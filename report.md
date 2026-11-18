@@ -35,3 +35,10 @@ Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migr
 
 ## Prossimi passi consigliati
 Verifica su schermo di staff e infortuni (build in cloud, poi test con Marco). Poi staff per scout e giovanili, oppure allenamento e forma fisica.
+
+## 14. Parametri giocatori e Rosa a tabella (passi 13-15)
+- Giocatori con parametri VE, RE, AG, QU, FO, GM, EN, PA, DR, FI, TI, RI, piede e ruolo dettagliato (DB v8, migrazione 7→8).
+- Motore partita: valori per reparto dai parametri, stanchezza dopo il 65', falli/cartellini pesati sull'aggressività, forma che varia dopo ogni gara.
+- Valori ricalibrati (massima serie ~82, seconda ~73) solo per nuove partite/"Predefiniti".
+- Rosa a tabella a righe alternate; tocco = scheda giocatore con barre (pulsante Rinnova). Intestazione con bandiera e campionato.
+- Prossimi: tattiche, allenamento, assicurazioni, finanze dettagliate, coppe, amichevoli.
