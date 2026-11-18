@@ -37,7 +37,7 @@ data class MatchReport(
 object MatchEngine {
 
     private const val ATTACK_PER_MINUTE = 0.30
-    private const val HOME_BONUS = 1.05
+    private const val HOME_BONUS = 1.12
 
     private class Ratings(
         val atk: Double, val mid: Double, val def: Double, val gk: Double,
