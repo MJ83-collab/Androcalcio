@@ -154,6 +154,7 @@ fun EditorScreen(
         var role by remember(p) { mutableStateOf(p.role) }
         var age by remember(p) { mutableStateOf(p.age.toString()) }
         var ov by remember(p) { mutableStateOf(p.overall.toString()) }
+        var pot by remember(p) { mutableStateOf(p.potential.toString()) }
         var mo by remember(p) { mutableStateOf(p.morale.toString()) }
         var sal by remember(p) { mutableStateOf(p.salary.toString()) }
         var nat by remember(p) { mutableStateOf(p.nationality) }
@@ -170,6 +171,7 @@ fun EditorScreen(
                     }
                     NumF("Età", age) { age = it }
                     NumF("Valore (1-99)", ov) { ov = it }
+                    NumF("Potenziale (1-99, non sotto il valore)", pot) { pot = it }
                     NumF("Morale (0-100)", mo) { mo = it }
                     NumF("Ingaggio annuo (€)", sal) { sal = it }
                     TextF("Nazionalità (sigla)", nat) { nat = it.take(3).uppercase() }
@@ -177,10 +179,12 @@ fun EditorScreen(
             },
             confirmButton = {
                 Button(onClick = {
+                    val newOv = (ov.toIntOrNull() ?: p.overall).coerceIn(1, 99)
                     vm.savePlayer(p.copy(
                         name = pn.ifBlank { p.name }, role = role,
                         age = (age.toIntOrNull() ?: p.age).coerceIn(15, 45),
-                        overall = (ov.toIntOrNull() ?: p.overall).coerceIn(1, 99),
+                        overall = newOv,
+                        potential = (pot.toIntOrNull() ?: p.potential).coerceIn(newOv, 99),
                         morale = (mo.toIntOrNull() ?: p.morale).coerceIn(0, 100),
                         salary = sal.toLongOrNull() ?: p.salary,
                         nationality = nat.ifBlank { p.nationality }
