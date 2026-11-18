@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -71,6 +72,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Movimento
 import it.androcalcio.engine.Stadium
+import it.androcalcio.engine.Sponsorship
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.Progression
@@ -205,7 +207,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 Screen.FINANZE -> {
                     val movimenti by vm.movimenti.collectAsState()
-                    FinanzeScreen(team, players, movimenti) { vm.expandStadium() }
+                    FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) })
                 }
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
@@ -528,7 +530,10 @@ private fun RosaHeaderRow() {
 }
 
 @Composable
-fun FinanzeScreen(team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList(), onExpand: () -> Unit = {}) {
+fun FinanzeScreen(
+    team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList(),
+    onExpand: () -> Unit = {}, onSponsor: (String) -> Unit = {}
+) {
     if (team == null) return
     val wages = players.sumOf { it.salary }
     val gate = (team.stadiumCapacity * team.ticketPrice * 0.7).toLong()
@@ -545,7 +550,25 @@ fun FinanzeScreen(team: Team?, players: List<Player>, movimenti: List<Movimento>
             Modifier.fillMaxWidth()
         )
         StatChip("Prezzo biglietto", "€ ${team.ticketPrice}", Modifier.fillMaxWidth())
-        StatChip("Sponsor principale", team.sponsor, Modifier.fillMaxWidth())
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Sponsor e merchandising", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Lo sponsor e il merchandising arrivano a fine stagione. " +
+                        "Merchandising: ${money(Sponsorship.merch(team.stadiumCapacity))} l'anno.",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall
+                )
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Sponsorship.offers.forEach { o ->
+                        FilterChip(
+                            selected = o.name == team.sponsor,
+                            onClick = { onSponsor(o.name) },
+                            label = { Text("${o.name} · ${money(o.annual)}") }
+                        )
+                    }
+                }
+            }
+        }
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Stadio: ${team.stadiumCapacity} posti", style = MaterialTheme.typography.titleMedium)

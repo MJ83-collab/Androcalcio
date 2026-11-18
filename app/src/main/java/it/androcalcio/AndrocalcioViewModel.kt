@@ -3,6 +3,7 @@ package it.androcalcio
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.Stadium
+import it.androcalcio.engine.Sponsorship
 import it.androcalcio.engine.TrainFocus
 import it.androcalcio.engine.TrainIntensity
 import it.androcalcio.engine.TrainingPlan
@@ -485,6 +486,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Sponsor e merchandising della tua squadra a fine stagione (le AI non li incassano). */
+    private fun extra(t: Team): Long =
+        if (t.id == selectedTeam.value?.id) Sponsorship.annual(t.sponsor) + Sponsorship.merch(t.stadiumCapacity) else 0L
+
+    /** Sceglie lo sponsor della tua squadra: l'incasso arriva a fine stagione. */
+    fun setSponsor(name: String) {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            dao.updateTeam(me.copy(sponsor = name))
+            _notice.value = "Sponsor: $name (${money(Sponsorship.annual(name))} l'anno)."
+        }
+    }
+
     /** Amplia lo stadio della tua squadra di un blocco di posti, pagato dal budget. */
     fun expandStadium() {
         viewModelScope.launch {
@@ -812,7 +826,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         "bilancio ${money(net)}."
                 }
                 t.copy(
-                    budget = (t.budget + net + (prizes[t.id] ?: 0L)).coerceAtLeast(0),
+                    budget = (t.budget + net + (prizes[t.id] ?: 0L) + extra(t)).coerceAtLeast(0),
                     campionato = newLeague ?: t.campionato
                 )
             }
@@ -821,10 +835,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.insertPlayers(added)
             dao.updateTeams(newTeams)
             newTeams.find { it.id == me.id }?.let { nt ->
-                registra(me.id, "Bilancio di fine stagione (incassi, ingaggi)", meNet, nt.budget - (prizes[me.id] ?: 0L))
-                (prizes[me.id] ?: 0L).takeIf { it != 0L }?.let { pr ->
-                    registra(me.id, "Premio piazzamento", pr, nt.budget)
-                }
+                val pr = prizes[me.id] ?: 0L
+                val sp = Sponsorship.annual(me.sponsor)
+                val mc = Sponsorship.merch(me.stadiumCapacity)
+                registra(me.id, "Bilancio di fine stagione (incassi, ingaggi)", meNet, nt.budget - pr - sp - mc)
+                if (pr != 0L) registra(me.id, "Premio piazzamento", pr, nt.budget - sp - mc)
+                registra(me.id, "Sponsor ${me.sponsor}", sp, nt.budget - mc)
+                registra(me.id, "Merchandising", mc, nt.budget)
             }
 
             // Staff: un anno di contratto in meno; chi arriva a zero lascia la squadra
