@@ -37,7 +37,7 @@ data class MatchReport(
 object MatchEngine {
 
     private const val ATTACK_PER_MINUTE = 0.30
-    private const val HOME_BONUS = 1.25
+    private const val HOME_BONUS = 1.20
     private const val HOME_FINISH = 1.05   // chi gioca in casa finalizza un po' meglio
 
     private class Ratings(

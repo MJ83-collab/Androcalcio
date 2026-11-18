@@ -2,6 +2,7 @@ package it.androcalcio.engine
 
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.random.Random
 
@@ -53,6 +54,13 @@ class TaraturaMotoreTest {
             println(String.format(java.util.Locale.ITALY,
                 "TARATURA divisione %d: partite %d, gol/partita %.2f, pareggi %.1f%%, vittorie casa %.1f%%, 0-0 %.1f%%",
                 tier + 1, s.n, s.gol.toDouble() / s.n, 100.0 * s.x / s.n, 100.0 * s.casa / s.n, 100.0 * s.zero / s.n))
+            // Intervalli realistici: se una modifica li rompe, la build fallisce
+            val gol = s.gol.toDouble() / s.n
+            val x = 100.0 * s.x / s.n
+            val casa = 100.0 * s.casa / s.n
+            assertTrue("Divisione ${tier + 1}: gol/partita $gol fuori da 2,4-3,0", gol in 2.4..3.0)
+            assertTrue("Divisione ${tier + 1}: pareggi $x% fuori da 22-30%", x in 22.0..30.0)
+            assertTrue("Divisione ${tier + 1}: vittorie in casa $casa% fuori da 42-49%", casa in 42.0..49.0)
         }
     }
 }
