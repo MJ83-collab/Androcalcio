@@ -89,6 +89,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     val team by vm.selectedTeam.collectAsState()
     val players by vm.players.collectAsState()
     val report by vm.report.collectAsState()
+    val matches by vm.matches.collectAsState()
 
     BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
 
@@ -122,7 +123,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     vm.selectTeam(it)
                     screen = Screen.HOME
                 }
-                Screen.PARTITA -> PartitaScreen(team, teams, report, { h, a -> vm.play(h, a) }, { vm.resetMatch() })
+                Screen.PARTITA -> PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() })
+                Screen.CALENDARIO -> CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() })
                 Screen.FINANZE -> FinanzeScreen(team, players)
                 else -> ComingSoon(screen)
             }

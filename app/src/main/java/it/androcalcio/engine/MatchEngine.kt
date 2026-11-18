@@ -24,7 +24,9 @@ data class MatchReport(
     val homeShots: Int,
     val awayShots: Int,
     val homePossession: Int,
-    val events: List<MatchEvent>
+    val events: List<MatchEvent>,
+    val homeFormation: Formation = Formation.F442,
+    val awayFormation: Formation = Formation.F442
 )
 
 /**
@@ -45,10 +47,10 @@ object MatchEngine {
         ps.filter { it.role == role }.sortedByDescending { it.overall }.take(n)
             .map { it.overall.toDouble() }.average().let { if (it.isNaN()) 50.0 else it }
 
-    private fun ratings(ps: List<Player>) = Ratings(
-        atk = top(ps, "A", 3) * 0.6 + top(ps, "C", 3) * 0.4,
-        mid = top(ps, "C", 4),
-        def = top(ps, "D", 4),
+    private fun ratings(ps: List<Player>, f: Formation) = Ratings(
+        atk = (top(ps, "A", 3) * 0.6 + top(ps, "C", 3) * 0.4) * f.atkMod,
+        mid = top(ps, "C", 4) * f.midMod,
+        def = top(ps, "D", 4) * f.defMod,
         gk = top(ps, "P", 1),
         players = ps
     )
@@ -75,10 +77,12 @@ object MatchEngine {
     fun simulate(
         home: Team, homePlayers: List<Player>,
         away: Team, awayPlayers: List<Player>,
+        homeF: Formation = Formation.F442,
+        awayF: Formation = Formation.F442,
         rng: Random = Random.Default
     ): MatchReport {
-        val h = ratings(homePlayers)
-        val a = ratings(awayPlayers)
+        val h = ratings(homePlayers, homeF)
+        val a = ratings(awayPlayers, awayF)
         val pHome = h.mid * HOME_BONUS / (h.mid * HOME_BONUS + a.mid)
 
         val events = mutableListOf<MatchEvent>()
@@ -134,6 +138,6 @@ object MatchEngine {
         }
         events += MatchEvent(90, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
 
-        return MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events)
+        return MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events, homeF, awayF)
     }
 }

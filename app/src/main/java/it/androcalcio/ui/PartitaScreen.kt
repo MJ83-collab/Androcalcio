@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import it.androcalcio.data.Team
 import it.androcalcio.engine.EventType
+import it.androcalcio.engine.Formation
 import it.androcalcio.engine.MatchReport
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
@@ -52,13 +53,14 @@ fun PartitaScreen(
     team: Team?,
     teams: List<Team>,
     report: MatchReport?,
-    onPlay: (Team, Team) -> Unit,
+    onPlay: (Team, Team, Formation) -> Unit,
     onReset: () -> Unit
 ) {
     if (team == null) return
     if (report == null) {
         val rivals = teams.filter { it.campionato == team.campionato && it.id != team.id }
         var awayId by rememberSaveable { mutableStateOf(-1L) }
+        var formation by rememberSaveable { mutableStateOf(Formation.F442) }
         val away = rivals.firstOrNull { it.id == awayId } ?: rivals.firstOrNull()
         Column(
             Modifier.fillMaxSize().padding(16.dp),
@@ -72,6 +74,16 @@ fun PartitaScreen(
                         selected = t.id == away?.id,
                         onClick = { awayId = t.id },
                         label = { Text(t.name) }
+                    )
+                }
+            }
+            SectionTitle("Il tuo modulo")
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(Formation.values().toList()) { f ->
+                    FilterChip(
+                        selected = f == formation,
+                        onClick = { formation = f },
+                        label = { Text(f.label) }
                     )
                 }
             }
@@ -92,7 +104,7 @@ fun PartitaScreen(
                     }
                 }
                 Button(
-                    onClick = { onPlay(team, away) },
+                    onClick = { onPlay(team, away, formation) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AC.Accent, contentColor = AC.Bg
@@ -135,7 +147,7 @@ fun PartitaScreen(
                 }
             }
         }
-        item { Pitch(report.home, report.away, bx, by) }
+        item { Pitch(report.home, report.away, bx, by, report.homeFormation, report.awayFormation) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { minute = 90 }) { Text("Salta") }
@@ -161,15 +173,11 @@ fun PartitaScreen(
 }
 
 @Composable
-fun Pitch(home: Team, away: Team, bx: Float, by: Float) {
-    val formation = listOf(
-        0.05f to 0.5f,
-        0.18f to 0.15f, 0.18f to 0.38f, 0.18f to 0.62f, 0.18f to 0.85f,
-        0.32f to 0.15f, 0.32f to 0.38f, 0.32f to 0.62f, 0.32f to 0.85f,
-        0.44f to 0.35f, 0.44f to 0.65f
-    )
+fun Pitch(home: Team, away: Team, bx: Float, by: Float, hf: Formation, af: Formation) {
     val homeColor = Color(home.colorPrimary)
     val awayColor = Color(if (home.colorPrimary == away.colorPrimary) away.colorSecondary else away.colorPrimary)
+    val homePos = hf.coords()
+    val awayPos = af.coords()
     Canvas(Modifier.fillMaxWidth().aspectRatio(1.6f)) {
         val w = size.width; val h = size.height
         val line = Color.White.copy(alpha = 0.6f)
@@ -182,8 +190,10 @@ fun Pitch(home: Team, away: Team, bx: Float, by: Float) {
         drawRect(line, Offset(w * 0.86f, h * 0.25f), Size(w * 0.14f, h * 0.5f), style = st)
         val shift = (bx - 0.5f) * 0.2f
         val r = h * 0.03f
-        formation.forEach { (fx, fy) ->
+        homePos.forEach { (fx, fy) ->
             drawCircle(homeColor, r, Offset((fx + shift).coerceIn(0.02f, 0.98f) * w, fy * h))
+        }
+        awayPos.forEach { (fx, fy) ->
             drawCircle(awayColor, r, Offset(((1f - fx) + shift).coerceIn(0.02f, 0.98f) * w, fy * h))
         }
         drawCircle(Color.White, r * 0.8f, Offset(bx * w, by * h))

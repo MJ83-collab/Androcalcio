@@ -39,5 +39,7 @@ data class MatchResult(
     val homeTeamId: Long,
     val awayTeamId: Long,
     val homeGoals: Int,
-    val awayGoals: Int
+    val awayGoals: Int,
+    val league: String = "",
+    val played: Boolean = false
 )
