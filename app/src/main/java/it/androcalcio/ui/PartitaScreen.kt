@@ -57,13 +57,14 @@ fun PartitaScreen(
     onPlay: (Team, Team, Formation) -> Unit,
     onReset: () -> Unit,
     mentality: Mentality = Mentality.EQUILIBRATA,
-    onMentality: (Mentality) -> Unit = {}
+    onMentality: (Mentality) -> Unit = {},
+    formation: Formation = Formation.F442,
+    onFormation: (Formation) -> Unit = {}
 ) {
     if (team == null) return
     if (report == null) {
         val rivals = teams.filter { it.campionato == team.campionato && it.id != team.id }
         var awayId by rememberSaveable { mutableStateOf(-1L) }
-        var formation by rememberSaveable { mutableStateOf(Formation.F442) }
         val away = rivals.firstOrNull { it.id == awayId } ?: rivals.firstOrNull()
         Column(
             Modifier.fillMaxSize().padding(16.dp),
@@ -85,7 +86,7 @@ fun PartitaScreen(
                 items(Formation.values().toList()) { f ->
                     FilterChip(
                         selected = f == formation,
-                        onClick = { formation = f },
+                        onClick = { onFormation(f) },
                         label = { Text(f.label) }
                     )
                 }

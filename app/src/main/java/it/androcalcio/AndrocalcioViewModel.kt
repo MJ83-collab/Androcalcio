@@ -24,6 +24,7 @@ import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Mentality
+import it.androcalcio.engine.Lineup
 import it.androcalcio.data.ScoutReport
 import it.androcalcio.data.Youth
 import it.androcalcio.engine.MatchEngine
@@ -77,7 +78,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun play(home: Team, away: Team, formation: Formation) {
         viewModelScope.launch {
-            val hp = Medical.available(dao.playersOnce(home.id))
+            val hp = Lineup.resolve(dao.playersOnce(home.id), formation).xi
             val ap = Medical.available(dao.playersOnce(away.id))
             val staffMap = dao.allStaff().groupBy { it.teamId }
             _report.value = MatchEngine.simulate(
@@ -103,6 +104,37 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private val _mentality = MutableStateFlow(
         Mentality.values()[prefs.getInt("mentalita", Mentality.EQUILIBRATA.ordinal)])
     val mentality: StateFlow<Mentality> = _mentality
+    // Modulo e formazione titolare della tua squadra
+    private val _formation = MutableStateFlow(
+        Formation.values()[prefs.getInt("modulo", Formation.F442.ordinal).coerceIn(0, Formation.values().size - 1)])
+    val formation: StateFlow<Formation> = _formation
+    fun setFormation(f: Formation) {
+        _formation.value = f
+        prefs.edit().putInt("modulo", f.ordinal).apply()
+    }
+
+    fun toggleStarter(p: Player) {
+        viewModelScope.launch {
+            val mine = dao.playersOnce(p.teamId)
+            if (!p.starter && mine.count { it.starter } >= 11) {
+                _notice.value = "Hai già 11 titolari: togline uno prima di aggiungere ${p.name}."
+                return@launch
+            }
+            dao.updatePlayer(p.copy(starter = !p.starter))
+        }
+    }
+
+    /** L'allenatore propone gli 11 migliori disponibili per il modulo scelto. */
+    fun coachLineup() {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            val ps = dao.playersOnce(me.id)
+            val xi = Lineup.coachPick(ps, _formation.value).map { it.id }.toSet()
+            dao.updatePlayers(ps.map { it.copy(starter = it.id in xi) })
+            _notice.value = "L'allenatore ha scelto gli 11 titolari per il ${_formation.value.label}."
+        }
+    }
+
     fun setMentality(m: Mentality) {
         _mentality.value = m
         prefs.edit().putInt("mentalita", m.ordinal).apply()
@@ -154,6 +186,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
             val staffBy = dao.allStaff().groupBy { it.teamId }
             val cache = HashMap<Long, List<Player>>()   // rose complete, aggiornate dopo ogni partita
+            val lineupNotes = mutableListOf<String>()
             val formations = Formation.values()
             val rng = kotlin.random.Random.Default
             val goalsAcc = ArrayList<Goal>()
@@ -164,9 +197,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val a = teamsById[m.awayTeamId] ?: continue
                 val hp = cache.getOrPut(h.id) { dao.playersOnce(h.id) }
                 val ap = cache.getOrPut(a.id) { dao.playersOnce(a.id) }
+                val hL = if (h.id == t.id) Lineup.resolve(hp, _formation.value) else null
+                val aL = if (a.id == t.id) Lineup.resolve(ap, _formation.value) else null
+                lineupNotes += hL?.notes.orEmpty() + aL?.notes.orEmpty()
                 val r = MatchEngine.simulate(
-                    h, Medical.available(hp), a, Medical.available(ap),
-                    formations.random(), formations.random(),
+                    h, hL?.xi ?: Medical.available(hp), a, aL?.xi ?: Medical.available(ap),
+                    if (hL != null) _formation.value else formations.random(),
+                    if (aL != null) _formation.value else formations.random(),
                     Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                     Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                     homeMent = if (h.id == t.id) _mentality.value else null,
@@ -182,6 +219,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
+            if (lineupNotes.isNotEmpty()) _notice.value = lineupNotes.distinct().joinToString("\n")
         }
     }
 
@@ -490,10 +528,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val h = byId[m.homeTeamId]
                     val a = byId[m.awayTeamId]
                     if (h == null || a == null) null else {
+                        fun xi(id: Long) = cache[id].orEmpty().let {
+                            if (id == me.id) Lineup.resolve(it, _formation.value).xi else Medical.available(it)
+                        }
                         val r = MatchEngine.simulate(
-                            h, Medical.available(cache[h.id] ?: emptyList()),
-                            a, Medical.available(cache[a.id] ?: emptyList()),
-                            formations.random(), formations.random(),
+                            h, xi(h.id), a, xi(a.id),
+                            if (h.id == me.id) _formation.value else formations.random(),
+                            if (a.id == me.id) _formation.value else formations.random(),
                             Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                             Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                             homeMent = if (h.id == me.id) _mentality.value else null,

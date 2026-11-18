@@ -1,5 +1,7 @@
 package it.androcalcio.ui
 
+import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Lineup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -144,15 +146,20 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         Box(Modifier.weight(1f).fillMaxSize()) {
             when (screen) {
                 Screen.HOME -> HomeScreen(team, players) { screen = it }
-                Screen.ROSA -> RosaScreen(team, players) { p, y -> vm.renew(p, y) }
+                Screen.ROSA -> {
+                    val modulo by vm.formation.collectAsState()
+                    RosaScreen(team, players, { p, y -> vm.renew(p, y) },
+                        modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() })
+                }
                 Screen.SQUADRE -> TeamList(teams, team?.id) {
                     vm.selectTeam(it)
                     screen = Screen.HOME
                 }
                 Screen.PARTITA -> {
                     val ment by vm.mentality.collectAsState()
+                    val modulo by vm.formation.collectAsState()
                     PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() },
-                        ment, { vm.setMentality(it) })
+                        ment, { vm.setMentality(it) }, modulo, { vm.setFormation(it) })
                 }
                 Screen.CALENDARIO -> {
                     val ment by vm.mentality.collectAsState()
@@ -413,7 +420,11 @@ private fun roleColor(role: String): Color = when (role) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Unit) {
+fun RosaScreen(
+    team: Team?, players: List<Player>, onRenew: (Player, Int) -> Unit,
+    formation: Formation, onFormation: (Formation) -> Unit,
+    onToggleStarter: (Player) -> Unit, onCoach: () -> Unit
+) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
     var sheet by remember { mutableStateOf<Player?>(null) }
@@ -452,6 +463,7 @@ fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Uni
                 )
             }
         }
+        item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { RosaHeaderRow() }
         items(players, key = { it.id }) { p ->
             val idx = players.indexOf(p)
@@ -461,6 +473,9 @@ fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Uni
                     .clickable { sheet = p }.padding(horizontal = 6.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Tocco sul pallino: titolare sì/no
+                Text(if (p.starter) "●" else "○", Modifier.width(24.dp).clickable { onToggleStarter(p) },
+                    color = if (p.starter) AC.Accent else AC.TextDim, textAlign = TextAlign.Center)
                 Text(p.role, Modifier.width(18.dp), color = roleColor(p.role), fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall)
                 Text(p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.weight(1f), maxLines = 1,
@@ -479,6 +494,8 @@ fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Uni
 @Composable
 private fun RosaHeaderRow() {
     Row(Modifier.fillMaxWidth().background(AC.Accent.copy(alpha = 0.18f)).padding(horizontal = 6.dp, vertical = 6.dp)) {
+        Text("T", Modifier.width(24.dp), color = AC.Accent, textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.labelSmall)
         Text("R", Modifier.width(18.dp), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
         Text("Nome", Modifier.weight(1f), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
         listOf("ET", "VE", "RE", "QU", "FO", "LIV").forEach {
@@ -530,6 +547,40 @@ fun ComingSoon(s: Screen) {
                     color = AC.TextDim
                 )
             }
+        }
+    }
+}
+
+/** Modulo, conteggio dei titolari per ruolo e proposta dell'allenatore. */
+@Composable
+private fun FormazioneCard(
+    players: List<Player>, formation: Formation,
+    onFormation: (Formation) -> Unit, onCoach: () -> Unit
+) {
+    val xi = players.filter { it.starter }
+    val need = Lineup.needs(formation)
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Formazione", style = MaterialTheme.typography.titleMedium)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(Formation.values().toList()) { f ->
+                    FilterChip(selected = f == formation, onClick = { onFormation(f) }, label = { Text(f.label) })
+                }
+            }
+            val ok = xi.size == 11 && need.all { (r, n) -> xi.count { it.role == r } == n }
+            Text(
+                "Titolari ${xi.size}/11 · " + need.entries.joinToString("  ") { (r, n) -> "$r ${xi.count { it.role == r }}/$n" },
+                color = if (ok) AC.Ok else AC.Warn, style = MaterialTheme.typography.bodySmall
+            )
+            if (xi.any { it.injuredRounds > 0 }) Text(
+                "Hai titolari infortunati: in partita l'allenatore li sostituisce.",
+                color = AC.Danger, style = MaterialTheme.typography.bodySmall
+            )
+            if (xi.isEmpty()) Text("Nessun titolare scelto: decide l'allenatore.",
+                color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+            Button(onClick = onCoach) { Text("Chiedi all'allenatore") }
+            Text("Tocca ● / ○ per mettere o togliere un titolare.",
+                color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

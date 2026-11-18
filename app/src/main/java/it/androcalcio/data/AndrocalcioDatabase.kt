@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -48,6 +48,13 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
         }
 
         /** 7 -> 8: parametri dei giocatori, ricavati dal livello attuale (variazione deterministica). */
+        /** 8 -> 9: formazione titolare scelta dall'utente, senza perdere i dati. */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE players ADD COLUMN starter INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 val ints = mapOf("ve" to 50, "re" to 50, "ag" to 50, "qu" to 50, "fo" to 80, "gm" to 20,
@@ -83,6 +90,6 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).fallbackToDestructiveMigration().build()
     }
 }
