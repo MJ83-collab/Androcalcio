@@ -5,7 +5,7 @@ import it.androcalcio.data.Team
 import kotlin.math.pow
 import kotlin.random.Random
 
-enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC }
+enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC, SUB }
 
 data class MatchEvent(
     val minute: Int,
@@ -49,6 +49,11 @@ object MatchEngine {
         ps.filter { it.role == role }.map(f).sortedDescending().take(n)
             .average().let { if (it.isNaN()) 50.0 else it }
 
+    const val MAX_SUBS = 5
+
+    /** Energia persa al minuto dopo il 55': da ~0,0045 (RE bassa) a ~0,002 (RE 99). */
+    private fun drain(p: Player): Double = 0.0045 - 0.0025 * p.re / 99.0
+
     /** Sceglie a caso un giocatore, con più probabilità per chi ha l'aggressività alta. */
     private fun aggressive(ps: List<Player>, rng: Random): Player {
         val total = ps.sumOf { it.ag.coerceAtLeast(1) }
@@ -57,13 +62,14 @@ object MatchEngine {
         return ps.last()
     }
 
-    private fun ratings(ps: List<Player>, f: Formation, coach: Int): Ratings {
+    private fun ratings(ps: List<Player>, f: Formation, coach: Int, en: Map<Long, Double> = emptyMap()): Ratings {
         val k = Staffing.coachFactor(coach)
+        fun e(p: Player) = en[p.id] ?: 1.0
         return Ratings(
-            atk = (top(ps, "A", 3) { Attr.atk(it) } * 0.6 + top(ps, "C", 3) { Attr.atk(it) } * 0.4) * f.atkMod * k,
-            mid = top(ps, "C", 4) { Attr.mid(it) } * f.midMod * k,
-            def = top(ps, "D", 4) { Attr.def(it) } * f.defMod * k,
-            gk = top(ps, "P", 1) { Attr.gk(it) },
+            atk = (top(ps, "A", 3) { Attr.atk(it) * e(it) } * 0.6 + top(ps, "C", 3) { Attr.atk(it) * e(it) } * 0.4) * f.atkMod * k,
+            mid = top(ps, "C", 4) { Attr.mid(it) * e(it) } * f.midMod * k,
+            def = top(ps, "D", 4) { Attr.def(it) * e(it) } * f.defMod * k,
+            gk = top(ps, "P", 1) { Attr.gk(it) * e(it) },
             stamina = if (ps.isEmpty()) 60.0 else ps.map { it.re }.average(),
             players = ps
         )
@@ -97,10 +103,20 @@ object MatchEngine {
         awayCoach: Int = Staffing.NEUTRAL,
         homeMent: Mentality? = null,        // null = decide il motore (squadre AI)
         awayMent: Mentality? = null,
+        homeBench: List<Player>? = null,    // null = titolari e panchina scelti dall'allenatore
+        awayBench: List<Player>? = null,
         rng: Random = Random.Default
     ): MatchReport {
-        val h = ratings(homePlayers, homeF, homeCoach)
-        val a = ratings(awayPlayers, awayF, awayCoach)
+        // Titolari e panchina: se arriva la rosa intera, l'allenatore sceglie gli 11
+        fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
+            if (bench != null) ps.toMutableList() to bench.toMutableList()
+            else Lineup.coachPick(ps, f).let { xi -> xi.toMutableList() to ps.filter { it !in xi }.toMutableList() }
+        val (xiH, benchH) = split(homePlayers, homeBench, homeF)
+        val (xiA, benchA) = split(awayPlayers, awayBench, awayF)
+        val energy = HashMap<Long, Double>()
+        var subsH = 0; var subsA = 0
+        var h = ratings(xiH, homeF, homeCoach)
+        var a = ratings(xiA, awayF, awayCoach)
         val pHome = h.mid * HOME_BONUS / (h.mid * HOME_BONUS + a.mid)
 
         val events = mutableListOf<MatchEvent>()
@@ -131,7 +147,33 @@ object MatchEngine {
             else -> base
         }
 
+        // Cambio: esce il più stanco, entra il migliore della panchina nello stesso ruolo
+        // (se la squadra perde dopo il 60', meglio un attaccante al posto di un difensore o centrocampista)
+        fun trySub(xi: MutableList<Player>, bench: MutableList<Player>, losing: Boolean, minute: Int, homeSide: Boolean, t: Team): Boolean {
+            val tired = xi.filter { it.role != "P" }.minByOrNull { energy[it.id] ?: 1.0 } ?: return false
+            if ((energy[tired.id] ?: 1.0) > 0.93 && !(losing && minute > 60)) return false
+            val wantAtk = losing && minute > 60 && tired.role != "A"
+            val inP = (if (wantAtk) bench.filter { it.role == "A" }.maxByOrNull { Attr.atk(it) } else null)
+                ?: bench.filter { it.role == tired.role }.maxByOrNull { it.overall }
+                ?: return false
+            xi[xi.indexOf(tired)] = inP; bench -= inP
+            events += MatchEvent(minute, EventType.SUB, homeSide,
+                "Sostituzione (${t.shortName}): ${inP.name} per ${tired.name}", 0.5f, 0.5f)
+            return true
+        }
+
         for (minute in 1..90) {
+            if (minute > 55) {
+                (xiH + xiA).forEach { p -> energy[p.id] = ((energy[p.id] ?: 1.0) - drain(p)).coerceAtLeast(0.7) }
+                if (minute in 56..85) {
+                    if (subsH < MAX_SUBS && rng.nextDouble() < 0.12 &&
+                        trySub(xiH, benchH, hg < ag, minute, true, home)) subsH++
+                    if (subsA < MAX_SUBS && rng.nextDouble() < 0.12 &&
+                        trySub(xiA, benchA, ag < hg, minute, false, away)) subsA++
+                }
+                h = ratings(xiH, homeF, homeCoach, energy)
+                a = ratings(xiA, awayF, awayCoach, energy)
+            }
             val nH = live(homeMent, baseH, hg, ag, minute)
             val nA = live(awayMent, baseA, ag, hg, minute)
             if (nH != mH && minute > 70) events += MatchEvent(minute, EventType.TACTIC, true,
@@ -140,10 +182,7 @@ object MatchEngine {
                 "${away.shortName} passa a mentalità ${nA.label.lowercase()}", 0.5f, 0.5f)
             mH = nH; mA = nA
             if (rng.nextDouble() < ATTACK_PER_MINUTE * (mH.tempo + mA.tempo) / 2) {
-                // oltre il 65' la squadra meno resistente cala
-                val tireH = if (minute > 65) 0.96 + 0.04 * (h.stamina / 90.0).coerceAtMost(1.0) else 1.0
-                val tireA = if (minute > 65) 0.96 + 0.04 * (a.stamina / 90.0).coerceAtMost(1.0) else 1.0
-                val pNow = h.mid * tireH * HOME_BONUS / (h.mid * tireH * HOME_BONUS + a.mid * tireA)
+                val pNow = h.mid * HOME_BONUS / (h.mid * HOME_BONUS + a.mid)
                 val homeAtt = rng.nextDouble() < pNow
                 val att = if (homeAtt) h else a
                 val dfn = if (homeAtt) a else h
@@ -175,7 +214,7 @@ object MatchEngine {
             }
             if (rng.nextDouble() < 0.018) {
                 val side = rng.nextBoolean()
-                val ps = (if (side) homePlayers else awayPlayers).filter { it.role != "P" }
+                val ps = (if (side) xiH else xiA).filter { it.role != "P" }
                 if (ps.isNotEmpty()) {
                     val p = aggressive(ps, rng)
                     val t = if (side) home else away

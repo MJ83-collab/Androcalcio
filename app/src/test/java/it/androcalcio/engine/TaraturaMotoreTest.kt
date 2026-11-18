@@ -28,7 +28,7 @@ class TaraturaMotoreTest {
         return t to ps
     }
 
-    private data class Stat(var n: Int = 0, var gol: Int = 0, var x: Int = 0, var casa: Int = 0, var zero: Int = 0)
+    private data class Stat(var n: Int = 0, var gol: Int = 0, var x: Int = 0, var casa: Int = 0, var zero: Int = 0, var cambi: Int = 0)
 
     private fun campionato(tier: Int, stagioni: Int, rng: Random): Stat {
         val st = Stat()
@@ -41,6 +41,7 @@ class TaraturaMotoreTest {
                 if (r.homeGoals == r.awayGoals) st.x++
                 if (r.homeGoals > r.awayGoals) st.casa++
                 if (r.homeGoals + r.awayGoals == 0) st.zero++
+                st.cambi += r.events.count { it.type == EventType.SUB }
             }
         }
         return st
@@ -52,8 +53,8 @@ class TaraturaMotoreTest {
         for (tier in 0..2) {
             val s = campionato(tier, 3, rng)
             println(String.format(java.util.Locale.ITALY,
-                "TARATURA divisione %d: partite %d, gol/partita %.2f, pareggi %.1f%%, vittorie casa %.1f%%, 0-0 %.1f%%",
-                tier + 1, s.n, s.gol.toDouble() / s.n, 100.0 * s.x / s.n, 100.0 * s.casa / s.n, 100.0 * s.zero / s.n))
+                "TARATURA divisione %d: partite %d, gol/partita %.2f, pareggi %.1f%%, vittorie casa %.1f%%, 0-0 %.1f%%, cambi per squadra %.1f",
+                tier + 1, s.n, s.gol.toDouble() / s.n, 100.0 * s.x / s.n, 100.0 * s.casa / s.n, 100.0 * s.zero / s.n, s.cambi / (2.0 * s.n)))
             // Intervalli realistici: se una modifica li rompe, la build fallisce
             val gol = s.gol.toDouble() / s.n
             val x = 100.0 * s.x / s.n

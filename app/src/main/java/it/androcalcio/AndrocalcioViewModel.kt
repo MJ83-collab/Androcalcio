@@ -78,14 +78,16 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun play(home: Team, away: Team, formation: Formation) {
         viewModelScope.launch {
-            val hp = Lineup.resolve(dao.playersOnce(home.id), formation).xi
+            val all = dao.playersOnce(home.id)
+            val hp = Lineup.resolve(all, formation).xi
             val ap = Medical.available(dao.playersOnce(away.id))
             val staffMap = dao.allStaff().groupBy { it.teamId }
             _report.value = MatchEngine.simulate(
                 home, hp, away, ap, formation, Formation.values().random(),
                 Staffing.skill(staffMap, home.id, Staffing.ALLENATORE),
                 Staffing.skill(staffMap, away.id, Staffing.ALLENATORE),
-                homeMent = _mentality.value
+                homeMent = _mentality.value,
+                homeBench = Medical.available(all) - hp.toSet()
             )
         }
     }
@@ -207,7 +209,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                     Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                     homeMent = if (h.id == t.id) _mentality.value else null,
-                    awayMent = if (a.id == t.id) _mentality.value else null
+                    awayMent = if (a.id == t.id) _mentality.value else null,
+                    homeBench = hL?.let { Medical.available(hp) - it.xi.toSet() },
+                    awayBench = aL?.let { Medical.available(ap) - it.xi.toSet() }
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
                 goalsAcc += r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
@@ -531,14 +535,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         fun xi(id: Long) = cache[id].orEmpty().let {
                             if (id == me.id) Lineup.resolve(it, _formation.value).xi else Medical.available(it)
                         }
+                        fun bench(id: Long, xi: List<Player>) =
+                            if (id == me.id) Medical.available(cache[id].orEmpty()) - xi.toSet() else null
+                        val hx = xi(h.id); val ax = xi(a.id)
                         val r = MatchEngine.simulate(
-                            h, xi(h.id), a, xi(a.id),
+                            h, hx, a, ax,
                             if (h.id == me.id) _formation.value else formations.random(),
                             if (a.id == me.id) _formation.value else formations.random(),
                             Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                             Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                             homeMent = if (h.id == me.id) _mentality.value else null,
-                            awayMent = if (a.id == me.id) _mentality.value else null
+                            awayMent = if (a.id == me.id) _mentality.value else null,
+                            homeBench = bench(h.id, hx), awayBench = bench(a.id, ax)
                         )
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(),
                             Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
