@@ -152,7 +152,7 @@ object MatchEngine {
         fun trySub(xi: MutableList<Player>, bench: MutableList<Player>, losing: Boolean, minute: Int, homeSide: Boolean, t: Team): Boolean {
             // dal più stanco in su, il primo che ha un sostituto in panchina
             for (tired in xi.filter { it.role != "P" }.sortedBy { energy[it.id] ?: 1.0 }) {
-                if ((energy[tired.id] ?: 1.0) > 0.975 && !(losing && minute > 60)) return false
+                if ((energy[tired.id] ?: 1.0) > 0.965 && !(losing && minute > 60)) return false
                 val wantAtk = losing && minute > 60 && tired.role != "A"
                 val inP = (if (wantAtk) bench.filter { it.role == "A" }.maxByOrNull { Attr.atk(it) } else null)
                     ?: bench.filter { it.role == tired.role }.maxByOrNull { it.overall }
@@ -169,9 +169,9 @@ object MatchEngine {
             if (minute > 55) {
                 (xiH + xiA).forEach { p -> energy[p.id] = ((energy[p.id] ?: 1.0) - drain(p)).coerceAtLeast(0.7) }
                 if (minute in 56..85) {
-                    if (subsH < MAX_SUBS && rng.nextDouble() < 0.30 &&
+                    if (subsH < MAX_SUBS && rng.nextDouble() < 0.15 &&
                         trySub(xiH, benchH, hg < ag, minute, true, home)) subsH++
-                    if (subsA < MAX_SUBS && rng.nextDouble() < 0.30 &&
+                    if (subsA < MAX_SUBS && rng.nextDouble() < 0.15 &&
                         trySub(xiA, benchA, ag < hg, minute, false, away)) subsA++
                 }
                 h = ratings(xiH, homeF, homeCoach, energy)
