@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -29,12 +28,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private val selectedId = MutableStateFlow<Long?>(null)
 
     val selectedTeam: StateFlow<Team?> =
-        combine(teams, selectedId) { list, id -> list.firstOrNull { it.id == id } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        combine(teams, selectedId) { list, id ->
+            list.firstOrNull { it.id == id } ?: list.firstOrNull()
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val players: StateFlow<List<Player>> =
-        selectedId
-            .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else dao.playersOf(id) }
+        selectedTeam
+            .flatMapLatest { t -> if (t == null) flowOf(emptyList()) else dao.playersOf(t.id) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
