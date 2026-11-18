@@ -37,7 +37,8 @@ data class MatchReport(
 object MatchEngine {
 
     private const val ATTACK_PER_MINUTE = 0.30
-    private const val HOME_BONUS = 1.12
+    private const val HOME_BONUS = 1.25
+    private const val HOME_FINISH = 1.05   // chi gioca in casa finalizza un po' meglio
 
     private class Ratings(
         val atk: Double, val mid: Double, val def: Double, val gk: Double,
@@ -126,7 +127,7 @@ object MatchEngine {
                     val sh = shooter(att.players, rng)
                     val who = sh?.name ?: "Attaccante"
                     val (x, y) = pos(homeAtt)
-                    val pGoal = (0.22 * (att.atk / dfn.gk).pow(1.5)).coerceIn(0.08, 0.45)
+                    val pGoal = (0.22 * (att.atk / dfn.gk).pow(1.5) * (if (homeAtt) HOME_FINISH else 1.0)).coerceIn(0.08, 0.45)
                     val r = rng.nextDouble()
                     when {
                         r < pGoal -> {
