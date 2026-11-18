@@ -10,7 +10,6 @@ sealed class OfferResult {
 }
 
 object Market {
-    const val SEASON = "2026/27"
     const val MAX_SQUAD = 30
     const val MIN_SQUAD = 15
 

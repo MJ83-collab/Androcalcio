@@ -21,7 +21,8 @@ object DataIO {
                 ga.put(JSONObject()
                     .put("name", p.name).put("role", p.role).put("age", p.age)
                     .put("overall", p.overall).put("morale", p.morale)
-                    .put("salary", p.salary).put("nationality", p.nationality))
+                    .put("salary", p.salary).put("nationality", p.nationality)
+                    .put("potential", p.potential).put("contract", p.contract))
             }
             arr.put(JSONObject()
                 .put("name", t.name).put("shortName", t.shortName)
@@ -63,7 +64,9 @@ object DataIO {
                     role = g.getString("role").takeIf { it in listOf("P", "D", "C", "A") } ?: "C",
                     age = g.getInt("age"), overall = g.getInt("overall").coerceIn(1, 99),
                     morale = g.getInt("morale").coerceIn(0, 100), salary = g.getLong("salary"),
-                    nationality = g.getString("nationality")
+                    nationality = g.getString("nationality"),
+                    potential = g.optInt("potential", g.getInt("overall")).coerceIn(1, 99),
+                    contract = g.optInt("contract", 3)
                 )
             }
         }

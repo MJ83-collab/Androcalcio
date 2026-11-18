@@ -95,6 +95,15 @@ interface AndrocalcioDao {
     @Query("DELETE FROM players") suspend fun clearPlayers()
     @Query("DELETE FROM teams") suspend fun clearTeams()
 
+    @Update
+    suspend fun updatePlayers(list: List<Player>)
+
+    @Update
+    suspend fun updateTeams(list: List<Team>)
+
+    @Delete
+    suspend fun deletePlayers(list: List<Player>)
+
     @Insert
     suspend fun insertTeams(teams: List<Team>): List<Long>
 

@@ -1,7 +1,7 @@
 # Androcalcio – report (stato al passo 6)
 
 ## Stack
-Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 4, ricreato da zero a ogni cambio schema), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
+Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 5, ricreato da zero a ogni cambio schema), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
 
 ## Fatto
 1. Grafica e menu: tema scuro del canvas, stemmi generati, Home con 9 voci, Rosa, Finanze.
@@ -10,9 +10,11 @@ Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 4, ricreato
 4. Calendario andata/ritorno, classifica, risultati salvati.
 5. Mercato: offerte, controfferte, vendite, budget e limiti di rosa.
 6. Vivaio e scouting: leva giovanile con parere dell'allenatore, report scout con intervalli che si stringono, giudizio di adattamento alla rosa.
+7. Editor dati, copia personalizzata/predefiniti all'avvio, export/import JSON.
+8. Nuove stagioni: età, crescita verso il potenziale, ritiri, contratti (rinnovo), bilancio di fine stagione.
 
 ## Non fatto
-- Contratti, ingaggi dinamici, crescita/invecchiamento dei giocatori (il potenziale dei giovani non viene conservato dopo la promozione).
+- Clausole contrattuali, promozioni/retrocessioni tra divisioni, premi, bilancio dettagliato.
 - Staff completo, finanze con bilancio, editor dati, export/import JSON, salvataggio multiplo.
 - Partite di campionato senza vista 2D; nessuna tattica in partita, infortuni, sostituzioni.
 - Taratura del motore (media gol, % pareggi) non verificata; app mai provata da me su schermo.

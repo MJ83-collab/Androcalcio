@@ -17,6 +17,7 @@ import it.androcalcio.engine.Formation
 import it.androcalcio.data.ScoutReport
 import it.androcalcio.data.Youth
 import it.androcalcio.engine.MatchEngine
+import it.androcalcio.engine.Progression
 import it.androcalcio.engine.Scouting
 import it.androcalcio.engine.Youths
 import it.androcalcio.engine.Market
@@ -75,23 +76,26 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private val season = "2026/27"
+    private val prefs = ctx.getSharedPreferences("androcalcio", 0)
+    private fun seasonName(y: Int) = "$y/${((y + 1) % 100).toString().padStart(2, '0')}"
+    private val _season = MutableStateFlow(seasonName(prefs.getInt("season_year", 2026)))
+    val season: StateFlow<String> = _season
     private fun key(t: Team) = "${t.nazione}|${t.campionato}"
 
     val matches: StateFlow<List<MatchResult>> =
-        selectedTeam
-            .flatMapLatest { t ->
-                if (t == null) flowOf(emptyList()) else dao.matches(key(t), season)
+        combine(selectedTeam, _season) { t, s -> t to s }
+            .flatMapLatest { (t, s) ->
+                if (t == null) flowOf(emptyList()) else dao.matches(key(t), s)
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         viewModelScope.launch {
-            selectedTeam.filterNotNull().collect { t ->
+            combine(selectedTeam.filterNotNull(), _season) { t, s -> t to s }.collect { (t, s) ->
                 val k = key(t)
-                if (dao.fixtureCount(k, season) == 0) {
+                if (dao.fixtureCount(k, s) == 0) {
                     val ids = dao.teamsOfLeague(t.nazione, t.campionato).map { it.id }
-                    dao.insertMatches(Fixtures.generate(ids, season, k))
+                    dao.insertMatches(Fixtures.generate(ids, s, k))
                 }
             }
         }
@@ -100,7 +104,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private fun playRounds(all: Boolean) {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
-            val ms = dao.matchesOnce(key(t), season)
+            val ms = dao.matchesOnce(key(t), _season.value)
             val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
             val cache = HashMap<Long, List<Player>>()
             val formations = Formation.values()
@@ -195,9 +199,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun generateYouths() {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
-            if (t.youthClaimed == season) return@launch
-            dao.insertYouths(Youths.generate(t, season))
-            dao.updateTeam(t.copy(youthClaimed = season))
+            val s = _season.value
+            if (t.youthClaimed == s) return@launch
+            dao.insertYouths(Youths.generate(t, s))
+            dao.updateTeam(t.copy(youthClaimed = s))
         }
     }
 
@@ -209,7 +214,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.insertPlayer(
                 Player(teamId = y.teamId, name = y.name, role = y.role, age = y.age,
-                    overall = y.overall, morale = 75, salary = 30_000, nationality = y.nationality)
+                    overall = y.overall, morale = 75, salary = 30_000, nationality = y.nationality,
+                    potential = y.potential, contract = 3)
             )
             dao.deleteYouth(y)
             _notice.value = "${y.name} promosso in prima squadra."
@@ -271,6 +277,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun resetDefaultsNow() {
         DataIO.wipe(dao)
+        prefs.edit().putInt("season_year", 2026).apply()
+        _season.value = seasonName(2026)
         SeedData.insertInto(ctx, dao)
     }
 
@@ -322,6 +330,72 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val t = selectedTeam.value ?: return@launch
             dao.insertPlayer(Player(teamId = t.id, name = "Nuovo giocatore", role = "C", age = 22,
                 overall = 60, morale = 70, salary = 50_000, nationality = "ITA"))
+        }
+    }
+
+    fun renew(p: Player, years: Int) {
+        viewModelScope.launch {
+            if (p.morale < 40) {
+                _notice.value = "${p.name} rifiuta di rinnovare (morale basso)."
+                return@launch
+            }
+            val wage = Progression.wage(p)
+            dao.updatePlayer(p.copy(contract = years, salary = wage))
+            _notice.value = "${p.name} ha rinnovato per $years anni a ${money(wage)} l'anno."
+        }
+    }
+
+    /** Fine stagione: età, crescita, ritiri, contratti, bilancio; nuova stagione. */
+    fun closeSeason() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val rng = kotlin.random.Random.Default
+            val byTeam = dao.allPlayers().groupBy { it.teamId }
+            val updated = ArrayList<Player>()
+            val removed = ArrayList<Player>()
+            val added = ArrayList<Player>()
+            val leavers = ArrayList<String>()
+            var report = ""
+            val newTeams = dao.allTeams().map { t ->
+                val keep = ArrayList<Player>()
+                (byTeam[t.id] ?: emptyList()).forEach { p ->
+                    val a = Progression.advance(p, rng)
+                    when {
+                        a.age >= 38 -> {
+                            removed += p
+                            if (t.id == me.id) leavers += "${p.name} (ritiro)"
+                        }
+                        a.contract <= 0 && t.id == me.id -> {
+                            removed += p
+                            leavers += "${p.name} (contratto scaduto)"
+                        }
+                        else -> {
+                            val f = if (a.contract <= 0) Progression.renewAI(a, rng) else a
+                            updated += f
+                            keep += f
+                        }
+                    }
+                }
+                val noKeeper = keep.none { it.role == "P" }
+                repeat((16 - keep.size).coerceAtLeast(0)) { i ->
+                    added += Progression.newYoung(t, rng, i == 0 && noKeeper)
+                }
+                val wages = keep.sumOf { it.salary }
+                val gate = t.stadiumCapacity.toLong() * t.ticketPrice * 7 / 10 * 19
+                val net = gate - wages * 4 / 10
+                if (t.id == me.id) report = "Bilancio stagione: ${money(net)}."
+                t.copy(budget = (t.budget + net).coerceAtLeast(0))
+            }
+            dao.updatePlayers(updated)
+            dao.deletePlayers(removed)
+            dao.insertPlayers(added)
+            dao.updateTeams(newTeams)
+            dao.clearYouths()
+            val y = prefs.getInt("season_year", 2026) + 1
+            prefs.edit().putInt("season_year", y).apply()
+            _season.value = seasonName(y)
+            _notice.value = "Nuova stagione ${seasonName(y)}. $report" +
+                (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
         }
     }
 

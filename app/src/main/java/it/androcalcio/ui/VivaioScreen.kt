@@ -70,6 +70,7 @@ fun VivaioScreen(
     scouted: List<Player>,
     reports: List<ScoutReport>,
     notice: String?,
+    season: String,
     onGenerate: () -> Unit,
     onPromote: (Youth) -> Unit,
     onDiscard: (Youth) -> Unit,
@@ -97,13 +98,13 @@ fun VivaioScreen(
         }
 
         if (tab == 0) {
-            if (team.youthClaimed != Market.SEASON) {
+            if (team.youthClaimed != season) {
                 Button(
                     onClick = onGenerate, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
-                ) { Text("Nuova leva ${Market.SEASON}") }
+                ) { Text("Nuova leva $season") }
             }
-            if (youths.isEmpty() && team.youthClaimed == Market.SEASON) {
+            if (youths.isEmpty() && team.youthClaimed == season) {
                 Text("Nessun giovane da valutare per questa stagione.", color = AC.TextDim)
             }
             LazyColumn(

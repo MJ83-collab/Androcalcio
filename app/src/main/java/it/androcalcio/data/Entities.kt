@@ -31,7 +31,9 @@ data class Player(
     val overall: Int,            // 1..99
     val morale: Int,             // 0..100
     val salary: Long,
-    val nationality: String
+    val nationality: String,
+    val potential: Int = 60,
+    val contract: Int = 3
 )
 
 @Entity(tableName = "matches")

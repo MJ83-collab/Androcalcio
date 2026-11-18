@@ -41,7 +41,9 @@ fun CalendarioScreen(
     teams: List<Team>,
     matches: List<MatchResult>,
     onNext: () -> Unit,
-    onSeason: () -> Unit
+    onSeason: () -> Unit,
+    season: String,
+    onClose: () -> Unit
 ) {
     if (team == null) return
     val byId = teams.associateBy { it.id }
@@ -52,7 +54,7 @@ fun CalendarioScreen(
     val shown = if (round == 0) (nextRound ?: lastRound) else round
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("${team.campionato} 2026/27", style = MaterialTheme.typography.headlineSmall)
+        Text("${team.campionato} $season", style = MaterialTheme.typography.headlineSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Calendario") })
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Classifica") })
@@ -65,6 +67,13 @@ fun CalendarioScreen(
             OutlinedButton(onClick = { round = 0; onSeason() }, enabled = nextRound != null) {
                 Text("Fine stagione")
             }
+        }
+
+        if (nextRound == null && matches.isNotEmpty()) {
+            Button(
+                onClick = { round = 0; onClose() }, modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = AC.Accent2, contentColor = AC.Bg)
+            ) { Text("Chiudi stagione e passa alla successiva") }
         }
 
         if (tab == 0) {

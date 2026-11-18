@@ -88,7 +88,9 @@ object SeedData {
                     overall = ov,
                     morale = rng.nextInt(50, 91),
                     salary = (ov - 30).coerceAtLeast(5) * 9_000L,
-                    nationality = if (rng.nextInt(100) < 75) nat else codes.values.random(rng)
+                    nationality = if (rng.nextInt(100) < 75) nat else codes.values.random(rng),
+                    potential = (ov + if (age < 24) rng.nextInt(0, 16) else rng.nextInt(0, 3)).coerceAtMost(99),
+                    contract = rng.nextInt(1, 5)
                 )
             }
         }

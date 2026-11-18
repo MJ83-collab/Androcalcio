@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -61,6 +62,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
+import it.androcalcio.engine.Progression
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.components.SectionTitle
@@ -93,6 +95,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     val players by vm.players.collectAsState()
     val report by vm.report.collectAsState()
     val matches by vm.matches.collectAsState()
+    val season by vm.season.collectAsState()
+    val globalNotice by vm.notice.collectAsState()
 
     val ask by vm.askStartup.collectAsState()
     if (ask) {
@@ -107,6 +111,15 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     TextButton(onClick = { vm.chooseStartup(2) }, modifier = Modifier.fillMaxWidth()) { Text("Continua come ora") }
                 }
             }
+        )
+    }
+
+    if (globalNotice != null && screen != Screen.VIVAIO && screen != Screen.EDITOR) {
+        AlertDialog(
+            onDismissRequest = { vm.clearNotice() },
+            title = { Text("Androcalcio") },
+            text = { Text(globalNotice ?: "") },
+            confirmButton = { TextButton(onClick = { vm.clearNotice() }) { Text("OK") } }
         )
     }
 
@@ -137,13 +150,13 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         Box(Modifier.padding(padding).fillMaxSize()) {
             when (screen) {
                 Screen.HOME -> HomeScreen(team, players) { screen = it }
-                Screen.ROSA -> RosaScreen(team, players)
+                Screen.ROSA -> RosaScreen(team, players) { p, y -> vm.renew(p, y) }
                 Screen.SQUADRE -> TeamList(teams, team?.id) {
                     vm.selectTeam(it)
                     screen = Screen.HOME
                 }
                 Screen.PARTITA -> PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() })
-                Screen.CALENDARIO -> CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() })
+                Screen.CALENDARIO -> CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() }, season, { vm.closeSeason() })
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsState()
                     val role by vm.marketRole.collectAsState()
@@ -160,7 +173,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     val reports by vm.reports.collectAsState()
                     val notice by vm.notice.collectAsState()
                     VivaioScreen(
-                        team, teams, players, youths, scouted, reports, notice,
+                        team, teams, players, youths, scouted, reports, notice, season,
                         { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
                         { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() }
                     )
@@ -313,9 +326,31 @@ private fun roleColor(role: String): Color = when (role) {
     else -> AC.Danger
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RosaScreen(team: Team?, players: List<Player>) {
+fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Unit) {
     if (team == null) return
+    var renew by remember { mutableStateOf<Player?>(null) }
+    renew?.let { p ->
+        var years by remember(p) { mutableStateOf(3) }
+        AlertDialog(
+            onDismissRequest = { renew = null },
+            title = { Text("Rinnovo ${p.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Contratto attuale: ${p.contract} anni · ${money(p.salary)}")
+                    Text("Richiesta: ${money(Progression.wage(p))} l'anno", color = AC.Accent)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (1..5).forEach { y ->
+                            FilterChip(selected = years == y, onClick = { years = y }, label = { Text("$y") })
+                        }
+                    }
+                }
+            },
+            confirmButton = { Button(onClick = { onRenew(p, years); renew = null }) { Text("Rinnova") } },
+            dismissButton = { TextButton(onClick = { renew = null }) { Text("Annulla") } }
+        )
+    }
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -331,7 +366,7 @@ fun RosaScreen(team: Team?, players: List<Player>) {
             }
         }
         items(players, key = { it.id }) { p ->
-            GlassCard(Modifier.fillMaxWidth()) {
+            GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { renew = p }) {
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier.size(34.dp).clip(RoundedCornerShape(10.dp))
@@ -343,7 +378,7 @@ fun RosaScreen(team: Team?, players: List<Player>) {
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
                         Text(p.name, style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "${p.age} anni · ${p.nationality} · morale ${p.morale}",
+                            "${p.age} anni · ${p.nationality} · morale ${p.morale} · contratto ${p.contract}",
                             style = MaterialTheme.typography.bodySmall,
                             color = AC.TextDim
                         )
