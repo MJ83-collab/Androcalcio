@@ -19,6 +19,7 @@ import it.androcalcio.data.AndrocalcioDatabase
 import it.androcalcio.data.Player
 import it.androcalcio.data.SeedData
 import it.androcalcio.data.Goal
+import it.androcalcio.data.Movimento
 import it.androcalcio.data.Staff
 import it.androcalcio.engine.Attr
 import it.androcalcio.engine.EventType
@@ -151,6 +152,16 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
     /** Piano di allenamento solo per la squadra dell'utente; le AI non si allenano in modo speciale. */
     private fun planFor(id: Long, userId: Long?) = if (id == userId) _training.value else null
+
+    /** Movimenti di cassa: registrati solo per la squadra dell'utente. */
+    val movimenti: StateFlow<List<Movimento>> =
+        selectedTeam.flatMapLatest { t -> t?.let { dao.movimenti(it.id) } ?: flowOf(emptyList()) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private suspend fun registra(teamId: Long, label: String, importo: Long, saldo: Long) {
+        if (teamId != selectedTeam.value?.id) return
+        dao.insertMovimento(Movimento(teamId = teamId, season = _season.value, label = label, importo = importo, saldo = saldo))
+    }
 
     fun setLine(l: DefLine) { _line.value = l; prefs.edit().putInt("linea", l.ordinal).apply() }
 
@@ -401,6 +412,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     dao.updateTeam(buyer.copy(budget = buyer.budget - price))
                     dao.updateTeam(seller.copy(budget = seller.budget + price))
                     dao.updatePlayer(p.copy(teamId = buyer.id))
+                    registra(buyer.id, "Acquisto ${p.name}", -price, buyer.budget - price)
                     OfferResult.Accepted("${p.name} è tuo per ${money(price)}.")
                 }
                 price >= (d * 0.85).toLong() -> OfferResult.Counter(p, d)
@@ -422,6 +434,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updateTeam(me.copy(budget = me.budget + price))
             dao.updateTeam(buyer.copy(budget = (buyer.budget - price).coerceAtLeast(0)))
             dao.updatePlayer(p.copy(teamId = buyer.id))
+            registra(me.id, "Vendita ${p.name} a ${buyer.name}", price, me.budget + price)
             _offer.value = OfferResult.Accepted("${p.name} ceduto a ${buyer.name} per ${money(price)}.")
         }
     }
@@ -490,6 +503,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 ScoutReport(me.id, it.id, (dao.report(me.id, it.id)?.observations ?: 0) + 1)
             })
             dao.updateTeam(me.copy(budget = me.budget - cost))
+            registra(me.id, "Scouting (${picks.size} giocatori)", -cost, me.budget - cost)
             _notice.value = "Lo scout ha osservato ${picks.size} giocatori (${money(cost)})."
         }
     }
@@ -504,6 +518,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val obs = (dao.report(me.id, p.id)?.observations ?: 0) + 1
             dao.upsertReports(listOf(ScoutReport(me.id, p.id, obs)))
             dao.updateTeam(me.copy(budget = me.budget - Scouting.FOLLOW_COST))
+            registra(me.id, "Osservazione ${p.name}", -Scouting.FOLLOW_COST, me.budget - Scouting.FOLLOW_COST)
         }
     }
 
@@ -784,6 +799,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.deletePlayers(removed)
             dao.insertPlayers(added)
             dao.updateTeams(newTeams)
+            newTeams.find { it.id == me.id }?.let { nt ->
+                registra(me.id, "Bilancio di fine stagione (incassi, ingaggi)", net, nt.budget - (prizes[me.id] ?: 0L))
+                (prizes[me.id] ?: 0L).takeIf { it != 0L }?.let { pr ->
+                    registra(me.id, "Premio piazzamento", pr, nt.budget)
+                }
+            }
 
             // Staff: un anno di contratto in meno; chi arriva a zero lascia la squadra
             val staffNext = staffAll.map { it.copy(contract = it.contract - 1) }

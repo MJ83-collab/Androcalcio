@@ -146,4 +146,12 @@ interface AndrocalcioDao {
 
     @Query("SELECT * FROM players")
     fun allPlayersFlow(): Flow<List<Player>>
+
+    @Insert
+    suspend fun insertMovimento(m: Movimento)
+
+    @Query("SELECT * FROM movimenti WHERE teamId = :teamId ORDER BY id DESC LIMIT :n")
+    fun movimenti(teamId: Long, n: Int = 60): Flow<List<Movimento>>
+
+    @Query("DELETE FROM movimenti") suspend fun clearMovimenti()
 }

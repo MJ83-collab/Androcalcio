@@ -69,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import it.androcalcio.AndrocalcioViewModel
+import it.androcalcio.data.Movimento
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.Progression
@@ -201,7 +202,10 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     val notice by vm.notice.collectAsState()
                     EditorScreen(vm, team, players, notice)
                 }
-                Screen.FINANZE -> FinanzeScreen(team, players)
+                Screen.FINANZE -> {
+                    val movimenti by vm.movimenti.collectAsState()
+                    FinanzeScreen(team, players, movimenti)
+                }
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
                     val everyone by vm.allPlayers.collectAsState()
@@ -523,7 +527,7 @@ private fun RosaHeaderRow() {
 }
 
 @Composable
-fun FinanzeScreen(team: Team?, players: List<Player>) {
+fun FinanzeScreen(team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList()) {
     if (team == null) return
     val wages = players.sumOf { it.salary }
     val gate = (team.stadiumCapacity * team.ticketPrice * 0.7).toLong()
@@ -541,6 +545,26 @@ fun FinanzeScreen(team: Team?, players: List<Player>) {
         )
         StatChip("Prezzo biglietto", "€ ${team.ticketPrice}", Modifier.fillMaxWidth())
         StatChip("Sponsor principale", team.sponsor, Modifier.fillMaxWidth())
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Movimenti di cassa", style = MaterialTheme.typography.titleMedium)
+                if (movimenti.isEmpty()) {
+                    Text("Nessun movimento registrato.", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                } else movimenti.forEach { m ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(Modifier.weight(1f)) {
+                            Text(m.label, style = MaterialTheme.typography.bodySmall)
+                            Text(m.season, color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
+                        }
+                        Text(
+                            (if (m.importo >= 0) "+" else "") + money(m.importo),
+                            color = if (m.importo >= 0) AC.Ok else AC.Danger,
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -109,3 +109,13 @@ data class ScoutReport(
     val playerId: Long,
     val observations: Int
 )
+
+@Entity(tableName = "movimenti")
+data class Movimento(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val teamId: Long,
+    val season: String,
+    val label: String,
+    val importo: Long,   // positivo = entrata, negativo = uscita
+    val saldo: Long       // budget dopo questo movimento
+)
