@@ -76,12 +76,12 @@ fun CalendarioScreen(
             ) { Text("Chiudi stagione e passa alla successiva") }
         }
 
-        if (tab == 0) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items((1..lastRound).toList()) { r ->
-                    FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
-                }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items((1..lastRound).toList()) { r ->
+                FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
             }
+        }
+        if (tab == 0) {
             LazyColumn(Modifier.weight(1f)) {
                 items(matches.filter { it.round == shown }, key = { it.id }) { m ->
                     val h = byId[m.homeTeamId]
@@ -104,7 +104,12 @@ fun CalendarioScreen(
             }
         } else {
             val league = teams.filter { it.nazione == team.nazione && it.campionato == team.campionato }
-            val rows = standings(league, matches)
+            // Divisioni della nazione in ordine: la prima è la massima serie
+            val tiers = teams.filter { it.nazione == team.nazione }.groupBy { it.campionato }
+                .entries.sortedBy { e -> e.value.minOf { it.id } }.map { it.key }
+            val tier = tiers.indexOf(team.campionato)
+            val kk = minOf(3, league.size / 4)
+            val rows = standings(league, matches.filter { it.round <= shown })
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Text("#", Modifier.width(28.dp), color = AC.TextDim)
                 Text("Squadra", Modifier.weight(1f), color = AC.TextDim)
@@ -119,6 +124,12 @@ fun CalendarioScreen(
                         Modifier.fillMaxWidth().padding(vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val zone = when {
+                            tier > 0 && i < kk -> "▲"
+                            tier in 0 until tiers.lastIndex && i >= rows.size - kk -> "▼"
+                            else -> ""
+                        }
+                        Text(zone, Modifier.width(16.dp), color = if (zone == "▲") AC.Ok else AC.Danger)
                         Text("${i + 1}", Modifier.width(28.dp), color = AC.TextDim)
                         Crest(r.team, 22.dp)
                         Text(r.team.name, Modifier.weight(1f).padding(start = 8.dp), color = c, maxLines = 1)

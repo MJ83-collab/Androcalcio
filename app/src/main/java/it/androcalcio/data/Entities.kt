@@ -75,6 +75,16 @@ data class Youth(
     val nationality: String
 )
 
+@Entity(tableName = "goals")
+data class Goal(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val season: String,
+    val league: String,
+    val round: Int,
+    val teamId: Long,
+    val playerId: Long
+)
+
 @Entity(tableName = "scout_reports", primaryKeys = ["teamId", "playerId"])
 data class ScoutReport(
     val teamId: Long,

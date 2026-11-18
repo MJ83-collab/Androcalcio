@@ -10,7 +10,9 @@ import androidx.lifecycle.viewModelScope
 import it.androcalcio.data.AndrocalcioDatabase
 import it.androcalcio.data.Player
 import it.androcalcio.data.SeedData
+import it.androcalcio.data.Goal
 import it.androcalcio.data.Staff
+import it.androcalcio.engine.EventType
 import it.androcalcio.data.Team
 import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
@@ -119,6 +121,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val cache = HashMap<Long, List<Player>>()   // rose complete, aggiornate dopo ogni partita
             val formations = Formation.values()
             val rng = kotlin.random.Random.Default
+            val goalsAcc = ArrayList<Goal>()
             val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
                 .let { if (all) it else it.take(1) }
             for (m in ms.filter { !it.played && it.round in rounds }) {
@@ -133,10 +136,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
+                goalsAcc += r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
+                    Goal(season = _season.value, league = key(t), round = m.round,
+                        teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
+                }
                 cache[h.id] = Medical.afterMatch(hp, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
                 cache[a.id] = Medical.afterMatch(ap, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
             }
             dao.updatePlayers(cache.values.flatten())
+            dao.insertGoals(goalsAcc)
         }
     }
 
@@ -364,6 +372,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    val goals: StateFlow<List<Goal>> =
+        combine(selectedTeam, _season) { t, s -> t to s }
+            .flatMapLatest { (t, s) -> if (t == null) flowOf(emptyList()) else dao.goals(key(t), s) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val allPlayers: StateFlow<List<Player>> =
+        dao.allPlayersFlow().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     // ---- Staff: allenatore e preparatore della tua squadra ----
     val staff: StateFlow<List<Staff>> =
         selectedTeam.flatMapLatest { t ->
@@ -536,6 +552,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             // Il club torna senza figura: vivaio e scout riprendono l'abilità "vuoto"
             staffNext.filter { it.contract <= 0 }.forEach { syncTeamSkill(it.teamId, it.role, Staffing.VUOTO) }
             dao.clearYouths()
+            dao.clearGoals()
             val y = prefs.getInt("season_year", 2026) + 1
             prefs.edit().putInt("season_year", y).apply()
             _season.value = seasonName(y)

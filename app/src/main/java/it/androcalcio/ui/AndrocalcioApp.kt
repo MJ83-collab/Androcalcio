@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
@@ -81,6 +82,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String) {
     CALENDARIO("Calendario", Icons.Filled.DateRange, "Giornate e risultati"),
     FINANZE("Finanze", Icons.Filled.AccountBox, "Bilancio e sponsor"),
     STAFF("Staff", Icons.Filled.Settings, "Allenatori e preparatori"),
+    STATISTICHE("Statistiche", Icons.Filled.Info, "Marcatori e portieri"),
     EDITOR("Editor", Icons.Filled.Build, "Modifica i dati")
 }
 
@@ -172,6 +174,11 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     EditorScreen(vm, team, players, notice)
                 }
                 Screen.FINANZE -> FinanzeScreen(team, players)
+                Screen.STATISTICHE -> {
+                    val goals by vm.goals.collectAsState()
+                    val everyone by vm.allPlayers.collectAsState()
+                    StatsScreen(team, teams, matches, goals, everyone, season)
+                }
                 Screen.STAFF -> {
                     val staffList by vm.staff.collectAsState()
                     val cands by vm.candidates.collectAsState()
@@ -271,18 +278,16 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         }
 
         val ctx = androidx.compose.ui.platform.LocalContext.current
-        GlassCard(Modifier.fillMaxWidth()) {
-            Row(
-                Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Tema PC Calcio", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                androidx.compose.material3.Switch(
-                    checked = AC.pcCalcio,
-                    onCheckedChange = {
-                        AC.pcCalcio = it
-                        ctx.getSharedPreferences("androcalcio", 0).edit().putBoolean("tema_pc", it).apply()
-                    }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Tema", style = MaterialTheme.typography.titleSmall)
+            listOf("Scuro", "Turchese", "Blu").forEachIndexed { i, n ->
+                androidx.compose.material3.FilterChip(
+                    selected = AC.tema == i,
+                    onClick = {
+                        AC.tema = i
+                        ctx.getSharedPreferences("androcalcio", 0).edit().putInt("tema", i).apply()
+                    },
+                    label = { Text(n) }
                 )
             }
         }
@@ -290,7 +295,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         SectionTitle("Menu")
         val tiles = listOf(
             Screen.ROSA, Screen.PARTITA, Screen.MERCATO, Screen.VIVAIO,
-            Screen.CALENDARIO, Screen.FINANZE, Screen.STAFF, Screen.EDITOR,
+            Screen.CALENDARIO, Screen.FINANZE, Screen.STAFF, Screen.STATISTICHE, Screen.EDITOR,
             Screen.SQUADRE
         )
         tiles.chunked(2).forEach { row ->

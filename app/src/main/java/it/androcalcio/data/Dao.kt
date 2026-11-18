@@ -135,4 +135,15 @@ interface AndrocalcioDao {
     suspend fun deleteStaffs(list: List<Staff>)
 
     @Query("DELETE FROM staff") suspend fun clearStaff()
+
+    @Insert
+    suspend fun insertGoals(list: List<Goal>)
+
+    @Query("SELECT * FROM goals WHERE league = :league AND season = :season")
+    fun goals(league: String, season: String): Flow<List<Goal>>
+
+    @Query("DELETE FROM goals") suspend fun clearGoals()
+
+    @Query("SELECT * FROM players")
+    fun allPlayersFlow(): Flow<List<Player>>
 }

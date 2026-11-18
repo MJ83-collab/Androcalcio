@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class],
-    version = 6,
+    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class],
+    version = 7,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -34,11 +34,24 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
             }
         }
 
+        /** 6 -> 7: tabella dei gol (marcatori e portieri). */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `goals` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`season` TEXT NOT NULL, `league` TEXT NOT NULL, " +
+                        "`round` INTEGER NOT NULL, `teamId` INTEGER NOT NULL, " +
+                        "`playerId` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         fun create(context: Context): AndrocalcioDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).addMigrations(MIGRATION_5_6).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7).fallbackToDestructiveMigration().build()
     }
 }

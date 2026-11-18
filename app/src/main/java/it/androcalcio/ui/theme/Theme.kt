@@ -5,7 +5,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -15,19 +15,22 @@ import androidx.compose.ui.unit.sp
 // Due temi: "scuro" (design canvas Androcalcio) e "PC Calcio" (turchese, stile dei vecchi gestionali).
 // I colori sono letti da uno stato: cambiando AC.pcCalcio tutte le schermate si ridisegnano.
 object AC {
-    var pcCalcio by mutableStateOf(false)
+    /** 0 = scuro, 1 = turchese PC Calcio, 2 = blu navy PC Calcio. */
+    var tema by mutableIntStateOf(0)
 
-    val Bg get() = if (pcCalcio) Color(0xFF053A40) else Color(0xFF0A0E13)
-    val Surface get() = if (pcCalcio) Color(0xFF0C5A60) else Color(0xFF131A22)
-    val SurfaceHi get() = if (pcCalcio) Color(0xFF14787D) else Color(0xFF1B2530)
-    val Border get() = if (pcCalcio) Color(0x80A5F2EC) else Color(0x1FFFFFFF)
-    val Accent get() = if (pcCalcio) Color(0xFFFFE14A) else Color(0xFFB6FF3C)
-    val Accent2 get() = if (pcCalcio) Color(0xFF5FF5E6) else Color(0xFF4FD1FF)
-    val Ok get() = if (pcCalcio) Color(0xFF7CF08A) else Color(0xFF3DDC84)
+    private fun pick(a: Long, b: Long, c: Long) = Color(when (tema) { 1 -> b; 2 -> c; else -> a })
+
+    val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740)
+    val Surface get() = pick(0xFF131A22, 0xFF0C5A60, 0xFF14307A)
+    val SurfaceHi get() = pick(0xFF1B2530, 0xFF14787D, 0xFF2243A0)
+    val Border get() = pick(0x1FFFFFFF, 0x80A5F2EC, 0x80B4C8FF)
+    val Accent get() = pick(0xFFB6FF3C, 0xFFFFE14A, 0xFFFFD21F)
+    val Accent2 get() = pick(0xFF4FD1FF, 0xFF5FF5E6, 0xFF7FC4FF)
+    val Ok get() = pick(0xFF3DDC84, 0xFF7CF08A, 0xFF7CF08A)
     val Warn get() = Color(0xFFFFC24B)
-    val Danger get() = if (pcCalcio) Color(0xFFFF6B6B) else Color(0xFFFF5C72)
-    val Text get() = if (pcCalcio) Color(0xFFF2FBFA) else Color(0xFFE8EEF4)
-    val TextDim get() = if (pcCalcio) Color(0xFFA9DAD6) else Color(0xFF8FA0B2)
+    val Danger get() = pick(0xFFFF5C72, 0xFFFF6B6B, 0xFFFF7A5C)
+    val Text get() = pick(0xFFE8EEF4, 0xFFF2FBFA, 0xFFF4F7FF)
+    val TextDim get() = pick(0xFF8FA0B2, 0xFFA9DAD6, 0xFFB4C4EE)
 }
 
 private fun scheme() = darkColorScheme(

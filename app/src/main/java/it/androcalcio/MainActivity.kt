@@ -11,7 +11,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("androcalcio", 0)
-        AC.pcCalcio = prefs.getBoolean("tema_pc", false)
+        AC.tema = prefs.getInt("tema", if (prefs.getBoolean("tema_pc", false)) 1 else 0)
         setContent {
             AndrocalcioTheme {
                 AndrocalcioApp()

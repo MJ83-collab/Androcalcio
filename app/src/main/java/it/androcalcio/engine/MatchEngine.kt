@@ -13,7 +13,8 @@ data class MatchEvent(
     val home: Boolean,
     val text: String,
     val x: Float,   // 0..1, la squadra di casa attacca verso destra
-    val y: Float
+    val y: Float,
+    val playerId: Long = 0
 )
 
 data class MatchReport(
@@ -109,7 +110,8 @@ object MatchEngine {
                 val ratio = att.atk / dfn.def
                 if (rng.nextDouble() < (0.45 * ratio).coerceIn(0.2, 0.7)) {
                     if (homeAtt) hs++ else asht++
-                    val who = shooter(att.players, rng)?.name ?: "Attaccante"
+                    val sh = shooter(att.players, rng)
+                    val who = sh?.name ?: "Attaccante"
                     val (x, y) = pos(homeAtt)
                     val pGoal = (0.22 * (att.atk / dfn.gk).pow(1.5)).coerceIn(0.08, 0.45)
                     val r = rng.nextDouble()
@@ -117,7 +119,7 @@ object MatchEngine {
                         r < pGoal -> {
                             if (homeAtt) hg++ else ag++
                             events += MatchEvent(minute, EventType.GOAL, homeAtt,
-                                "Gol! $who (${team.shortName})", x, y)
+                                "Gol! $who (${team.shortName})", x, y, sh?.id ?: 0L)
                         }
                         r < pGoal + (1 - pGoal) * 0.4 -> events += MatchEvent(
                             minute, EventType.SAVE, homeAtt,
