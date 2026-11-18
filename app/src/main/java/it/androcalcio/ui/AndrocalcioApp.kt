@@ -495,6 +495,9 @@ fun RosaScreen(
                         fontWeight = if (v == p.overall) FontWeight.Bold else FontWeight.Normal,
                         style = MaterialTheme.typography.bodySmall)
                 }
+                Text("${p.condition}", Modifier.width(26.dp), textAlign = TextAlign.End,
+                    color = if (p.condition < 60) AC.Danger else if (p.condition < 80) AC.Warn else AC.Ok,
+                    style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -507,7 +510,7 @@ private fun RosaHeaderRow() {
             style = MaterialTheme.typography.labelSmall)
         Text("R", Modifier.width(18.dp), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
         Text("Nome", Modifier.weight(1f), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
-        listOf("ET", "VE", "RE", "QU", "FO", "LIV").forEach {
+        listOf("ET", "VE", "RE", "QU", "FO", "LIV", "CF").forEach {
             Text(it, Modifier.width(26.dp), textAlign = TextAlign.End, color = AC.Accent,
                 style = MaterialTheme.typography.labelSmall)
         }

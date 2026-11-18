@@ -64,16 +64,28 @@ object Staffing {
     }
 }
 
-/** Infortuni: dopo ogni partita una squadra può perdere un giocatore per 1-3 turni. */
+/** Infortuni e condizione fisica: dopo ogni partita una squadra può perdere un giocatore per 1-3 turni. */
 object Medical {
     /** I giocatori disponibili: gli infortunati non scendono in campo. */
     fun available(ps: List<Player>): List<Player> = ps.filter { it.injuredRounds == 0 }
 
-    /** Dopo una partita: gli infortunati recuperano di un turno, poi può esserci un nuovo infortunio. */
-    fun afterMatch(ps: List<Player>, prep: Int, rng: Random): List<Player> {
+    /** Calo di condizione per chi ha giocato: più alto per chi ha poca resistenza (RE) o è più anziano. */
+    private fun conditionDrop(p: Player): Int = (14 - p.re / 12 + (p.age - 24).coerceAtLeast(0) / 4).coerceIn(6, 20)
+
+    /** Recupero per chi non ha giocato: un buon preparatore lo accelera. */
+    private fun conditionGain(prep: Int): Int = (10 + (prep - Staffing.NEUTRAL) / 6).coerceIn(6, 18)
+
+    /**
+     * Dopo una partita: chi è sceso in campo (playedIds) perde condizione, gli altri recuperano;
+     * gli infortunati recuperano di un turno, poi può esserci un nuovo infortunio.
+     */
+    fun afterMatch(ps: List<Player>, playedIds: Set<Long>, prep: Int, rng: Random): List<Player> {
         val healed = ps.map {
             val fo = (it.fo + rng.nextInt(-4, 5)).coerceIn(40, 99)   // la forma oscilla di partita in partita
-            if (it.injuredRounds > 0) it.copy(injuredRounds = it.injuredRounds - 1, fo = fo) else it.copy(fo = fo)
+            val cond = if (it.id in playedIds) (it.condition - conditionDrop(it)).coerceAtLeast(35)
+                else (it.condition + conditionGain(prep)).coerceAtMost(100)
+            val base = it.copy(fo = fo, condition = cond)
+            if (it.injuredRounds > 0) base.copy(injuredRounds = it.injuredRounds - 1) else base
         }
         if (rng.nextDouble() >= Staffing.injuryChance(prep)) return healed
         val ok = healed.indices.filter { healed[it].injuredRounds == 0 }

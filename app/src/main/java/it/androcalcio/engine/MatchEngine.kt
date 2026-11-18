@@ -27,7 +27,9 @@ data class MatchReport(
     val homePossession: Int,
     val events: List<MatchEvent>,
     val homeFormation: Formation = Formation.F442,
-    val awayFormation: Formation = Formation.F442
+    val awayFormation: Formation = Formation.F442,
+    val homePlayed: Set<Long> = emptySet(),   // chi è sceso in campo (titolari + subentrati), per la condizione
+    val awayPlayed: Set<Long> = emptySet()
 )
 
 /**

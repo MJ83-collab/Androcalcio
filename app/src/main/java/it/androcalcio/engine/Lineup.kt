@@ -12,8 +12,12 @@ object Lineup {
         return mapOf("P" to 1, "D" to d, "C" to f.lines.sum() - d - a, "A" to a)
     }
 
-    private fun score(p: Player, role: String): Double = when (role) {
-        "P" -> Attr.gk(p); "D" -> Attr.def(p); "C" -> Attr.mid(p); else -> Attr.atk(p)
+    private fun score(p: Player, role: String): Double {
+        val base = when (role) {
+            "P" -> Attr.gk(p); "D" -> Attr.def(p); "C" -> Attr.mid(p); else -> Attr.atk(p)
+        }
+        // Sotto il 75% di condizione l'allenatore comincia a preferire chi è più fresco
+        return base * (0.7 + 0.3 * (p.condition.coerceAtLeast(35) / 100.0))
     }
 
     /** Proposta dell'allenatore: i migliori disponibili per ogni ruolo del modulo. */

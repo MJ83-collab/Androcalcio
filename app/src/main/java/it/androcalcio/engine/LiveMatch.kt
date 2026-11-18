@@ -33,6 +33,9 @@ class LiveMatch(
         split(homePlayers, homeBench, homeF).let { xiH = it.first; benchH = it.second }
         split(awayPlayers, awayBench, awayF).let { xiA = it.first; benchA = it.second }
     }
+    // Chi è sceso in campo (titolari + chi è entrato), per il calo di condizione a fine partita
+    private val playedH = xiH.map { it.id }.toMutableSet()
+    private val playedA = xiA.map { it.id }.toMutableSet()
 
     private val energy = HashMap<Long, Double>()
     var subsH = 0; private set
@@ -109,6 +112,7 @@ class LiveMatch(
         val xi = if (homeSide) xiH else xiA
         val bench = if (homeSide) benchH else benchA
         xi[xi.indexOf(out)] = inP; bench -= inP
+        (if (homeSide) playedH else playedA) += inP.id
         if (homeSide) subsH++ else subsA++
         val t = if (homeSide) home else away
         events += MatchEvent(minute, EventType.SUB, homeSide,
@@ -220,5 +224,6 @@ class LiveMatch(
         while (!finished) step()
     }
 
-    fun report() = MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events.toList(), homeF, awayF)
+    fun report() = MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events.toList(), homeF, awayF,
+        playedH.toSet(), playedA.toSet())
 }

@@ -52,7 +52,8 @@ data class Player(
     @ColumnInfo(defaultValue = "50") val ri: Int = 50,
     val foot: String = "D",      // D destro, S mancino, A ambidestro
     val pos: String = "",        // ruolo dettagliato: POR TD TS DC MED REG INT MP ES CA
-    @ColumnInfo(defaultValue = "0") val starter: Boolean = false   // titolare scelto dall'utente
+    @ColumnInfo(defaultValue = "0") val starter: Boolean = false,  // titolare scelto dall'utente
+    @ColumnInfo(defaultValue = "100") val condition: Int = 100     // condizione fisica 0..100, tra una partita e l'altra
 )
 
 @Entity(tableName = "staff")

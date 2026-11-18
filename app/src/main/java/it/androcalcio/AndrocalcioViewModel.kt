@@ -230,8 +230,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     Goal(season = _season.value, league = key(t), round = m.round,
                         teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
                 }
-                cache[h.id] = Medical.afterMatch(hp, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
-                cache[a.id] = Medical.afterMatch(ap, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
+                cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
+                cache[a.id] = Medical.afterMatch(ap, r.awayPlayed, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
             }
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
@@ -342,7 +342,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val staffBy = dao.allStaff().groupBy { it.teamId }
             val rng = kotlin.random.Random.Default
             for (id in listOf(mr.homeTeamId, mr.awayTeamId)) {
-                dao.updatePlayers(Medical.afterMatch(dao.playersOnce(id), Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng))
+                val played = if (id == mr.homeTeamId) r.homePlayed else r.awayPlayed
+                dao.updatePlayers(Medical.afterMatch(dao.playersOnce(id), played, Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng))
             }
         }
         _live.value = _live.value?.copy(saved = true, tick = i.tick + 1)
@@ -677,9 +678,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             homeLine = if (h.id == me.id) _line.value else null,
                             awayLine = if (a.id == me.id) _line.value else null
                         )
-                        cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(),
+                        cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
                             Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
-                        cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(),
+                        cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(), r.awayPlayed,
                             Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
