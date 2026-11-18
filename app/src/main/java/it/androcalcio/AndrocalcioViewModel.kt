@@ -11,6 +11,9 @@ import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.MatchEngine
+import it.androcalcio.engine.Market
+import it.androcalcio.engine.OfferResult
+import it.androcalcio.ui.components.money
 import it.androcalcio.engine.MatchReport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,6 +109,59 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun playNextRound() = playRounds(false)
     fun playSeason() = playRounds(true)
+
+    private val _role = MutableStateFlow("%")
+    val marketRole: StateFlow<String> = _role
+    fun setMarketRole(r: String) { _role.value = r }
+
+    val market: StateFlow<List<Player>> =
+        combine(selectedTeam, _role) { t, r -> t to r }
+            .flatMapLatest { (t, r) ->
+                if (t == null) flowOf(emptyList()) else dao.market(t.id, r)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _offer = MutableStateFlow<OfferResult?>(null)
+    val offerResult: StateFlow<OfferResult?> = _offer
+    fun clearOffer() { _offer.value = null }
+
+    fun offer(p: Player, price: Long) {
+        viewModelScope.launch {
+            val buyer = selectedTeam.value ?: return@launch
+            val d = Market.demand(p)
+            _offer.value = when {
+                players.value.size >= Market.MAX_SQUAD ->
+                    OfferResult.Rejected("Rosa piena (massimo ${Market.MAX_SQUAD} giocatori).")
+                price > buyer.budget -> OfferResult.Rejected("Budget insufficiente.")
+                price >= d -> {
+                    val seller = dao.team(p.teamId)
+                    dao.updateTeam(buyer.copy(budget = buyer.budget - price))
+                    dao.updateTeam(seller.copy(budget = seller.budget + price))
+                    dao.updatePlayer(p.copy(teamId = buyer.id))
+                    OfferResult.Accepted("${p.name} è tuo per ${money(price)}.")
+                }
+                price >= (d * 0.85).toLong() -> OfferResult.Counter(p, d)
+                else -> OfferResult.Rejected("Offerta troppo bassa: il club non tratta.")
+            }
+        }
+    }
+
+    fun sell(p: Player) {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            if (players.value.size <= Market.MIN_SQUAD) {
+                _offer.value = OfferResult.Rejected("Rosa troppo corta (minimo ${Market.MIN_SQUAD}).")
+                return@launch
+            }
+            val price = (Market.value(p) * 0.9).toLong()
+            val buyer = teams.value.filter { it.id != me.id && it.campionato == me.campionato }
+                .randomOrNull() ?: return@launch
+            dao.updateTeam(me.copy(budget = me.budget + price))
+            dao.updateTeam(buyer.copy(budget = (buyer.budget - price).coerceAtLeast(0)))
+            dao.updatePlayer(p.copy(teamId = buyer.id))
+            _offer.value = OfferResult.Accepted("${p.name} ceduto a ${buyer.name} per ${money(price)}.")
+        }
+    }
 
     fun selectTeam(team: Team) {
         selectedId.value = team.id

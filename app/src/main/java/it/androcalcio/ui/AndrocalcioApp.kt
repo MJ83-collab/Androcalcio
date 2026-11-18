@@ -125,6 +125,16 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 Screen.PARTITA -> PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() })
                 Screen.CALENDARIO -> CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() })
+                Screen.MERCATO -> {
+                    val market by vm.market.collectAsState()
+                    val role by vm.marketRole.collectAsState()
+                    val offer by vm.offerResult.collectAsState()
+                    MercatoScreen(
+                        team, teams, players, market, role, offer,
+                        { vm.setMarketRole(it) }, { p, price -> vm.offer(p, price) },
+                        { vm.sell(it) }, { vm.clearOffer() }
+                    )
+                }
                 Screen.FINANZE -> FinanzeScreen(team, players)
                 else -> ComingSoon(screen)
             }
