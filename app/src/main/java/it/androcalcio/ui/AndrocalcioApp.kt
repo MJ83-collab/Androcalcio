@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Movimento
+import it.androcalcio.engine.Stadium
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.Progression
@@ -204,7 +205,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 Screen.FINANZE -> {
                     val movimenti by vm.movimenti.collectAsState()
-                    FinanzeScreen(team, players, movimenti)
+                    FinanzeScreen(team, players, movimenti) { vm.expandStadium() }
                 }
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
@@ -527,7 +528,7 @@ private fun RosaHeaderRow() {
 }
 
 @Composable
-fun FinanzeScreen(team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList()) {
+fun FinanzeScreen(team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList(), onExpand: () -> Unit = {}) {
     if (team == null) return
     val wages = players.sumOf { it.salary }
     val gate = (team.stadiumCapacity * team.ticketPrice * 0.7).toLong()
@@ -545,6 +546,20 @@ fun FinanzeScreen(team: Team?, players: List<Player>, movimenti: List<Movimento>
         )
         StatChip("Prezzo biglietto", "€ ${team.ticketPrice}", Modifier.fillMaxWidth())
         StatChip("Sponsor principale", team.sponsor, Modifier.fillMaxWidth())
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Stadio: ${team.stadiumCapacity} posti", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Ampliamento di ${Stadium.STEP} posti per ${money(Stadium.blockCost)}. " +
+                        "Più posti = più incasso a partita. Tetto ${Stadium.MAX_CAPACITY} posti.",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall
+                )
+                Button(
+                    onClick = onExpand,
+                    enabled = Stadium.canExpand(team.stadiumCapacity) && team.budget >= Stadium.blockCost
+                ) { Text("Amplia stadio") }
+            }
+        }
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Movimenti di cassa", style = MaterialTheme.typography.titleMedium)

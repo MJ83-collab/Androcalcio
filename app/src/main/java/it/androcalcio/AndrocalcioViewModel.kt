@@ -2,6 +2,7 @@ package it.androcalcio
 
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
+import it.androcalcio.engine.Stadium
 import it.androcalcio.engine.TrainFocus
 import it.androcalcio.engine.TrainIntensity
 import it.androcalcio.engine.TrainingPlan
@@ -481,6 +482,24 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             )
             dao.deleteYouth(y)
             _notice.value = "${y.name} promosso in prima squadra."
+        }
+    }
+
+    /** Amplia lo stadio della tua squadra di un blocco di posti, pagato dal budget. */
+    fun expandStadium() {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            if (!Stadium.canExpand(me.stadiumCapacity)) {
+                _notice.value = "Stadio al massimo (${Stadium.MAX_CAPACITY} posti)."
+                return@launch
+            }
+            if (Stadium.blockCost > me.budget) {
+                _notice.value = "Budget insufficiente (servono ${money(Stadium.blockCost)})."
+                return@launch
+            }
+            dao.updateTeam(me.copy(stadiumCapacity = me.stadiumCapacity + Stadium.STEP, budget = me.budget - Stadium.blockCost))
+            registra(me.id, "Ampliamento stadio (+${Stadium.STEP} posti)", -Stadium.blockCost, me.budget - Stadium.blockCost)
+            _notice.value = "Stadio ampliato a ${me.stadiumCapacity + Stadium.STEP} posti."
         }
     }
 
