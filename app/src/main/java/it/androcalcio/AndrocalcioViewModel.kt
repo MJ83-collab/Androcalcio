@@ -25,6 +25,7 @@ import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.Lineup
+import it.androcalcio.engine.LiveMatch
 import it.androcalcio.data.ScoutReport
 import it.androcalcio.data.Youth
 import it.androcalcio.engine.MatchEngine
@@ -78,17 +79,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun play(home: Team, away: Team, formation: Formation) {
         viewModelScope.launch {
-            val all = dao.playersOnce(home.id)
-            val hp = Lineup.resolve(all, formation).xi
-            val ap = Medical.available(dao.playersOnce(away.id))
-            val staffMap = dao.allStaff().groupBy { it.teamId }
-            _report.value = MatchEngine.simulate(
-                home, hp, away, ap, formation, Formation.values().random(),
-                Staffing.skill(staffMap, home.id, Staffing.ALLENATORE),
-                Staffing.skill(staffMap, away.id, Staffing.ALLENATORE),
-                homeMent = _mentality.value,
-                homeBench = Medical.available(all) - hp.toSet()
-            )
+            setFormation(formation)
+            _live.value = buildLive(home, away, true, null)
+            startTicker()
         }
     }
 
@@ -181,8 +174,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun playRounds(all: Boolean) {
-        viewModelScope.launch {
-            val t = selectedTeam.value ?: return@launch
+        viewModelScope.launch { runRounds(all, null) }
+    }
+
+    /** Gioca la prossima giornata (o tutte); skipId = la tua partita, giocata a parte dal vivo. */
+    private suspend fun runRounds(all: Boolean, skipId: Long?) {
+        run {
+            val t = selectedTeam.value ?: return
             ensureAiStaff(t.id)
             val ms = dao.matchesOnce(key(t), _season.value)
             val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
@@ -194,7 +192,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val goalsAcc = ArrayList<Goal>()
             val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
                 .let { if (all) it else it.take(1) }
-            for (m in ms.filter { !it.played && it.round in rounds }) {
+            for (m in ms.filter { !it.played && it.round in rounds && it.id != skipId }) {
                 val h = teamsById[m.homeTeamId] ?: continue
                 val a = teamsById[m.awayTeamId] ?: continue
                 val hp = cache.getOrPut(h.id) { dao.playersOnce(h.id) }
@@ -229,6 +227,114 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun playNextRound() = playRounds(false)
     fun playSeason() = playRounds(true)
+
+    // ---- Partita dal vivo: pausa, velocità, cambi e mentalità decisi da te ----
+    data class LiveInfo(
+        val m: LiveMatch, val tick: Int = 0, val paused: Boolean = false, val speed: Int = 1,
+        val userHome: Boolean = true, val league: MatchResult? = null, val saved: Boolean = false
+    )
+    private val _live = MutableStateFlow<LiveInfo?>(null)
+    val live: StateFlow<LiveInfo?> = _live
+    private var liveJob: kotlinx.coroutines.Job? = null
+
+    private fun bump() { _live.value = _live.value?.let { it.copy(tick = it.tick + 1) } }
+
+    private suspend fun buildLive(home: Team, away: Team, userHome: Boolean, league: MatchResult?): LiveInfo {
+        val staffBy = dao.allStaff().groupBy { it.teamId }
+        val me = if (userHome) home else away
+        val all = dao.playersOnce(me.id)
+        val res = Lineup.resolve(all, _formation.value)
+        if (res.notes.isNotEmpty()) _notice.value = res.notes.joinToString("\n")
+        val myBench = Medical.available(all) - res.xi.toSet()
+        val opp = Medical.available(dao.playersOnce(if (userHome) away.id else home.id))
+        val oppF = Formation.values().random()
+        val m = LiveMatch(
+            home, if (userHome) res.xi else opp, away, if (userHome) opp else res.xi,
+            if (userHome) _formation.value else oppF, if (userHome) oppF else _formation.value,
+            Staffing.skill(staffBy, home.id, Staffing.ALLENATORE), Staffing.skill(staffBy, away.id, Staffing.ALLENATORE),
+            if (userHome) _mentality.value else null, if (userHome) null else _mentality.value,
+            if (userHome) myBench else null, if (userHome) null else myBench,
+            manualHome = userHome, manualAway = !userHome
+        )
+        return LiveInfo(m, userHome = userHome, league = league)
+    }
+
+    private fun startTicker() {
+        liveJob?.cancel()
+        liveJob = viewModelScope.launch {
+            while (true) {
+                val i = _live.value ?: return@launch
+                if (i.m.finished) break
+                if (!i.paused) { i.m.step(); bump() }
+                kotlinx.coroutines.delay(if (i.speed >= 20) 50L else 1000L / i.speed)
+            }
+            finishLive()
+        }
+    }
+
+    /** Prossima giornata guardando la tua partita: le altre si giocano subito in automatico. */
+    fun playNextRoundLive() {
+        viewModelScope.launch {
+            val t = selectedTeam.value ?: return@launch
+            val ms = dao.matchesOnce(key(t), _season.value)
+            val round = ms.filter { !it.played }.minOfOrNull { it.round } ?: return@launch
+            val mine = ms.firstOrNull { !it.played && it.round == round && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
+            runRounds(false, mine?.id)
+            if (mine == null) { _notice.value = "In questa giornata la tua squadra riposa."; return@launch }
+            val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
+            val h = teamsById[mine.homeTeamId] ?: return@launch
+            val a = teamsById[mine.awayTeamId] ?: return@launch
+            _live.value = buildLive(h, a, h.id == t.id, mine)
+            startTicker()
+        }
+    }
+
+    fun setLivePaused(p: Boolean) { _live.value = _live.value?.copy(paused = p) }
+    fun setLiveSpeed(x: Int) { _live.value = _live.value?.copy(speed = x) }
+    fun liveSub(out: Player, inP: Player) {
+        val i = _live.value ?: return
+        if (!i.m.substitute(i.userHome, out, inP)) _notice.value = "Cambio non possibile."
+        bump()
+    }
+    fun liveMentality(m: Mentality) {
+        val i = _live.value ?: return
+        i.m.setMentality(i.userHome, m); bump()
+    }
+    /** Salta alla fine: i cambi rimasti li fa l'allenatore. */
+    fun liveSkip() {
+        val i = _live.value ?: return
+        i.m.runToEnd(); bump()
+    }
+
+    /** Fine partita: per il campionato salva risultato, marcatori, infortuni e forma. */
+    private suspend fun finishLive() {
+        val i = _live.value ?: return
+        if (i.saved) return
+        val mr = i.league
+        if (mr != null) {
+            val r = i.m.report()
+            val t = selectedTeam.value
+            val lg = t?.let { key(it) } ?: ""
+            dao.updateMatch(mr.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
+            dao.insertGoals(r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
+                Goal(season = _season.value, league = lg, round = mr.round,
+                    teamId = if (it.home) mr.homeTeamId else mr.awayTeamId, playerId = it.playerId)
+            })
+            val staffBy = dao.allStaff().groupBy { it.teamId }
+            val rng = kotlin.random.Random.Default
+            for (id in listOf(mr.homeTeamId, mr.awayTeamId)) {
+                dao.updatePlayers(Medical.afterMatch(dao.playersOnce(id), Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng))
+            }
+        }
+        _live.value = _live.value?.copy(saved = true, tick = i.tick + 1)
+    }
+
+    fun closeLive() {
+        val i = _live.value ?: return
+        if (!i.m.finished) return
+        liveJob?.cancel()
+        _live.value = null
+    }
 
     private val _role = MutableStateFlow("%")
     val marketRole: StateFlow<String> = _role

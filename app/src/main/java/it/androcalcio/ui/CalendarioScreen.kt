@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import androidx.compose.runtime.remember
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import it.androcalcio.engine.Mentality
 import androidx.compose.foundation.layout.Column
@@ -46,8 +49,17 @@ fun CalendarioScreen(
     season: String,
     onClose: () -> Unit,
     mentality: Mentality = Mentality.EQUILIBRATA,
-    onMentality: (Mentality) -> Unit = {}
+    onMentality: (Mentality) -> Unit = {},
+    onNextLive: () -> Unit = onNext
 ) {
+    var askNext by remember { mutableStateOf(false) }
+    if (askNext) AlertDialog(
+        onDismissRequest = { askNext = false },
+        title = { Text("Prossima giornata") },
+        text = { Text("Vuoi guardare la tua partita dal vivo (pausa, cambi, mentalità) o avere solo il risultato?") },
+        confirmButton = { Button(onClick = { askNext = false; onNextLive() }) { Text("Guarda la partita") } },
+        dismissButton = { TextButton(onClick = { askNext = false; onNext() }) { Text("Solo risultato") } }
+    )
     if (team == null) return
     val byId = teams.associateBy { it.id }
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -64,7 +76,7 @@ fun CalendarioScreen(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                onClick = { round = 0; onNext() }, enabled = nextRound != null,
+                onClick = { round = 0; askNext = true }, enabled = nextRound != null,
                 colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
             ) { Text("Prossima giornata") }
             OutlinedButton(onClick = { round = 0; onSeason() }, enabled = nextRound != null) {

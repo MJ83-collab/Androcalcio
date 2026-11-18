@@ -144,7 +144,9 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         HeaderBar(team, season, screen)
         Row(Modifier.weight(1f)) {
         Box(Modifier.weight(1f).fillMaxSize()) {
-            when (screen) {
+            val liveInfo by vm.live.collectAsState()
+            val li = liveInfo
+            if (li != null) LiveMatchScreen(li, vm) else when (screen) {
                 Screen.HOME -> HomeScreen(team, players) { screen = it }
                 Screen.ROSA -> {
                     val modulo by vm.formation.collectAsState()
@@ -164,7 +166,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 Screen.CALENDARIO -> {
                     val ment by vm.mentality.collectAsState()
                     CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() }, season,
-                        { vm.closeSeason() }, ment, { vm.setMentality(it) })
+                        { vm.closeSeason() }, ment, { vm.setMentality(it) }, { vm.playNextRoundLive() })
                 }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsState()
