@@ -1,0 +1,2450 @@
+[
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Milano RN",
+    "sigla": "MR",
+    "colore1": "#AC1E22",
+    "colore2": "#000000",
+    "sponsor": "Doha Airways"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Inter NA",
+    "sigla": "IN",
+    "colore1": "#0E1E5B",
+    "colore2": "#000000",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Piemonte BN",
+    "sigla": "PB",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Partenope AZ",
+    "sigla": "PA",
+    "colore1": "#1E88C7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Roma GR",
+    "sigla": "RG",
+    "colore1": "#8E1F2F",
+    "colore2": "#F2C230",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Lazio BC",
+    "sigla": "LB",
+    "colore1": "#9AC5E8",
+    "colore2": "#FFFFFF",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Firenze VI",
+    "sigla": "FV",
+    "colore1": "#7B5EA7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Bergamo DA",
+    "sigla": "BD",
+    "colore1": "#1E3A5F",
+    "colore2": "#111111",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Torino GT",
+    "sigla": "TG",
+    "colore1": "#7A1E2B",
+    "colore2": "#111111",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Bologna RB",
+    "sigla": "BR",
+    "colore1": "#8E1B2B",
+    "colore2": "#1C3B6E",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Genova GF",
+    "sigla": "GG",
+    "colore1": "#B3121B",
+    "colore2": "#1C1C1C",
+    "sponsor": "Alliansa"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Genova BL",
+    "sigla": "GB",
+    "colore1": "#2E6FB5",
+    "colore2": "#F2C230",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Verona GB",
+    "sigla": "VG",
+    "colore1": "#F2C230",
+    "colore2": "#1C3B6E",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Udine ZB",
+    "sigla": "UZ",
+    "colore1": "#111111",
+    "colore2": "#FFFFFF",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Cagliari IS",
+    "sigla": "CI",
+    "colore1": "#8E1B2B",
+    "colore2": "#1C3B6E",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Parma CR",
+    "sigla": "PC",
+    "colore1": "#F2C230",
+    "colore2": "#1C3B6E",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Lecce SA",
+    "sigla": "LS",
+    "colore1": "#F2C230",
+    "colore2": "#B3121B",
+    "sponsor": "Soundify"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Monza BR",
+    "sigla": "MB",
+    "colore1": "#B3121B",
+    "colore2": "#FFFFFF",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Empoli CE",
+    "sigla": "EC",
+    "colore1": "#2E6FB5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Clinch"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie A",
+    "squadra": "Frosinone CI",
+    "sigla": "FC",
+    "colore1": "#F2C230",
+    "colore2": "#1C3B6E",
+    "sponsor": "AXON"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Palermo RN2",
+    "sigla": "PR",
+    "colore1": "#B3121B",
+    "colore2": "#F2C230",
+    "sponsor": "Dacio"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Bari BR2",
+    "sigla": "BB",
+    "colore1": "#B3121B",
+    "colore2": "#FFFFFF",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Brescia BC2",
+    "sigla": "BB",
+    "colore1": "#2E6FB5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Cremona GR2",
+    "sigla": "CG",
+    "colore1": "#8E1B2B",
+    "colore2": "#1C3B6E",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Catanzaro GR3",
+    "sigla": "CG",
+    "colore1": "#F2C230",
+    "colore2": "#B3121B",
+    "sponsor": "Doha National Bank"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Cosenza RB2",
+    "sigla": "CR",
+    "colore1": "#8E1B2B",
+    "colore2": "#1C3B6E",
+    "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Modena GC",
+    "sigla": "MG",
+    "colore1": "#F2C230",
+    "colore2": "#1C3B6E",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Pisa NA2",
+    "sigla": "PN",
+    "colore1": "#1C1C1C",
+    "colore2": "#2E6FB5",
+    "sponsor": "Betsona"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Reggio EM",
+    "sigla": "RE",
+    "colore1": "#8E1B2B",
+    "colore2": "#F2C230",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Spezia AQ",
+    "sigla": "SA",
+    "colore1": "#FFFFFF",
+    "colore2": "#1C3B6E",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Venezia AN",
+    "sigla": "VA",
+    "colore1": "#F2A51E",
+    "colore2": "#1C1C1C",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Terni RV",
+    "sigla": "TR",
+    "colore1": "#8E1B2B",
+    "colore2": "#F2C230",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Ascoli BN2",
+    "sigla": "AB",
+    "colore1": "#FFFFFF",
+    "colore2": "#1C1C1C",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Perugia GR4",
+    "sigla": "PG",
+    "colore1": "#8E1B2B",
+    "colore2": "#1C3B6E",
+    "sponsor": "Hubloc"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Salerno GR5",
+    "sigla": "SG",
+    "colore1": "#8E1B2B",
+    "colore2": "#8A2BE2",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Bolzano SU",
+    "sigla": "BS",
+    "colore1": "#B3121B",
+    "colore2": "#FFFFFF",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Citta VB",
+    "sigla": "CV",
+    "colore1": "#F2A51E",
+    "colore2": "#1C3B6E",
+    "sponsor": "GameStation"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Como AZ2",
+    "sigla": "CA",
+    "colore1": "#2E6FB5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Salo FS",
+    "sigla": "SF",
+    "colore1": "#2E8B57",
+    "colore2": "#F2C230",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Lecco BC3",
+    "sigla": "LB",
+    "colore1": "#1C3B6E",
+    "colore2": "#2E6FB5",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Royal Madril",
+    "sigla": "RM",
+    "colore1": "#FFFFFF",
+    "colore2": "#F2C230",
+    "sponsor": "Toyoda"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Barcelos BG",
+    "sigla": "BB",
+    "colore1": "#A50044",
+    "colore2": "#004D98",
+    "sponsor": "Doha Airways"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Atletic Madril",
+    "sigla": "AM",
+    "colore1": "#CE2029",
+    "colore2": "#1C3B6E",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Sivilla NB",
+    "sigla": "SN",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Donosti RJ",
+    "sigla": "DR",
+    "colore1": "#004D98",
+    "colore2": "#FFFFFF",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Betis VB",
+    "sigla": "BV",
+    "colore1": "#00A550",
+    "colore2": "#FFFFFF",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Villareal AM",
+    "sigla": "VA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Bilbo RJ2",
+    "sigla": "BR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Valencio NB2",
+    "sigla": "VN",
+    "colore1": "#F2D022",
+    "colore2": "#D71920",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Celta CY",
+    "sigla": "CC",
+    "colore1": "#9AC5E8",
+    "colore2": "#FFFFFF",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Osasuna RJ3",
+    "sigla": "OR",
+    "colore1": "#D71920",
+    "colore2": "#1C3B6E",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Getafo AZ3",
+    "sigla": "GA",
+    "colore1": "#004D98",
+    "colore2": "#FFFFFF",
+    "sponsor": "Alliansa"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Girono RJ4",
+    "sigla": "GR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Malorca RJ5",
+    "sigla": "MR",
+    "colore1": "#D71920",
+    "colore2": "#F2D022",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Rayo FR",
+    "sigla": "RF",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Las Islas AM2",
+    "sigla": "LIA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Alaves AZ4",
+    "sigla": "AA",
+    "colore1": "#004D98",
+    "colore2": "#FFFFFF",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Cadis AM3",
+    "sigla": "CA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "Soundify"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Granado RJ6",
+    "sigla": "GR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Primera",
+    "squadra": "Almeiro RJ7",
+    "sigla": "AR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Clinch"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Coruno BL2",
+    "sigla": "CB",
+    "colore1": "#004D98",
+    "colore2": "#FFFFFF",
+    "sponsor": "AXON"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Santandro VB2",
+    "sigla": "SV",
+    "colore1": "#00A550",
+    "colore2": "#FFFFFF",
+    "sponsor": "Dacio"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Gijono RJ8",
+    "sigla": "GR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Zaragosa AM4",
+    "sigla": "ZA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Levanto GR6",
+    "sigla": "LG",
+    "colore1": "#00A550",
+    "colore2": "#D71920",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Eibaro AZ5",
+    "sigla": "EA",
+    "colore1": "#004D98",
+    "colore2": "#FFFFFF",
+    "sponsor": "Doha National Bank"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Albaceto RJ9",
+    "sigla": "AR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Tenerifo AZ6",
+    "sigla": "TA",
+    "colore1": "#004D98",
+    "colore2": "#FFFFFF",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Legano RJ10",
+    "sigla": "LR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Betsona"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Elcho GR7",
+    "sigla": "EG",
+    "colore1": "#00A550",
+    "colore2": "#FFFFFF",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Burgos RJ11",
+    "sigla": "BR",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Huesco AM5",
+    "sigla": "HA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Mirandes RJ12",
+    "sigla": "MR",
+    "colore1": "#D71920",
+    "colore2": "#000000",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Eldeso AM6",
+    "sigla": "EA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Ferrolo VB3",
+    "sigla": "FV",
+    "colore1": "#00A550",
+    "colore2": "#FFFFFF",
+    "sponsor": "Hubloc"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Amorebio GR8",
+    "sigla": "AG",
+    "colore1": "#00A550",
+    "colore2": "#D71920",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Cordobo RJ13",
+    "sigla": "CR",
+    "colore1": "#FFFFFF",
+    "colore2": "#004D98",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Castello AM7",
+    "sigla": "CA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "GameStation"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Malago AZ7",
+    "sigla": "MA",
+    "colore1": "#004D98",
+    "colore2": "#FFFFFF",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Spagna",
+    "campionato": "Segunda",
+    "squadra": "Cartageno AM8",
+    "sigla": "CA",
+    "colore1": "#F2D022",
+    "colore2": "#1C3B6E",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Manchester Unity RD",
+    "sigla": "MUR",
+    "colore1": "#DA291C",
+    "colore2": "#FBE122",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Manchester Citt SB",
+    "sigla": "MCS",
+    "colore1": "#6CABDD",
+    "colore2": "#1C2C5B",
+    "sponsor": "Toyoda"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Liverpoole RD2",
+    "sigla": "LR",
+    "colore1": "#C8102E",
+    "colore2": "#F6EB61",
+    "sponsor": "Doha Airways"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Arsenale GN",
+    "sigla": "AG",
+    "colore1": "#EF0107",
+    "colore2": "#FFFFFF",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Chelsfield BL",
+    "sigla": "CB",
+    "colore1": "#034694",
+    "colore2": "#FFFFFF",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Tottenam SP",
+    "sigla": "TS",
+    "colore1": "#FFFFFF",
+    "colore2": "#132257",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Newcastel MG",
+    "sigla": "NM",
+    "colore1": "#241F20",
+    "colore2": "#FFFFFF",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Aston Villan VL",
+    "sigla": "AVV",
+    "colore1": "#670E36",
+    "colore2": "#95BFE5",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "West Hamm HM",
+    "sigla": "WHH",
+    "colore1": "#7A263A",
+    "colore2": "#1BB1E7",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Evertonn TF",
+    "sigla": "ET",
+    "colore1": "#003399",
+    "colore2": "#FFFFFF",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Leicestar FX",
+    "sigla": "LF",
+    "colore1": "#003090",
+    "colore2": "#FDBE11",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Wolverhamp WV",
+    "sigla": "WW",
+    "colore1": "#FDB913",
+    "colore2": "#231F20",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Brighten SG",
+    "sigla": "BS",
+    "colore1": "#0057B8",
+    "colore2": "#FFFFFF",
+    "sponsor": "Alliansa"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Crystal Palac EG",
+    "sigla": "CPE",
+    "colore1": "#1B458F",
+    "colore2": "#C4122E",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Fulhame CT",
+    "sigla": "FC",
+    "colore1": "#FFFFFF",
+    "colore2": "#000000",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Brentfort BE",
+    "sigla": "BB",
+    "colore1": "#D20000",
+    "colore2": "#FBB800",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Nottingam TT",
+    "sigla": "NT",
+    "colore1": "#DD0000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Bornemuth CH",
+    "sigla": "BC",
+    "colore1": "#DA291C",
+    "colore2": "#000000",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Southamptn SA",
+    "sigla": "SS",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Soundify"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Premier",
+    "squadra": "Burnlea CL",
+    "sigla": "BC",
+    "colore1": "#6C1D45",
+    "colore2": "#99D6EA",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Leedz United WH",
+    "sigla": "LUW",
+    "colore1": "#FFCD00",
+    "colore2": "#1D428A",
+    "sponsor": "Clinch"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Sheffield Unit BL2",
+    "sigla": "SUB",
+    "colore1": "#EE2737",
+    "colore2": "#FFFFFF",
+    "sponsor": "AXON"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Norwitch CN",
+    "sigla": "NC",
+    "colore1": "#FFF200",
+    "colore2": "#00A650",
+    "sponsor": "Dacio"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Watfrod HN",
+    "sigla": "WH",
+    "colore1": "#FBEE23",
+    "colore2": "#ED2127",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Middlesbr BO",
+    "sigla": "MB",
+    "colore1": "#DA291C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Sunderlnd BC2",
+    "sigla": "SB",
+    "colore1": "#EB172B",
+    "colore2": "#FFFFFF",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Coventr SB2",
+    "sigla": "CS",
+    "colore1": "#78D0F2",
+    "colore2": "#1C1C1C",
+    "sponsor": "Doha National Bank"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Hullsity TG",
+    "sigla": "HT",
+    "colore1": "#F18A00",
+    "colore2": "#000000",
+    "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Prestone NE",
+    "sigla": "PN",
+    "colore1": "#FFFFFF",
+    "colore2": "#1C1C1C",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Bristole RB4",
+    "sigla": "BR",
+    "colore1": "#E21937",
+    "colore2": "#FFFFFF",
+    "sponsor": "Betsona"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Stokecit PT",
+    "sigla": "SP",
+    "colore1": "#E03A3E",
+    "colore2": "#FFFFFF",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Swansea JK",
+    "sigla": "SJ",
+    "colore1": "#FFFFFF",
+    "colore2": "#1C1C1C",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Cardif BC3",
+    "sigla": "CB",
+    "colore1": "#0070B5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Millwal LN",
+    "sigla": "ML",
+    "colore1": "#1C2C5B",
+    "colore2": "#FFFFFF",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Blackbur RV",
+    "sigla": "BR",
+    "colore1": "#009EE0",
+    "colore2": "#FFFFFF",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "QParkRng HP",
+    "sigla": "QH",
+    "colore1": "#1D5BA4",
+    "colore2": "#FFFFFF",
+    "sponsor": "Hubloc"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Birminghm BL3",
+    "sigla": "BB",
+    "colore1": "#0084C9",
+    "colore2": "#FFFFFF",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Huddersf TR",
+    "sigla": "HT",
+    "colore1": "#0E63AD",
+    "colore2": "#FFFFFF",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Rotherhm MI",
+    "sigla": "RM",
+    "colore1": "#DA020E",
+    "colore2": "#FFFFFF",
+    "sponsor": "GameStation"
+  },
+  {
+    "nazione": "Inghilterra",
+    "campionato": "Championship",
+    "squadra": "Plymoth PG",
+    "sigla": "PP",
+    "colore1": "#005DAA",
+    "colore2": "#000000",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Baviera MO",
+    "sigla": "BM",
+    "colore1": "#DC052D",
+    "colore2": "#0066B2",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Dortmuno GS",
+    "sigla": "DG",
+    "colore1": "#FDE100",
+    "colore2": "#1C1C1C",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Lipsia RB2",
+    "sigla": "LR",
+    "colore1": "#DD0742",
+    "colore2": "#FFFFFF",
+    "sponsor": "Toyoda"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Leverkus BA",
+    "sigla": "LB",
+    "colore1": "#E32221",
+    "colore2": "#1C1C1C",
+    "sponsor": "Doha Airways"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Eintrach FR2",
+    "sigla": "EF",
+    "colore1": "#E1000F",
+    "colore2": "#1C1C1C",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Wolfsbur VW",
+    "sigla": "WV",
+    "colore1": "#65B32E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Glabach FH",
+    "sigla": "GF",
+    "colore1": "#1C9B3C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Freiburgo SC2",
+    "sigla": "FS",
+    "colore1": "#000000",
+    "colore2": "#E2001A",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Union BE",
+    "sigla": "UB",
+    "colore1": "#EB1923",
+    "colore2": "#FFFFFF",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Mainza KL",
+    "sigla": "MK",
+    "colore1": "#C7102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Hoffenhm TS",
+    "sigla": "HT",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Bremeno WD",
+    "sigla": "BW",
+    "colore1": "#1C9B3C",
+    "colore2": "#FFFFFF",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Kolno GT2",
+    "sigla": "KG",
+    "colore1": "#ED1C24",
+    "colore2": "#FFFFFF",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Stuggart VB4",
+    "sigla": "SV",
+    "colore1": "#E32219",
+    "colore2": "#FFFFFF",
+    "sponsor": "Alliansa"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Augusbur FC2",
+    "sigla": "AF",
+    "colore1": "#BA3733",
+    "colore2": "#FFFFFF",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Bochium VF",
+    "sigla": "BV",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Heidenhm FC3",
+    "sigla": "HF",
+    "colore1": "#E2001A",
+    "colore2": "#1C1C1C",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "Bundesliga",
+    "squadra": "Darmstat SV",
+    "sigla": "DS",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Amburgo HSV",
+    "sigla": "AH",
+    "colore1": "#1C1C1C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Herta BC4",
+    "sigla": "HB",
+    "colore1": "#004B9E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Soundify"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Schalka GZ",
+    "sigla": "SG",
+    "colore1": "#004C9B",
+    "colore2": "#FFFFFF",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Hannoveria H96",
+    "sigla": "HH",
+    "colore1": "#1C9B3C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Clinch"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Norimberg FCN",
+    "sigla": "NF",
+    "colore1": "#C4122E",
+    "colore2": "#1C1C1C",
+    "sponsor": "AXON"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Dusseldrf F95",
+    "sigla": "DF",
+    "colore1": "#E2001A",
+    "colore2": "#FFFFFF",
+    "sponsor": "Dacio"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Karlsruhn KSC",
+    "sigla": "KK",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "StPauli FC4",
+    "sigla": "SF",
+    "colore1": "#5A2E2E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Paderbrn SC3",
+    "sigla": "PS",
+    "colore1": "#1C63B7",
+    "colore2": "#1C1C1C",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Kielia HK",
+    "sigla": "KH",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Doha National Bank"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Furtha GF2",
+    "sigla": "FG",
+    "colore1": "#1C9B3C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Kaiserlt FCK",
+    "sigla": "KF",
+    "colore1": "#E2001A",
+    "colore2": "#FFFFFF",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Magdebur FCM",
+    "sigla": "MF",
+    "colore1": "#1C9B3C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Betsona"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Braunsch BT",
+    "sigla": "BB",
+    "colore1": "#E2001A",
+    "colore2": "#FFFFFF",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Elversbr SVE",
+    "sigla": "ES",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Ulmo SSV",
+    "sigla": "US",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Ratisbon JR",
+    "sigla": "RJ",
+    "colore1": "#1C1C1C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Germania",
+    "campionato": "2.Bundesliga",
+    "squadra": "Wiesbadn SVW",
+    "sigla": "WS",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Parigi SG",
+    "sigla": "PS",
+    "colore1": "#004170",
+    "colore2": "#DA291C",
+    "sponsor": "Hubloc"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Marsiglia OM2",
+    "sigla": "MO",
+    "colore1": "#2FAEE0",
+    "colore2": "#FFFFFF",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Monaco AS2",
+    "sigla": "MA",
+    "colore1": "#E2001A",
+    "colore2": "#FFFFFF",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Lionese OL2",
+    "sigla": "LO",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "GameStation"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Lilla LOS",
+    "sigla": "LL",
+    "colore1": "#C8102E",
+    "colore2": "#1C1C1C",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Renn SR",
+    "sigla": "RS",
+    "colore1": "#E2001A",
+    "colore2": "#1C1C1C",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Lens RC2",
+    "sigla": "LR",
+    "colore1": "#FFD100",
+    "colore2": "#C8102E",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Nissa OGC",
+    "sigla": "NO",
+    "colore1": "#C8102E",
+    "colore2": "#1C1C1C",
+    "sponsor": "Toyoda"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Nantas FCN2",
+    "sigla": "NF",
+    "colore1": "#FFD700",
+    "colore2": "#1C9B3C",
+    "sponsor": "Doha Airways"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Strasbrg RC3",
+    "sigla": "SR",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Montpelr MH2",
+    "sigla": "MM",
+    "colore1": "#FF6A00",
+    "colore2": "#1C63B7",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Reimso SR2",
+    "sigla": "RS",
+    "colore1": "#E2001A",
+    "colore2": "#FFFFFF",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Toulus TF2",
+    "sigla": "TT",
+    "colore1": "#5A2E8E",
+    "colore2": "#FF4F00",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Brest SB29",
+    "sigla": "BS",
+    "colore1": "#E2001A",
+    "colore2": "#FFFFFF",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Le Havro HAC",
+    "sigla": "LHH",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Mezzo FCM2",
+    "sigla": "MF",
+    "colore1": "#8E0E1F",
+    "colore2": "#FFFFFF",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Clairmont F632",
+    "sigla": "CF",
+    "colore1": "#E2001A",
+    "colore2": "#FFFFFF",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 1",
+    "squadra": "Loriento FCL",
+    "sigla": "LF",
+    "colore1": "#FF6A00",
+    "colore2": "#1C1C1C",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "StEtienn ASSE",
+    "sigla": "SA",
+    "colore1": "#1C9B3C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Alliansa"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Bordeux FCG2",
+    "sigla": "BF",
+    "colore1": "#1C63B7",
+    "colore2": "#8E0E1F",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Auxerra AJA2",
+    "sigla": "AA",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Angerso SCO2",
+    "sigla": "AS",
+    "colore1": "#1C1C1C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Caeno SMC2",
+    "sigla": "CS",
+    "colore1": "#1C63B7",
+    "colore2": "#C8102E",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Grenobl GF38",
+    "sigla": "GG",
+    "colore1": "#1C63B7",
+    "colore2": "#C8102E",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Guingmp EAG2",
+    "sigla": "GE",
+    "colore1": "#D71920",
+    "colore2": "#FFFFFF",
+    "sponsor": "Soundify"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Amiense ASC2",
+    "sigla": "AA",
+    "colore1": "#1C63B7",
+    "colore2": "#C8102E",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Parigi FC2",
+    "sigla": "PF",
+    "colore1": "#1C1C1C",
+    "colore2": "#1C63B7",
+    "sponsor": "Clinch"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Troyso ESTAC",
+    "sigla": "TE",
+    "colore1": "#1C63B7",
+    "colore2": "#C8102E",
+    "sponsor": "AXON"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Lavalo SL2",
+    "sigla": "LS",
+    "colore1": "#1C9B3C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Dacio"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Rodezo RAF2",
+    "sigla": "RR",
+    "colore1": "#D71920",
+    "colore2": "#1C1C1C",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Bastio SCB2",
+    "sigla": "BS",
+    "colore1": "#1C63B7",
+    "colore2": "#FFFFFF",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Pauo PFC2",
+    "sigla": "PP",
+    "colore1": "#1C63B7",
+    "colore2": "#F2D022",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Annecy FCA2",
+    "sigla": "AF",
+    "colore1": "#D71920",
+    "colore2": "#1C1C1C",
+    "sponsor": "Doha National Bank"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Dunkrq USLD",
+    "sigla": "DU",
+    "colore1": "#D71920",
+    "colore2": "#1C1C1C",
+    "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "Concarn USCK",
+    "sigla": "CU",
+    "colore1": "#D71920",
+    "colore2": "#1C1C1C",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Francia",
+    "campionato": "Ligue 2",
+    "squadra": "RedStr RSFC",
+    "sigla": "RR",
+    "colore1": "#D71920",
+    "colore2": "#1C1C1C",
+    "sponsor": "Betsona"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Flamengo MG",
+    "sigla": "FM",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Palmeras VD",
+    "sigla": "PV",
+    "colore1": "#006437",
+    "colore2": "#FFFFFF",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "San Paulo TC",
+    "sigla": "SPT",
+    "colore1": "#FE0000",
+    "colore2": "#000000",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Corintios TM",
+    "sigla": "CT",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Santos PX",
+    "sigla": "SP",
+    "colore1": "#FFFFFF",
+    "colore2": "#000000",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Gremio TG",
+    "sigla": "GT",
+    "colore1": "#0D80C7",
+    "colore2": "#000000",
+    "sponsor": "Hubloc"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Internaciol CL",
+    "sigla": "IC",
+    "colore1": "#D2122E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Atletico Minas GL",
+    "sigla": "AMG",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Cruzeiro RP",
+    "sigla": "CR",
+    "colore1": "#002366",
+    "colore2": "#FFFFFF",
+    "sponsor": "GameStation"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Botafogo FG",
+    "sigla": "BF",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Vasco CM",
+    "sigla": "VC",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Fluminense TL",
+    "sigla": "FT",
+    "colore1": "#891429",
+    "colore2": "#006341",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Bahia TB",
+    "sigla": "BT",
+    "colore1": "#0033A0",
+    "colore2": "#C8102E",
+    "sponsor": "Toyoda"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Fortaleza LP",
+    "sigla": "FL",
+    "colore1": "#C8102E",
+    "colore2": "#003DA5",
+    "sponsor": "Doha Airways"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Ceara VZ",
+    "sigla": "CV",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Paranaense FR",
+    "sigla": "PF",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Bragantino MB",
+    "sigla": "BM",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Cuiaba DO",
+    "sigla": "CD",
+    "colore1": "#F2A900",
+    "colore2": "#006341",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Juventude PP",
+    "sigla": "JP",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie A",
+    "squadra": "Criciuma TG2",
+    "sigla": "CT",
+    "colore1": "#FFD400",
+    "colore2": "#000000",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Recife LD",
+    "sigla": "RL",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Coritiba CX",
+    "sigla": "CC",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Goias EM",
+    "sigla": "GE",
+    "colore1": "#006341",
+    "colore2": "#7A1F3D",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Guarani BG2",
+    "sigla": "GB",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "Alliansa"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Ponte Preta MC",
+    "sigla": "PPM",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Novorizontino NV",
+    "sigla": "NN",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Avai LI",
+    "sigla": "AL",
+    "colore1": "#003DA5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Chapeco VO",
+    "sigla": "CV",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Operario FM",
+    "sigla": "OF",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "CRB AL",
+    "sigla": "CA",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Soundify"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Amazonas AM3",
+    "sigla": "AA",
+    "colore1": "#003DA5",
+    "colore2": "#C8102E",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Ituano IT",
+    "sigla": "II",
+    "colore1": "#F2A900",
+    "colore2": "#000000",
+    "sponsor": "Clinch"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Mirassol LE",
+    "sigla": "ML",
+    "colore1": "#FFD400",
+    "colore2": "#006341",
+    "sponsor": "AXON"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Paysandu PA",
+    "sigla": "PP",
+    "colore1": "#003DA5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Dacio"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Botafogo SP2",
+    "sigla": "BS",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Brusque QD",
+    "sigla": "BQ",
+    "colore1": "#F2691D",
+    "colore2": "#000000",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Vila Nova TG3",
+    "sigla": "VNT",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "America MG CO",
+    "sigla": "AMC",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "Doha National Bank"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Sampaio SC",
+    "sigla": "SS",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Brasile",
+    "campionato": "Serie B",
+    "squadra": "Volta Redonda VR2",
+    "sigla": "VRV",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Boca XZ",
+    "sigla": "BX",
+    "colore1": "#0E4C92",
+    "colore2": "#FFD400",
+    "sponsor": "Betsona"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "River ML",
+    "sigla": "RM",
+    "colore1": "#FFFFFF",
+    "colore2": "#C8102E",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Racing AC",
+    "sigla": "RA",
+    "colore1": "#87CEEB",
+    "colore2": "#FFFFFF",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Independencia RJ14",
+    "sigla": "IR",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "San Lorenzo CC",
+    "sigla": "SLC",
+    "colore1": "#003DA5",
+    "colore2": "#C8102E",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Estudiantes PR",
+    "sigla": "EP",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Velez FT",
+    "sigla": "VF",
+    "colore1": "#FFFFFF",
+    "colore2": "#003DA5",
+    "sponsor": "Hubloc"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Argentinos BC2",
+    "sigla": "AB",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Huracan GB",
+    "sigla": "HG",
+    "colore1": "#FFFFFF",
+    "colore2": "#C8102E",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Banfield TD",
+    "sigla": "BT",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "GameStation"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Lanus GR9",
+    "sigla": "LG",
+    "colore1": "#7A1F3D",
+    "colore2": "#000000",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Newells LP",
+    "sigla": "NL",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Rosario CN",
+    "sigla": "RC",
+    "colore1": "#003DA5",
+    "colore2": "#FFD400",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Talleres MT",
+    "sigla": "TM",
+    "colore1": "#003DA5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Toyoda"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Belgrano PI",
+    "sigla": "BP",
+    "colore1": "#87CEEB",
+    "colore2": "#FFFFFF",
+    "sponsor": "Doha Airways"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Instituto GL2",
+    "sigla": "IG",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Godoy TB2",
+    "sigla": "GT",
+    "colore1": "#003DA5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Defensa HC",
+    "sigla": "DH",
+    "colore1": "#006341",
+    "colore2": "#FFD400",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Platense CL2",
+    "sigla": "PC",
+    "colore1": "#000000",
+    "colore2": "#F2E2C4",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera",
+    "squadra": "Tigre MT2",
+    "sigla": "TM",
+    "colore1": "#003DA5",
+    "colore2": "#C8102E",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Chacarita FN",
+    "sigla": "CF",
+    "colore1": "#000000",
+    "colore2": "#006341",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Almirante AB2",
+    "sigla": "AA",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Atlanta BH",
+    "sigla": "AB",
+    "colore1": "#003DA5",
+    "colore2": "#FFD400",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Quilmes CV2",
+    "sigla": "QC",
+    "colore1": "#003DA5",
+    "colore2": "#FFD400",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Moron GA2",
+    "sigla": "MG",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Alliansa"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Ferro VD2",
+    "sigla": "FV",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "GimnasiaJ LO",
+    "sigla": "GL",
+    "colore1": "#87CEEB",
+    "colore2": "#FFFFFF",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "EstudiantesRC ER",
+    "sigla": "EE",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "GuaraniAF GF3",
+    "sigla": "GG",
+    "colore1": "#003DA5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Mitre MT3",
+    "sigla": "MM",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Chicago TO2",
+    "sigla": "CT",
+    "colore1": "#C8102E",
+    "colore2": "#000000",
+    "sponsor": "Soundify"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "SanMartinT CR",
+    "sigla": "SC",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Agropecuario AG2",
+    "sigla": "AA",
+    "colore1": "#006341",
+    "colore2": "#FFFFFF",
+    "sponsor": "Clinch"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "BrownAdro BA2",
+    "sigla": "BB",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "AXON"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "ChacoForever CF2",
+    "sigla": "CC",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "Dacio"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Maipu MP",
+    "sigla": "MM",
+    "colore1": "#C8102E",
+    "colore2": "#FFFFFF",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "GimnasiaM LO2",
+    "sigla": "GL",
+    "colore1": "#000000",
+    "colore2": "#FFFFFF",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Patronato PT2",
+    "sigla": "PP",
+    "colore1": "#000000",
+    "colore2": "#C8102E",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "SanTelmo ST2",
+    "sigla": "SS",
+    "colore1": "#87CEEB",
+    "colore2": "#FFFFFF",
+    "sponsor": "Doha National Bank"
+  },
+  {
+    "nazione": "Argentina",
+    "campionato": "Primera Nacional",
+    "squadra": "Temperley GS",
+    "sigla": "TG",
+    "colore1": "#87CEEB",
+    "colore2": "#FFFFFF",
+    "sponsor": "Expedio"
+  }
+]

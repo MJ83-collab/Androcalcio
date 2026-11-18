@@ -13,7 +13,9 @@ data class Team(
     val budget: Long,
     val stadiumCapacity: Int,
     val ticketPrice: Int,
-    val sponsor: String
+    val sponsor: String,
+    val nazione: String = "",
+    val campionato: String = ""
 )
 
 @Entity(tableName = "players")

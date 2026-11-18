@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AndrocalcioDao {
 
-    @Query("SELECT * FROM teams ORDER BY name")
+    @Query("SELECT * FROM teams ORDER BY id")
     fun teams(): Flow<List<Team>>
 
     @Query("SELECT * FROM players WHERE teamId = :teamId ORDER BY overall DESC")

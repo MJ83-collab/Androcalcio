@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -196,31 +199,58 @@ fun MenuTile(s: Screen, modifier: Modifier = Modifier, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TeamList(teams: List<Team>, selectedId: Long?, onSelect: (Team) -> Unit) {
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item { Text("Scegli la squadra", style = MaterialTheme.typography.headlineSmall) }
-        items(teams, key = { it.id }) { t ->
-            GlassCard(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                    .clickable { onSelect(t) }
-            ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Crest(t, size = 48.dp)
-                    Column(Modifier.padding(start = 14.dp)) {
-                        Text(
-                            t.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (t.id == selectedId) AC.Accent else AC.Text
-                        )
-                        Text(
-                            "${t.sponsor} · Stadio ${t.stadiumCapacity}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AC.TextDim
-                        )
+    val leagues = teams.map { "${it.nazione} · ${it.campionato}" }.distinct()
+    val current = teams.firstOrNull { it.id == selectedId }
+    var league by rememberSaveable {
+        mutableStateOf(current?.let { "${it.nazione} · ${it.campionato}" } ?: "")
+    }
+    val active = if (league in leagues) league else leagues.firstOrNull().orEmpty()
+    val shown = teams.filter { "${it.nazione} · ${it.campionato}" == active }
+
+    Column(Modifier.fillMaxSize()) {
+        Text(
+            "Scegli la squadra",
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp),
+            style = MaterialTheme.typography.headlineSmall
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(leagues) { l ->
+                FilterChip(
+                    selected = l == active,
+                    onClick = { league = l },
+                    label = { Text(l) }
+                )
+            }
+        }
+        LazyColumn(
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(shown, key = { it.id }) { t ->
+                GlassCard(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                        .clickable { onSelect(t) }
+                ) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Crest(t, size = 48.dp)
+                        Column(Modifier.padding(start = 14.dp)) {
+                            Text(
+                                t.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (t.id == selectedId) AC.Accent else AC.Text
+                            )
+                            Text(
+                                "${t.sponsor} · Stadio ${t.stadiumCapacity}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AC.TextDim
+                            )
+                        }
                     }
                 }
             }
