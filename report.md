@@ -1,29 +1,22 @@
-# Androcalcio – report progetto Android (scaffold v0.1.0)
+# Androcalcio – report (stato al passo 6)
 
-## Cosa contiene lo ZIP
-- Progetto Gradle Kotlin DSL, modulo `app`, package `it.androcalcio`.
-- Stack: Kotlin 2.0.20, Jetpack Compose (BOM 2024.09.00, Material 3), Room 2.6.1 via KSP, minSdk 26, targetSdk 35.
-- Entità Room: `Team`, `Player`, `MatchResult` (da sezione 14.1 del documento; campi semplificati).
-- DAO e database Room con seed automatico di 2 squadre e 8 giocatori fittizi al primo avvio.
-- Tema scuro con i colori del canvas (sfondo #0A0E13, accent #B6FF3C, cyan #4FD1FF).
-- Schermate: Squadre (lista e selezione), Rosa (giocatori della squadra selezionata), tre segnaposto (Partita, Mercato, Vivaio).
+## Stack
+Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 4, ricreato da zero a ogni cambio schema), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
 
-## Non ancora fatto
-- Non compilato: in questo ambiente non ci sono Android SDK e la rete per Gradle è disattivata. Il primo build può quindi rivelare errori di versione o di import.
-- Gradle wrapper (`gradlew`) non incluso: Android Studio lo genera all'apertura del progetto.
-- Font Sora e Manrope non inclusi: si usa il font di sistema.
-- Motore partita 2D, mercato, vivaio, staff, scouting, bilancio: solo segnaposto.
-- Editor dati e salvataggio/esportazione JSON v2: non implementati.
-- Database PC Calcio riutilizzato: non importato; i dati seed sono inventati.
-- Il nome del package è `it.androcalcio`; per cambiarlo servono rinomina di cartelle e riferimenti.
+## Fatto
+1. Grafica e menu: tema scuro del canvas, stemmi generati, Home con 9 voci, Rosa, Finanze.
+2. Dati: 272 squadre (7 nazioni, 14 divisioni) da `assets/squadre.json`, 18 giocatori generati per squadra.
+3. Partita: motore a eventi discreti + vista 2D, 7 moduli con bonus/malus.
+4. Calendario andata/ritorno, classifica, risultati salvati.
+5. Mercato: offerte, controfferte, vendite, budget e limiti di rosa.
+6. Vivaio e scouting: leva giovanile con parere dell'allenatore, report scout con intervalli che si stringono, giudizio di adattamento alla rosa.
 
-## Come compilare l'APK
-1. Apri la cartella `Androcalcio` con Android Studio (versione Ladybug o successiva).
-2. Attendi il sync di Gradle; Android Studio scarica le dipendenze e crea il wrapper.
-3. Menu Build → Build APK(s). L'APK esce in `app/build/outputs/apk/debug/`.
+## Non fatto
+- Contratti, ingaggi dinamici, crescita/invecchiamento dei giocatori (il potenziale dei giovani non viene conservato dopo la promozione).
+- Staff completo, finanze con bilancio, editor dati, export/import JSON, salvataggio multiplo.
+- Partite di campionato senza vista 2D; nessuna tattica in partita, infortuni, sostituzioni.
+- Taratura del motore (media gol, % pareggi) non verificata; app mai provata da me su schermo.
+- Font Sora/Manrope non inclusi.
 
-## Passi successivi consigliati
-1. Verificare il primo build e correggere le versioni eventualmente incompatibili.
-2. Implementare il motore partita a eventi discreti (sezione 14.4).
-3. Aggiungere export/import JSON v2 per il salvataggio.
-4. Portare nel progetto il database reale delle squadre.
+## Prossimi passi consigliati
+Editor dati con export/import, poi stagioni successive (età, crescita, contratti), poi staff e bilancio.
