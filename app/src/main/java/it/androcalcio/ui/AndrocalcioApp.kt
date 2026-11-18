@@ -135,6 +135,17 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         { vm.sell(it) }, { vm.clearOffer() }
                     )
                 }
+                Screen.VIVAIO -> {
+                    val youths by vm.youths.collectAsState()
+                    val scouted by vm.scouted.collectAsState()
+                    val reports by vm.reports.collectAsState()
+                    val notice by vm.notice.collectAsState()
+                    VivaioScreen(
+                        team, teams, players, youths, scouted, reports, notice,
+                        { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
+                        { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() }
+                    )
+                }
                 Screen.FINANZE -> FinanzeScreen(team, players)
                 else -> ComingSoon(screen)
             }

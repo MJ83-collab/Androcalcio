@@ -11,15 +11,15 @@ import kotlin.random.Random
  */
 object SeedData {
 
-    private val initials = "ABCDEFGILMNPRSTV"
-    private val surnames = listOf(
+    val initials = "ABCDEFGILMNPRSTV"
+    val surnames = listOf(
         "Rossi", "Bianchi", "Verdi", "Neri", "Costa", "Ferri", "Greco", "Russo", "Conti", "Moretti",
         "Galli", "Fontana", "Serra", "Pace", "Leone", "Sala", "Longo", "Rinaldi", "Barone", "Mariani",
         "Silva", "Souza", "Lima", "Pires", "Duarte", "Navarro", "Ortega", "Molina", "Vega", "Castro",
         "Keller", "Brandt", "Vogel", "Hahn", "Lang", "Dubois", "Moreau", "Laurent", "Roche", "Perrin",
         "Hughes", "Walker", "Bennett", "Cooper", "Wells", "Gomez", "Rojas", "Acosta", "Diaz", "Sosa"
     )
-    private val codes = mapOf(
+    val codes = mapOf(
         "Italia" to "ITA", "Spagna" to "ESP", "Inghilterra" to "ENG", "Germania" to "GER",
         "Francia" to "FRA", "Brasile" to "BRA", "Argentina" to "ARG"
     )
@@ -63,7 +63,9 @@ object SeedData {
                 ticketPrice = (45 - tier * 8).coerceAtLeast(8),
                 sponsor = o.getString("sponsor"),
                 nazione = n,
-                campionato = camp
+                campionato = camp,
+                youthCoachSkill = (70 - tier * 6 + rng.nextInt(-8, 9)).coerceIn(30, 95),
+                scoutSkill = (70 - tier * 6 + rng.nextInt(-8, 9)).coerceIn(30, 95)
             )
             tiers += tier
         }

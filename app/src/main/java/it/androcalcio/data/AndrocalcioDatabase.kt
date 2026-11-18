@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [Team::class, Player::class, MatchResult::class],
-    version = 3,
+    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class],
+    version = 4,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {

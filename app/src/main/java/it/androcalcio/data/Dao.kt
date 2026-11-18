@@ -1,7 +1,9 @@
 package it.androcalcio.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +52,33 @@ interface AndrocalcioDao {
 
     @Query("SELECT * FROM teams WHERE id = :id")
     suspend fun team(id: Long): Team
+
+    @Insert
+    suspend fun insertYouths(list: List<Youth>)
+
+    @Query("SELECT * FROM youths WHERE teamId = :teamId ORDER BY potential DESC")
+    fun youths(teamId: Long): Flow<List<Youth>>
+
+    @Delete
+    suspend fun deleteYouth(y: Youth)
+
+    @Insert
+    suspend fun insertPlayer(p: Player)
+
+    @Query("SELECT * FROM scout_reports WHERE teamId = :teamId")
+    fun reports(teamId: Long): Flow<List<ScoutReport>>
+
+    @Query("SELECT p.* FROM players p JOIN scout_reports r ON r.playerId = p.id WHERE r.teamId = :teamId")
+    fun scouted(teamId: Long): Flow<List<Player>>
+
+    @Query("SELECT * FROM scout_reports WHERE teamId = :teamId AND playerId = :playerId")
+    suspend fun report(teamId: Long, playerId: Long): ScoutReport?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertReports(list: List<ScoutReport>)
+
+    @Query("SELECT * FROM players WHERE teamId != :me AND teamId IN (SELECT id FROM teams WHERE nazione = :nazione AND campionato = :campionato)")
+    suspend fun leaguePlayers(nazione: String, campionato: String, me: Long): List<Player>
 
     @Insert
     suspend fun insertTeams(teams: List<Team>): List<Long>

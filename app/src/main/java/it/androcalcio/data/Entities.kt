@@ -15,7 +15,10 @@ data class Team(
     val ticketPrice: Int,
     val sponsor: String,
     val nazione: String = "",
-    val campionato: String = ""
+    val campionato: String = "",
+    val youthCoachSkill: Int = 55,
+    val scoutSkill: Int = 55,
+    val youthClaimed: String = ""
 )
 
 @Entity(tableName = "players")
@@ -42,4 +45,24 @@ data class MatchResult(
     val awayGoals: Int,
     val league: String = "",
     val played: Boolean = false
+)
+
+@Entity(tableName = "youths")
+data class Youth(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val teamId: Long,
+    val season: String,
+    val name: String,
+    val role: String,
+    val age: Int,
+    val overall: Int,
+    val potential: Int,      // nascosto: l'utente vede solo il parere dell'allenatore
+    val nationality: String
+)
+
+@Entity(tableName = "scout_reports", primaryKeys = ["teamId", "playerId"])
+data class ScoutReport(
+    val teamId: Long,
+    val playerId: Long,
+    val observations: Int
 )

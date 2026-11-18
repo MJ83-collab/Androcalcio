@@ -10,7 +10,11 @@ import it.androcalcio.data.Team
 import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Formation
+import it.androcalcio.data.ScoutReport
+import it.androcalcio.data.Youth
 import it.androcalcio.engine.MatchEngine
+import it.androcalcio.engine.Scouting
+import it.androcalcio.engine.Youths
 import it.androcalcio.engine.Market
 import it.androcalcio.engine.OfferResult
 import it.androcalcio.ui.components.money
@@ -160,6 +164,85 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updateTeam(buyer.copy(budget = (buyer.budget - price).coerceAtLeast(0)))
             dao.updatePlayer(p.copy(teamId = buyer.id))
             _offer.value = OfferResult.Accepted("${p.name} ceduto a ${buyer.name} per ${money(price)}.")
+        }
+    }
+
+    val youths: StateFlow<List<Youth>> =
+        selectedTeam.flatMapLatest { t ->
+            if (t == null) flowOf(emptyList()) else dao.youths(t.id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val scouted: StateFlow<List<Player>> =
+        selectedTeam.flatMapLatest { t ->
+            if (t == null) flowOf(emptyList()) else dao.scouted(t.id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val reports: StateFlow<List<ScoutReport>> =
+        selectedTeam.flatMapLatest { t ->
+            if (t == null) flowOf(emptyList()) else dao.reports(t.id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _notice = MutableStateFlow<String?>(null)
+    val notice: StateFlow<String?> = _notice
+    fun clearNotice() { _notice.value = null }
+
+    fun generateYouths() {
+        viewModelScope.launch {
+            val t = selectedTeam.value ?: return@launch
+            if (t.youthClaimed == season) return@launch
+            dao.insertYouths(Youths.generate(t, season))
+            dao.updateTeam(t.copy(youthClaimed = season))
+        }
+    }
+
+    fun promote(y: Youth) {
+        viewModelScope.launch {
+            if (players.value.size >= Market.MAX_SQUAD) {
+                _notice.value = "Rosa piena (massimo ${Market.MAX_SQUAD} giocatori)."
+                return@launch
+            }
+            dao.insertPlayer(
+                Player(teamId = y.teamId, name = y.name, role = y.role, age = y.age,
+                    overall = y.overall, morale = 75, salary = 30_000, nationality = y.nationality)
+            )
+            dao.deleteYouth(y)
+            _notice.value = "${y.name} promosso in prima squadra."
+        }
+    }
+
+    fun discard(y: Youth) { viewModelScope.launch { dao.deleteYouth(y) } }
+
+    fun sendScout(nazione: String, campionato: String) {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            val cost = Scouting.cost(me.scoutSkill)
+            if (cost > me.budget) {
+                _notice.value = "Budget insufficiente (servono ${money(cost)})."
+                return@launch
+            }
+            val picks = dao.leaguePlayers(nazione, campionato, me.id).shuffled().take(6)
+            if (picks.isEmpty()) {
+                _notice.value = "Nessun giocatore da osservare in questo campionato."
+                return@launch
+            }
+            dao.upsertReports(picks.map {
+                ScoutReport(me.id, it.id, (dao.report(me.id, it.id)?.observations ?: 0) + 1)
+            })
+            dao.updateTeam(me.copy(budget = me.budget - cost))
+            _notice.value = "Lo scout ha osservato ${picks.size} giocatori (${money(cost)})."
+        }
+    }
+
+    fun followPlayer(p: Player) {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            if (Scouting.FOLLOW_COST > me.budget) {
+                _notice.value = "Budget insufficiente."
+                return@launch
+            }
+            val obs = (dao.report(me.id, p.id)?.observations ?: 0) + 1
+            dao.upsertReports(listOf(ScoutReport(me.id, p.id, obs)))
+            dao.updateTeam(me.copy(budget = me.budget - Scouting.FOLLOW_COST))
         }
     }
 
