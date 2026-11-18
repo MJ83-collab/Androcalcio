@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -127,27 +128,15 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
 
     Scaffold(
         containerColor = AC.Bg,
-        bottomBar = {
-            NavigationBar(containerColor = AC.Surface) {
-                bottomTabs.forEach { t ->
-                    NavigationBarItem(
-                        selected = screen == t,
-                        onClick = { screen = t },
-                        icon = { Icon(t.icon, contentDescription = t.label) },
-                        label = { Text(t.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = AC.Bg,
-                            selectedTextColor = AC.Accent,
-                            indicatorColor = AC.Accent,
-                            unselectedIconColor = AC.TextDim,
-                            unselectedTextColor = AC.TextDim
-                        )
-                    )
-                }
-            }
-        }
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
+        Column(
+            Modifier.padding(padding).fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.Bg, AC.Surface))
+            )
+        ) {
+        HeaderBar(team, season, screen)
+        Row(Modifier.weight(1f)) {
+        Box(Modifier.weight(1f).fillMaxSize()) {
             when (screen) {
                 Screen.HOME -> HomeScreen(team, players) { screen = it }
                 Screen.ROSA -> RosaScreen(team, players) { p, y -> vm.renew(p, y) }
@@ -193,6 +182,55 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 else -> ComingSoon(screen)
             }
+        }
+        SideMenu(screen) { screen = it }
+        }
+        }
+    }
+}
+
+/** Barra in alto: squadra e stagione a sinistra, titolo della schermata a destra. */
+@Composable
+fun HeaderBar(team: Team?, season: String, screen: Screen) {
+    Row(
+        Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.45f))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (team != null) Crest(team, size = 34.dp)
+        Column(Modifier.padding(start = 10.dp).weight(1f)) {
+            Text(team?.name ?: "Androcalcio", style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Text("Stagione $season", style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+        }
+        Text(
+            if (screen == Screen.HOME) "ANDROCALCIO" else screen.label.uppercase(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = AC.Accent
+        )
+    }
+}
+
+/** Menu laterale a elenco di testo, come nei gestionali di una volta. */
+@Composable
+fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
+    Column(
+        Modifier.width(84.dp).fillMaxHeight().background(Color.Black.copy(alpha = 0.3f))
+            .verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Screen.values().forEach { sc ->
+            val on = sc == current
+            Text(
+                sc.label,
+                modifier = Modifier.fillMaxWidth()
+                    .background(if (on) AC.Accent.copy(alpha = 0.2f) else Color.Transparent)
+                    .clickable { onSelect(sc) }
+                    .padding(horizontal = 10.dp, vertical = 11.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Medium,
+                color = if (on) AC.Accent else AC.Text
+            )
         }
     }
 }

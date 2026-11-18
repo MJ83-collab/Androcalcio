@@ -1,4 +1,4 @@
-# Androcalcio – report (stato al passo 11)
+# Androcalcio – report (stato al passo 12)
 
 ## Stack
 Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migrazione 5→6 che conserva i dati), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
@@ -19,6 +19,8 @@ Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migr
     - Candidati casuali, ingaggio annuo pagato a fine stagione, contratto in anni: a scadenza lo staff lascia la squadra.
     - Il giudizio sull'abilità è sintetico (stessa scala del vivaio). Export/import JSON include lo staff.
 11. Allenatore delle giovanili e scout assumibili: l'assunzione aggiorna l'abilità del vivaio e dello scout del club; a licenziamento o scadenza del contratto il club torna all'abilità 40 ("vuoto"). Il valore inserito a mano nell'editor viene sovrascritto dall'assunzione.
+
+12. Stile PC Calcio: tema turchese con interruttore nella Home (salvato), barra in alto (squadra, stagione, titolo) e menu laterale a testo al posto della barra in basso. Non ancora fatte: tabelle con colonne colorate, sfondo con bandiera.
 
 ## Non fatto
 - Infortuni in partite simulate a fine stagione (`Chiudi stagione`): non vengono tirati. Solo le giornate giocate con "Prossima giornata" o "Fine stagione" li generano.
