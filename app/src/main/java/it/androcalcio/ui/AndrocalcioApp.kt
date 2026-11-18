@@ -183,6 +183,14 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     EditorScreen(vm, team, players, notice)
                 }
                 Screen.FINANZE -> FinanzeScreen(team, players)
+                Screen.STAFF -> {
+                    val staffList by vm.staff.collectAsState()
+                    val cands by vm.candidates.collectAsState()
+                    StaffScreen(
+                        team, staffList, cands,
+                        { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() }
+                    )
+                }
                 else -> ComingSoon(screen)
             }
         }
@@ -382,6 +390,13 @@ fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Uni
                             style = MaterialTheme.typography.bodySmall,
                             color = AC.TextDim
                         )
+                        if (p.injuredRounds > 0) {
+                            Text(
+                                "Infortunato: torna tra ${p.injuredRounds} ${if (p.injuredRounds == 1) "turno" else "turni"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AC.Danger
+                            )
+                        }
                         LinearProgressIndicator(
                             progress = { p.overall / 99f },
                             modifier = Modifier.padding(top = 6.dp).fillMaxWidth().height(4.dp),

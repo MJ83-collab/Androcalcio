@@ -112,4 +112,27 @@ interface AndrocalcioDao {
 
     @Insert
     suspend fun insertPlayers(players: List<Player>)
+
+    @Query("SELECT * FROM staff WHERE teamId = :teamId ORDER BY role")
+    fun staffOf(teamId: Long): Flow<List<Staff>>
+
+    @Query("SELECT * FROM staff WHERE teamId = :teamId")
+    suspend fun staffOnce(teamId: Long): List<Staff>
+
+    @Query("SELECT * FROM staff")
+    suspend fun allStaff(): List<Staff>
+
+    @Insert
+    suspend fun addStaff(s: Staff)
+
+    @Insert
+    suspend fun insertStaffs(list: List<Staff>)
+
+    @Update
+    suspend fun updateStaffs(list: List<Staff>)
+
+    @Delete
+    suspend fun deleteStaffs(list: List<Staff>)
+
+    @Query("DELETE FROM staff") suspend fun clearStaff()
 }

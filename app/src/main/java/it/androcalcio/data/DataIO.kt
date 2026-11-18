@@ -1,5 +1,6 @@
 package it.androcalcio.data
 
+import it.androcalcio.engine.Staffing
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -9,11 +10,12 @@ object DataIO {
 
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()
-        dao.clearPlayers(); dao.clearTeams()
+        dao.clearStaff(); dao.clearPlayers(); dao.clearTeams()
     }
 
     suspend fun export(dao: AndrocalcioDao): String {
         val players = dao.allPlayers().groupBy { it.teamId }
+        val staff = dao.allStaff().groupBy { it.teamId }
         val arr = JSONArray()
         dao.allTeams().forEach { t ->
             val ga = JSONArray()
@@ -24,6 +26,12 @@ object DataIO {
                     .put("salary", p.salary).put("nationality", p.nationality)
                     .put("potential", p.potential).put("contract", p.contract))
             }
+            val sa = JSONArray()
+            (staff[t.id] ?: emptyList()).forEach { s ->
+                sa.put(JSONObject()
+                    .put("role", s.role).put("name", s.name).put("skill", s.skill)
+                    .put("salary", s.salary).put("contract", s.contract))
+            }
             arr.put(JSONObject()
                 .put("name", t.name).put("shortName", t.shortName)
                 .put("colorPrimary", t.colorPrimary).put("colorSecondary", t.colorSecondary)
@@ -31,7 +39,7 @@ object DataIO {
                 .put("ticketPrice", t.ticketPrice).put("sponsor", t.sponsor)
                 .put("nazione", t.nazione).put("campionato", t.campionato)
                 .put("youthCoachSkill", t.youthCoachSkill).put("scoutSkill", t.scoutSkill)
-                .put("youthClaimed", t.youthClaimed).put("giocatori", ga))
+                .put("youthClaimed", t.youthClaimed).put("giocatori", ga).put("staff", sa))
         }
         return JSONObject().put("formato", FORMAT).put("versione", 1)
             .put("squadre", arr).toString(1)
@@ -44,6 +52,7 @@ object DataIO {
         val arr = root.getJSONArray("squadre")
         val teams = ArrayList<Team>()
         val squads = ArrayList<List<Player>>()
+        val staffs = ArrayList<List<Staff>>()
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
             teams += Team(
@@ -69,11 +78,25 @@ object DataIO {
                     contract = g.optInt("contract", 3)
                 )
             }
+            // "staff" manca nei file precedenti: in quel caso la squadra parte senza staff
+            val sa = o.optJSONArray("staff")
+            staffs += if (sa == null) emptyList() else (0 until sa.length()).map { k ->
+                val s = sa.getJSONObject(k)
+                Staff(
+                    teamId = 0,
+                    role = s.getString("role").takeIf { it in Staffing.ROLES } ?: Staffing.ALLENATORE,
+                    name = s.getString("name"),
+                    skill = s.getInt("skill").coerceIn(1, 99),
+                    salary = s.getLong("salary"),
+                    contract = s.getInt("contract").coerceIn(1, 5)
+                )
+            }
         }
         require(teams.isNotEmpty()) { "nessuna squadra" }
         wipe(dao)
         val ids = dao.insertTeams(teams)
         dao.insertPlayers(squads.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
+        dao.insertStaffs(staffs.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
         return teams.size
     }
 }

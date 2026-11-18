@@ -1,7 +1,7 @@
-# Androcalcio – report (stato al passo 6)
+# Androcalcio – report (stato al passo 10)
 
 ## Stack
-Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 5, ricreato da zero a ogni cambio schema), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
+Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migrazione 5→6 che conserva i dati), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
 
 ## Fatto
 1. Grafica e menu: tema scuro del canvas, stemmi generati, Home con 9 voci, Rosa, Finanze.
@@ -13,13 +13,21 @@ Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 5, ricreato
 7. Editor dati, copia personalizzata/predefiniti all'avvio, export/import JSON.
 8. Nuove stagioni: età, crescita verso il potenziale, ritiri a età fissa casuale 38-45, contratti (rinnovo), bilancio di fine stagione.
 9. Fine stagione: tutti i campionati vengono completati, premi per piazzamento, 3 promozioni/retrocessioni tra divisioni vicine.
+10. Staff (allenatore e preparatore della tua squadra):
+    - Allenatore: moltiplicatore sulla forza di squadra in partita (da -10% a +10%) e fino a ±2 punti di crescita per i giocatori fino a 28 anni.
+    - Preparatore: rischio di infortunio dopo ogni partita (da 2,5% a 7,5%); l'infortunato sta fuori 1-3 turni e non scende in campo.
+    - Candidati casuali, ingaggio annuo pagato a fine stagione, contratto in anni: a scadenza lo staff lascia la squadra.
+    - Il giudizio sull'abilità è sintetico (stessa scala del vivaio). Export/import JSON include lo staff.
 
 ## Non fatto
-- Clausole contrattuali, premi, bilancio dettagliato.
-- Staff completo, finanze con bilancio, editor dati, export/import JSON, salvataggio multiplo.
-- Partite di campionato senza vista 2D; nessuna tattica in partita, infortuni, sostituzioni.
+- Staff per scout e allenatore delle giovanili (oggi restano campi fissi della squadra, modificabili dall'editor).
+- Infortuni in partite simulate a fine stagione (`Chiudi stagione`): non vengono tirati. Solo le giornate giocate con "Prossima giornata" o "Fine stagione" li generano.
+- Staff per le squadre AI: giocano sempre con effetto neutro.
+- Clausole contrattuali, bilancio dettagliato.
+- Editor dati con potenziale modificabile, salvataggi multipli.
+- Partite di campionato senza vista 2D; nessuna tattica in partita, sostituzioni, forma fisica.
 - Taratura del motore (media gol, % pareggi) non verificata; app mai provata da me su schermo.
 - Font Sora/Manrope non inclusi.
 
 ## Prossimi passi consigliati
-Editor dati con export/import, poi stagioni successive (età, crescita, contratti), poi staff e bilancio.
+Verifica su schermo di staff e infortuni (build in cloud, poi test con Marco). Poi staff per scout e giovanili, oppure allenamento e forma fisica.

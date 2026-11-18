@@ -10,10 +10,13 @@ import androidx.lifecycle.viewModelScope
 import it.androcalcio.data.AndrocalcioDatabase
 import it.androcalcio.data.Player
 import it.androcalcio.data.SeedData
+import it.androcalcio.data.Staff
 import it.androcalcio.data.Team
 import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Medical
+import it.androcalcio.engine.Staffing
 import it.androcalcio.data.ScoutReport
 import it.androcalcio.data.Youth
 import it.androcalcio.engine.MatchEngine
@@ -63,9 +66,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun play(home: Team, away: Team, formation: Formation) {
         viewModelScope.launch {
-            val hp = dao.playersOnce(home.id)
-            val ap = dao.playersOnce(away.id)
-            _report.value = MatchEngine.simulate(home, hp, away, ap, formation, Formation.values().random())
+            val hp = Medical.available(dao.playersOnce(home.id))
+            val ap = Medical.available(dao.playersOnce(away.id))
+            val staffMap = dao.allStaff().groupBy { it.teamId }
+            _report.value = MatchEngine.simulate(
+                home, hp, away, ap, formation, Formation.values().random(),
+                Staffing.skill(staffMap, home.id, Staffing.ALLENATORE),
+                Staffing.skill(staffMap, away.id, Staffing.ALLENATORE)
+            )
         }
     }
 
@@ -107,8 +115,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val t = selectedTeam.value ?: return@launch
             val ms = dao.matchesOnce(key(t), _season.value)
             val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
-            val cache = HashMap<Long, List<Player>>()
+            val staffBy = dao.allStaff().groupBy { it.teamId }
+            val cache = HashMap<Long, List<Player>>()   // rose complete, aggiornate dopo ogni partita
             val formations = Formation.values()
+            val rng = kotlin.random.Random.Default
             val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
                 .let { if (all) it else it.take(1) }
             for (m in ms.filter { !it.played && it.round in rounds }) {
@@ -116,9 +126,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val a = teamsById[m.awayTeamId] ?: continue
                 val hp = cache.getOrPut(h.id) { dao.playersOnce(h.id) }
                 val ap = cache.getOrPut(a.id) { dao.playersOnce(a.id) }
-                val r = MatchEngine.simulate(h, hp, a, ap, formations.random(), formations.random())
+                val r = MatchEngine.simulate(
+                    h, Medical.available(hp), a, Medical.available(ap),
+                    formations.random(), formations.random(),
+                    Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
+                    Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)
+                )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
+                cache[h.id] = Medical.afterMatch(hp, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
+                cache[a.id] = Medical.afterMatch(ap, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
             }
+            dao.updatePlayers(cache.values.flatten())
         }
     }
 
@@ -346,6 +364,40 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Staff: allenatore e preparatore della tua squadra ----
+    val staff: StateFlow<List<Staff>> =
+        selectedTeam.flatMapLatest { t ->
+            if (t == null) flowOf(emptyList()) else dao.staffOf(t.id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _candidates = MutableStateFlow(Staffing.candidates(kotlin.random.Random.Default))
+    val candidates: StateFlow<List<Staff>> = _candidates
+
+    fun refreshCandidates() {
+        _candidates.value = Staffing.candidates(kotlin.random.Random.Default)
+    }
+
+    /** Assume un candidato: sostituisce chi occupava già quel ruolo. Lo stipendio si paga a fine stagione. */
+    fun hire(c: Staff) {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            val old = dao.staffOnce(me.id).filter { it.role == c.role }
+            if (old.isNotEmpty()) dao.deleteStaffs(old)
+            dao.addStaff(c.copy(id = 0, teamId = me.id))
+            _candidates.value = _candidates.value - c
+            val sost = old.firstOrNull()?.let { " Sostituisce ${it.name}." } ?: ""
+            _notice.value = "${c.name} ingaggiato come ${Staffing.roleName(c.role).lowercase()}.$sost " +
+                "Stipendio ${money(c.salary)} l'anno, pagato a fine stagione."
+        }
+    }
+
+    fun fire(s: Staff) {
+        viewModelScope.launch {
+            dao.deleteStaffs(listOf(s))
+            _notice.value = "${s.name} è stato licenziato."
+        }
+    }
+
     /** Fine stagione: età, crescita, ritiri, contratti, bilancio; nuova stagione. */
     fun closeSeason() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -357,6 +409,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val byTeam = cache
             val leagues = teamsNow.groupBy { it.nazione to it.campionato }
             val formations = Formation.values()
+            val staffAll = dao.allStaff()
+            val staffBy = staffAll.groupBy { it.teamId }
 
             // 1) Tutti i campionati: genera il calendario se manca e gioca le partite rimaste
             val finals = HashMap<Pair<String, String>, List<it.androcalcio.engine.StandingRow>>()
@@ -371,8 +425,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val a = byId[m.awayTeamId]
                     if (h == null || a == null) null else {
                         val r = MatchEngine.simulate(
-                            h, cache[h.id] ?: emptyList(), a, cache[a.id] ?: emptyList(),
-                            formations.random(), formations.random()
+                            h, Medical.available(cache[h.id] ?: emptyList()),
+                            a, Medical.available(cache[a.id] ?: emptyList()),
+                            formations.random(), formations.random(),
+                            Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
+                            Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)
                         )
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
@@ -414,7 +471,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
-                    val a = Progression.advance(p, rng)
+                    val a = Progression.advance(p, rng, Staffing.skill(staffBy, t.id, Staffing.ALLENATORE))
                     when {
                         a.age >= Progression.retireAge(a) -> {
                             removed += p
@@ -435,7 +492,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 repeat((16 - keep.size).coerceAtLeast(0)) { i ->
                     added += Progression.newYoung(t, rng, i == 0 && noKeeper)
                 }
-                val wages = keep.sumOf { it.salary }
+                val wages = keep.sumOf { it.salary } + (staffBy[t.id]?.sumOf { it.salary } ?: 0L)
                 val gate = t.stadiumCapacity.toLong() * t.ticketPrice * 7 / 10 * 19
                 val net = gate - wages * 4 / 10
                 val newLeague = moves[t.id]
@@ -457,6 +514,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.deletePlayers(removed)
             dao.insertPlayers(added)
             dao.updateTeams(newTeams)
+
+            // Staff: un anno di contratto in meno; chi arriva a zero lascia la squadra
+            val staffNext = staffAll.map { it.copy(contract = it.contract - 1) }
+            dao.updateStaffs(staffNext.filter { it.contract > 0 })
+            dao.deleteStaffs(staffNext.filter { it.contract <= 0 })
+            staffNext.filter { it.contract <= 0 && it.teamId == me.id }.forEach {
+                leavers += "${it.name} (${Staffing.roleName(it.role).lowercase()}, contratto scaduto)"
+            }
             dao.clearYouths()
             val y = prefs.getInt("season_year", 2026) + 1
             prefs.edit().putInt("season_year", y).apply()

@@ -47,13 +47,16 @@ object MatchEngine {
         ps.filter { it.role == role }.sortedByDescending { it.overall }.take(n)
             .map { it.overall.toDouble() }.average().let { if (it.isNaN()) 50.0 else it }
 
-    private fun ratings(ps: List<Player>, f: Formation) = Ratings(
-        atk = (top(ps, "A", 3) * 0.6 + top(ps, "C", 3) * 0.4) * f.atkMod,
-        mid = top(ps, "C", 4) * f.midMod,
-        def = top(ps, "D", 4) * f.defMod,
-        gk = top(ps, "P", 1),
-        players = ps
-    )
+    private fun ratings(ps: List<Player>, f: Formation, coach: Int): Ratings {
+        val k = Staffing.coachFactor(coach)
+        return Ratings(
+            atk = (top(ps, "A", 3) * 0.6 + top(ps, "C", 3) * 0.4) * f.atkMod * k,
+            mid = top(ps, "C", 4) * f.midMod * k,
+            def = top(ps, "D", 4) * f.defMod * k,
+            gk = top(ps, "P", 1),
+            players = ps
+        )
+    }
 
     private fun shooter(ps: List<Player>, rng: Random): Player? {
         val weights = ps.map {
@@ -79,10 +82,12 @@ object MatchEngine {
         away: Team, awayPlayers: List<Player>,
         homeF: Formation = Formation.F442,
         awayF: Formation = Formation.F442,
+        homeCoach: Int = Staffing.NEUTRAL,
+        awayCoach: Int = Staffing.NEUTRAL,
         rng: Random = Random.Default
     ): MatchReport {
-        val h = ratings(homePlayers, homeF)
-        val a = ratings(awayPlayers, awayF)
+        val h = ratings(homePlayers, homeF, homeCoach)
+        val a = ratings(awayPlayers, awayF, awayCoach)
         val pHome = h.mid * HOME_BONUS / (h.mid * HOME_BONUS + a.mid)
 
         val events = mutableListOf<MatchEvent>()

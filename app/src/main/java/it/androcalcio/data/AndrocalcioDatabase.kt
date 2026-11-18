@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class],
-    version = 5,
+    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class],
+    version = 6,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -15,11 +17,28 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
     abstract fun dao(): AndrocalcioDao
 
     companion object {
+        /** 5 -> 6: aggiunge lo staff e lo stato infortunio dei giocatori, senza perdere i dati. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE players ADD COLUMN injuredRounds INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `staff` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`teamId` INTEGER NOT NULL, " +
+                        "`role` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`skill` INTEGER NOT NULL, " +
+                        "`salary` INTEGER NOT NULL, " +
+                        "`contract` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         fun create(context: Context): AndrocalcioDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6).fallbackToDestructiveMigration().build()
     }
 }

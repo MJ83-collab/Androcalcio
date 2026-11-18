@@ -12,8 +12,12 @@ object Progression {
         return (((p.overall - 30).coerceAtLeast(5) * 9_000L * f).toLong() / 1_000L) * 1_000L
     }
 
-    /** Un anno dopo: età, crescita o declino, potenziale e contratto. */
-    fun advance(p: Player, rng: Random): Player {
+    /**
+     * Un anno dopo: età, crescita o declino, potenziale e contratto.
+     * Fino a 28 anni l'allenatore aggiunge o toglie fino a 2 punti (skill 1..99).
+     * Gli infortuni si esauriscono in bassa stagione.
+     */
+    fun advance(p: Player, rng: Random, coach: Int = Staffing.NEUTRAL): Player {
         val age = p.age + 1
         val delta = when {
             age < 20 -> rng.nextInt(2, 7)          // giovani: crescita decisa
@@ -21,11 +25,12 @@ object Progression {
             age <= 31 -> rng.nextInt(-1, 2)        // 29-31: stabili
             else -> -(1 + (age - 32) / 2 + rng.nextInt(0, 3)) // dopo i 31: declino crescente
         }
-        var ov = p.overall + delta
+        val coachBonus = if (age <= 28) (coach - Staffing.NEUTRAL) / 20 else 0
+        var ov = p.overall + delta + coachBonus
         if (age <= 28) ov = ov.coerceAtMost(maxOf(p.potential, p.overall))
         ov = ov.coerceIn(30, 99)
         val pot = if (age > 28) ov else maxOf(p.potential, ov)
-        return p.copy(age = age, overall = ov, potential = pot, contract = p.contract - 1)
+        return p.copy(age = age, overall = ov, potential = pot, contract = p.contract - 1, injuredRounds = 0)
     }
 
     /** Età di ritiro fissa per ogni giocatore, tra 38 e 45 anni. */

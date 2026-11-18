@@ -1,5 +1,6 @@
 package it.androcalcio.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -33,7 +34,19 @@ data class Player(
     val salary: Long,
     val nationality: String,
     val potential: Int = 60,
-    val contract: Int = 3
+    val contract: Int = 3,
+    @ColumnInfo(defaultValue = "0") val injuredRounds: Int = 0   // turni di stop; 0 = disponibile
+)
+
+@Entity(tableName = "staff")
+data class Staff(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val teamId: Long,            // 0 = candidato non ancora assunto
+    val role: String,            // ALL = allenatore, PRE = preparatore
+    val name: String,
+    val skill: Int,              // 1..99, mostrato all'utente come giudizio
+    val salary: Long,
+    val contract: Int
 )
 
 @Entity(tableName = "matches")
