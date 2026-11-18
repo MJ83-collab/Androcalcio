@@ -1,7 +1,7 @@
-# Androcalcio – report (stato al passo 12)
+# Androcalcio – report (stato al passo 15)
 
 ## Stack
-Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migrazione 5→6 che conserva i dati), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
+Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 8, migrazioni 5→6, 6→7, 7→8 che conservano i dati), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
 
 ## Fatto
 1. Grafica e menu: tema scuro del canvas, stemmi generati, Home con 9 voci, Rosa, Finanze.
@@ -36,9 +36,14 @@ Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migr
 ## Prossimi passi consigliati
 Verifica su schermo di staff e infortuni (build in cloud, poi test con Marco). Poi staff per scout e giovanili, oppure allenamento e forma fisica.
 
-## 14. Parametri giocatori e Rosa a tabella (passi 13-15)
-- Giocatori con parametri VE, RE, AG, QU, FO, GM, EN, PA, DR, FI, TI, RI, piede e ruolo dettagliato (DB v8, migrazione 7→8).
-- Motore partita: valori per reparto dai parametri, stanchezza dopo il 65', falli/cartellini pesati sull'aggressività, forma che varia dopo ogni gara.
-- Valori ricalibrati (massima serie ~82, seconda ~73) solo per nuove partite/"Predefiniti".
-- Rosa a tabella a righe alternate; tocco = scheda giocatore con barre (pulsante Rinnova). Intestazione con bandiera e campionato.
-- Prossimi: tattiche, allenamento, assicurazioni, finanze dettagliate, coppe, amichevoli.
+14. Parametri giocatori (passo 13): VE, RE, AG, QU, FO, GM, EN, PA, DR, FI, TI, RI, piede e ruolo dettagliato (DB v8). Il motore usa i parametri per reparto, stanchezza dopo il 65', falli pesati sull'aggressività, forma variabile dopo ogni gara. Valori ricalibrati (massima serie ~82, seconda ~73) solo per nuovi giochi o "Predefiniti". Import/export includono i parametri.
+15. Interfaccia (passi 14-15): Rosa a tabella con righe alternate (ruolo, nome, ET, VE, RE, QU, FO, LIV); tocco = scheda giocatore con barre e tasto Rinnova; intestazione con bandiera e campionato.
+
+## Ultimi commit
+Passi 13-15 in un unico commit, build verde (1m55s). Build: `gh run list --repo MJ83-collab/Androcalcio --limit 1`.
+
+## Prossimi passi proposti
+Tattiche, allenamento, assicurazioni, finanze dettagliate (cassa, merchandising, stadio), coppe, amichevoli di precampionato. Le clausole contrattuali richiedono un nuovo modello dati.
+
+## Regole di lavoro con Marco
+Italiano, risposte educate e precise; chiedere in caso di dubbi; confermare ogni passo salvo delega per la sessione; report dopo circa 5 domande; pochi token; a fine lavoro dire se bastava un modello inferiore. Solo nomi fittizi, nessun asset originale di PC Calcio.
