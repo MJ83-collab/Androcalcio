@@ -96,6 +96,9 @@ interface AndrocalcioDao {
     @Query("DELETE FROM teams") suspend fun clearTeams()
 
     @Update
+    suspend fun updateMatches(list: List<MatchResult>)
+
+    @Update
     suspend fun updatePlayers(list: List<Player>)
 
     @Update

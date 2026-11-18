@@ -18,6 +18,7 @@ import it.androcalcio.data.ScoutReport
 import it.androcalcio.data.Youth
 import it.androcalcio.engine.MatchEngine
 import it.androcalcio.engine.Progression
+import it.androcalcio.engine.standings
 import it.androcalcio.engine.Scouting
 import it.androcalcio.engine.Youths
 import it.androcalcio.engine.Market
@@ -350,13 +351,67 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val me = selectedTeam.value ?: return@launch
             val rng = kotlin.random.Random.Default
-            val byTeam = dao.allPlayers().groupBy { it.teamId }
+            val s = _season.value
+            val teamsNow = dao.allTeams()
+            val cache = dao.allPlayers().groupBy { it.teamId }
+            val byTeam = cache
+            val leagues = teamsNow.groupBy { it.nazione to it.campionato }
+            val formations = Formation.values()
+
+            // 1) Tutti i campionati: genera il calendario se manca e gioca le partite rimaste
+            val finals = HashMap<Pair<String, String>, List<it.androcalcio.engine.StandingRow>>()
+            for ((nc, ts) in leagues) {
+                val key = "${nc.first}|${nc.second}"
+                if (dao.fixtureCount(key, s) == 0) {
+                    dao.insertMatches(Fixtures.generate(ts.map { it.id }, s, key))
+                }
+                val byId = ts.associateBy { it.id }
+                val sims = dao.matchesOnce(key, s).filter { !it.played }.mapNotNull { m ->
+                    val h = byId[m.homeTeamId]
+                    val a = byId[m.awayTeamId]
+                    if (h == null || a == null) null else {
+                        val r = MatchEngine.simulate(
+                            h, cache[h.id] ?: emptyList(), a, cache[a.id] ?: emptyList(),
+                            formations.random(), formations.random()
+                        )
+                        m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
+                    }
+                }
+                dao.updateMatches(sims)
+                finals[nc] = standings(ts, dao.matchesOnce(key, s))
+            }
+
+            // 2) Premi, promozioni e retrocessioni (divisioni ordinate per comparsa nella lista)
+            val moves = HashMap<Long, String>()
+            val prizes = HashMap<Long, Long>()
+            val posInfo = HashMap<Long, String>()
+            val promoted = HashSet<Long>()
+            val relegated = HashSet<Long>()
+            leagues.keys.groupBy { it.first }.forEach { (_, keys) ->
+                val ordered = keys.sortedBy { k -> leagues.getValue(k).minOf { it.id } }
+                ordered.forEachIndexed { tier, k ->
+                    val st = finals.getValue(k)
+                    val size = st.size
+                    val base = listOf(20_000_000L, 6_000_000L, 2_000_000L).getOrElse(tier) { 800_000L }
+                    st.forEachIndexed { pos, row ->
+                        prizes[row.team.id] = base * (size - 1 - pos) / (size - 1).coerceAtLeast(1)
+                        posInfo[row.team.id] = "${pos + 1}º su $size in ${k.second}"
+                    }
+                    if (tier + 1 < ordered.size) {
+                        val lk = ordered[tier + 1]
+                        val low = finals.getValue(lk)
+                        val kk = minOf(3, size / 4, low.size / 4)
+                        st.takeLast(kk).forEach { moves[it.team.id] = lk.second; relegated += it.team.id }
+                        low.take(kk).forEach { moves[it.team.id] = k.second; promoted += it.team.id }
+                    }
+                }
+            }
             val updated = ArrayList<Player>()
             val removed = ArrayList<Player>()
             val added = ArrayList<Player>()
             val leavers = ArrayList<String>()
             var report = ""
-            val newTeams = dao.allTeams().map { t ->
+            val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
                     val a = Progression.advance(p, rng)
@@ -383,8 +438,20 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val wages = keep.sumOf { it.salary }
                 val gate = t.stadiumCapacity.toLong() * t.ticketPrice * 7 / 10 * 19
                 val net = gate - wages * 4 / 10
-                if (t.id == me.id) report = "Bilancio stagione: ${money(net)}."
-                t.copy(budget = (t.budget + net).coerceAtLeast(0))
+                val newLeague = moves[t.id]
+                if (t.id == me.id) {
+                    val fate = when {
+                        t.id in promoted -> "Promossa in $newLeague!"
+                        t.id in relegated -> "Retrocessa in $newLeague."
+                        else -> ""
+                    }
+                    report = "${posInfo[t.id] ?: ""}. $fate Premio ${money(prizes[t.id] ?: 0L)}, " +
+                        "bilancio ${money(net)}."
+                }
+                t.copy(
+                    budget = (t.budget + net + (prizes[t.id] ?: 0L)).coerceAtLeast(0),
+                    campionato = newLeague ?: t.campionato
+                )
             }
             dao.updatePlayers(updated)
             dao.deletePlayers(removed)
