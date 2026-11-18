@@ -41,20 +41,29 @@ object MatchEngine {
 
     private class Ratings(
         val atk: Double, val mid: Double, val def: Double, val gk: Double,
-        val players: List<Player>
+        val stamina: Double, val players: List<Player>
     )
 
-    private fun top(ps: List<Player>, role: String, n: Int): Double =
-        ps.filter { it.role == role }.sortedByDescending { it.overall }.take(n)
-            .map { it.overall.toDouble() }.average().let { if (it.isNaN()) 50.0 else it }
+    private fun top(ps: List<Player>, role: String, n: Int, f: (Player) -> Double): Double =
+        ps.filter { it.role == role }.map(f).sortedDescending().take(n)
+            .average().let { if (it.isNaN()) 50.0 else it }
+
+    /** Sceglie a caso un giocatore, con più probabilità per chi ha l'aggressività alta. */
+    private fun aggressive(ps: List<Player>, rng: Random): Player {
+        val total = ps.sumOf { it.ag.coerceAtLeast(1) }
+        var r = rng.nextInt(total)
+        for (p in ps) { r -= p.ag.coerceAtLeast(1); if (r < 0) return p }
+        return ps.last()
+    }
 
     private fun ratings(ps: List<Player>, f: Formation, coach: Int): Ratings {
         val k = Staffing.coachFactor(coach)
         return Ratings(
-            atk = (top(ps, "A", 3) * 0.6 + top(ps, "C", 3) * 0.4) * f.atkMod * k,
-            mid = top(ps, "C", 4) * f.midMod * k,
-            def = top(ps, "D", 4) * f.defMod * k,
-            gk = top(ps, "P", 1),
+            atk = (top(ps, "A", 3) { Attr.atk(it) } * 0.6 + top(ps, "C", 3) { Attr.atk(it) } * 0.4) * f.atkMod * k,
+            mid = top(ps, "C", 4) { Attr.mid(it) } * f.midMod * k,
+            def = top(ps, "D", 4) { Attr.def(it) } * f.defMod * k,
+            gk = top(ps, "P", 1) { Attr.gk(it) },
+            stamina = if (ps.isEmpty()) 60.0 else ps.map { it.re }.average(),
             players = ps
         )
     }
@@ -62,9 +71,9 @@ object MatchEngine {
     private fun shooter(ps: List<Player>, rng: Random): Player? {
         val weights = ps.map {
             when (it.role) {
-                "A" -> it.overall * 3.0
-                "C" -> it.overall * 1.5
-                "D" -> it.overall * 0.4
+                "A" -> (it.fi + it.ti) / 2.0 * 3.0
+                "C" -> (it.fi + it.ti + it.pa) / 3.0 * 1.5
+                "D" -> it.ti * 0.4
                 else -> 0.0
             }
         }
@@ -103,7 +112,11 @@ object MatchEngine {
 
         for (minute in 1..90) {
             if (rng.nextDouble() < ATTACK_PER_MINUTE) {
-                val homeAtt = rng.nextDouble() < pHome
+                // oltre il 65' la squadra meno resistente cala
+                val tireH = if (minute > 65) 0.96 + 0.04 * (h.stamina / 90.0).coerceAtMost(1.0) else 1.0
+                val tireA = if (minute > 65) 0.96 + 0.04 * (a.stamina / 90.0).coerceAtMost(1.0) else 1.0
+                val pNow = h.mid * tireH * HOME_BONUS / (h.mid * tireH * HOME_BONUS + a.mid * tireA)
+                val homeAtt = rng.nextDouble() < pNow
                 val att = if (homeAtt) h else a
                 val dfn = if (homeAtt) a else h
                 val team = if (homeAtt) home else away
@@ -134,7 +147,7 @@ object MatchEngine {
                 val side = rng.nextBoolean()
                 val ps = (if (side) homePlayers else awayPlayers).filter { it.role != "P" }
                 if (ps.isNotEmpty()) {
-                    val p = ps[rng.nextInt(ps.size)]
+                    val p = aggressive(ps, rng)
                     val t = if (side) home else away
                     events += MatchEvent(minute, EventType.YELLOW, side,
                         "Ammonito ${p.name} (${t.shortName})", 0.5f, 0.5f)

@@ -2,6 +2,7 @@ package it.androcalcio.data
 
 import android.content.Context
 import android.graphics.Color
+import it.androcalcio.engine.Attr
 import org.json.JSONArray
 import kotlin.random.Random
 
@@ -75,12 +76,14 @@ object SeedData {
         val players = mutableListOf<Player>()
         teams.forEachIndexed { idx, team ->
             val rng = Random(team.name.hashCode() + 7)
-            val base = 76 - tiers[idx] * 5 + rng.nextInt(-4, 5)
+            val base = 82 - tiers[idx] * 9 + rng.nextInt(-4, 5)   // massima serie ~82, seconda ~73
             val nat = codes[team.nazione] ?: "ITA"
-            roles.forEach { role ->
+            roles.forEachIndexed { slot, role ->
                 val age = rng.nextInt(17, 37)
-                val ov = (base + rng.nextInt(-9, 9) - if (age < 21) 6 else 0).coerceIn(35, 95)
-                players += Player(
+                // i primi di ogni reparto sono i titolari di qualità: qualche stella per squadra
+                val star = if (slot == 2 || slot == 8 || slot == 14 || slot == 0) 4 else 0
+                val ov = (base + star + rng.nextInt(-9, 9) - if (age < 21) 6 else 0).coerceIn(35, 95)
+                players += Attr.fill(Player(
                     teamId = ids[idx],
                     name = "${initials[rng.nextInt(initials.length)]}. ${surnames[rng.nextInt(surnames.size)]}",
                     role = role,
@@ -91,7 +94,7 @@ object SeedData {
                     nationality = if (rng.nextInt(100) < 75) nat else codes.values.random(rng),
                     potential = (ov + if (age < 24) rng.nextInt(0, 16) else rng.nextInt(0, 3)).coerceAtMost(99),
                     contract = rng.nextInt(1, 5)
-                )
+                ), rng)
             }
         }
         dao.insertPlayers(players)

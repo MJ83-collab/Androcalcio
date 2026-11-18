@@ -56,7 +56,10 @@ object Medical {
 
     /** Dopo una partita: gli infortunati recuperano di un turno, poi può esserci un nuovo infortunio. */
     fun afterMatch(ps: List<Player>, prep: Int, rng: Random): List<Player> {
-        val healed = ps.map { if (it.injuredRounds > 0) it.copy(injuredRounds = it.injuredRounds - 1) else it }
+        val healed = ps.map {
+            val fo = (it.fo + rng.nextInt(-4, 5)).coerceIn(40, 99)   // la forma oscilla di partita in partita
+            if (it.injuredRounds > 0) it.copy(injuredRounds = it.injuredRounds - 1, fo = fo) else it.copy(fo = fo)
+        }
         if (rng.nextDouble() >= Staffing.injuryChance(prep)) return healed
         val ok = healed.indices.filter { healed[it].injuredRounds == 0 }
         if (ok.isEmpty()) return healed

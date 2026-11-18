@@ -35,7 +35,23 @@ data class Player(
     val nationality: String,
     val potential: Int = 60,
     val contract: Int = 3,
-    @ColumnInfo(defaultValue = "0") val injuredRounds: Int = 0   // turni di stop; 0 = disponibile
+    @ColumnInfo(defaultValue = "0") val injuredRounds: Int = 0,  // turni di stop; 0 = disponibile
+    // Parametri come in PC Calcio (1..99): VE velocità, RE resistenza, AG aggressività, QU qualità,
+    // FO stato di forma; gioco di mani, entrate, passaggio, dribbling, finalizzare, tiro, rigori.
+    @ColumnInfo(defaultValue = "50") val ve: Int = 50,
+    @ColumnInfo(defaultValue = "50") val re: Int = 50,
+    @ColumnInfo(defaultValue = "50") val ag: Int = 50,
+    @ColumnInfo(defaultValue = "50") val qu: Int = 50,
+    @ColumnInfo(defaultValue = "80") val fo: Int = 80,
+    @ColumnInfo(defaultValue = "20") val gm: Int = 20,
+    @ColumnInfo(defaultValue = "50") val en: Int = 50,
+    @ColumnInfo(defaultValue = "50") val pa: Int = 50,
+    @ColumnInfo(defaultValue = "50") val dr: Int = 50,
+    @ColumnInfo(defaultValue = "50") val fi: Int = 50,
+    @ColumnInfo(defaultValue = "50") val ti: Int = 50,
+    @ColumnInfo(defaultValue = "50") val ri: Int = 50,
+    val foot: String = "D",      // D destro, S mancino, A ambidestro
+    val pos: String = ""         // ruolo dettagliato: POR TD TS DC MED REG INT MP ES CA
 )
 
 @Entity(tableName = "staff")

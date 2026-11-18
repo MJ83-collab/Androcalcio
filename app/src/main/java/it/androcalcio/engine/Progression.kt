@@ -30,7 +30,10 @@ object Progression {
         if (age <= 28) ov = ov.coerceAtMost(maxOf(p.potential, p.overall))
         ov = ov.coerceIn(30, 99)
         val pot = if (age > 28) ov else maxOf(p.potential, ov)
-        return p.copy(age = age, overall = ov, potential = pot, contract = p.contract - 1, injuredRounds = 0)
+        return Attr.shift(p, ov - p.overall).copy(
+            age = age, overall = ov, potential = pot, contract = p.contract - 1, injuredRounds = 0,
+            fo = rng.nextInt(60, 100)
+        )
     }
 
     /** Età di ritiro fissa per ogni giocatore, tra 38 e 45 anni. */
@@ -41,7 +44,7 @@ object Progression {
 
     fun newYoung(t: Team, rng: Random, forceGoalkeeper: Boolean): Player {
         val ov = rng.nextInt(38, 56)
-        return Player(
+        return Attr.fill(Player(
             teamId = t.id,
             name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                 SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
@@ -50,6 +53,6 @@ object Progression {
             nationality = SeedData.codes[t.nazione] ?: "ITA",
             potential = (ov + rng.nextInt(5, 26)).coerceAtMost(95),
             contract = rng.nextInt(2, 5)
-        )
+        ), rng)
     }
 }

@@ -3,6 +3,7 @@ package it.androcalcio.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -207,7 +208,8 @@ fun HeaderBar(team: Team?, season: String, screen: Screen) {
         if (team != null) Crest(team, size = 34.dp)
         Column(Modifier.padding(start = 10.dp).weight(1f)) {
             Text(team?.name ?: "Androcalcio", style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            Text("Stagione $season", style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+            Text("${flagOf(team?.nazione ?: "")} ${team?.campionato ?: ""} · Stagione $season",
+                style = MaterialTheme.typography.bodySmall, color = AC.TextDim, maxLines = 1)
         }
         Text(
             if (screen == Screen.HOME) "ANDROCALCIO" else screen.label.uppercase(),
@@ -399,6 +401,8 @@ private fun roleColor(role: String): Color = when (role) {
 fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Unit) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
+    var sheet by remember { mutableStateOf<Player?>(null) }
+    sheet?.let { p -> PlayerSheet(p, team, onClose = { sheet = null }, onRenew = { renew = p; sheet = null }) }
     renew?.let { p ->
         var years by remember(p) { mutableStateOf(3) }
         AlertDialog(
@@ -433,45 +437,38 @@ fun RosaScreen(team: Team?, players: List<Player>, onRenew: (Player, Int) -> Uni
                 )
             }
         }
+        item { RosaHeaderRow() }
         items(players, key = { it.id }) { p ->
-            GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { renew = p }) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(34.dp).clip(RoundedCornerShape(10.dp))
-                            .background(roleColor(p.role).copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(p.role, color = roleColor(p.role), fontWeight = FontWeight.Bold)
-                    }
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text(p.name, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            "${p.age} anni · ${p.nationality} · morale ${p.morale} · contratto ${p.contract}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AC.TextDim
-                        )
-                        if (p.injuredRounds > 0) {
-                            Text(
-                                "Infortunato: torna tra ${p.injuredRounds} ${if (p.injuredRounds == 1) "turno" else "turni"}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AC.Danger
-                            )
-                        }
-                        LinearProgressIndicator(
-                            progress = { p.overall / 99f },
-                            modifier = Modifier.padding(top = 6.dp).fillMaxWidth().height(4.dp),
-                            color = AC.Accent,
-                            trackColor = AC.SurfaceHi
-                        )
-                    }
-                    Text(
-                        "${p.overall}",
-                        modifier = Modifier.padding(start = 12.dp).width(32.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = AC.Accent
-                    )
+            val idx = players.indexOf(p)
+            Row(
+                Modifier.fillMaxWidth()
+                    .background(if (idx % 2 == 0) AC.Surface else AC.SurfaceHi.copy(alpha = 0.55f))
+                    .clickable { sheet = p }.padding(horizontal = 6.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(p.role, Modifier.width(18.dp), color = roleColor(p.role), fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall)
+                Text(p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.weight(1f), maxLines = 1,
+                    color = if (p.injuredRounds > 0) AC.Danger else AC.Text, style = MaterialTheme.typography.bodySmall)
+                listOf(p.age, p.ve, p.re, p.qu, p.fo, p.overall).forEach { v ->
+                    Text("$v", Modifier.width(26.dp), textAlign = TextAlign.End,
+                        color = if (v == p.overall) AC.Accent else AC.Text,
+                        fontWeight = if (v == p.overall) FontWeight.Bold else FontWeight.Normal,
+                        style = MaterialTheme.typography.bodySmall)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RosaHeaderRow() {
+    Row(Modifier.fillMaxWidth().background(AC.Accent.copy(alpha = 0.18f)).padding(horizontal = 6.dp, vertical = 6.dp)) {
+        Text("R", Modifier.width(18.dp), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
+        Text("Nome", Modifier.weight(1f), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
+        listOf("ET", "VE", "RE", "QU", "FO", "LIV").forEach {
+            Text(it, Modifier.width(26.dp), textAlign = TextAlign.End, color = AC.Accent,
+                style = MaterialTheme.typography.labelSmall)
         }
     }
 }

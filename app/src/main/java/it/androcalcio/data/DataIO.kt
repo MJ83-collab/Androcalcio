@@ -1,6 +1,8 @@
 package it.androcalcio.data
 
+import it.androcalcio.engine.Attr
 import it.androcalcio.engine.Staffing
+import kotlin.random.Random
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -24,7 +26,10 @@ object DataIO {
                     .put("name", p.name).put("role", p.role).put("age", p.age)
                     .put("overall", p.overall).put("morale", p.morale)
                     .put("salary", p.salary).put("nationality", p.nationality)
-                    .put("potential", p.potential).put("contract", p.contract))
+                    .put("potential", p.potential).put("contract", p.contract)
+                    .put("ve", p.ve).put("re", p.re).put("ag", p.ag).put("qu", p.qu).put("fo", p.fo)
+                    .put("gm", p.gm).put("en", p.en).put("pa", p.pa).put("dr", p.dr).put("fi", p.fi)
+                    .put("ti", p.ti).put("ri", p.ri).put("foot", p.foot).put("pos", p.pos))
             }
             val sa = JSONArray()
             (staff[t.id] ?: emptyList()).forEach { s ->
@@ -68,7 +73,7 @@ object DataIO {
             val ga = o.getJSONArray("giocatori")
             squads += (0 until ga.length()).map { j ->
                 val g = ga.getJSONObject(j)
-                Player(
+                val base = Player(
                     teamId = 0, name = g.getString("name"),
                     role = g.getString("role").takeIf { it in listOf("P", "D", "C", "A") } ?: "C",
                     age = g.getInt("age"), overall = g.getInt("overall").coerceIn(1, 99),
@@ -76,6 +81,13 @@ object DataIO {
                     nationality = g.getString("nationality"),
                     potential = g.optInt("potential", g.getInt("overall")).coerceIn(1, 99),
                     contract = g.optInt("contract", 3)
+                )
+                // file senza parametri (versioni precedenti): li ricavo dal livello
+                if (!g.has("ve")) Attr.fill(base, Random(j + base.name.hashCode())) else base.copy(
+                    ve = g.getInt("ve"), re = g.getInt("re"), ag = g.getInt("ag"), qu = g.getInt("qu"),
+                    fo = g.optInt("fo", 80), gm = g.getInt("gm"), en = g.getInt("en"), pa = g.getInt("pa"),
+                    dr = g.getInt("dr"), fi = g.getInt("fi"), ti = g.getInt("ti"), ri = g.getInt("ri"),
+                    foot = g.optString("foot", "D"), pos = g.optString("pos", "")
                 )
             }
             // "staff" manca nei file precedenti: in quel caso la squadra parte senza staff

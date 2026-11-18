@@ -12,6 +12,7 @@ import it.androcalcio.data.Player
 import it.androcalcio.data.SeedData
 import it.androcalcio.data.Goal
 import it.androcalcio.data.Staff
+import it.androcalcio.engine.Attr
 import it.androcalcio.engine.EventType
 import it.androcalcio.data.Team
 import it.androcalcio.data.MatchResult
@@ -240,9 +241,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             dao.insertPlayer(
-                Player(teamId = y.teamId, name = y.name, role = y.role, age = y.age,
+                Attr.fill(Player(teamId = y.teamId, name = y.name, role = y.role, age = y.age,
                     overall = y.overall, morale = 75, salary = 30_000, nationality = y.nationality,
-                    potential = y.potential, contract = 3)
+                    potential = y.potential, contract = 3), kotlin.random.Random)
             )
             dao.deleteYouth(y)
             _notice.value = "${y.name} promosso in prima squadra."
@@ -355,8 +356,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun addPlayer() {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
-            dao.insertPlayer(Player(teamId = t.id, name = "Nuovo giocatore", role = "C", age = 22,
-                overall = 60, morale = 70, salary = 50_000, nationality = "ITA"))
+            dao.insertPlayer(Attr.fill(Player(teamId = t.id, name = "Nuovo giocatore", role = "C", age = 22,
+                overall = 60, morale = 70, salary = 50_000, nationality = "ITA"), kotlin.random.Random))
         }
     }
 
