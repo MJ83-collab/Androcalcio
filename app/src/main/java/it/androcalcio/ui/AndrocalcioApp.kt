@@ -1,5 +1,7 @@
 package it.androcalcio.ui
 
+import it.androcalcio.engine.DefLine
+import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Lineup
 import androidx.activity.compose.BackHandler
@@ -150,8 +152,11 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 Screen.HOME -> HomeScreen(team, players) { screen = it }
                 Screen.ROSA -> {
                     val modulo by vm.formation.collectAsState()
+                    val press by vm.pressing.collectAsState()
+                    val linea by vm.line.collectAsState()
                     RosaScreen(team, players, { p, y -> vm.renew(p, y) },
-                        modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() })
+                        modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() },
+                        press, linea, { vm.setPressing(it) }, { vm.setLine(it) })
                 }
                 Screen.SQUADRE -> TeamList(teams, team?.id) {
                     vm.selectTeam(it)
@@ -425,7 +430,8 @@ private fun roleColor(role: String): Color = when (role) {
 fun RosaScreen(
     team: Team?, players: List<Player>, onRenew: (Player, Int) -> Unit,
     formation: Formation, onFormation: (Formation) -> Unit,
-    onToggleStarter: (Player) -> Unit, onCoach: () -> Unit
+    onToggleStarter: (Player) -> Unit, onCoach: () -> Unit,
+    press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -466,6 +472,7 @@ fun RosaScreen(
             }
         }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
+        item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { RosaHeaderRow() }
         items(players, key = { it.id }) { p ->
             val idx = players.indexOf(p)

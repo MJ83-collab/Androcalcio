@@ -1,5 +1,7 @@
 package it.androcalcio.ui
 
+import it.androcalcio.engine.Pressing
+import it.androcalcio.engine.DefLine
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -214,5 +216,18 @@ fun MentalityPicker(current: Mentality, onPick: (Mentality) -> Unit) {
         Mentality.values().forEach { m ->
             FilterChip(selected = m == current, onClick = { onPick(m) }, label = { Text(m.label) })
         }
+    }
+}
+
+/** Pressing e linea difensiva della tua squadra. */
+@Composable
+fun TacticsPicker(press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit) {
+    SectionTitle("Pressing")
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Pressing.values().forEach { p -> FilterChip(selected = p == press, onClick = { onPress(p) }, label = { Text(p.label) }) }
+    }
+    SectionTitle("Linea difensiva")
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        DefLine.values().forEach { l -> FilterChip(selected = l == line, onClick = { onLine(l) }, label = { Text(l.label) }) }
     }
 }

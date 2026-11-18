@@ -34,3 +34,17 @@ enum class Mentality(val label: String, val atk: Double, val def: Double, val te
     EQUILIBRATA("Equilibrata", 1.0, 1.0, 1.0),
     OFFENSIVA("Offensiva", 1.08, 0.92, 1.06)
 }
+
+/** Pressing: più alto = più palloni recuperati (possesso) ma più stanchezza. */
+enum class Pressing(val label: String, val poss: Double, val drain: Double) {
+    BASSO("Basso", 0.95, 0.8),
+    MEDIO("Medio", 1.0, 1.0),
+    ALTO("Alto", 1.06, 1.3)
+}
+
+/** Linea difensiva: alta = squadra corta e più spinta, ma soffre gli attaccanti veloci. */
+enum class DefLine(val label: String, val poss: Double, val def: Double, val atk: Double) {
+    BASSA("Bassa", 0.97, 1.05, 0.97),
+    MEDIA("Media", 1.0, 1.0, 1.0),
+    ALTA("Alta", 1.04, 0.98, 1.03)
+}

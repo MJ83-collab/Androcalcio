@@ -86,6 +86,14 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 }
             }
             item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
+            item {
+                Column {
+                    TacticsPicker(
+                        if (info.userHome) m.pressH else m.pressA, if (info.userHome) m.lineH else m.lineA,
+                        { vm.livePressing(it) }, { vm.liveLine(it) }
+                    )
+                }
+            }
         } else {
             item {
                 Button(onClick = { vm.closeLive() }, modifier = Modifier.fillMaxWidth(), enabled = info.saved || info.league == null,

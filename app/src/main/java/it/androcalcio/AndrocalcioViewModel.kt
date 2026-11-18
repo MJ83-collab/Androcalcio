@@ -1,5 +1,7 @@
 package it.androcalcio
 
+import it.androcalcio.engine.DefLine
+import it.androcalcio.engine.Pressing
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
@@ -130,6 +132,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // Pressing e linea difensiva della tua squadra
+    private val _pressing = MutableStateFlow(Pressing.values()[prefs.getInt("pressing", 1).coerceIn(0, 2)])
+    val pressing: StateFlow<Pressing> = _pressing
+    fun setPressing(p: Pressing) { _pressing.value = p; prefs.edit().putInt("pressing", p.ordinal).apply() }
+    private val _line = MutableStateFlow(DefLine.values()[prefs.getInt("linea", 1).coerceIn(0, 2)])
+    val line: StateFlow<DefLine> = _line
+    fun setLine(l: DefLine) { _line.value = l; prefs.edit().putInt("linea", l.ordinal).apply() }
+
     fun setMentality(m: Mentality) {
         _mentality.value = m
         prefs.edit().putInt("mentalita", m.ordinal).apply()
@@ -209,7 +219,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     homeMent = if (h.id == t.id) _mentality.value else null,
                     awayMent = if (a.id == t.id) _mentality.value else null,
                     homeBench = hL?.let { Medical.available(hp) - it.xi.toSet() },
-                    awayBench = aL?.let { Medical.available(ap) - it.xi.toSet() }
+                    awayBench = aL?.let { Medical.available(ap) - it.xi.toSet() },
+                    homePress = if (h.id == t.id) _pressing.value else null,
+                    awayPress = if (a.id == t.id) _pressing.value else null,
+                    homeLine = if (h.id == t.id) _line.value else null,
+                    awayLine = if (a.id == t.id) _line.value else null
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
                 goalsAcc += r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
@@ -254,7 +268,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             Staffing.skill(staffBy, home.id, Staffing.ALLENATORE), Staffing.skill(staffBy, away.id, Staffing.ALLENATORE),
             if (userHome) _mentality.value else null, if (userHome) null else _mentality.value,
             if (userHome) myBench else null, if (userHome) null else myBench,
-            manualHome = userHome, manualAway = !userHome
+            manualHome = userHome, manualAway = !userHome,
+            homePress = if (userHome) _pressing.value else null, awayPress = if (userHome) null else _pressing.value,
+            homeLine = if (userHome) _line.value else null, awayLine = if (userHome) null else _line.value
         )
         return LiveInfo(m, userHome = userHome, league = league)
     }
@@ -296,6 +312,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (!i.m.substitute(i.userHome, out, inP)) _notice.value = "Cambio non possibile."
         bump()
     }
+    fun livePressing(p: Pressing) { val i = _live.value ?: return; i.m.setPressing(i.userHome, p); bump() }
+    fun liveLine(l: DefLine) { val i = _live.value ?: return; i.m.setLine(i.userHome, l); bump() }
+
     fun liveMentality(m: Mentality) {
         val i = _live.value ?: return
         i.m.setMentality(i.userHome, m); bump()
@@ -652,7 +671,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                             homeMent = if (h.id == me.id) _mentality.value else null,
                             awayMent = if (a.id == me.id) _mentality.value else null,
-                            homeBench = bench(h.id, hx), awayBench = bench(a.id, ax)
+                            homeBench = bench(h.id, hx), awayBench = bench(a.id, ax),
+                            homePress = if (h.id == me.id) _pressing.value else null,
+                            awayPress = if (a.id == me.id) _pressing.value else null,
+                            homeLine = if (h.id == me.id) _line.value else null,
+                            awayLine = if (a.id == me.id) _line.value else null
                         )
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(),
                             Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)

@@ -105,9 +105,12 @@ object MatchEngine {
         awayMent: Mentality? = null,
         homeBench: List<Player>? = null,    // null = titolari e panchina scelti dall'allenatore
         awayBench: List<Player>? = null,
+        homePress: Pressing? = null, awayPress: Pressing? = null,
+        homeLine: DefLine? = null, awayLine: DefLine? = null,
         rng: Random = Random.Default
     ): MatchReport = LiveMatch(
         home, homePlayers, away, awayPlayers, homeF, awayF, homeCoach, awayCoach,
-        homeMent, awayMent, homeBench, awayBench, rng
+        homeMent, awayMent, homeBench, awayBench, rng,
+        homePress = homePress, awayPress = awayPress, homeLine = homeLine, awayLine = awayLine
     ).also { it.runToEnd() }.report()
 }

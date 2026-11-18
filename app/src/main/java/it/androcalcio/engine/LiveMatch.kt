@@ -19,7 +19,9 @@ class LiveMatch(
     homeBench: List<Player>?, awayBench: List<Player>?,
     private val rng: Random = Random.Default,
     var manualHome: Boolean = false,
-    var manualAway: Boolean = false
+    var manualAway: Boolean = false,
+    homePress: Pressing? = null, awayPress: Pressing? = null,   // null = sceglie l'AI
+    homeLine: DefLine? = null, awayLine: DefLine? = null
 ) {
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
         if (bench != null) ps.toMutableList() to bench.toMutableList()
@@ -57,6 +59,30 @@ class LiveMatch(
     var mA = awayMent ?: baseA; private set
 
     fun energyOf(p: Player): Double = energy[p.id] ?: 1.0
+
+    // Pressing e linea delle squadre AI: in base a resistenza (RE) e velocità dei difensori (VE)
+    private fun aiPress(xi: List<Player>): Pressing {
+        val re = xi.filter { it.role != "P" }.map { it.re }.average()
+        return when { re >= 68 -> Pressing.ALTO; re < 55 -> Pressing.BASSO; else -> Pressing.MEDIO }
+    }
+    private fun aiLine(xi: List<Player>): DefLine {
+        val ve = xi.filter { it.role == "D" }.map { it.ve }.average().let { if (it.isNaN()) 60.0 else it }
+        return when { ve >= 68 -> DefLine.ALTA; ve < 55 -> DefLine.BASSA; else -> DefLine.MEDIA }
+    }
+    var pressH = homePress ?: aiPress(xiH); private set
+    var pressA = awayPress ?: aiPress(xiA); private set
+    var lineH = homeLine ?: aiLine(xiH); private set
+    var lineA = awayLine ?: aiLine(xiA); private set
+
+    fun setPressing(homeSide: Boolean, p: Pressing) { if (homeSide) pressH = p else pressA = p }
+    fun setLine(homeSide: Boolean, l: DefLine) { if (homeSide) lineH = l else lineA = l }
+
+    /** Con la linea alta, gli attaccanti avversari veloci trovano più spazio alle spalle. */
+    private fun speedPenalty(line: DefLine, attackers: List<Player>): Double {
+        if (line != DefLine.ALTA) return 1.0
+        val ve = attackers.filter { it.role == "A" }.map { it.ve }.average().let { if (it.isNaN()) 60.0 else it }
+        return 1.0 - ((ve - 65).coerceAtLeast(0.0) / 400.0)
+    }
 
     /** Mentalità scelta dall'utente a partita in corso. */
     fun setMentality(homeSide: Boolean, m: Mentality) {
@@ -124,7 +150,8 @@ class LiveMatch(
         if (finished) return
         minute++
         if (minute > 55) {
-            (xiH + xiA).forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p)).coerceAtLeast(0.7) }
+            xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressH.drain).coerceAtLeast(0.7) }
+            xiA.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressA.drain).coerceAtLeast(0.7) }
             if (minute in 56..85) {
                 if (!manualHome && subsH < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(true, hg < ag)
                 if (!manualAway && subsA < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(false, ag < hg)
@@ -139,14 +166,18 @@ class LiveMatch(
             "${away.shortName} passa a mentalità ${nA.label.lowercase()}", 0.5f, 0.5f)
         mH = nH; mA = nA
         if (rng.nextDouble() < MatchEngine.ATTACK_PER_MINUTE * (mH.tempo + mA.tempo) / 2) {
-            val pNow = h.mid * MatchEngine.HOME_BONUS / (h.mid * MatchEngine.HOME_BONUS + a.mid)
+            val ph = h.mid * MatchEngine.HOME_BONUS * pressH.poss * lineH.poss
+            val pNow = ph / (ph + a.mid * pressA.poss * lineA.poss)
             val homeAtt = rng.nextDouble() < pNow
             val att = if (homeAtt) h else a
             val dfn = if (homeAtt) a else h
             val team = if (homeAtt) home else away
             val mAtt = if (homeAtt) mH else mA
             val mDef = if (homeAtt) mA else mH
-            val ratio = att.atk * mAtt.atk / (dfn.def * mDef.def)
+            val lAtt = if (homeAtt) lineH else lineA
+            val lDef = if (homeAtt) lineA else lineH
+            val defPen = speedPenalty(lDef, if (homeAtt) xiH else xiA)
+            val ratio = att.atk * mAtt.atk * lAtt.atk / (dfn.def * mDef.def * lDef.def * defPen)
             if (rng.nextDouble() < (0.45 * ratio).coerceIn(0.2, 0.7)) {
                 if (homeAtt) hs++ else asht++
                 val sh = MatchEngine.shooter(att.players, rng)
