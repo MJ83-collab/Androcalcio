@@ -753,6 +753,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val added = ArrayList<Player>()
             val leavers = ArrayList<String>()
             var report = ""
+            var meNet = 0L
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
@@ -782,6 +783,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val net = gate - wages * 4 / 10
                 val newLeague = moves[t.id]
                 if (t.id == me.id) {
+                    meNet = net
                     val fate = when {
                         t.id in promoted -> "Promossa in $newLeague!"
                         t.id in relegated -> "Retrocessa in $newLeague."
@@ -800,7 +802,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.insertPlayers(added)
             dao.updateTeams(newTeams)
             newTeams.find { it.id == me.id }?.let { nt ->
-                registra(me.id, "Bilancio di fine stagione (incassi, ingaggi)", net, nt.budget - (prizes[me.id] ?: 0L))
+                registra(me.id, "Bilancio di fine stagione (incassi, ingaggi)", meNet, nt.budget - (prizes[me.id] ?: 0L))
                 (prizes[me.id] ?: 0L).takeIf { it != 0L }?.let { pr ->
                     registra(me.id, "Premio piazzamento", pr, nt.budget)
                 }
