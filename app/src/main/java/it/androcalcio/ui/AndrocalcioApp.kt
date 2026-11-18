@@ -73,6 +73,7 @@ import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Movimento
 import it.androcalcio.engine.Stadium
 import it.androcalcio.engine.Sponsorship
+import it.androcalcio.engine.Insurance
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.Progression
@@ -207,7 +208,9 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 Screen.FINANZE -> {
                     val movimenti by vm.movimenti.collectAsState()
-                    FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) })
+                    val assicurazione by vm.insurance.collectAsState()
+                    FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) },
+                        assicurazione, { vm.setInsurance(it) })
                 }
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
@@ -532,7 +535,8 @@ private fun RosaHeaderRow() {
 @Composable
 fun FinanzeScreen(
     team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList(),
-    onExpand: () -> Unit = {}, onSponsor: (String) -> Unit = {}
+    onExpand: () -> Unit = {}, onSponsor: (String) -> Unit = {},
+    insurance: Int = 0, onInsurance: (Int) -> Unit = {}
 ) {
     if (team == null) return
     val wages = players.sumOf { it.salary }
@@ -550,6 +554,25 @@ fun FinanzeScreen(
             Modifier.fillMaxWidth()
         )
         StatChip("Prezzo biglietto", "€ ${team.ticketPrice}", Modifier.fillMaxWidth())
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Assicurazione infortuni", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Premio pagato a fine stagione. Rimborsa una quota dell'ingaggio per ogni turno di stop " +
+                        "di un giocatore infortunato; il rimborso arriva a fine stagione.",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall
+                )
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        Insurance.NONE to "Nessuna",
+                        Insurance.BASE to "Base · ${money(Insurance.premium(Insurance.BASE))}/anno (50%)",
+                        Insurance.FULL to "Completa · ${money(Insurance.premium(Insurance.FULL))}/anno (100%)"
+                    ).forEach { (lvl, label) ->
+                        FilterChip(selected = insurance == lvl, onClick = { onInsurance(lvl) }, label = { Text(label) })
+                    }
+                }
+            }
+        }
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Sponsor e merchandising", style = MaterialTheme.typography.titleMedium)

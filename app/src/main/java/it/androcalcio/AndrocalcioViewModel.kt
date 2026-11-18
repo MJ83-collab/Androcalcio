@@ -3,6 +3,7 @@ package it.androcalcio
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.Stadium
+import it.androcalcio.engine.Insurance
 import it.androcalcio.engine.Sponsorship
 import it.androcalcio.engine.TrainFocus
 import it.androcalcio.engine.TrainIntensity
@@ -258,9 +259,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
                 }
                 cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
-                    planFor(h.id, t.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
+                    planFor(h.id, t.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE)).also { accrueInsurance(h.id, hp, it) }
                 cache[a.id] = Medical.afterMatch(ap, r.awayPlayed, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
-                    planFor(a.id, t.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
+                    planFor(a.id, t.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)).also { accrueInsurance(a.id, ap, it) }
             }
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
@@ -372,8 +373,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val rng = kotlin.random.Random.Default
             for (id in listOf(mr.homeTeamId, mr.awayTeamId)) {
                 val played = if (id == mr.homeTeamId) r.homePlayed else r.awayPlayed
-                dao.updatePlayers(Medical.afterMatch(dao.playersOnce(id), played, Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng,
-                    planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)))
+                val beforeP = dao.playersOnce(id)
+                dao.updatePlayers(Medical.afterMatch(beforeP, played, Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng,
+                    planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)).also { accrueInsurance(id, beforeP, it) })
             }
         }
         _live.value = _live.value?.copy(saved = true, tick = i.tick + 1)
@@ -486,9 +488,25 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Sponsor e merchandising della tua squadra a fine stagione (le AI non li incassano). */
-    private fun extra(t: Team): Long =
-        if (t.id == selectedTeam.value?.id) Sponsorship.annual(t.sponsor) + Sponsorship.merch(t.stadiumCapacity) else 0L
+    /** Stato dell'assicurazione infortuni della tua squadra (salvato nelle preferenze). */
+    private val _insurance = MutableStateFlow(prefs.getInt("assicurazione", Insurance.NONE).coerceIn(0, 2))
+    val insurance: StateFlow<Int> = _insurance
+    fun setInsurance(level: Int) {
+        _insurance.value = level
+        prefs.edit().putInt("assicurazione", level).apply()
+    }
+
+    /** Dopo una gara: accumula il rimborso per gli infortuni nuovi della tua squadra (pagato a fine stagione). */
+    private fun accrueInsurance(teamId: Long, before: List<Player>, after: List<Player>) {
+        val lvl = _insurance.value
+        if (lvl == Insurance.NONE || teamId != selectedTeam.value?.id) return
+        val prev = before.associateBy { it.id }
+        val add = after.sumOf { a ->
+            val b = prev[a.id]
+            if (b != null && b.injuredRounds == 0 && a.injuredRounds > 0) Insurance.refund(a.salary, a.injuredRounds, lvl) else 0L
+        }
+        if (add > 0) prefs.edit().putLong("ins_pending", prefs.getLong("ins_pending", 0L) + add).apply()
+    }
 
     /** Sceglie lo sponsor della tua squadra: l'incasso arriva a fine stagione. */
     fun setSponsor(name: String) {
@@ -746,9 +764,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
                             Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
                             planFor(h.id, me.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
+                            .also { accrueInsurance(h.id, cache[h.id] ?: emptyList(), it) }
                         cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(), r.awayPlayed,
                             Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
                             planFor(a.id, me.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
+                            .also { accrueInsurance(a.id, cache[a.id] ?: emptyList(), it) }
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
                 }
@@ -787,6 +807,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val leavers = ArrayList<String>()
             var report = ""
             var meNet = 0L
+            // Voci economiche della tua squadra, lette una volta sola (le sim sono già concluse)
+            val insPending = prefs.getLong("ins_pending", 0L)
+            prefs.edit().putLong("ins_pending", 0L).apply()
+            val insPremium = Insurance.premium(_insurance.value)
+            val meSp = Sponsorship.annual(me.sponsor)
+            val meMc = Sponsorship.merch(me.stadiumCapacity)
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
@@ -826,7 +852,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         "bilancio ${money(net)}."
                 }
                 t.copy(
-                    budget = (t.budget + net + (prizes[t.id] ?: 0L) + extra(t)).coerceAtLeast(0),
+                    budget = (t.budget + net + (prizes[t.id] ?: 0L) +
+                        (if (t.id == me.id) meSp + meMc - insPremium + insPending else 0L)).coerceAtLeast(0),
                     campionato = newLeague ?: t.campionato
                 )
             }
@@ -836,12 +863,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updateTeams(newTeams)
             newTeams.find { it.id == me.id }?.let { nt ->
                 val pr = prizes[me.id] ?: 0L
-                val sp = Sponsorship.annual(me.sponsor)
-                val mc = Sponsorship.merch(me.stadiumCapacity)
-                registra(me.id, "Bilancio di fine stagione (incassi, ingaggi)", meNet, nt.budget - pr - sp - mc)
-                if (pr != 0L) registra(me.id, "Premio piazzamento", pr, nt.budget - sp - mc)
-                registra(me.id, "Sponsor ${me.sponsor}", sp, nt.budget - mc)
-                registra(me.id, "Merchandising", mc, nt.budget)
+                val lines = buildList {
+                    add("Bilancio di fine stagione (incassi, ingaggi)" to meNet)
+                    if (pr != 0L) add("Premio piazzamento" to pr)
+                    add("Sponsor ${me.sponsor}" to meSp)
+                    add("Merchandising" to meMc)
+                    if (insPremium > 0) add("Premio assicurazione" to -insPremium)
+                    if (insPending > 0) add("Rimborso infortuni" to insPending)
+                }
+                var saldo = nt.budget - lines.sumOf { it.second }
+                lines.forEach { (label, importo) ->
+                    saldo += importo
+                    registra(me.id, label, importo, saldo)
+                }
             }
 
             // Staff: un anno di contratto in meno; chi arriva a zero lascia la squadra
