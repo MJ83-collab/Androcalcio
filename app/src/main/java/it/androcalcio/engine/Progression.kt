@@ -16,18 +16,20 @@ object Progression {
     fun advance(p: Player, rng: Random): Player {
         val age = p.age + 1
         val delta = when {
-            age <= 21 -> rng.nextInt(1, 6)
-            age <= 26 -> rng.nextInt(-1, 4)
-            age <= 30 -> rng.nextInt(-2, 2)
-            age <= 33 -> -rng.nextInt(0, 4)
-            else -> -rng.nextInt(1, 5)
+            age < 20 -> rng.nextInt(2, 7)          // giovani: crescita decisa
+            age <= 28 -> rng.nextInt(-1, 3)        // 20-28 anni: miglioramento lieve
+            age <= 31 -> rng.nextInt(-1, 2)        // 29-31: stabili
+            else -> -(1 + (age - 32) / 2 + rng.nextInt(0, 3)) // dopo i 31: declino crescente
         }
         var ov = p.overall + delta
-        if (age <= 26) ov = ov.coerceAtMost(maxOf(p.potential, p.overall))
+        if (age <= 28) ov = ov.coerceAtMost(maxOf(p.potential, p.overall))
         ov = ov.coerceIn(30, 99)
-        val pot = if (age > 26) ov else maxOf(p.potential, ov)
+        val pot = if (age > 28) ov else maxOf(p.potential, ov)
         return p.copy(age = age, overall = ov, potential = pot, contract = p.contract - 1)
     }
+
+    /** Età di ritiro fissa per ogni giocatore, tra 38 e 45 anni. */
+    fun retireAge(p: Player): Int = 38 + Math.abs(p.id.hashCode()) % 8
 
     fun renewAI(p: Player, rng: Random): Player =
         p.copy(contract = rng.nextInt(1, 5), salary = wage(p))

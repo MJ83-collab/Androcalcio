@@ -11,7 +11,7 @@ Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 5, ricreato
 5. Mercato: offerte, controfferte, vendite, budget e limiti di rosa.
 6. Vivaio e scouting: leva giovanile con parere dell'allenatore, report scout con intervalli che si stringono, giudizio di adattamento alla rosa.
 7. Editor dati, copia personalizzata/predefiniti all'avvio, export/import JSON.
-8. Nuove stagioni: età, crescita verso il potenziale, ritiri, contratti (rinnovo), bilancio di fine stagione.
+8. Nuove stagioni: età, crescita verso il potenziale, ritiri a età fissa casuale 38-45, contratti (rinnovo), bilancio di fine stagione.
 
 ## Non fatto
 - Clausole contrattuali, promozioni/retrocessioni tra divisioni, premi, bilancio dettagliato.

@@ -361,7 +361,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
                     val a = Progression.advance(p, rng)
                     when {
-                        a.age >= 38 -> {
+                        a.age >= Progression.retireAge(a) -> {
                             removed += p
                             if (t.id == me.id) leavers += "${p.name} (ritiro)"
                         }
