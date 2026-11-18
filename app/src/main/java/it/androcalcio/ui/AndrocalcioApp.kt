@@ -232,6 +232,23 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
             StatChip("Rosa", "${players.size}", Modifier.weight(1f))
         }
 
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        GlassCard(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Tema PC Calcio", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                androidx.compose.material3.Switch(
+                    checked = AC.pcCalcio,
+                    onCheckedChange = {
+                        AC.pcCalcio = it
+                        ctx.getSharedPreferences("androcalcio", 0).edit().putBoolean("tema_pc", it).apply()
+                    }
+                )
+            }
+        }
+
         SectionTitle("Menu")
         val tiles = listOf(
             Screen.ROSA, Screen.PARTITA, Screen.MERCATO, Screen.VIVAIO,
