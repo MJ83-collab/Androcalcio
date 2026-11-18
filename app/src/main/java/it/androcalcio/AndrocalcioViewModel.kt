@@ -175,6 +175,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _season = MutableStateFlow(seasonName(prefs.getInt("season_year", 2026)))
     val season: StateFlow<String> = _season
+
+    /** Movimenti della stagione in corso della tua squadra (per il bilancio di stagione). */
+    val movimentiStagione: StateFlow<List<Movimento>> =
+        combine(selectedTeam, _season) { t, s -> t to s }
+            .flatMapLatest { (t, s) -> if (t == null) flowOf(emptyList()) else dao.movimentiStagione(t.id, s) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private fun key(t: Team) = "${t.nazione}|${t.campionato}"
 
     val matches: StateFlow<List<MatchResult>> =

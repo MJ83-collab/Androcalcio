@@ -154,4 +154,7 @@ interface AndrocalcioDao {
     fun movimenti(teamId: Long, n: Int = 60): Flow<List<Movimento>>
 
     @Query("DELETE FROM movimenti") suspend fun clearMovimenti()
+
+    @Query("SELECT * FROM movimenti WHERE teamId = :teamId AND season = :season ORDER BY id")
+    fun movimentiStagione(teamId: Long, season: String): Flow<List<Movimento>>
 }

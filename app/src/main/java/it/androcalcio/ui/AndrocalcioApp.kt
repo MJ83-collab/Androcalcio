@@ -83,6 +83,8 @@ import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.components.StatChip
 import it.androcalcio.ui.components.money
 import it.androcalcio.ui.theme.AC
+import androidx.compose.foundation.layout.Spacer
+import it.androcalcio.engine.Bilancio
 
 enum class Screen(val label: String, val icon: ImageVector, val desc: String) {
     HOME("Home", Icons.Filled.Home, ""),
@@ -208,9 +210,11 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 Screen.FINANZE -> {
                     val movimenti by vm.movimenti.collectAsState()
+                    val movStagione by vm.movimentiStagione.collectAsState()
+                    val stagione by vm.season.collectAsState()
                     val assicurazione by vm.insurance.collectAsState()
                     FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) },
-                        assicurazione, { vm.setInsurance(it) })
+                        assicurazione, { vm.setInsurance(it) }, movStagione, stagione)
                 }
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
@@ -536,7 +540,8 @@ private fun RosaHeaderRow() {
 fun FinanzeScreen(
     team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList(),
     onExpand: () -> Unit = {}, onSponsor: (String) -> Unit = {},
-    insurance: Int = 0, onInsurance: (Int) -> Unit = {}
+    insurance: Int = 0, onInsurance: (Int) -> Unit = {},
+    bilancioStagione: List<Movimento> = emptyList(), stagione: String = ""
 ) {
     if (team == null) return
     val wages = players.sumOf { it.salary }
@@ -604,6 +609,42 @@ fun FinanzeScreen(
                     onClick = onExpand,
                     enabled = Stadium.canExpand(team.stadiumCapacity) && team.budget >= Stadium.blockCost
                 ) { Text("Amplia stadio") }
+            }
+        }
+        val righe = remember(bilancioStagione) { Bilancio.riepilogo(bilancioStagione) }
+        val entrate = righe.sumOf { it.entrate }
+        val uscite = righe.sumOf { it.uscite }
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Bilancio di stagione $stagione", style = MaterialTheme.typography.titleMedium)
+                if (righe.isEmpty()) {
+                    Text("Nessun movimento in questa stagione.", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                }
+                righe.forEach { r ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(r.categoria, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "+${money(r.entrate)}   -${money(r.uscite)}",
+                            style = MaterialTheme.typography.bodySmall, color = AC.TextDim
+                        )
+                    }
+                }
+                if (righe.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Totale entrate / uscite", style = MaterialTheme.typography.bodySmall)
+                        Text("+${money(entrate)}   -${money(uscite)}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    val risultato = entrate - uscite
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Risultato della stagione", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            (if (risultato >= 0) "+" else "") + money(risultato),
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold,
+                            color = if (risultato >= 0) AC.Ok else AC.Danger
+                        )
+                    }
+                }
             }
         }
         GlassCard(Modifier.fillMaxWidth()) {
