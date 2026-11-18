@@ -33,7 +33,10 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -91,6 +94,22 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     val report by vm.report.collectAsState()
     val matches by vm.matches.collectAsState()
 
+    val ask by vm.askStartup.collectAsState()
+    if (ask) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Quali dati vuoi usare?") },
+            text = { Text("Hai una copia personalizzata. Nessuna copia viene sovrascritta.") },
+            confirmButton = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(onClick = { vm.chooseStartup(0) }, modifier = Modifier.fillMaxWidth()) { Text("Personalizzati") }
+                    Button(onClick = { vm.chooseStartup(1) }, modifier = Modifier.fillMaxWidth()) { Text("Predefiniti") }
+                    TextButton(onClick = { vm.chooseStartup(2) }, modifier = Modifier.fillMaxWidth()) { Text("Continua come ora") }
+                }
+            }
+        )
+    }
+
     BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
 
     Scaffold(
@@ -145,6 +164,10 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
                         { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() }
                     )
+                }
+                Screen.EDITOR -> {
+                    val notice by vm.notice.collectAsState()
+                    EditorScreen(vm, team, players, notice)
                 }
                 Screen.FINANZE -> FinanzeScreen(team, players)
                 else -> ComingSoon(screen)

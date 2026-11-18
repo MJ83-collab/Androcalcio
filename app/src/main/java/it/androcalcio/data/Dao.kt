@@ -80,6 +80,21 @@ interface AndrocalcioDao {
     @Query("SELECT * FROM players WHERE teamId != :me AND teamId IN (SELECT id FROM teams WHERE nazione = :nazione AND campionato = :campionato)")
     suspend fun leaguePlayers(nazione: String, campionato: String, me: Long): List<Player>
 
+    @Query("SELECT * FROM teams ORDER BY id")
+    suspend fun allTeams(): List<Team>
+
+    @Query("SELECT * FROM players")
+    suspend fun allPlayers(): List<Player>
+
+    @Delete
+    suspend fun deletePlayer(p: Player)
+
+    @Query("DELETE FROM matches") suspend fun clearMatches()
+    @Query("DELETE FROM youths") suspend fun clearYouths()
+    @Query("DELETE FROM scout_reports") suspend fun clearReports()
+    @Query("DELETE FROM players") suspend fun clearPlayers()
+    @Query("DELETE FROM teams") suspend fun clearTeams()
+
     @Insert
     suspend fun insertTeams(teams: List<Team>): List<Long>
 

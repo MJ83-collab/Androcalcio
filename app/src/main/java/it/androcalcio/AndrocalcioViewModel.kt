@@ -1,6 +1,10 @@
 package it.androcalcio
 
 import android.app.Application
+import android.net.Uri
+import it.androcalcio.data.DataIO
+import kotlinx.coroutines.Dispatchers
+import java.io.File
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import it.androcalcio.data.AndrocalcioDatabase
@@ -33,7 +37,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
+    private val ctx: Application = app
     private val dao = AndrocalcioDatabase.create(app).dao()
+    private val customFile = File(app.filesDir, "custom.json")
 
     val teams: StateFlow<List<Team>> =
         dao.teams().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -243,6 +249,79 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val obs = (dao.report(me.id, p.id)?.observations ?: 0) + 1
             dao.upsertReports(listOf(ScoutReport(me.id, p.id, obs)))
             dao.updateTeam(me.copy(budget = me.budget - Scouting.FOLLOW_COST))
+        }
+    }
+
+    val askStartup = MutableStateFlow(customFile.exists())
+
+    /** 0 = personalizzati, 1 = predefiniti, 2 = continua come ora. Nessuna copia viene sovrascritta. */
+    fun chooseStartup(choice: Int) {
+        askStartup.value = false
+        viewModelScope.launch(Dispatchers.IO) {
+            when (choice) {
+                0 -> try {
+                    DataIO.import(dao, customFile.readText())
+                } catch (e: Exception) {
+                    _notice.value = "Copia personalizzata non valida: nessuna modifica."
+                }
+                1 -> resetDefaultsNow()
+            }
+        }
+    }
+
+    private suspend fun resetDefaultsNow() {
+        DataIO.wipe(dao)
+        SeedData.insertInto(ctx, dao)
+    }
+
+    fun resetDefaults() {
+        viewModelScope.launch(Dispatchers.IO) {
+            resetDefaultsNow()
+            _notice.value = "Dati predefiniti ripristinati."
+        }
+    }
+
+    fun saveCustom() {
+        viewModelScope.launch(Dispatchers.IO) {
+            customFile.writeText(DataIO.export(dao))
+            _notice.value = "Copia personalizzata salvata."
+        }
+    }
+
+    fun exportTo(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val text = DataIO.export(dao)
+                ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                _notice.value = "Dati esportati."
+            } catch (e: Exception) {
+                _notice.value = "Esportazione non riuscita."
+            }
+        }
+    }
+
+    fun importFrom(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val text = ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: error("vuoto")
+                val n = DataIO.import(dao, text)
+                _notice.value = "Importate $n squadre."
+            } catch (e: Exception) {
+                _notice.value = "File non valido: nessuna modifica."
+            }
+        }
+    }
+
+    fun saveTeam(t: Team) { viewModelScope.launch { dao.updateTeam(t) } }
+    fun savePlayer(p: Player) { viewModelScope.launch { dao.updatePlayer(p) } }
+    fun deletePlayer(p: Player) { viewModelScope.launch { dao.deletePlayer(p) } }
+
+    fun addPlayer() {
+        viewModelScope.launch {
+            val t = selectedTeam.value ?: return@launch
+            dao.insertPlayer(Player(teamId = t.id, name = "Nuovo giocatore", role = "C", age = 22,
+                overall = 60, morale = 70, salary = 50_000, nationality = "ITA"))
         }
     }
 
