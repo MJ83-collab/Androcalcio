@@ -150,16 +150,19 @@ object MatchEngine {
         // Cambio: esce il più stanco, entra il migliore della panchina nello stesso ruolo
         // (se la squadra perde dopo il 60', meglio un attaccante al posto di un difensore o centrocampista)
         fun trySub(xi: MutableList<Player>, bench: MutableList<Player>, losing: Boolean, minute: Int, homeSide: Boolean, t: Team): Boolean {
-            val tired = xi.filter { it.role != "P" }.minByOrNull { energy[it.id] ?: 1.0 } ?: return false
-            if ((energy[tired.id] ?: 1.0) > 0.975 && !(losing && minute > 60)) return false
-            val wantAtk = losing && minute > 60 && tired.role != "A"
-            val inP = (if (wantAtk) bench.filter { it.role == "A" }.maxByOrNull { Attr.atk(it) } else null)
-                ?: bench.filter { it.role == tired.role }.maxByOrNull { it.overall }
-                ?: return false
-            xi[xi.indexOf(tired)] = inP; bench -= inP
-            events += MatchEvent(minute, EventType.SUB, homeSide,
-                "Sostituzione (${t.shortName}): ${inP.name} per ${tired.name}", 0.5f, 0.5f)
-            return true
+            // dal più stanco in su, il primo che ha un sostituto in panchina
+            for (tired in xi.filter { it.role != "P" }.sortedBy { energy[it.id] ?: 1.0 }) {
+                if ((energy[tired.id] ?: 1.0) > 0.975 && !(losing && minute > 60)) return false
+                val wantAtk = losing && minute > 60 && tired.role != "A"
+                val inP = (if (wantAtk) bench.filter { it.role == "A" }.maxByOrNull { Attr.atk(it) } else null)
+                    ?: bench.filter { it.role == tired.role }.maxByOrNull { it.overall }
+                    ?: continue
+                xi[xi.indexOf(tired)] = inP; bench -= inP
+                events += MatchEvent(minute, EventType.SUB, homeSide,
+                    "Sostituzione (${t.shortName}): ${inP.name} per ${tired.name}", 0.5f, 0.5f)
+                return true
+            }
+            return false
         }
 
         for (minute in 1..90) {
