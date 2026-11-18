@@ -7,6 +7,8 @@ import it.androcalcio.data.AndrocalcioDatabase
 import it.androcalcio.data.Player
 import it.androcalcio.data.SeedData
 import it.androcalcio.data.Team
+import it.androcalcio.engine.MatchEngine
+import it.androcalcio.engine.MatchReport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +38,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         selectedTeam
             .flatMapLatest { t -> if (t == null) flowOf(emptyList()) else dao.playersOf(t.id) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _report = MutableStateFlow<MatchReport?>(null)
+    val report: StateFlow<MatchReport?> = _report
+
+    fun play(home: Team, away: Team) {
+        viewModelScope.launch {
+            val hp = dao.playersOnce(home.id)
+            val ap = dao.playersOnce(away.id)
+            _report.value = MatchEngine.simulate(home, hp, away, ap)
+        }
+    }
+
+    fun resetMatch() { _report.value = null }
 
     init {
         viewModelScope.launch {

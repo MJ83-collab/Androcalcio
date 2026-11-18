@@ -14,6 +14,9 @@ interface AndrocalcioDao {
     @Query("SELECT * FROM players WHERE teamId = :teamId ORDER BY overall DESC")
     fun playersOf(teamId: Long): Flow<List<Player>>
 
+    @Query("SELECT * FROM players WHERE teamId = :teamId")
+    suspend fun playersOnce(teamId: Long): List<Player>
+
     @Query("SELECT COUNT(*) FROM teams")
     suspend fun teamCount(): Int
 
