@@ -35,6 +35,11 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // I test stampano le statistiche di taratura nel log della build
+    testOptions {
+        unitTests.all { it.testLogging { showStandardStreams = true } }
+    }
 }
 
 dependencies {
@@ -50,4 +55,5 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
 }
