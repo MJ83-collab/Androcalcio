@@ -9,10 +9,18 @@ import kotlin.random.Random
 object Staffing {
     const val ALLENATORE = "ALL"
     const val PREPARATORE = "PRE"
+    const val GIOVANILI = "GIO"     // allenatore delle giovanili: aggiorna Team.youthCoachSkill
+    const val SCOUT = "SCO"         // scout: aggiorna Team.scoutSkill
     const val NEUTRAL = 50          // squadre AI e ruoli vuoti: effetto nullo
-    val ROLES = listOf(ALLENATORE, PREPARATORE)
+    const val VUOTO = 40            // abilità del club quando il ruolo resta scoperto
+    val ROLES = listOf(ALLENATORE, PREPARATORE, GIOVANILI, SCOUT)
 
-    fun roleName(role: String): String = if (role == ALLENATORE) "Allenatore" else "Preparatore"
+    fun roleName(role: String): String = when (role) {
+        ALLENATORE -> "Allenatore"
+        PREPARATORE -> "Preparatore"
+        GIOVANILI -> "Allenatore delle giovanili"
+        else -> "Scout"
+    }
 
     /** Abilità dello staff di una squadra per ruolo; 50 (neutra) se il ruolo è vuoto. */
     fun skill(by: Map<Long, List<Staff>>, teamId: Long, role: String): Int =
@@ -28,7 +36,7 @@ object Staffing {
     fun wage(skill: Int): Long = ((skill - 30).coerceAtLeast(5) * 12_000L / 1_000L) * 1_000L
 
     /** Candidati da assumere: n per ruolo, con abilità e contratto casuali. */
-    fun candidates(rng: Random, n: Int = 3): List<Staff> = ROLES.flatMap { role ->
+    fun candidates(rng: Random, n: Int = 2): List<Staff> = ROLES.flatMap { role ->
         (1..n).map {
             val sk = rng.nextInt(35, 91)
             Staff(

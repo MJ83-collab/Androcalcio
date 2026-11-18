@@ -384,6 +384,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val old = dao.staffOnce(me.id).filter { it.role == c.role }
             if (old.isNotEmpty()) dao.deleteStaffs(old)
             dao.addStaff(c.copy(id = 0, teamId = me.id))
+            syncTeamSkill(me.id, c.role, c.skill)
             _candidates.value = _candidates.value - c
             val sost = old.firstOrNull()?.let { " Sostituisce ${it.name}." } ?: ""
             _notice.value = "${c.name} ingaggiato come ${Staffing.roleName(c.role).lowercase()}.$sost " +
@@ -394,7 +395,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun fire(s: Staff) {
         viewModelScope.launch {
             dao.deleteStaffs(listOf(s))
+            syncTeamSkill(s.teamId, s.role, Staffing.VUOTO)
             _notice.value = "${s.name} è stato licenziato."
+        }
+    }
+
+    /** Vivaio e scout leggono le abilità del club: assumere le aggiorna, lasciare il ruolo vuoto le riporta a VUOTO. */
+    private suspend fun syncTeamSkill(teamId: Long, role: String, skill: Int) {
+        val t = dao.team(teamId)
+        when (role) {
+            Staffing.GIOVANILI -> dao.updateTeam(t.copy(youthCoachSkill = skill))
+            Staffing.SCOUT -> dao.updateTeam(t.copy(scoutSkill = skill))
         }
     }
 
@@ -522,6 +533,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             staffNext.filter { it.contract <= 0 && it.teamId == me.id }.forEach {
                 leavers += "${it.name} (${Staffing.roleName(it.role).lowercase()}, contratto scaduto)"
             }
+            // Il club torna senza figura: vivaio e scout riprendono l'abilità "vuoto"
+            staffNext.filter { it.contract <= 0 }.forEach { syncTeamSkill(it.teamId, it.role, Staffing.VUOTO) }
             dao.clearYouths()
             val y = prefs.getInt("season_year", 2026) + 1
             prefs.edit().putInt("season_year", y).apply()

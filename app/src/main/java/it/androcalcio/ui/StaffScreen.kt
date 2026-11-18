@@ -35,9 +35,11 @@ private fun effetto(s: Staff): String = when (s.role) {
         val p = ((Staffing.coachFactor(s.skill) - 1.0) * 100).roundToInt()
         "Partita: ${if (p >= 0) "+" else ""}$p% · crescita dei giocatori fino a 28 anni"
     }
-    else -> String.format(
+    Staffing.PREPARATORE -> String.format(
         Locale.ITALY, "Rischio infortunio per partita: %.1f%%", Staffing.injuryChance(s.skill) * 100
     )
+    Staffing.GIOVANILI -> "Giudizi del vivaio sui giovani: più precisi con abilità alta"
+    else -> "Osservazioni dello scout: costo e precisione dipendono dall'abilità"
 }
 
 @Composable
@@ -68,7 +70,7 @@ fun StaffScreen(
         item {
             Text(
                 "Lo stipendio di ogni figura si paga a fine stagione, insieme agli ingaggi. " +
-                    "Assumere un nuovo allenatore sostituisce quello in carica.",
+                    "Assumere una figura sostituisce quella in carica dello stesso ruolo.",
                 style = MaterialTheme.typography.bodySmall, color = AC.TextDim
             )
         }

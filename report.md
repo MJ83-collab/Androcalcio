@@ -1,4 +1,4 @@
-# Androcalcio – report (stato al passo 10)
+# Androcalcio – report (stato al passo 11)
 
 ## Stack
 Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migrazione 5→6 che conserva i dati), minSdk 26. Build in cloud con GitHub Actions (artifact `androcalcio-debug-apk`).
@@ -18,9 +18,9 @@ Kotlin 2.0.20, Jetpack Compose (Material 3), Room 2.6.1 (versione DB 6, con migr
     - Preparatore: rischio di infortunio dopo ogni partita (da 2,5% a 7,5%); l'infortunato sta fuori 1-3 turni e non scende in campo.
     - Candidati casuali, ingaggio annuo pagato a fine stagione, contratto in anni: a scadenza lo staff lascia la squadra.
     - Il giudizio sull'abilità è sintetico (stessa scala del vivaio). Export/import JSON include lo staff.
+11. Allenatore delle giovanili e scout assumibili: l'assunzione aggiorna l'abilità del vivaio e dello scout del club; a licenziamento o scadenza del contratto il club torna all'abilità 40 ("vuoto"). Il valore inserito a mano nell'editor viene sovrascritto dall'assunzione.
 
 ## Non fatto
-- Staff per scout e allenatore delle giovanili (oggi restano campi fissi della squadra, modificabili dall'editor).
 - Infortuni in partite simulate a fine stagione (`Chiudi stagione`): non vengono tirati. Solo le giornate giocate con "Prossima giornata" o "Fine stagione" li generano.
 - Staff per le squadre AI: giocano sempre con effetto neutro.
 - Clausole contrattuali, bilancio dettagliato.
