@@ -1,6 +1,7 @@
 package it.androcalcio.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import it.androcalcio.engine.Mentality
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,7 +44,9 @@ fun CalendarioScreen(
     onNext: () -> Unit,
     onSeason: () -> Unit,
     season: String,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    mentality: Mentality = Mentality.EQUILIBRATA,
+    onMentality: (Mentality) -> Unit = {}
 ) {
     if (team == null) return
     val byId = teams.associateBy { it.id }
@@ -68,6 +71,8 @@ fun CalendarioScreen(
                 Text("Fine stagione")
             }
         }
+
+        if (nextRound != null) MentalityPicker(mentality, onMentality)
 
         if (nextRound == null && matches.isNotEmpty()) {
             Button(

@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import it.androcalcio.data.Team
 import it.androcalcio.engine.EventType
 import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.MatchReport
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
@@ -54,7 +55,9 @@ fun PartitaScreen(
     teams: List<Team>,
     report: MatchReport?,
     onPlay: (Team, Team, Formation) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    mentality: Mentality = Mentality.EQUILIBRATA,
+    onMentality: (Mentality) -> Unit = {}
 ) {
     if (team == null) return
     if (report == null) {
@@ -87,6 +90,7 @@ fun PartitaScreen(
                     )
                 }
             }
+            MentalityPicker(mentality, onMentality)
             if (away != null) {
                 GlassCard(Modifier.fillMaxWidth()) {
                     Row(
@@ -165,6 +169,7 @@ fun PartitaScreen(
                 EventType.GOAL -> AC.Accent
                 EventType.YELLOW -> AC.Warn
                 EventType.SAVE -> AC.Accent2
+                EventType.TACTIC -> AC.Ok
                 else -> AC.TextDim
             }
             Text("${e.minute}'  ${e.text}", color = c, style = MaterialTheme.typography.bodyMedium)
@@ -197,5 +202,16 @@ fun Pitch(home: Team, away: Team, bx: Float, by: Float, hf: Formation, af: Forma
             drawCircle(awayColor, r, Offset(((1f - fx) + shift).coerceIn(0.02f, 0.98f) * w, fy * h))
         }
         drawCircle(Color.White, r * 0.8f, Offset(bx * w, by * h))
+    }
+}
+
+/** Scelta della mentalità della tua squadra: vale per le partite e per le giornate di campionato. */
+@Composable
+fun MentalityPicker(current: Mentality, onPick: (Mentality) -> Unit) {
+    SectionTitle("Mentalità")
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Mentality.values().forEach { m ->
+            FilterChip(selected = m == current, onClick = { onPick(m) }, label = { Text(m.label) })
+        }
     }
 }

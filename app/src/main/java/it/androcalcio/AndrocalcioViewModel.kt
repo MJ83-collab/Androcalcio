@@ -23,6 +23,7 @@ import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
+import it.androcalcio.engine.Mentality
 import it.androcalcio.data.ScoutReport
 import it.androcalcio.data.Youth
 import it.androcalcio.engine.MatchEngine
@@ -82,7 +83,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             _report.value = MatchEngine.simulate(
                 home, hp, away, ap, formation, Formation.values().random(),
                 Staffing.skill(staffMap, home.id, Staffing.ALLENATORE),
-                Staffing.skill(staffMap, away.id, Staffing.ALLENATORE)
+                Staffing.skill(staffMap, away.id, Staffing.ALLENATORE),
+                homeMent = _mentality.value
             )
         }
     }
@@ -97,6 +99,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = ctx.getSharedPreferences("androcalcio", 0)
     private fun seasonName(y: Int) = "$y/${((y + 1) % 100).toString().padStart(2, '0')}"
+    // Mentalità della tua squadra, ricordata tra una sessione e l'altra
+    private val _mentality = MutableStateFlow(
+        Mentality.values()[prefs.getInt("mentalita", Mentality.EQUILIBRATA.ordinal)])
+    val mentality: StateFlow<Mentality> = _mentality
+    fun setMentality(m: Mentality) {
+        _mentality.value = m
+        prefs.edit().putInt("mentalita", m.ordinal).apply()
+    }
+
     private val _season = MutableStateFlow(seasonName(prefs.getInt("season_year", 2026)))
     val season: StateFlow<String> = _season
     private fun key(t: Team) = "${t.nazione}|${t.campionato}"
@@ -157,7 +168,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     h, Medical.available(hp), a, Medical.available(ap),
                     formations.random(), formations.random(),
                     Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
-                    Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)
+                    Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
+                    homeMent = if (h.id == t.id) _mentality.value else null,
+                    awayMent = if (a.id == t.id) _mentality.value else null
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
                 goalsAcc += r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
@@ -482,7 +495,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             a, Medical.available(cache[a.id] ?: emptyList()),
                             formations.random(), formations.random(),
                             Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
-                            Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)
+                            Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
+                            homeMent = if (h.id == me.id) _mentality.value else null,
+                            awayMent = if (a.id == me.id) _mentality.value else null
                         )
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(),
                             Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)

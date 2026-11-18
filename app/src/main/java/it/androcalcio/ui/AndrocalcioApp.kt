@@ -149,8 +149,16 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     vm.selectTeam(it)
                     screen = Screen.HOME
                 }
-                Screen.PARTITA -> PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() })
-                Screen.CALENDARIO -> CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() }, season, { vm.closeSeason() })
+                Screen.PARTITA -> {
+                    val ment by vm.mentality.collectAsState()
+                    PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() },
+                        ment, { vm.setMentality(it) })
+                }
+                Screen.CALENDARIO -> {
+                    val ment by vm.mentality.collectAsState()
+                    CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() }, season,
+                        { vm.closeSeason() }, ment, { vm.setMentality(it) })
+                }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsState()
                     val role by vm.marketRole.collectAsState()

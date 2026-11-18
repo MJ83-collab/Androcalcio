@@ -27,3 +27,10 @@ enum class Formation(
         return out
     }
 }
+
+/** Mentalità: sposta l'equilibrio tra attacco e difesa e cambia il ritmo della partita. */
+enum class Mentality(val label: String, val atk: Double, val def: Double, val tempo: Double) {
+    DIFENSIVA("Difensiva", 0.92, 1.08, 0.94),
+    EQUILIBRATA("Equilibrata", 1.0, 1.0, 1.0),
+    OFFENSIVA("Offensiva", 1.08, 0.92, 1.06)
+}

@@ -5,7 +5,7 @@ import it.androcalcio.data.Team
 import kotlin.math.pow
 import kotlin.random.Random
 
-enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME }
+enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC }
 
 data class MatchEvent(
     val minute: Int,
@@ -95,6 +95,8 @@ object MatchEngine {
         awayF: Formation = Formation.F442,
         homeCoach: Int = Staffing.NEUTRAL,
         awayCoach: Int = Staffing.NEUTRAL,
+        homeMent: Mentality? = null,        // null = decide il motore (squadre AI)
+        awayMent: Mentality? = null,
         rng: Random = Random.Default
     ): MatchReport {
         val h = ratings(homePlayers, homeF, homeCoach)
@@ -111,8 +113,33 @@ object MatchEngine {
 
         events += MatchEvent(0, EventType.KICKOFF, true, "Calcio d'inizio", 0.5f, 0.5f)
 
+        // Mentalità iniziale delle squadre AI: in base al rapporto di forza
+        fun startMent(own: Ratings, opp: Ratings, bonus: Double): Mentality {
+            val q = (own.atk + own.mid + own.def) * bonus / (opp.atk + opp.mid + opp.def)
+            return when { q < 0.93 -> Mentality.DIFENSIVA; q > 1.07 -> Mentality.OFFENSIVA; else -> Mentality.EQUILIBRATA }
+        }
+        val baseH = startMent(h, a, HOME_BONUS)
+        val baseA = startMent(a, h, 1.0 / HOME_BONUS)
+        var mH = homeMent ?: baseH
+        var mA = awayMent ?: baseA
+
+        // Nel finale le squadre AI cambiano atteggiamento in base al punteggio
+        fun live(fixed: Mentality?, base: Mentality, mine: Int, theirs: Int, minute: Int): Mentality = when {
+            fixed != null -> fixed
+            minute > 70 && mine < theirs -> Mentality.OFFENSIVA
+            minute > 75 && mine - theirs == 1 -> Mentality.DIFENSIVA
+            else -> base
+        }
+
         for (minute in 1..90) {
-            if (rng.nextDouble() < ATTACK_PER_MINUTE) {
+            val nH = live(homeMent, baseH, hg, ag, minute)
+            val nA = live(awayMent, baseA, ag, hg, minute)
+            if (nH != mH && minute > 70) events += MatchEvent(minute, EventType.TACTIC, true,
+                "${home.shortName} passa a mentalità ${nH.label.lowercase()}", 0.5f, 0.5f)
+            if (nA != mA && minute > 70) events += MatchEvent(minute, EventType.TACTIC, false,
+                "${away.shortName} passa a mentalità ${nA.label.lowercase()}", 0.5f, 0.5f)
+            mH = nH; mA = nA
+            if (rng.nextDouble() < ATTACK_PER_MINUTE * (mH.tempo + mA.tempo) / 2) {
                 // oltre il 65' la squadra meno resistente cala
                 val tireH = if (minute > 65) 0.96 + 0.04 * (h.stamina / 90.0).coerceAtMost(1.0) else 1.0
                 val tireA = if (minute > 65) 0.96 + 0.04 * (a.stamina / 90.0).coerceAtMost(1.0) else 1.0
@@ -121,7 +148,9 @@ object MatchEngine {
                 val att = if (homeAtt) h else a
                 val dfn = if (homeAtt) a else h
                 val team = if (homeAtt) home else away
-                val ratio = att.atk / dfn.def
+                val mAtt = if (homeAtt) mH else mA
+                val mDef = if (homeAtt) mA else mH
+                val ratio = att.atk * mAtt.atk / (dfn.def * mDef.def)
                 if (rng.nextDouble() < (0.45 * ratio).coerceIn(0.2, 0.7)) {
                     if (homeAtt) hs++ else asht++
                     val sh = shooter(att.players, rng)
