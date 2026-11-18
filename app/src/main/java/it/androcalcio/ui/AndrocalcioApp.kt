@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -84,7 +85,8 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String) {
     FINANZE("Finanze", Icons.Filled.AccountBox, "Bilancio e sponsor"),
     STAFF("Staff", Icons.Filled.Settings, "Allenatori e preparatori"),
     STATISTICHE("Statistiche", Icons.Filled.Info, "Marcatori e portieri"),
-    EDITOR("Editor", Icons.Filled.Build, "Modifica i dati")
+    EDITOR("Editor", Icons.Filled.Build, "Modifica i dati"),
+    SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita")
 }
 
 private val bottomTabs = listOf(
@@ -187,6 +189,11 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         team, staffList, cands,
                         { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() }
                     )
+                }
+                Screen.SALVATAGGI -> {
+                    val slots by vm.slots.collectAsState()
+                    SalvataggiScreen(slots, team?.name, season,
+                        { vm.saveSlot(it) }, { vm.loadSlot(it) }, { vm.deleteSlot(it) })
                 }
                 else -> ComingSoon(screen)
             }
@@ -298,7 +305,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         val tiles = listOf(
             Screen.ROSA, Screen.PARTITA, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.STAFF, Screen.STATISTICHE, Screen.EDITOR,
-            Screen.SQUADRE
+            Screen.SQUADRE, Screen.SALVATAGGI
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

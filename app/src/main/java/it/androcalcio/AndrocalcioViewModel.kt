@@ -1,7 +1,10 @@
 package it.androcalcio
 
 import android.app.Application
+import android.content.Intent
 import android.net.Uri
+import it.androcalcio.data.SaveSlots
+import it.androcalcio.data.SlotInfo
 import it.androcalcio.data.DataIO
 import kotlinx.coroutines.Dispatchers
 import java.io.File
@@ -46,13 +49,17 @@ import kotlinx.coroutines.launch
 class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private val ctx: Application = app
-    private val dao = AndrocalcioDatabase.create(app).dao()
+    private val db = AndrocalcioDatabase.create(app)
+    private val dao = db.dao()
     private val customFile = File(app.filesDir, "custom.json")
 
     val teams: StateFlow<List<Team>> =
         dao.teams().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val selectedId = MutableStateFlow<Long?>(null)
+    // La squadra scelta viene ricordata anche dopo la chiusura dell'app
+    private val selectedId = MutableStateFlow<Long?>(
+        app.getSharedPreferences("androcalcio", 0).getLong("team_id", -1L).takeIf { it > 0 }
+    )
 
     val selectedTeam: StateFlow<Team?> =
         combine(teams, selectedId) { list, id ->
@@ -586,5 +593,46 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun selectTeam(team: Team) {
         selectedId.value = team.id
+        prefs.edit().putLong("team_id", team.id).apply()
+    }
+
+    // ---- Salvataggi: 3 slot con copia completa della partita ----
+    private val _slots = MutableStateFlow(SaveSlots.list(app))
+    val slots: StateFlow<List<SlotInfo>> = _slots
+
+    fun saveSlot(n: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val t = selectedTeam.value ?: return@launch
+            try {
+                SaveSlots.save(ctx, db, n, t.id, t.name, prefs.getInt("season_year", 2026), _season.value)
+                _notice.value = "Partita salvata nello slot $n."
+            } catch (e: Exception) {
+                _notice.value = "Salvataggio non riuscito: ${e.message}"
+            }
+            _slots.value = SaveSlots.list(ctx)
+        }
+    }
+
+    fun deleteSlot(n: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            SaveSlots.delete(ctx, n)
+            _slots.value = SaveSlots.list(ctx)
+            _notice.value = "Slot $n cancellato."
+        }
+    }
+
+    /** Carica lo slot e riavvia l'app: il database in uso non si può sostituire a caldo. */
+    fun loadSlot(n: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = try { SaveSlots.load(ctx, n) } catch (e: Exception) { false }
+            if (!ok) {
+                _notice.value = "Slot $n non caricabile."
+                return@launch
+            }
+            val i = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
+            i?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            if (i != null) ctx.startActivity(i)
+            Runtime.getRuntime().exit(0)
+        }
     }
 }
