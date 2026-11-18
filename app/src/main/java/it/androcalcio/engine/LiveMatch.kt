@@ -60,19 +60,22 @@ class LiveMatch(
 
     fun energyOf(p: Player): Double = energy[p.id] ?: 1.0
 
-    // Pressing e linea delle squadre AI: in base a resistenza (RE) e velocità dei difensori (VE)
-    private fun aiPress(xi: List<Player>): Pressing {
-        val re = xi.filter { it.role != "P" }.map { it.re }.average()
-        return when { re >= 68 -> Pressing.ALTO; re < 55 -> Pressing.BASSO; else -> Pressing.MEDIO }
+    // Pressing e linea delle squadre AI, rispetto all'avversario:
+    // pressing alto se hanno più resistenza (RE), linea alta se i difensori sono più veloci (VE) degli attaccanti avversari
+    private fun avg(ps: List<Player>, role: String?, f: (Player) -> Int): Double =
+        ps.filter { if (role == null) it.role != "P" else it.role == role }.map(f).average().let { if (it.isNaN()) 60.0 else it }
+    private fun aiPress(own: List<Player>, opp: List<Player>): Pressing {
+        val d = avg(own, null) { it.re } - avg(opp, null) { it.re }
+        return when { d > 4 -> Pressing.ALTO; d < -4 -> Pressing.BASSO; else -> Pressing.MEDIO }
     }
-    private fun aiLine(xi: List<Player>): DefLine {
-        val ve = xi.filter { it.role == "D" }.map { it.ve }.average().let { if (it.isNaN()) 60.0 else it }
-        return when { ve >= 68 -> DefLine.ALTA; ve < 55 -> DefLine.BASSA; else -> DefLine.MEDIA }
+    private fun aiLine(own: List<Player>, opp: List<Player>): DefLine {
+        val d = avg(own, "D") { it.ve } - avg(opp, "A") { it.ve }
+        return when { d > 4 -> DefLine.ALTA; d < -4 -> DefLine.BASSA; else -> DefLine.MEDIA }
     }
-    var pressH = homePress ?: aiPress(xiH); private set
-    var pressA = awayPress ?: aiPress(xiA); private set
-    var lineH = homeLine ?: aiLine(xiH); private set
-    var lineA = awayLine ?: aiLine(xiA); private set
+    var pressH = homePress ?: aiPress(xiH, xiA); private set
+    var pressA = awayPress ?: aiPress(xiA, xiH); private set
+    var lineH = homeLine ?: aiLine(xiH, xiA); private set
+    var lineA = awayLine ?: aiLine(xiA, xiH); private set
 
     fun setPressing(homeSide: Boolean, p: Pressing) { if (homeSide) pressH = p else pressA = p }
     fun setLine(homeSide: Boolean, l: DefLine) { if (homeSide) lineH = l else lineA = l }

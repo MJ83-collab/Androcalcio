@@ -46,5 +46,5 @@ enum class Pressing(val label: String, val poss: Double, val drain: Double) {
 enum class DefLine(val label: String, val poss: Double, val def: Double, val atk: Double) {
     BASSA("Bassa", 0.97, 1.05, 0.97),
     MEDIA("Media", 1.0, 1.0, 1.0),
-    ALTA("Alta", 1.04, 0.98, 1.03)
+    ALTA("Alta", 1.04, 0.99, 1.02)
 }
