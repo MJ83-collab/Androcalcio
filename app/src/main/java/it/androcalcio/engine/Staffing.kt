@@ -78,16 +78,21 @@ object Medical {
     /**
      * Dopo una partita: chi è sceso in campo (playedIds) perde condizione, gli altri recuperano;
      * gli infortunati recuperano di un turno, poi può esserci un nuovo infortunio.
+     * Con un piano di allenamento (solo la tua squadra) si applicano crescita, fatica e rischio extra.
      */
-    fun afterMatch(ps: List<Player>, playedIds: Set<Long>, prep: Int, rng: Random): List<Player> {
-        val healed = ps.map {
+    fun afterMatch(
+        ps: List<Player>, playedIds: Set<Long>, prep: Int, rng: Random,
+        plan: TrainingPlan? = null, coach: Int = Staffing.NEUTRAL
+    ): List<Player> {
+        val healed0 = ps.map {
             val fo = (it.fo + rng.nextInt(-4, 5)).coerceIn(40, 99)   // la forma oscilla di partita in partita
             val cond = if (it.id in playedIds) (it.condition - conditionDrop(it)).coerceAtLeast(35)
                 else (it.condition + conditionGain(prep)).coerceAtMost(100)
             val base = it.copy(fo = fo, condition = cond)
             if (it.injuredRounds > 0) base.copy(injuredRounds = it.injuredRounds - 1) else base
         }
-        if (rng.nextDouble() >= Staffing.injuryChance(prep)) return healed
+        val healed = if (plan == null) healed0 else healed0.map { Training.apply(it, plan, coach, rng) }
+        if (rng.nextDouble() >= Staffing.injuryChance(prep) * (plan?.injuryFactor() ?: 1.0)) return healed
         val ok = healed.indices.filter { healed[it].injuredRounds == 0 }
         if (ok.isEmpty()) return healed
         val i = ok[rng.nextInt(ok.size)]

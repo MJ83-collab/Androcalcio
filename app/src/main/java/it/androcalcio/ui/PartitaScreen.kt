@@ -2,9 +2,14 @@ package it.androcalcio.ui
 
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.DefLine
+import it.androcalcio.engine.TrainFocus
+import it.androcalcio.engine.TrainIntensity
+import it.androcalcio.engine.TrainingPlan
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -229,5 +234,31 @@ fun TacticsPicker(press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, o
     SectionTitle("Linea difensiva")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         DefLine.values().forEach { l -> FilterChip(selected = l == line, onClick = { onLine(l) }, label = { Text(l.label) }) }
+    }
+}
+
+/** Allenamento settimanale della tua squadra: si applica dopo ogni partita giocata. */
+@Composable
+fun TrainingPicker(plan: TrainingPlan, onChange: (TrainingPlan) -> Unit) {
+    SectionTitle("Allenamento")
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        TrainFocus.values().forEach { f ->
+            FilterChip(selected = f == plan.focus, onClick = { onChange(plan.copy(focus = f)) }, label = { Text(f.label) })
+        }
+    }
+    Text(plan.focus.info, style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+    if (plan.focus != TrainFocus.RIPOSO) {
+        SectionTitle("Intensità")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TrainIntensity.values().forEach { i ->
+                FilterChip(selected = i == plan.intensity, onClick = { onChange(plan.copy(intensity = i)) }, label = { Text(i.label) })
+            }
+        }
+        val txt = when (plan.intensity) {
+            TrainIntensity.BASSA -> "Crescita lenta, condizione +4, infortuni −20%"
+            TrainIntensity.MEDIA -> "Crescita normale, nessun effetto su condizione e infortuni"
+            TrainIntensity.ALTA -> "Crescita rapida, condizione −4, infortuni +30%"
+        }
+        Text(txt, style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
     }
 }

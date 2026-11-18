@@ -2,6 +2,9 @@ package it.androcalcio
 
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
+import it.androcalcio.engine.TrainFocus
+import it.androcalcio.engine.TrainIntensity
+import it.androcalcio.engine.TrainingPlan
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
@@ -138,6 +141,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun setPressing(p: Pressing) { _pressing.value = p; prefs.edit().putInt("pressing", p.ordinal).apply() }
     private val _line = MutableStateFlow(DefLine.values()[prefs.getInt("linea", 1).coerceIn(0, 2)])
     val line: StateFlow<DefLine> = _line
+    private val _training = MutableStateFlow(TrainingPlan(
+        TrainFocus.values()[prefs.getInt("allen_focus", 0).coerceIn(0, TrainFocus.values().size - 1)],
+        TrainIntensity.values()[prefs.getInt("allen_int", 1).coerceIn(0, 2)]))
+    val training: StateFlow<TrainingPlan> = _training
+    fun setTraining(t: TrainingPlan) {
+        _training.value = t
+        prefs.edit().putInt("allen_focus", t.focus.ordinal).putInt("allen_int", t.intensity.ordinal).apply()
+    }
+    /** Piano di allenamento solo per la squadra dell'utente; le AI non si allenano in modo speciale. */
+    private fun planFor(id: Long, userId: Long?) = if (id == userId) _training.value else null
+
     fun setLine(l: DefLine) { _line.value = l; prefs.edit().putInt("linea", l.ordinal).apply() }
 
     fun setMentality(m: Mentality) {
@@ -230,8 +244,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     Goal(season = _season.value, league = key(t), round = m.round,
                         teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
                 }
-                cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
-                cache[a.id] = Medical.afterMatch(ap, r.awayPlayed, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
+                cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
+                    planFor(h.id, t.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
+                cache[a.id] = Medical.afterMatch(ap, r.awayPlayed, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
+                    planFor(a.id, t.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
             }
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
@@ -343,7 +359,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val rng = kotlin.random.Random.Default
             for (id in listOf(mr.homeTeamId, mr.awayTeamId)) {
                 val played = if (id == mr.homeTeamId) r.homePlayed else r.awayPlayed
-                dao.updatePlayers(Medical.afterMatch(dao.playersOnce(id), played, Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng))
+                dao.updatePlayers(Medical.afterMatch(dao.playersOnce(id), played, Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng,
+                    planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)))
             }
         }
         _live.value = _live.value?.copy(saved = true, tick = i.tick + 1)
@@ -679,9 +696,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             awayLine = if (a.id == me.id) _line.value else null
                         )
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
-                            Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
+                            Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
+                            planFor(h.id, me.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
                         cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(), r.awayPlayed,
-                            Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
+                            Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
+                            planFor(a.id, me.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
                 }
