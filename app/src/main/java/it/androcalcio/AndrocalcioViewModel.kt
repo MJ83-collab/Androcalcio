@@ -113,9 +113,25 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Squadre AI senza allenatore o preparatore: ne ricevono uno casuale (anche per i salvataggi esistenti). */
+    private suspend fun ensureAiStaff(meId: Long) {
+        val have = dao.allStaff().groupBy { it.teamId }
+        val players = dao.allPlayers().groupBy { it.teamId }
+        val rng = kotlin.random.Random.Default
+        val add = dao.allTeams().filter { it.id != meId }.flatMap { t ->
+            val roles = have[t.id].orEmpty().map { it.role }
+            val missing = listOf(Staffing.ALLENATORE, Staffing.PREPARATORE).filter { it !in roles }
+            val ps = players[t.id].orEmpty()
+            if (missing.isEmpty() || ps.isEmpty()) emptyList()
+            else Staffing.aiStaff(t.id, ps.map { it.overall }.average(), missing, rng)
+        }
+        if (add.isNotEmpty()) dao.insertStaffs(add)
+    }
+
     private fun playRounds(all: Boolean) {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
+            ensureAiStaff(t.id)
             val ms = dao.matchesOnce(key(t), _season.value)
             val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
             val staffBy = dao.allStaff().groupBy { it.teamId }
@@ -430,6 +446,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun closeSeason() {
         viewModelScope.launch(Dispatchers.IO) {
             val me = selectedTeam.value ?: return@launch
+            ensureAiStaff(me.id)
             val rng = kotlin.random.Random.Default
             val s = _season.value
             val teamsNow = dao.allTeams()

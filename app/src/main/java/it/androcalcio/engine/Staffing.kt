@@ -35,6 +35,21 @@ object Staffing {
     /** Ingaggio annuo in base all'abilità. */
     fun wage(skill: Int): Long = ((skill - 30).coerceAtLeast(5) * 12_000L / 1_000L) * 1_000L
 
+    /**
+     * Staff di una squadra AI per i ruoli mancanti (solo allenatore e preparatore).
+     * Abilità legata alla forza media della rosa: massima serie ~57, seconda ~48 (±10).
+     */
+    fun aiStaff(teamId: Long, avgOverall: Double, missing: List<String>, rng: Random): List<Staff> =
+        missing.map { role ->
+            val sk = (avgOverall - 25 + rng.nextInt(-10, 11)).toInt().coerceIn(30, 90)
+            Staff(
+                teamId = teamId, role = role,
+                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
+                    SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5)
+            )
+        }
+
     /** Candidati da assumere: n per ruolo, con abilità e contratto casuali. */
     fun candidates(rng: Random, n: Int = 2): List<Staff> = ROLES.flatMap { role ->
         (1..n).map {
