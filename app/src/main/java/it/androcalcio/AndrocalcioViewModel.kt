@@ -433,7 +433,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val rng = kotlin.random.Random.Default
             val s = _season.value
             val teamsNow = dao.allTeams()
-            val cache = dao.allPlayers().groupBy { it.teamId }
+            val cache = HashMap(dao.allPlayers().groupBy { it.teamId })
             val byTeam = cache
             val leagues = teamsNow.groupBy { it.nazione to it.campionato }
             val formations = Formation.values()
@@ -448,7 +448,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     dao.insertMatches(Fixtures.generate(ts.map { it.id }, s, key))
                 }
                 val byId = ts.associateBy { it.id }
-                val sims = dao.matchesOnce(key, s).filter { !it.played }.mapNotNull { m ->
+                // In ordine di giornata: gli infortunati saltano davvero i turni successivi
+                val sims = dao.matchesOnce(key, s).filter { !it.played }.sortedBy { it.round }.mapNotNull { m ->
                     val h = byId[m.homeTeamId]
                     val a = byId[m.awayTeamId]
                     if (h == null || a == null) null else {
@@ -459,6 +460,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                             Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)
                         )
+                        cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(),
+                            Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng)
+                        cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(),
+                            Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng)
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
                 }
