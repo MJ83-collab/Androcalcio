@@ -6,7 +6,7 @@ import kotlin.random.Random
 
 /**
  * Coppa nazionale a eliminazione diretta, con il formato della coppa reale del paese:
- * andata e ritorno in Spagna e Brasile (la finale è sempre secca), partita secca altrove.
+ * andata e ritorno nelle fasi indicate da twoLegs (la finale è sempre secca), partita secca altrove.
  *
  * Le partite stanno nella tabella `matches`, con league = "COPPA|<nazione>".
  * Codice turno: BASE + stadio * 10 + gamba (0 = andata o partita secca, 1 = ritorno).
@@ -23,7 +23,21 @@ object Cup {
     fun key(nazione: String) = "COPPA|$nazione"
     fun isCup(round: Int) = round >= BASE
     fun stageOf(round: Int) = (round - BASE) / STEP
-    fun twoLegs(nazione: String) = nazione == "Spagna" || nazione == "Brasile"
+    /**
+     * Andata e ritorno secondo le regole reali della coppa del paese:
+     * Italia: solo semifinali. Spagna: turno preliminare e semifinali. Brasile: dagli ottavi (16 squadre)
+     * alle semifinali. Inghilterra, Germania, Francia, Argentina: sempre partita secca.
+     * La finale è sempre secca (2 squadre).
+     */
+    fun twoLegs(nazione: String, stage: Int, teamsInStage: Int): Boolean {
+        if (teamsInStage <= 2) return false
+        return when (nazione) {
+            "Italia" -> teamsInStage == 4
+            "Spagna" -> stage == 0 || teamsInStage == 4
+            "Brasile" -> teamsInStage in 4..16
+            else -> false
+        }
+    }
 
     /** Nome del turno per la scheda Coppa. */
     fun stageName(stage: Int, teamsInStage: Int): String = when {
@@ -39,14 +53,14 @@ object Cup {
      * Primo turno. Se le squadre sono più della potenza di 2 inferiore, le prime
      * 2 * (n - potenza) del sorteggio giocano il turno preliminare; le altre passano direttamente.
      */
-    fun firstStage(teamIds: List<Long>, season: String, key: String, rng: Random, twoLegs: Boolean): List<MatchResult> {
+    fun firstStage(teamIds: List<Long>, season: String, key: String, rng: Random, nazione: String): List<MatchResult> {
         val n = teamIds.size
         if (n < 2) return emptyList()
         val target = Integer.highestOneBit(n)
         val prelim = 2 * (n - target)
         val shuffled = teamIds.shuffled(rng)
-        return if (prelim > 0) pairs(shuffled.take(prelim), 0, season, key, twoLegs)
-        else pairs(shuffled, 1, season, key, twoLegs)
+        return if (prelim > 0) pairs(shuffled.take(prelim), 0, season, key, nazione)
+        else pairs(shuffled, 1, season, key, nazione)
     }
 
     /**
@@ -55,7 +69,7 @@ object Cup {
      */
     fun nextStage(
         cup: List<MatchResult>, teams: List<Team>, strength: Map<Long, Double>,
-        season: String, key: String, twoLegs: Boolean, rng: Random
+        season: String, key: String, nazione: String, rng: Random
     ): List<MatchResult> {
         if (cup.isEmpty() || cup.any { !it.played }) return emptyList()
         val eliminated = HashSet<Long>()
@@ -81,11 +95,11 @@ object Cup {
         }
         val alive = teams.map { it.id }.filter { it !in eliminated }
         if (alive.size <= 1) return emptyList()
-        return pairs(alive.shuffled(rng), cup.maxOf { stageOf(it.round) } + 1, season, key, twoLegs)
+        return pairs(alive.shuffled(rng), cup.maxOf { stageOf(it.round) } + 1, season, key, nazione)
     }
 
-    private fun pairs(pool: List<Long>, stage: Int, season: String, key: String, twoLegs: Boolean): List<MatchResult> {
-        val legs = if (twoLegs && pool.size > 2) 2 else 1
+    private fun pairs(pool: List<Long>, stage: Int, season: String, key: String, nazione: String): List<MatchResult> {
+        val legs = if (twoLegs(nazione, stage, pool.size)) 2 else 1
         return pool.chunked(2).filter { it.size == 2 }.flatMap { (a, b) ->
             val andata = MatchResult(season = season, round = BASE + stage * STEP, homeTeamId = a,
                 awayTeamId = b, homeGoals = 0, awayGoals = 0, league = key)

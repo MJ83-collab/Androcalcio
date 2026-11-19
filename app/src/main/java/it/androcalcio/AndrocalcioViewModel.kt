@@ -210,7 +210,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val ck = Cup.key(t.nazione)
                 if (dao.fixtureCount(ck, s) == 0) {
                     val nation = dao.allTeams().filter { it.nazione == t.nazione }.map { it.id }
-                    dao.insertMatches(Cup.firstStage(nation, s, ck, kotlin.random.Random.Default, Cup.twoLegs(t.nazione)))
+                    dao.insertMatches(Cup.firstStage(nation, s, ck, kotlin.random.Random.Default, t.nazione))
                 }
             }
         }
@@ -296,7 +296,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             // Coppa: se il turno è finito, sorteggia il successivo
             val ck = Cup.key(t.nazione)
             dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), teamsById.values.toList(),
-                strengthOf(), _season.value, ck, Cup.twoLegs(t.nazione), kotlin.random.Random.Default))
+                strengthOf(), _season.value, ck, t.nazione, kotlin.random.Random.Default))
             // Con "Fine stagione" si gioca fino in fondo, anche i turni di coppa sorteggiati adesso
             if (all && playedNow > 0) runRounds(true, skipId)
         }
@@ -417,7 +417,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val ck = Cup.key(t.nazione)
                 val nation = dao.allTeams().filter { it.nazione == t.nazione }
                 dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), nation, strengthOf(),
-                    _season.value, ck, Cup.twoLegs(t.nazione), kotlin.random.Random.Default))
+                    _season.value, ck, t.nazione, kotlin.random.Random.Default))
             }
         }
         _live.value = _live.value?.copy(saved = true, tick = i.tick + 1)
@@ -862,7 +862,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val nTeams = teamsNow.filter { it.nazione == nazione }
                 val ck = Cup.key(nazione)
                 if (dao.fixtureCount(ck, s) == 0) {
-                    dao.insertMatches(Cup.firstStage(nTeams.map { it.id }, s, ck, rng, Cup.twoLegs(nazione)))
+                    dao.insertMatches(Cup.firstStage(nTeams.map { it.id }, s, ck, rng, nazione))
                 }
                 val byId = nTeams.associateBy { it.id }
                 while (true) {
@@ -877,7 +877,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     if (done.isEmpty()) break
                     dao.updateMatches(done)
                     dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, s), nTeams, strength, s, ck,
-                        Cup.twoLegs(nazione), rng))
+                        nazione, rng))
                 }
             }
 
