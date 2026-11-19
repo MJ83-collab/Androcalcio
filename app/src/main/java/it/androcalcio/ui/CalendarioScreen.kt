@@ -37,6 +37,17 @@ import it.androcalcio.data.Team
 import it.androcalcio.engine.standings
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.theme.AC
+import it.androcalcio.ui.components.HeadCell
+import it.androcalcio.ui.components.PaperRow
+import it.androcalcio.ui.components.PaperPanel
+import it.androcalcio.ui.components.PcButton
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,54 +79,50 @@ fun CalendarioScreen(
     val lastRound = matches.maxOfOrNull { it.round } ?: 1
     val shown = if (round == 0) (nextRound ?: lastRound) else round
 
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("${team.campionato} $season", style = MaterialTheme.typography.headlineSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Calendario") })
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Classifica") })
+    Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PcButton("Calendario", { tab = 0 }, Modifier.weight(1f), main = tab == 0)
+            PcButton("Classifica", { tab = 1 }, Modifier.weight(1f), main = tab == 1)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = { round = 0; askNext = true }, enabled = nextRound != null,
-                colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
-            ) { Text("Prossima giornata") }
-            OutlinedButton(onClick = { round = 0; onSeason() }, enabled = nextRound != null) {
-                Text("Fine stagione")
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PcButton("Prossima giornata", { round = 0; askNext = true }, Modifier.weight(1f), main = true, enabled = nextRound != null)
+            PcButton("Fine stagione", { round = 0; onSeason() }, Modifier.weight(1f), enabled = nextRound != null)
         }
 
         if (nextRound != null) MentalityPicker(mentality, onMentality)
 
         if (nextRound == null && matches.isNotEmpty()) {
-            Button(
-                onClick = { round = 0; onClose() }, modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AC.Accent2, contentColor = AC.Bg)
-            ) { Text("Chiudi stagione e passa alla successiva") }
+            PcButton("Chiudi stagione e passa alla successiva", { round = 0; onClose() }, Modifier.fillMaxWidth(), main = true)
         }
 
+        Text("Giornata $shown di $lastRound · ${team.campionato} $season", color = AC.Text,
+            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items((1..lastRound).toList()) { r ->
                 FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
             }
         }
         if (tab == 0) {
-            LazyColumn(Modifier.weight(1f)) {
-                items(matches.filter { it.round == shown }, key = { it.id }) { m ->
-                    val h = byId[m.homeTeamId]
-                    val a = byId[m.awayTeamId]
-                    val mine = m.homeTeamId == team.id || m.awayTeamId == team.id
-                    val c = if (mine) AC.Accent else AC.Text
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(h?.name ?: "?", Modifier.weight(1f), color = c, textAlign = TextAlign.End)
-                        Text(
-                            if (m.played) "${m.homeGoals} - ${m.awayGoals}" else "-",
-                            Modifier.width(60.dp), color = AC.Accent2, textAlign = TextAlign.Center,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(a?.name ?: "?", Modifier.weight(1f), color = c)
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                PaperPanel(Modifier.fillMaxWidth()) {
+                    matches.filter { it.round == shown }.forEachIndexed { i, m ->
+                        val h = byId[m.homeTeamId]
+                        val a = byId[m.awayTeamId]
+                        val mine = m.homeTeamId == team.id || m.awayTeamId == team.id
+                        val c = if (mine) AC.ColBlue else AC.PaperText
+                        val w = if (mine) FontWeight.ExtraBold else FontWeight.Medium
+                        PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
+                            Text(h?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w,
+                                textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)
+                            Box(
+                                Modifier.padding(horizontal = 6.dp).width(54.dp).background(AC.Btn).padding(vertical = 3.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(if (m.played) "${m.homeGoals} - ${m.awayGoals}" else "-", color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                            }
+                            Text(a?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w, fontSize = 12.sp, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -127,33 +134,43 @@ fun CalendarioScreen(
             val tier = tiers.indexOf(team.campionato)
             val kk = minOf(3, league.size / 4)
             val rows = standings(league, matches.filter { it.round <= shown })
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Text("#", Modifier.width(28.dp), color = AC.TextDim)
-                Text("Squadra", Modifier.weight(1f), color = AC.TextDim)
-                Text("G", Modifier.width(30.dp), color = AC.TextDim, textAlign = TextAlign.End)
-                Text("DR", Modifier.width(38.dp), color = AC.TextDim, textAlign = TextAlign.End)
-                Text("Pt", Modifier.width(36.dp), color = AC.TextDim, textAlign = TextAlign.End)
-            }
-            LazyColumn(Modifier.weight(1f)) {
-                itemsIndexed(rows, key = { _, r -> r.team.id }) { i, r ->
-                    val c = if (r.team.id == team.id) AC.Accent else AC.Text
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val zone = when {
-                            tier > 0 && i < kk -> "▲"
-                            tier in 0 until tiers.lastIndex && i >= rows.size - kk -> "▼"
-                            else -> ""
+            val heads = listOf("G", "V", "N", "P", "GF", "GS", "DR", "PT")
+            val headColor = listOf(AC.ColBlue, AC.ColGreen, AC.ColBlue, AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColOrange)
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                PaperPanel(Modifier.fillMaxWidth()) {
+                    Column(Modifier.horizontalScroll(rememberScrollState())) {
+                        Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            HeadCell("", AC.PaperText, Modifier.width(14.dp))
+                            HeadCell("N", AC.PaperText, Modifier.width(22.dp))
+                            HeadCell("SQUADRA", AC.PaperText, Modifier.width(128.dp), TextAlign.Start)
+                            heads.forEachIndexed { k, h -> HeadCell(h, headColor[k], Modifier.width(if (k >= 6) 32.dp else 26.dp)) }
                         }
-                        Text(zone, Modifier.width(16.dp), color = if (zone == "▲") AC.Ok else AC.Danger)
-                        Text("${i + 1}", Modifier.width(28.dp), color = AC.TextDim)
-                        Crest(r.team, 22.dp)
-                        Text(r.team.name, Modifier.weight(1f).padding(start = 8.dp), color = c, maxLines = 1)
-                        Text("${r.played}", Modifier.width(30.dp), textAlign = TextAlign.End, color = c)
-                        Text("${r.gd}", Modifier.width(38.dp), textAlign = TextAlign.End, color = c)
-                        Text("${r.pts}", Modifier.width(36.dp), textAlign = TextAlign.End,
-                            color = c, fontWeight = FontWeight.Bold)
+                        rows.forEachIndexed { i, r ->
+                            val mine = r.team.id == team.id
+                            val c = if (mine) AC.ColBlue else AC.PaperText
+                            val zone = when {
+                                tier > 0 && i < kk -> "▲"
+                                tier in 0 until tiers.lastIndex && i >= rows.size - kk -> "▼"
+                                else -> ""
+                            }
+                            PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
+                                Text(zone, Modifier.width(14.dp), fontSize = 10.sp,
+                                    color = if (zone == "▲") AC.ColGreen else AC.ColEn)
+                                Text("${i + 1}", Modifier.width(22.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold, color = AC.PaperText)
+                                Row(Modifier.width(128.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Crest(r.team, 18.dp)
+                                    Text(r.team.name, Modifier.padding(start = 6.dp), color = c, maxLines = 1,
+                                        fontSize = 12.sp, fontWeight = if (mine) FontWeight.ExtraBold else FontWeight.Medium)
+                                }
+                                val cells = listOf(r.played, r.won, r.drawn, r.lost, r.gf, r.ga, r.gd, r.pts)
+                                cells.forEachIndexed { k, v ->
+                                    Text("$v", Modifier.width(if (k >= 6) 32.dp else 26.dp), textAlign = TextAlign.Center,
+                                        fontSize = 12.sp, color = c,
+                                        fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium)
+                                }
+                            }
+                        }
                     }
                 }
             }
