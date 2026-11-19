@@ -17,7 +17,7 @@ import it.androcalcio.ui.theme.AC
 
 /** Consigli dell'allenatore in seconda: undici in forma e notizie sul prossimo avversario. */
 @Composable
-fun AssistantCard(advice: AssistantCoach.Advice?, onApply: () -> Unit) {
+fun AssistantCard(advice: AssistantCoach.Advice?, onApply: () -> Unit, onApplyTattica: () -> Unit = {}) {
     GlassCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SectionTitle("Allenatore in seconda")
@@ -39,6 +39,11 @@ fun AssistantCard(advice: AssistantCoach.Advice?, onApply: () -> Unit) {
             SectionTitle("Prossimo avversario: ${a.opponent ?: "nessuno in campionato"}")
             a.opponentNotes.forEach {
                 Text("• $it", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+            }
+            a.tatticaNota?.let { nota ->
+                SectionTitle("Tattica consigliata: ${a.tattica?.label ?: ""}")
+                Text("• $nota", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                PcAction(onClick = onApplyTattica) { Text("Applica la tattica consigliata") }
             }
         }
     }

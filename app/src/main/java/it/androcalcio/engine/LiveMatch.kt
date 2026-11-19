@@ -22,7 +22,8 @@ class LiveMatch(
     var manualHome: Boolean = false,
     var manualAway: Boolean = false,
     homePress: Pressing? = null, awayPress: Pressing? = null,   // null = sceglie l'AI
-    homeLine: DefLine? = null, awayLine: DefLine? = null
+    homeLine: DefLine? = null, awayLine: DefLine? = null,
+    homeStile: Stile? = null, awayStile: Stile? = null
 ) {
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
         if (bench != null) ps.toMutableList() to bench.toMutableList()
@@ -61,8 +62,9 @@ class LiveMatch(
         val q = (own.atk + own.mid + own.def) * bonus / (opp.atk + opp.mid + opp.def)
         return when { q < 0.93 -> Mentality.DIFENSIVA; q > 1.07 -> Mentality.OFFENSIVA; else -> Mentality.EQUILIBRATA }
     }
-    private val baseH = startMent(h, a, MatchEngine.HOME_BONUS)
-    private val baseA = startMent(a, h, 1.0 / MatchEngine.HOME_BONUS)
+    // Con l'allenatore della squadra AI, la tattica di base è quella del suo stile; altrimenti decide la forza
+    private val baseH = homeStile?.mentalita ?: startMent(h, a, MatchEngine.HOME_BONUS)
+    private val baseA = awayStile?.mentalita ?: startMent(a, h, 1.0 / MatchEngine.HOME_BONUS)
     var mH = homeMent ?: baseH; private set
     var mA = awayMent ?: baseA; private set
 
@@ -80,10 +82,10 @@ class LiveMatch(
         val d = avg(own, "D") { it.ve } - avg(opp, "A") { it.ve }
         return when { d > 4 -> DefLine.ALTA; d < -4 -> DefLine.BASSA; else -> DefLine.MEDIA }
     }
-    var pressH = homePress ?: aiPress(xiH, xiA); private set
-    var pressA = awayPress ?: aiPress(xiA, xiH); private set
-    var lineH = homeLine ?: aiLine(xiH, xiA); private set
-    var lineA = awayLine ?: aiLine(xiA, xiH); private set
+    var pressH = homePress ?: homeStile?.pressing ?: aiPress(xiH, xiA); private set
+    var pressA = awayPress ?: awayStile?.pressing ?: aiPress(xiA, xiH); private set
+    var lineH = homeLine ?: homeStile?.linea ?: aiLine(xiH, xiA); private set
+    var lineA = awayLine ?: awayStile?.linea ?: aiLine(xiA, xiH); private set
 
     fun setPressing(homeSide: Boolean, p: Pressing) { if (homeSide) pressH = p else pressA = p }
     fun setLine(homeSide: Boolean, l: DefLine) { if (homeSide) lineH = l else lineA = l }

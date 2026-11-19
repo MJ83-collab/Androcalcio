@@ -136,6 +136,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Applica l'undici consigliato dall'allenatore in seconda. */
+    /** Applica lo stile consigliato dall'allenatore in seconda: mentalità, pressing e linea. */
+    fun applyAssistantTattica() {
+        val s = assistantAdvice.value?.tattica
+        if (s == null) {
+            _notice.value = "Nessuna tattica consigliata: serve un allenatore in seconda e una prossima partita."
+            return
+        }
+        setMentality(s.mentalita)
+        setPressing(s.pressing)
+        setLine(s.linea)
+        _notice.value = "Tattica ${s.label.lowercase()} applicata: mentalità ${s.mentalita.label.lowercase()}, pressing ${s.pressing.label.lowercase()}, linea ${s.linea.label.lowercase()}."
+    }
+
     fun applyAssistantXI() {
         viewModelScope.launch {
             val me = selectedTeam.value ?: return@launch
@@ -226,12 +239,21 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.staffOnce(me.id).firstOrNull { it.role == Staffing.ALLENATORE }?.skill ?: Staffing.NEUTRAL,
             f
         )
+        val miaStile = Staffing.stile(mapOf(me.id to dao.staffOnce(me.id)), me.id)
+        val consiglio = if (opp == null) null else AssistantCoach.tattica(
+            dao.playersOnce(opp.id), mine, opp.id,
+            dao.staffOnce(opp.id).firstOrNull { it.role == Staffing.ALLENATORE }?.skill ?: Staffing.NEUTRAL,
+            dao.staffOnce(me.id).firstOrNull { it.role == Staffing.ALLENATORE }?.skill ?: Staffing.NEUTRAL,
+            f, miaStile
+        )
         return AssistantCoach.Advice(
             assistantName = vice?.name,
             xi = if (vice == null) emptyList() else xi,
             xiNotes = if (vice == null) emptyList() else AssistantCoach.xiNotes(mine, xi),
             opponent = opp?.name,
-            opponentNotes = if (vice == null) emptyList() else notes
+            opponentNotes = if (vice == null) emptyList() else notes,
+            tattica = if (vice == null) null else consiglio?.first,
+            tatticaNota = if (vice == null) null else consiglio?.second
         )
     }
 
@@ -337,7 +359,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     homePress = if (h.id == t.id) _pressing.value else null,
                     awayPress = if (a.id == t.id) _pressing.value else null,
                     homeLine = if (h.id == t.id) _line.value else null,
-                    awayLine = if (a.id == t.id) _line.value else null
+                    awayLine = if (a.id == t.id) _line.value else null,
+                    homeStile = if (h.id == t.id) null else Staffing.stile(staffBy, h.id),
+                    awayStile = if (a.id == t.id) null else Staffing.stile(staffBy, a.id)
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
                 playedNow++
@@ -394,7 +418,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             if (userHome) myBench else null, if (userHome) null else myBench,
             manualHome = userHome, manualAway = !userHome,
             homePress = if (userHome) _pressing.value else null, awayPress = if (userHome) null else _pressing.value,
-            homeLine = if (userHome) _line.value else null, awayLine = if (userHome) null else _line.value
+            homeLine = if (userHome) _line.value else null, awayLine = if (userHome) null else _line.value,
+            homeStile = if (userHome) null else Staffing.stile(staffBy, home.id),
+            awayStile = if (userHome) Staffing.stile(staffBy, away.id) else null
         )
         return LiveInfo(m, userHome = userHome, league = league)
     }
@@ -863,6 +889,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             awayPress = if (a.id == me.id) _pressing.value else null,
             homeLine = if (h.id == me.id) _line.value else null,
             awayLine = if (a.id == me.id) _line.value else null,
+            homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
+            awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id),
             rng = rng
         )
         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
@@ -936,7 +964,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             homePress = if (h.id == me.id) _pressing.value else null,
                             awayPress = if (a.id == me.id) _pressing.value else null,
                             homeLine = if (h.id == me.id) _line.value else null,
-                            awayLine = if (a.id == me.id) _line.value else null
+                            awayLine = if (a.id == me.id) _line.value else null,
+                            homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
+                            awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id)
                         )
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
                             Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,

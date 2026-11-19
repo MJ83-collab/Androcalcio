@@ -16,8 +16,31 @@ object AssistantCoach {
         val xi: List<Player>,
         val xiNotes: List<String>,
         val opponent: String?,               // null = nessuna prossima partita di campionato
-        val opponentNotes: List<String>
+        val opponentNotes: List<String>,
+        val tattica: Stile? = null,          // stile consigliato; null = nessun consiglio
+        val tatticaNota: String? = null
     )
+
+    /**
+     * Stile consigliato contro l'avversario: attacco se siamo più forti, difesa se siamo più deboli.
+     * A forze pari resta la tattica del nostro allenatore. Stessa forza usata per le notizie.
+     */
+    fun tattica(
+        theirs: List<Player>, mine: List<Player>, oppId: Long,
+        oppCoach: Int, myCoach: Int, f: Formation, mioStile: Stile?
+    ): Pair<Stile, String>? {
+        val t = theirs.filter { it.injuredRounds == 0 }
+        val m = mine.filter { it.injuredRounds == 0 }
+        if (t.isEmpty() || m.isEmpty() || mioStile == null) return null
+        val o = MatchEngine.ratings(t, schemaAbituale(oppId), oppCoach)
+        val me = MatchEngine.ratings(m, f, myCoach)
+        val q = (me.atk + me.mid + me.def) / (o.atk + o.mid + o.def)
+        return when {
+            q > 1.05 -> Stile.ATTACCO to "Siamo più forti: tattica d'attacco, alziamo la squadra e pressiamo."
+            q < 0.95 -> Stile.DIFESA to "Sono più forti: tattica di difesa, linea bassa e ripartenze."
+            else -> mioStile to "Forze pari: resta sulla tattica del tuo allenatore (${mioStile.label.lowercase()})."
+        }
+    }
 
     /** Punteggio per la scelta dei titolari: qualità del ruolo, morale, ruolo in campo e condizione di oggi. */
     fun score(p: Player): Double {

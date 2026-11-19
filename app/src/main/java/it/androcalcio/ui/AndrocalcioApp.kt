@@ -181,7 +181,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() },
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) },
-                        consigli, { vm.applyAssistantXI() })
+                        consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() })
                 }
                 Screen.SQUADRE -> TeamList(teams, team?.id) {
                     vm.selectTeam(it)
@@ -545,7 +545,8 @@ fun RosaScreen(
     press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit,
     training: TrainingPlan, onTraining: (TrainingPlan) -> Unit,
     onRole: (Player, String) -> Unit = { _, _ -> },
-    advice: it.androcalcio.engine.AssistantCoach.Advice? = null, onApplyXI: () -> Unit = {}
+    advice: it.androcalcio.engine.AssistantCoach.Advice? = null, onApplyXI: () -> Unit = {},
+    onApplyTattica: () -> Unit = {}
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -575,7 +576,7 @@ fun RosaScreen(
         contentPadding = PaddingValues(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { AssistantCard(advice, onApplyXI) }
+        item { AssistantCard(advice, onApplyXI, onApplyTattica) }
         item { RosaTable(players, onToggleStarter, { sheet = it }, onRole) }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }

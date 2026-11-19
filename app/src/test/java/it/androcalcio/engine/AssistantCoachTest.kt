@@ -66,4 +66,25 @@ class AssistantCoachTest {
         val uguali = (1..1000).count { schemaInPartita(9L, rng) == abituale }
         assertTrue("schema abituale usato solo $uguali volte su 1000", uguali in 780..920)
     }
+
+    @Test
+    fun tatticaAttaccoSeSiamoPiuForti() {
+        val mine = rosa().map { it.copy(overall = 80) }
+        val loro = rosa().map { it.copy(overall = 50) }
+        val r = AssistantCoach.tattica(loro, mine, 99L, 50, 50, Formation.F442, Stile.DIFESA)
+        assertEquals(Stile.ATTACCO, r?.first)
+    }
+
+    @Test
+    fun tatticaDifesaSeSiamoPiuDeboli() {
+        val mine = rosa().map { it.copy(overall = 50) }
+        val loro = rosa().map { it.copy(overall = 80) }
+        val r = AssistantCoach.tattica(loro, mine, 99L, 50, 50, Formation.F442, Stile.ATTACCO)
+        assertEquals(Stile.DIFESA, r?.first)
+    }
+
+    @Test
+    fun tatticaNessunConsiglioSenzaAllenatore() {
+        assertEquals(null, AssistantCoach.tattica(rosa(), rosa(), 99L, 50, 50, Formation.F442, null))
+    }
 }

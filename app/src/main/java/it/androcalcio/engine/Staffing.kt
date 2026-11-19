@@ -28,6 +28,11 @@ object Staffing {
     fun skill(by: Map<Long, List<Staff>>, teamId: Long, role: String): Int =
         by[teamId]?.firstOrNull { it.role == role }?.skill ?: NEUTRAL
 
+    /** Tattica predefinita dell'allenatore della squadra; null se la squadra non ha allenatore. */
+    fun stile(by: Map<Long, List<Staff>>, teamId: Long): Stile? =
+        by[teamId]?.firstOrNull { it.role == ALLENATORE }?.stile
+            ?.let { s -> Stile.values().firstOrNull { it.name == s } }
+
     /** Moltiplicatore sul motore partita: da circa -10% (skill 1) a +10% (skill 99). */
     fun coachFactor(skill: Int): Double = 1.0 + (skill - NEUTRAL) / 500.0
 
