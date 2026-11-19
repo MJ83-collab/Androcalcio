@@ -1,29 +1,34 @@
 package it.androcalcio.engine
 
 import it.androcalcio.data.MatchResult
-import it.androcalcio.data.Team
 import kotlin.random.Random
 
 /**
- * Amichevoli di precampionato della tua squadra: due partite (casa e trasferta)
- * contro squadre scelte a caso tra tutte le nazioni. Non entrano in campionato né in coppa.
+ * Amichevoli di precampionato della tua squadra: due partite (casa e trasferta).
+ * Avversario scelto da te; se è già impegnato in un'altra amichevole non è disponibile.
+ * Richiesta accettata con una probabilità che dipende dalla forza relativa.
+ * Non entrano in campionato né in coppa.
  */
 object Friendlies {
     const val COUNT = 2
 
     fun key(teamId: Long) = "AMICHEVOLE|$teamId"
 
-    fun fixtures(me: Team, pool: List<Team>, season: String, rng: Random): List<MatchResult> {
-        val opponents = pool.filter { it.id != me.id }.shuffled(rng).take(COUNT)
-        val k = key(me.id)
-        return opponents.mapIndexed { i, o ->
-            val atHome = i % 2 == 0
-            MatchResult(
-                season = season, round = i + 1,
-                homeTeamId = if (atHome) me.id else o.id,
-                awayTeamId = if (atHome) o.id else me.id,
-                homeGoals = 0, awayGoals = 0, league = k
-            )
-        }
+    /** Partita dello slot (0 o 1): slot 0 in casa, slot 1 in trasferta. */
+    fun fixture(myId: Long, oppId: Long, slot: Int, season: String): MatchResult {
+        val atHome = slot % 2 == 0
+        return MatchResult(
+            season = season, round = slot + 1,
+            homeTeamId = if (atHome) myId else oppId,
+            awayTeamId = if (atHome) oppId else myId,
+            homeGoals = 0, awayGoals = 0, league = key(myId)
+        )
     }
+
+    /** Probabilità di accettazione: 75% se l'avversario è pari, cala di 1 punto ogni 50 di forza in più. */
+    fun acceptChance(mine: Double, theirs: Double): Double =
+        (0.75 - (theirs - mine) / 50.0).coerceIn(0.2, 0.9)
+
+    fun accepts(mine: Double, theirs: Double, rng: Random): Boolean =
+        rng.nextDouble() < acceptChance(mine, theirs)
 }

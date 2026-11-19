@@ -191,7 +191,9 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() }, season,
                         { vm.closeSeason() }, ment, { vm.setMentality(it) }, { vm.playNextRoundLive() },
                         cupMatches = cupMatches,
-                        friendlyMatches = friendlyMatches)
+                        friendlyMatches = friendlyMatches,
+                        onRequestFriendly = { vm.requestFriendly(it) },
+                        onPlayFriendlies = { vm.playFriendlies() })
                 }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsState()
