@@ -39,6 +39,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import it.androcalcio.ui.components.HeadCell
+import it.androcalcio.ui.components.PaperRow
+import it.androcalcio.ui.components.PaperPanel
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.width
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.Market
@@ -103,28 +110,11 @@ fun MercatoScreen(
                 }
             }
             val shown = if (affordable) market.filter { Market.value(it) <= team.budget } else market
-            LazyColumn(
-                Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(shown, key = { it.id }) { p ->
-                    PlayerRow(p, byId[p.teamId]?.name ?: "", Market.value(p), Modifier.clickable {
-                        target = p; amount = Market.value(p)
-                    })
-                }
+            MarketTable(shown, { byId[it.teamId]?.name ?: "" }, { Market.value(it) }, Modifier.weight(1f)) {
+                target = it; amount = Market.value(it)
             }
         } else {
-            LazyColumn(
-                Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(mySquad, key = { it.id }) { p ->
-                    PlayerRow(p, team.name, (Market.value(p) * 0.9).toLong(),
-                        Modifier.clickable { sellTarget = p })
-                }
-            }
+            MarketTable(mySquad, { team.name }, { (Market.value(it) * 0.9).toLong() }, Modifier.weight(1f)) { sellTarget = it }
         }
     }
 
@@ -187,23 +177,36 @@ fun MercatoScreen(
     }
 }
 
+/** Tabella su carta bianca: ruolo, giocatore con squadra, età, media e prezzo. */
 @Composable
-private fun PlayerRow(p: Player, club: String, price: Long, modifier: Modifier = Modifier) {
-    GlassCard(modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(34.dp).clip(RoundedCornerShape(10.dp))
-                    .background(roleCol(p.role).copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) { Text(p.role, color = roleCol(p.role), fontWeight = FontWeight.Bold) }
-            Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                Text(p.name, style = MaterialTheme.typography.titleSmall)
-                Text("$club · ${p.age} anni · ${p.nationality}",
-                    style = MaterialTheme.typography.bodySmall, color = AC.TextDim, maxLines = 1)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("${p.overall}", style = MaterialTheme.typography.titleMedium, color = AC.Accent)
-                Text(money(price), style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+private fun MarketTable(
+    ps: List<Player>, club: (Player) -> String, price: (Player) -> Long,
+    modifier: Modifier = Modifier, onClick: (Player) -> Unit
+) {
+    PaperPanel(modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            HeadCell("DEM", AC.PaperText, Modifier.width(34.dp))
+            HeadCell("GIOCATORE", AC.PaperText, Modifier.weight(1f), TextAlign.Start)
+            HeadCell("ETÀ", AC.ColBlue, Modifier.width(30.dp))
+            HeadCell("ME", AC.ColOrange, Modifier.width(30.dp))
+            HeadCell("PREZZO", AC.PaperText, Modifier.width(66.dp), TextAlign.End)
+        }
+        LazyColumn(Modifier.fillMaxWidth()) {
+            itemsIndexed(ps, key = { _, p -> p.id }) { i, p ->
+                PaperRow(i, Modifier.clickable { onClick(p) }) {
+                    Text(when (p.role) { "P" -> "POR"; "D" -> "DIF"; "C" -> "MED"; else -> "ATT" }, Modifier.width(34.dp),
+                        textAlign = TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
+                        color = when (p.role) { "P" -> AC.ColOrange; "D" -> AC.ColBlue; "C" -> AC.ColGreen; else -> AC.ColEn })
+                    Column(Modifier.weight(1f)) {
+                        Text(p.name, maxLines = 1, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
+                        Text("${club(p)} · ${p.nationality}", maxLines = 1, fontSize = 10.sp, color = AC.ColBlue)
+                    }
+                    Text("${p.age}", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp, color = AC.PaperText)
+                    Text("${p.overall}", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
+                    Text(money(price(p)), Modifier.width(66.dp), textAlign = TextAlign.End, fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold, color = AC.ColGreen, maxLines = 1)
+                }
             }
         }
     }
