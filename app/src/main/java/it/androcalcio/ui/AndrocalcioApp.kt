@@ -589,6 +589,28 @@ private fun RosaTable(
 ) {
     val stats = listOf("EN", "VE", "RE", "AG", "QU", "FO", "CF", "LIV")
     val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColGreen, AC.ColOrange)
+    var roleFor by remember { mutableStateOf<Player?>(null) }
+    roleFor?.let { rp ->
+        AlertDialog(
+            onDismissRequest = { roleFor = null },
+            title = { Text("Ruolo di ${rp.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Ruolo naturale al 100%. Gli affini pesano con la loro affinità.",
+                        color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                    TacticalRoles.options(rp).forEach { (r, a) ->
+                        PcChip(
+                            selected = TacticalRoles.assigned(rp) == r,
+                            onClick = { onRole(rp, if (r == rp.pos) "" else r); roleFor = null },
+                            label = { Text("${TacticalRoles.label(r)} · $a%") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            confirmButton = { PcAction(onClick = { roleFor = null }) { Text("Chiudi") } }
+        )
+    }
     PaperPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.horizontalScroll(rememberScrollState())) {
             Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -618,10 +640,7 @@ private fun RosaTable(
                     val affCur = opts.firstOrNull { it.first == cur }?.second ?: 100
                     Text(
                         if (p.pos.isEmpty()) roleName(p.role) else "$cur $affCur%",
-                        Modifier.width(74.dp).clickable(enabled = opts.size > 1) {
-                            val next = opts[(opts.indexOfFirst { it.first == cur } + 1) % opts.size].first
-                            onRole(p, if (next == p.pos) "" else next)
-                        },
+                        Modifier.width(74.dp).clickable(enabled = opts.size > 1) { roleFor = p },
                         textAlign = TextAlign.Center,
                         fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
                         color = if (affCur < 100) AC.ColOrange else AC.PaperText

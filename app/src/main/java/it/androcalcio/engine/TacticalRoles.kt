@@ -31,6 +31,9 @@ object TacticalRoles {
 
     fun label(role: String): String = NAMES[role] ?: role
 
+    /** Ruolo affine di default in posizione i (0 = primo, 1 = secondo) per un ruolo naturale: (ruolo, affinità). */
+    fun affine(pos: String, i: Int): Pair<String, Int> = AFFINI[pos]?.getOrNull(i) ?: ("" to 0)
+
     /** Ruolo in cui il giocatore scende in campo: quello scelto, altrimenti il naturale. */
     fun assigned(p: Player): String = p.ruoloPartita.ifEmpty { p.pos }
 
