@@ -81,6 +81,7 @@ import it.androcalcio.data.Team
 import it.androcalcio.engine.Progression
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
+import it.androcalcio.ui.components.PcButton
 import it.androcalcio.ui.components.PaperRow
 import it.androcalcio.ui.components.HeadCell
 import it.androcalcio.ui.components.PaperPanel
@@ -594,123 +595,122 @@ fun FinanzeScreen(
     val wages = players.sumOf { it.salary }
     val gate = (team.stadiumCapacity * team.ticketPrice * 0.7).toLong()
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Finanze", style = MaterialTheme.typography.headlineSmall)
-        StatChip("Budget disponibile", money(team.budget), Modifier.fillMaxWidth())
-        StatChip("Monte ingaggi (annuo)", money(wages), Modifier.fillMaxWidth())
-        StatChip(
-            "Incasso stimato a partita (70% stadio)",
-            money(gate),
-            Modifier.fillMaxWidth()
-        )
-        StatChip("Prezzo biglietto", "€ ${team.ticketPrice}", Modifier.fillMaxWidth())
+        // Situazione: tabella a due colonne
+        PaperPanel(Modifier.fillMaxWidth()) {
+            listOf(
+                "Budget disponibile" to money(team.budget),
+                "Monte ingaggi (annuo)" to money(wages),
+                "Incasso stimato a partita" to money(gate),
+                "Prezzo biglietto" to "€ ${team.ticketPrice}",
+                "Stadio" to "${team.stadiumCapacity} posti",
+                "Sponsor" to team.sponsor
+            ).forEachIndexed { i, (k, v) ->
+                PaperRow(i) {
+                    Text(k, Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(v, color = if (i == 0) AC.ColGreen else AC.ColBlue, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
         GlassCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Assicurazione infortuni", style = MaterialTheme.typography.titleMedium)
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionTitle("Stadio")
                 Text(
-                    "Premio pagato a fine stagione. Rimborsa una quota dell'ingaggio per ogni turno di stop " +
-                        "di un giocatore infortunato; il rimborso arriva a fine stagione.",
+                    "+${Stadium.STEP} posti per ${money(Stadium.blockCost)}. Più posti, più incasso. Tetto ${Stadium.MAX_CAPACITY}.",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall
+                )
+                PcButton("Amplia stadio", onExpand, main = true,
+                    enabled = Stadium.canExpand(team.stadiumCapacity) && team.budget >= Stadium.blockCost)
+
+                SectionTitle("Sponsor e merchandising")
+                Text(
+                    "Incassati a fine stagione. Merchandising: ${money(Sponsorship.merch(team.stadiumCapacity))} l'anno.",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall
+                )
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Sponsorship.offers.forEach { o ->
+                        PcButton("${o.name} · ${money(o.annual)}", { onSponsor(o.name) }, main = o.name == team.sponsor)
+                    }
+                }
+
+                SectionTitle("Assicurazione infortuni")
+                Text(
+                    "Premio a fine stagione; rimborsa una quota dell'ingaggio per ogni turno di stop.",
                     color = AC.TextDim, style = MaterialTheme.typography.bodySmall
                 )
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(
                         Insurance.NONE to "Nessuna",
-                        Insurance.BASE to "Base · ${money(Insurance.premium(Insurance.BASE))}/anno (50%)",
-                        Insurance.FULL to "Completa · ${money(Insurance.premium(Insurance.FULL))}/anno (100%)"
-                    ).forEach { (lvl, label) ->
-                        FilterChip(selected = insurance == lvl, onClick = { onInsurance(lvl) }, label = { Text(label) })
-                    }
+                        Insurance.BASE to "Base · ${money(Insurance.premium(Insurance.BASE))} (50%)",
+                        Insurance.FULL to "Completa · ${money(Insurance.premium(Insurance.FULL))} (100%)"
+                    ).forEach { (lvl, label) -> PcButton(label, { onInsurance(lvl) }, main = insurance == lvl) }
                 }
             }
         }
-        GlassCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Sponsor e merchandising", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Lo sponsor e il merchandising arrivano a fine stagione. " +
-                        "Merchandising: ${money(Sponsorship.merch(team.stadiumCapacity))} l'anno.",
-                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall
-                )
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Sponsorship.offers.forEach { o ->
-                        FilterChip(
-                            selected = o.name == team.sponsor,
-                            onClick = { onSponsor(o.name) },
-                            label = { Text("${o.name} · ${money(o.annual)}") }
-                        )
-                    }
-                }
-            }
-        }
-        GlassCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Stadio: ${team.stadiumCapacity} posti", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Ampliamento di ${Stadium.STEP} posti per ${money(Stadium.blockCost)}. " +
-                        "Più posti = più incasso a partita. Tetto ${Stadium.MAX_CAPACITY} posti.",
-                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall
-                )
-                Button(
-                    onClick = onExpand,
-                    enabled = Stadium.canExpand(team.stadiumCapacity) && team.budget >= Stadium.blockCost
-                ) { Text("Amplia stadio") }
-            }
-        }
+
+        // Bilancio di stagione
         val righe = remember(bilancioStagione) { Bilancio.riepilogo(bilancioStagione) }
         val entrate = righe.sumOf { it.entrate }
         val uscite = righe.sumOf { it.uscite }
-        GlassCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Bilancio di stagione $stagione", style = MaterialTheme.typography.titleMedium)
-                if (righe.isEmpty()) {
-                    Text("Nessun movimento in questa stagione.", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+        SectionTitle("Bilancio di stagione $stagione")
+        PaperPanel(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp)) {
+                HeadCell("CATEGORIA", AC.PaperText, Modifier.weight(1f), TextAlign.Start)
+                HeadCell("ENTRATE", AC.ColGreen, Modifier.width(78.dp), TextAlign.End)
+                HeadCell("USCITE", AC.ColEn, Modifier.width(78.dp), TextAlign.End)
+            }
+            if (righe.isEmpty()) {
+                PaperRow(0) { Text("Nessun movimento in questa stagione.", color = AC.PaperText, fontSize = 12.sp) }
+            }
+            righe.forEachIndexed { i, r ->
+                PaperRow(i) {
+                    Text(r.categoria, Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (r.entrate > 0) money(r.entrate) else "-", Modifier.width(78.dp), textAlign = TextAlign.End,
+                        color = AC.PaperText, fontSize = 12.sp)
+                    Text(if (r.uscite > 0) money(r.uscite) else "-", Modifier.width(78.dp), textAlign = TextAlign.End,
+                        color = AC.PaperText, fontSize = 12.sp)
                 }
-                righe.forEach { r ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(r.categoria, style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            "+${money(r.entrate)}   -${money(r.uscite)}",
-                            style = MaterialTheme.typography.bodySmall, color = AC.TextDim
-                        )
-                    }
+            }
+            if (righe.isNotEmpty()) {
+                val risultato = entrate - uscite
+                PaperRow(righe.size) {
+                    Text("TOTALE", Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(money(entrate), Modifier.width(78.dp), textAlign = TextAlign.End, color = AC.ColGreen,
+                        fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(money(uscite), Modifier.width(78.dp), textAlign = TextAlign.End, color = AC.ColEn,
+                        fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                if (righe.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Totale entrate / uscite", style = MaterialTheme.typography.bodySmall)
-                        Text("+${money(entrate)}   -${money(uscite)}", style = MaterialTheme.typography.bodySmall)
-                    }
-                    val risultato = entrate - uscite
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Risultato della stagione", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        Text(
-                            (if (risultato >= 0) "+" else "") + money(risultato),
-                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold,
-                            color = if (risultato >= 0) AC.Ok else AC.Danger
-                        )
-                    }
+                PaperRow(righe.size + 1) {
+                    Text("RISULTATO", Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                    Text((if (risultato >= 0) "+" else "") + money(risultato), color = if (risultato >= 0) AC.ColGreen else AC.ColEn,
+                        fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
-        GlassCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Movimenti di cassa", style = MaterialTheme.typography.titleMedium)
-                if (movimenti.isEmpty()) {
-                    Text("Nessun movimento registrato.", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
-                } else movimenti.forEach { m ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column(Modifier.weight(1f)) {
-                            Text(m.label, style = MaterialTheme.typography.bodySmall)
-                            Text(m.season, color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
-                        }
-                        Text(
-                            (if (m.importo >= 0) "+" else "") + money(m.importo),
-                            color = if (m.importo >= 0) AC.Ok else AC.Danger,
-                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold
-                        )
+
+        // Movimenti di cassa
+        SectionTitle("Movimenti di cassa")
+        PaperPanel(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp)) {
+                HeadCell("VOCE", AC.PaperText, Modifier.weight(1f), TextAlign.Start)
+                HeadCell("IMPORTO", AC.ColBlue, Modifier.width(76.dp), TextAlign.End)
+                HeadCell("SALDO", AC.ColOrange, Modifier.width(76.dp), TextAlign.End)
+            }
+            if (movimenti.isEmpty()) {
+                PaperRow(0) { Text("Nessun movimento registrato.", color = AC.PaperText, fontSize = 12.sp) }
+            }
+            movimenti.forEachIndexed { i, m ->
+                PaperRow(i) {
+                    Column(Modifier.weight(1f)) {
+                        Text(m.label, color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(m.season, color = AC.PaperLine, fontSize = 10.sp)
                     }
+                    Text((if (m.importo >= 0) "+" else "") + money(m.importo), Modifier.width(76.dp), textAlign = TextAlign.End,
+                        color = if (m.importo >= 0) AC.ColGreen else AC.ColEn, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(money(m.saldo), Modifier.width(76.dp), textAlign = TextAlign.End, color = AC.PaperText, fontSize = 11.sp)
                 }
             }
         }
