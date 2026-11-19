@@ -60,6 +60,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import it.androcalcio.engine.AssistantCoach
+import it.androcalcio.engine.schemaInPartita
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -325,8 +326,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 lineupNotes += hL?.notes.orEmpty() + aL?.notes.orEmpty()
                 val r = MatchEngine.simulate(
                     h, hL?.xi ?: Medical.available(hp), a, aL?.xi ?: Medical.available(ap),
-                    if (hL != null) _formation.value else formations.random(),
-                    if (aL != null) _formation.value else formations.random(),
+                    if (hL != null) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
+                    if (aL != null) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
                     Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                     Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                     homeMent = if (h.id == t.id) _mentality.value else null,
@@ -384,7 +385,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (res.notes.isNotEmpty()) _notice.value = res.notes.joinToString("\n")
         val myBench = Medical.available(all) - res.xi.toSet()
         val opp = Medical.available(dao.playersOnce(if (userHome) away.id else home.id))
-        val oppF = Formation.values().random()
+        val oppF = schemaInPartita(if (userHome) away.id else home.id, kotlin.random.Random.Default)
         val m = LiveMatch(
             home, if (userHome) res.xi else opp, away, if (userHome) opp else res.xi,
             if (userHome) _formation.value else oppF, if (userHome) oppF else _formation.value,
@@ -851,8 +852,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val hx = xi(h.id); val ax = xi(a.id)
         val r = MatchEngine.simulate(
             h, hx, a, ax,
-            if (h.id == me.id) _formation.value else formations.random(),
-            if (a.id == me.id) _formation.value else formations.random(),
+            if (h.id == me.id) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
+            if (a.id == me.id) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
             Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
             Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
             homeMent = if (h.id == me.id) _mentality.value else null,
@@ -925,8 +926,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         val hx = xi(h.id); val ax = xi(a.id)
                         val r = MatchEngine.simulate(
                             h, hx, a, ax,
-                            if (h.id == me.id) _formation.value else formations.random(),
-                            if (a.id == me.id) _formation.value else formations.random(),
+                            if (h.id == me.id) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
+                            if (a.id == me.id) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
                             Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                             Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                             homeMent = if (h.id == me.id) _mentality.value else null,

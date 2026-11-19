@@ -51,6 +51,19 @@ class AssistantCoachTest {
         val notes = AssistantCoach.opponentNotes(team.copy(id = 2, shortName = "AVV"), avversario, rosa(), 50, 50, Formation.F442)
         assertTrue(notes.isNotEmpty())
         assertTrue(notes.any { it.contains("uomo più pericoloso") })
-        assertTrue(notes.last().contains("non è ancora noto"))
+        assertTrue(notes.any { it.startsWith("Di solito") && it.contains("gioca con il") })
+    }
+
+    @Test
+    fun loSchemaAbitualeEStabile() {
+        for (id in 1L..50L) assertEquals(schemaAbituale(id), schemaAbituale(id))
+    }
+
+    @Test
+    fun laPartitaUsaSpessoLoSchemaAbituale() {
+        val rng = kotlin.random.Random(3)
+        val abituale = schemaAbituale(9L)
+        val uguali = (1..1000).count { schemaInPartita(9L, rng) == abituale }
+        assertTrue("schema abituale usato solo $uguali volte su 1000", uguali in 780..920)
     }
 }

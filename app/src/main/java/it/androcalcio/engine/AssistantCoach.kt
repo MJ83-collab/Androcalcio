@@ -62,7 +62,8 @@ object AssistantCoach {
         val m = mine.filter { it.injuredRounds == 0 }
         if (t.isEmpty() || m.isEmpty()) return listOf("Non ci sono abbastanza giocatori per un confronto.")
 
-        val o = MatchEngine.ratings(t, f, oppCoach)
+        val schema = schemaAbituale(opp.id)
+        val o = MatchEngine.ratings(t, schema, oppCoach)
         val me = MatchEngine.ratings(m, f, myCoach)
 
         t.filter { it.role == "A" }.maxByOrNull { Attr.atk(it) }?.let {
@@ -80,7 +81,19 @@ object AssistantCoach {
         if (formaMedia < 75) out += "Arrivano con una forma piuttosto bassa (media ${formaMedia.toInt()})."
         val infortunati = theirs.count { it.injuredRounds > 0 }
         if (infortunati > 0) out += "Hanno $infortunati infortunati."
-        out += "Il modulo lo sceglie ${opp.shortName} al momento della partita: non è ancora noto."
+        out += "Di solito ${opp.shortName} gioca con il ${schema.label}, ma può cambiare modulo durante la partita."
+        out += schemaTips(schema)
+        return out
+    }
+
+    /** Consigli in base allo schema abituale dell'avversario. */
+    private fun schemaTips(s: Formation): List<String> {
+        val out = mutableListOf<String>()
+        if (s.lines.size == 3 && s.lines.last() >= 3) out += "Con tre punte attaccano sulle ripartenze: copri bene le fasce."
+        if (s.lines.size == 3 && s.lines[1] >= 5) out += "Hanno cinque a centrocampo: allarga il gioco sulle fasce."
+        if (s.lines.size == 3 && s.lines[0] == 5) out += "Con cinque in difesa si chiudono: cerca il tiro da fuori area."
+        if (s.lines.size == 3 && s.lines[0] == 3) out += "Difesa a tre: attenzione alle sovrapposizioni sulle fasce."
+        if (s.lines.size == 4) out += "Con il doppio mediano coprono bene il centro: cerca gli inserimenti dei trequartisti."
         return out
     }
 }

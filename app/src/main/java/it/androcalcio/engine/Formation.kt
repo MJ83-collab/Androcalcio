@@ -48,3 +48,21 @@ enum class DefLine(val label: String, val poss: Double, val def: Double, val atk
     MEDIA("Media", 1.0, 1.0, 1.0),
     ALTA("Alta", 1.04, 0.99, 1.02)
 }
+
+/** Schema abituale di una squadra AI: sempre lo stesso per squadra, con pesi da schemi più comuni. */
+fun schemaAbituale(teamId: Long): Formation {
+    val pesi = listOf(
+        Formation.F442 to 35, Formation.F433 to 25, Formation.F4231 to 20, Formation.F352 to 10,
+        Formation.F451 to 5, Formation.F532 to 3, Formation.F343 to 2
+    )
+    var r = kotlin.random.Random(teamId * 7919L + 17L).nextInt(100)
+    for ((f, w) in pesi) {
+        if (r < w) return f
+        r -= w
+    }
+    return Formation.F442
+}
+
+/** Schema di una squadra AI in partita: di solito quello abituale, ogni tanto un altro. */
+fun schemaInPartita(teamId: Long, rng: kotlin.random.Random): Formation =
+    if (rng.nextDouble() < 0.8) schemaAbituale(teamId) else Formation.values().random(rng)
