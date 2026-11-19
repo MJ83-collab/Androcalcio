@@ -225,5 +225,5 @@ class LiveMatch(
     }
 
     fun report() = MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events.toList(), homeF, awayF,
-        playedH.toSet(), playedA.toSet())
+        playedH.toSet(), playedA.toSet(), xiH.toList(), xiA.toList())
 }

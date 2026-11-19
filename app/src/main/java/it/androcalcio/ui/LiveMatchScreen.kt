@@ -66,7 +66,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 }
             }
         }
-        item { Pitch(m.home, m.away, bx, by, m.homeF, m.awayF) }
+        item { Pitch(m.home, m.away, bx, by, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList()) }
         if (!m.finished) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

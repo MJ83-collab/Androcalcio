@@ -29,7 +29,9 @@ data class MatchReport(
     val homeFormation: Formation = Formation.F442,
     val awayFormation: Formation = Formation.F442,
     val homePlayed: Set<Long> = emptySet(),   // chi è sceso in campo (titolari + subentrati), per la condizione
-    val awayPlayed: Set<Long> = emptySet()
+    val awayPlayed: Set<Long> = emptySet(),
+    val homeXI: List<Player> = emptyList(),   // gli 11 in campo a fine partita, per i numeri sul campo
+    val awayXI: List<Player> = emptyList()
 )
 
 /**

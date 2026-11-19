@@ -45,8 +45,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.EventType
 import it.androcalcio.engine.Formation
@@ -160,7 +166,7 @@ fun PartitaScreen(
                 }
             }
         }
-        item { Pitch(report.home, report.away, bx, by, report.homeFormation, report.awayFormation) }
+        item { Pitch(report.home, report.away, bx, by, report.homeFormation, report.awayFormation, report.homeXI, report.awayXI) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (AC.pc7) {
@@ -219,12 +225,26 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
     else PcChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
+/** Ordine dei numeri stile PC 7: 1 portiere, poi difensori, centrocampisti e attaccanti (per overall). */
+private fun numbered(xi: List<Player>): List<Pair<Int, Player>> {
+    fun rank(role: String) = when (role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
+    return xi.sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }))
+        .mapIndexed { i, p -> (i + 1) to p }
+}
+
 @Composable
-fun Pitch(home: Team, away: Team, bx: Float, by: Float, hf: Formation, af: Formation) {
+fun Pitch(
+    home: Team, away: Team, bx: Float, by: Float, hf: Formation, af: Formation,
+    homeXI: List<Player> = emptyList(), awayXI: List<Player> = emptyList()
+) {
     val homeColor = Color(home.colorPrimary)
     val awayColor = Color(if (home.colorPrimary == away.colorPrimary) away.colorSecondary else away.colorPrimary)
     val homePos = hf.coords()
     val awayPos = af.coords()
+    val homeNums = numbered(homeXI)
+    val awayNums = numbered(awayXI)
+    val textMeasurer = rememberTextMeasurer()
+    val numStyle = TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
     Canvas(Modifier.fillMaxWidth().aspectRatio(1.6f)) {
         val w = size.width; val h = size.height
         val line = Color.White.copy(alpha = 0.6f)
@@ -237,11 +257,19 @@ fun Pitch(home: Team, away: Team, bx: Float, by: Float, hf: Formation, af: Forma
         drawRect(line, Offset(w * 0.86f, h * 0.25f), Size(w * 0.14f, h * 0.5f), style = st)
         val shift = (bx - 0.5f) * 0.2f
         val r = h * 0.03f
-        homePos.forEach { (fx, fy) ->
-            drawCircle(homeColor, r, Offset((fx + shift).coerceIn(0.02f, 0.98f) * w, fy * h))
+        fun drawNumber(n: Int, c: Offset) {
+            val m = textMeasurer.measure(n.toString(), numStyle)
+            drawText(textMeasurer, n.toString(), topLeft = Offset(c.x - m.size.width / 2f, c.y - m.size.height / 2f), style = numStyle)
         }
-        awayPos.forEach { (fx, fy) ->
-            drawCircle(awayColor, r, Offset(((1f - fx) + shift).coerceIn(0.02f, 0.98f) * w, fy * h))
+        homePos.forEachIndexed { i, (fx, fy) ->
+            val c = Offset((fx + shift).coerceIn(0.02f, 0.98f) * w, fy * h)
+            drawCircle(homeColor, r, c)
+            homeNums.firstOrNull { it.first == i + 1 }?.let { drawNumber(it.first, c) }
+        }
+        awayPos.forEachIndexed { i, (fx, fy) ->
+            val c = Offset(((1f - fx) + shift).coerceIn(0.02f, 0.98f) * w, fy * h)
+            drawCircle(awayColor, r, c)
+            awayNums.firstOrNull { it.first == i + 1 }?.let { drawNumber(it.first, c) }
         }
         drawCircle(Color.White, r * 0.8f, Offset(bx * w, by * h))
     }
