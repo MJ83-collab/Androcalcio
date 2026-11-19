@@ -195,7 +195,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val cupMatches: StateFlow<List<MatchResult>> =
         combine(selectedTeam, _season) { t, s -> t to s }
             .flatMapLatest { (t, s) ->
-                if (t == null) flowOf(emptyList()) else dao.matches(Cup.key(t.nazione), s)
+                if (t == null) flowOf(emptyList())
+                else combine(dao.matches(Cup.key(t.nazione), s), dao.matches(Cup.superKey(t.nazione), s)) { c, sc -> c + sc }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -762,8 +763,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Fine stagione: età, crescita, ritiri, contratti, bilancio; nuova stagione. */
     /** Supplementari e rigori per le partite di coppa giocate in parità (una sola volta per partita). */
-    private suspend fun finalizeCup(nazione: String, s: String, rng: kotlin.random.Random): List<MatchResult> {
-        val all = dao.matchesOnce(Cup.key(nazione), s)
+    private suspend fun finalizeCup(nazione: String, s: String, rng: kotlin.random.Random): List<MatchResult> =
+        finalizeKey(Cup.key(nazione), s, rng)
+
+    /** Come finalizeCup, per una qualunque chiave di competizione a eliminazione (coppa o supercoppa). */
+    private suspend fun finalizeKey(key: String, s: String, rng: kotlin.random.Random): List<MatchResult> {
+        val all = dao.matchesOnce(key, s)
         val changed = all.filter { it.played && it.homePens < 0 }.mapNotNull { m ->
             Cup.finalize(m, all, rng).takeIf { it != m }
         }
@@ -894,6 +899,44 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     finalizeCup(nazione, s, rng)
                     dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, s), nTeams, strength, s, ck,
                         nazione, rng))
+                }
+            }
+
+            // 1c) Supercoppa del paese: a fine coppa; Spagna = final four (semifinali + finale)
+            for (nazione in teamsNow.map { it.nazione }.distinct()) {
+                val nTeams = teamsNow.filter { it.nazione == nazione }
+                val byId = nTeams.associateBy { it.id }
+                val sk = Cup.superKey(nazione)
+                val fin = Cup.finalMatch(dao.matchesOnce(Cup.key(nazione), s)) ?: continue
+                val cupWinner = Cup.winnerOfTie(listOf(fin), strength)
+                val cupRunner = if (cupWinner == fin.homeTeamId) fin.awayTeamId else fin.homeTeamId
+                val firstDiv = leagues.keys.firstOrNull { it.first == nazione }?.let { finals[it] }
+                val leagueTop = firstDiv.orEmpty().map { it.team.id }
+                if (dao.fixtureCount(sk, s) == 0) {
+                    dao.insertMatches(Cup.superFirst(nazione, s, sk, leagueTop, cupWinner, cupRunner))
+                }
+                while (true) {
+                    val all = dao.matchesOnce(sk, s)
+                    val pending = all.filter { !it.played }.sortedBy { it.round }
+                    if (pending.isEmpty()) {
+                        val semis = all.filter { Cup.stageOf(it.round) == Cup.SUPER_STAGE }
+                        val hasFinal = all.any { Cup.stageOf(it.round) == Cup.SUPER_FINAL_STAGE }
+                        if (nazione == "Spagna" && semis.size == 2 && !hasFinal) {
+                            val w = semis.map { Cup.winnerOfTie(listOf(it), strength) }
+                            dao.insertMatches(listOf(Cup.superFinal(s, sk, w[0], w[1])))
+                            continue
+                        }
+                        break
+                    }
+                    val done = pending.mapNotNull { m ->
+                        val h = byId[m.homeTeamId] ?: return@mapNotNull null
+                        val a = byId[m.awayTeamId] ?: return@mapNotNull null
+                        val r = simCupMatch(h, a, me, cache, staffBy, rng)
+                        m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
+                    }
+                    if (done.isEmpty()) break
+                    dao.updateMatches(done)
+                    finalizeKey(sk, s, rng)
                 }
             }
 

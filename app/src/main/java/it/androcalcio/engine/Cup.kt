@@ -22,7 +22,14 @@ object Cup {
     /** Gol medi di una squadra nei supplementari: circa un terzo di una partita. */
     private const val ET_LAMBDA = 0.45
 
+    /** Stadi della supercoppa (sempre dopo gli stadi della coppa). */
+    const val SUPER_STAGE = 100
+    const val SUPER_FINAL_STAGE = 101
+    const val SUPER_ROUND = BASE + SUPER_STAGE * STEP
+    const val SUPER_FINAL_ROUND = BASE + SUPER_FINAL_STAGE * STEP
+
     fun key(nazione: String) = "COPPA|$nazione"
+    fun superKey(nazione: String) = "SUPERCOPPA|$nazione"
     fun isCup(round: Int) = round >= BASE
     fun stageOf(round: Int) = (round - BASE) / STEP
 
@@ -44,6 +51,8 @@ object Cup {
 
     /** Nome del turno per la scheda Coppa. */
     fun stageName(stage: Int, teamsInStage: Int): String = when {
+        stage == SUPER_FINAL_STAGE -> "Finale Supercoppa"
+        stage == SUPER_STAGE -> if (teamsInStage <= 2) "Supercoppa" else "Semifinali Supercoppa"
         stage == 0 -> "Turno preliminare"
         teamsInStage <= 2 -> "Finale"
         teamsInStage <= 4 -> "Semifinali"
@@ -77,27 +86,63 @@ object Cup {
     ): List<MatchResult> {
         if (cup.isEmpty() || cup.any { !it.played }) return emptyList()
         val eliminated = HashSet<Long>()
-        cup.groupBy { stageOf(it.round) }.values.forEach { stage ->
+        cup.filter { stageOf(it.round) < SUPER_STAGE }.groupBy { stageOf(it.round) }.values.forEach { stage ->
             stage.groupBy { setOf(it.homeTeamId, it.awayTeamId) }.values.forEach { tie ->
                 val a = tie.first().homeTeamId
                 val b = tie.first().awayTeamId
-                val ga = aggregate(tie, a)
-                val gb = aggregate(tie, b)
-                val aWins = when {
-                    ga != gb -> ga > gb
-                    else -> penaltyWinner(tie)?.let { it == a } ?: run {
-                        val sa = strength[a] ?: 0.0
-                        val sb = strength[b] ?: 0.0
-                        if (sa != sb) sa > sb else a < b
-                    }
-                }
-                eliminated += if (aWins) b else a
+                val w = winnerOfTie(tie, strength)
+                eliminated += if (w == a) b else a
             }
         }
         val alive = teams.map { it.id }.filter { it !in eliminated }
         if (alive.size <= 1) return emptyList()
         return pairs(alive.shuffled(rng), cup.maxOf { stageOf(it.round) } + 1, season, key, nazione)
     }
+
+    /** Vincitore di un confronto: aggregato, poi rigori, poi rosa più forte, poi id più basso. */
+    fun winnerOfTie(tie: List<MatchResult>, strength: Map<Long, Double>): Long {
+        val a = tie.first().homeTeamId
+        val b = tie.first().awayTeamId
+        val ga = aggregate(tie, a)
+        val gb = aggregate(tie, b)
+        if (ga != gb) return if (ga > gb) a else b
+        penaltyWinner(tie)?.let { return it }
+        val sa = strength[a] ?: 0.0
+        val sb = strength[b] ?: 0.0
+        return if (sa != sb) (if (sa > sb) a else b) else minOf(a, b)
+    }
+
+    /** Partita della finale di coppa (l'unica partita dello stadio più alto), se giocata. */
+    fun finalMatch(cup: List<MatchResult>): MatchResult? {
+        if (cup.isEmpty() || cup.any { !it.played }) return null
+        val last = cup.maxOf { stageOf(it.round) }
+        return cup.filter { stageOf(it.round) == last }.singleOrNull()
+    }
+
+    /**
+     * Supercoppa del paese, al termine della stagione. Spagna: final four (semifinali + finale).
+     * Altrove: partita secca tra il campione di lega e il vincitore di coppa; se è la stessa squadra,
+     * l'avversario è il secondo in campionato.
+     * leagueTop: classifica della prima divisione (in ordine).
+     */
+    fun superFirst(nazione: String, season: String, key: String, leagueTop: List<Long>, cupWinner: Long, cupRunner: Long): List<MatchResult> {
+        if (nazione == "Spagna") {
+            val four = (leagueTop.take(2) + listOf(cupWinner, cupRunner) + leagueTop.drop(2)).distinct().take(4)
+            if (four.size < 4) return emptyList()
+            return listOf(single(season, key, SUPER_ROUND, four[0], four[3]), single(season, key, SUPER_ROUND, four[1], four[2]))
+        }
+        val champion = leagueTop.firstOrNull() ?: return emptyList()
+        val opp = if (cupWinner != champion) cupWinner else leagueTop.getOrNull(1) ?: return emptyList()
+        return listOf(single(season, key, SUPER_ROUND, champion, opp))
+    }
+
+    /** Finale della final four spagnola, tra le vincitrici delle semifinali. */
+    fun superFinal(season: String, key: String, w1: Long, w2: Long): MatchResult =
+        single(season, key, SUPER_FINAL_ROUND, w1, w2)
+
+    private fun single(season: String, key: String, round: Int, home: Long, away: Long) =
+        MatchResult(season = season, round = round, homeTeamId = home, awayTeamId = away,
+            homeGoals = 0, awayGoals = 0, league = key)
 
     /**
      * Risolve una partita giocata in parità: partita secca o ritorno con aggregato pari.
