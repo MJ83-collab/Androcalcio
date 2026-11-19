@@ -58,7 +58,7 @@ fun AvversarioScreen(advice: AssistantCoach.Advice?) {
         }
         if (a.opponentXI.isNotEmpty()) {
             item { LineupTable(orderedXI(a.opponentXI)) }
-            a.opponentSchema?.let { f -> item { Box(Modifier.background(AC.Btn).padding(2.dp)) { TacticPitch(a.opponentXI, f) } } }
+            a.opponentSchema?.let { f -> item { FormationBoard(a.opponentXI, f, androidx.compose.ui.graphics.Color(0xFF1E3FA0)) } }
         }
         item {
             SectionTitle("Notizie dell'allenatore in seconda")

@@ -4,6 +4,7 @@ import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -183,29 +184,39 @@ private fun MarketTable(
     ps: List<Player>, club: (Player) -> String, price: (Player) -> Long,
     modifier: Modifier = Modifier, onClick: (Player) -> Unit
 ) {
-    PaperPanel(modifier.fillMaxWidth()) {
+    Column(modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-            HeadCell("DEM", AC.PaperText, Modifier.width(34.dp))
-            HeadCell("GIOCATORE", AC.PaperText, Modifier.weight(1f), TextAlign.Start)
-            HeadCell("ETÀ", AC.ColBlue, Modifier.width(30.dp))
+            HeadCell("DEM", AC.Text, Modifier.width(34.dp))
+            HeadCell("GIOCATORE", AC.Text, Modifier.weight(1f), TextAlign.Start)
+            HeadCell("ETÀ", AC.Text, Modifier.width(30.dp))
             HeadCell("ME", AC.ColOrange, Modifier.width(30.dp))
-            HeadCell("PREZZO", AC.PaperText, Modifier.width(66.dp), TextAlign.End)
+            HeadCell("PREZZO", AC.Text, Modifier.width(66.dp), TextAlign.End)
         }
         LazyColumn(Modifier.fillMaxWidth()) {
-            itemsIndexed(ps, key = { _, p -> p.id }) { i, p ->
-                PaperRow(i, Modifier.clickable { onClick(p) }) {
-                    Text(when (p.role) { "P" -> "POR"; "D" -> "DIF"; "C" -> "MED"; else -> "ATT" }, Modifier.width(34.dp),
-                        textAlign = TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
-                        color = when (p.role) { "P" -> AC.ColOrange; "D" -> AC.ColBlue; "C" -> AC.ColGreen; else -> AC.ColEn })
-                    Column(Modifier.weight(1f)) {
-                        Text(p.name, maxLines = 1, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
-                        Text("${club(p)} · ${p.nationality}", maxLines = 1, fontSize = 10.sp, color = AC.ColBlue)
+            itemsIndexed(ps, key = { _, p -> p.id }) { _, p ->
+                val n = (p.overall / 20).coerceIn(0, 5)
+                Column(
+                    Modifier.fillMaxWidth().padding(vertical = 3.dp, horizontal = 4.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xFFF2F5FF), Color(0xFFB9C6E8))))
+                        .border(1.dp, Color(0xFF5A6A9A), RoundedCornerShape(10.dp))
+                        .clickable { onClick(p) }.padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(p.name, Modifier.weight(1f), maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
+                        Text("★".repeat(n) + "☆".repeat(5 - n), color = Color(0xFFE0A800), fontSize = 12.sp)
+                        Text("${p.overall}", Modifier.width(30.dp), textAlign = TextAlign.End, fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold, color = AC.ColOrange)
+                        Text(when (p.role) { "P" -> "POR"; "D" -> "DIF"; "C" -> "CEN"; else -> "ATT" }, Modifier.width(36.dp),
+                            textAlign = TextAlign.End, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     }
-                    Text("${p.age}", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp, color = AC.PaperText)
-                    Text("${p.overall}", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
-                    Text(money(price(p)), Modifier.width(66.dp), textAlign = TextAlign.End, fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold, color = AC.ColGreen, maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(club(p).uppercase(), Modifier.weight(1f), maxLines = 1, fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold, color = AC.ColBlue)
+                        Text("${p.age} anni · ", fontSize = 10.sp, color = AC.PaperText)
+                        Text(money(price(p)), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColGreen)
+                    }
                 }
             }
         }

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -319,24 +320,29 @@ fun TrainingPicker(plan: TrainingPlan, onChange: (TrainingPlan) -> Unit) {
     }
 }
 
-/** Tabellone della partita: squadre a sinistra e destra, punteggio al centro e minuto, come nel gioco originale. */
+/** Tabellone stile TV: fascia blu con le squadre, punteggio bianco al centro, minuto in azzurro, stemmi grandi. */
 @Composable
 fun Scoreboard(home: Team, away: Team, hg: Int, ag: Int, status: String) {
-    Row(
-        Modifier.fillMaxWidth().background(AC.Btn).border(2.dp, AC.BtnBorder).padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val blu = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF3D63E0), Color(0xFF1C3BB0)))
+    Column(
+        Modifier.fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF0A1440), Color(0xFF1B5E20))))
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Crest(home, 40.dp)
-            Text(home.shortName.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(home.shortName.uppercase(), Modifier.weight(1f).background(blu).padding(vertical = 8.dp),
+                color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, textAlign = TextAlign.Center)
+            Text("$hg - $ag", Modifier.background(Color.White).border(2.dp, Color(0xFFC62828)).padding(horizontal = 16.dp, vertical = 4.dp),
+                color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp)
+            Text(away.shortName.uppercase(), Modifier.weight(1f).background(blu).padding(vertical = 8.dp),
+                color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, textAlign = TextAlign.Center)
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("$hg - $ag", color = AC.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 34.sp)
-            Text(status, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        }
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Crest(away, 40.dp)
-            Text(away.shortName.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+        Text(status, Modifier.background(Color(0xFF4FC3F7)).padding(horizontal = 18.dp, vertical = 2.dp),
+            color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Box(Modifier.border(3.dp, Color(0xFFD4AF37), androidx.compose.foundation.shape.CircleShape).padding(3.dp)) { Crest(home, 64.dp) }
+            Box(Modifier.border(3.dp, Color(0xFFD4AF37), androidx.compose.foundation.shape.CircleShape).padding(3.dp)) { Crest(away, 64.dp) }
         }
     }
 }

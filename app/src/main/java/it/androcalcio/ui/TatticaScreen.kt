@@ -92,7 +92,7 @@ private fun RoleIcon(code: String, role: String) {
 }
 
 /** Colore della cella in base al valore: rosso basso, arancio medio, nero alto. */
-private fun cellColor(v: Int) = when { v < 50 -> AC.ColEn; v < 70 -> AC.ColOrange; else -> AC.PaperText }
+private fun cellColor(v: Int) = if (v < 50) AC.ColEn else Color(0xFF5A6A9A)
 
 /**
  * Tabella dei titolari come nella schermata Tattica originale: N°, giocatore,
@@ -119,8 +119,8 @@ fun LineupTable(xi: List<Player>, onRole: ((Player) -> Unit)? = null, onOpen: ((
                         fontWeight = FontWeight.Bold, fontSize = 12.sp, color = AC.PaperText)
                     listOf(p.condition, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall).forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
-                            fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (k == 0 && p.condition < 60) AC.ColEn else cellColor(v))
+                            fontWeight = if (k == 0 || k == 7) FontWeight.ExtraBold else FontWeight.Bold,
+                            color = when (k) { 0 -> AC.ColEn; 7 -> AC.ColOrange; else -> cellColor(v) })
                     }
                     val code = TacticalRoles.assigned(p)
                     Row(
@@ -219,6 +219,7 @@ fun TatticaScreen(
     }
     LazyColumn(contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { LineupTable(xi, onRole = { roleFor = it }) }
+        item { FormationBoard(xi, formation, Color(0xFFC62828)) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f).border2()) { TacticPitch(xi, formation) }
@@ -251,3 +252,48 @@ fun TatticaScreen(
 
 private fun Modifier.border2(): Modifier =
     this.then(Modifier.background(AC.Btn).padding(2.dp))
+
+/** Formazione verticale come le grafiche TV: campo in prospettiva, giocatori con maglia, numero e nome in etichetta. */
+@Composable
+fun FormationBoard(xi: List<Player>, formation: Formation, shirt: Color, modifier: Modifier = Modifier) {
+    val ordered = orderedXI(xi)
+    val coords = formation.coords()
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier.fillMaxWidth().aspectRatio(0.8f)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF2E7D32), Color(0xFF1B5E20))))
+    ) {
+        val w = maxWidth; val h = maxHeight
+        Canvas(Modifier.matchParentSize()) {
+            val l = Color.White.copy(alpha = 0.7f); val st = Stroke(3f)
+            val path = Path().apply {
+                moveTo(size.width * 0.18f, size.height * 0.04f); lineTo(size.width * 0.82f, size.height * 0.04f)
+                lineTo(size.width * 0.97f, size.height * 0.97f); lineTo(size.width * 0.03f, size.height * 0.97f); close()
+            }
+            drawPath(path, l, style = st)
+            drawLine(l, Offset(size.width * 0.1f, size.height * 0.5f), Offset(size.width * 0.9f, size.height * 0.5f), 3f)
+            drawCircle(l, size.width * 0.12f, Offset(size.width / 2, size.height * 0.5f), style = st)
+            drawRect(l, Offset(size.width * 0.25f, size.height * 0.80f), Size(size.width * 0.5f, size.height * 0.17f), style = st)
+        }
+        ordered.forEachIndexed { i, p ->
+            val c = coords.getOrNull(i) ?: return@forEachIndexed
+            // c.first: 0.05 portiere .. 0.46 attacco → dal basso verso l'alto
+            val yf = 0.90f - (c.first - 0.05f) / 0.41f * 0.80f
+            val xf = c.second
+            Column(
+                Modifier.padding(start = w * xf - 34.dp, top = h * yf - 22.dp).width(68.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(Modifier.size(30.dp).background(if (p.role == "P") Color(0xFF29B6F6) else shirt,
+                    androidx.compose.foundation.shape.RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 3.dp, bottomEnd = 3.dp))
+                    .border(1.dp, Color.Black, androidx.compose.foundation.shape.RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 3.dp, bottomEnd = 3.dp)),
+                    contentAlignment = Alignment.Center) {
+                    Text(if (p.numero > 0) "${p.numero}" else "${i + 1}", color = Color.White, fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        style = TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, blurRadius = 4f)))
+                }
+                Text(p.name.substringAfter(". ").uppercase(), Modifier.background(Color.White).padding(horizontal = 3.dp),
+                    color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            }
+        }
+    }
+}
