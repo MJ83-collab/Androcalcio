@@ -359,8 +359,8 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         return
     }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(if (AC.pc7) 10.dp else 16.dp),
+        verticalArrangement = Arrangement.spacedBy(if (AC.pc7) 10.dp else 12.dp)
     ) {
         GlassCard(Modifier.fillMaxWidth()) {
             Row(
@@ -379,7 +379,22 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (AC.pc7) {
+            val media = if (players.isEmpty()) 0 else players.sortedByDescending { it.overall }.take(11).map { it.overall }.average().toInt()
+            PaperPanel(Modifier.fillMaxWidth()) {
+                listOf(
+                    "Budget" to money(team.budget),
+                    "Stadio" to "${team.stadiumCapacity} posti",
+                    "Giocatori in rosa" to "${players.size}",
+                    "Media dei titolari" to "$media"
+                ).forEachIndexed { i, (k, v) ->
+                    PaperRow(i) {
+                        Text(k, Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(v, color = if (i == 0) AC.ColGreen else AC.ColBlue, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
+        } else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatChip("Budget", money(team.budget), Modifier.weight(1f))
             StatChip("Stadio", "${team.stadiumCapacity}", Modifier.weight(1f))
             StatChip("Rosa", "${players.size}", Modifier.weight(1f))
@@ -389,14 +404,12 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Tema", style = MaterialTheme.typography.titleSmall)
             listOf("Scuro", "Turchese", "Blu", "PC 7").forEachIndexed { i, n ->
-                androidx.compose.material3.FilterChip(
-                    selected = AC.tema == i,
-                    onClick = {
-                        AC.tema = i
-                        ctx.getSharedPreferences("androcalcio", 0).edit().putInt("tema", i).apply()
-                    },
-                    label = { Text(n) }
-                )
+                val pick = {
+                    AC.tema = i
+                    ctx.getSharedPreferences("androcalcio", 0).edit().putInt("tema", i).apply()
+                }
+                if (AC.pc7) PcButton(n, pick, main = AC.tema == i)
+                else androidx.compose.material3.FilterChip(selected = AC.tema == i, onClick = pick, label = { Text(n) })
             }
         }
 
@@ -407,7 +420,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
             Screen.SQUADRE, Screen.SALVATAGGI
         )
         tiles.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {
                 row.forEach { s -> MenuTile(s, Modifier.weight(1f)) { go(s) } }
                 if (row.size == 1) Box(Modifier.weight(1f))
             }
@@ -417,6 +430,23 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
 
 @Composable
 fun MenuTile(s: Screen, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    if (AC.pc7) {
+        // Pulsante nero con icona gialla, etichetta maiuscola e descrizione
+        val shape = RoundedCornerShape(3.dp)
+        Row(
+            modifier.clip(shape).background(AC.Btn).border(2.dp, AC.BtnBorder, shape)
+                .clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(s.icon, contentDescription = s.label, tint = AC.Accent, modifier = Modifier.size(22.dp))
+            Column(Modifier.padding(start = 8.dp)) {
+                Text(s.label.uppercase(), color = Color.White, fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                Text(s.desc, color = AC.BtnBorder, fontSize = 10.sp, maxLines = 2, lineHeight = 12.sp)
+            }
+        }
+        return
+    }
     GlassCard(modifier.clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick)) {
         Column(Modifier.padding(16.dp)) {
             Box(
