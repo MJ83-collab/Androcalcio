@@ -40,6 +40,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import it.androcalcio.data.Team
 import it.androcalcio.ui.theme.AC
+import it.androcalcio.ui.theme.PcTitle
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import java.util.Locale
 
 
@@ -72,7 +79,9 @@ fun Crest(team: Team, size: Dp = 44.dp, modifier: Modifier = Modifier) {
                     colorStops = arrayOf(0f to c1, 0.5f to c1, 0.5f to c2, 1f to c2)
                 )
             )
-            .border(2.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+            .border(if (AC.pc7) (size.value * 0.06f).coerceAtLeast(2f).dp else 2.dp,
+                if (AC.pc7) Brush.linearGradient(listOf(Color(0xFFFFE9A0), Color(0xFFB8860B), Color(0xFFFFD86B)))
+                else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.3f))), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -93,8 +102,17 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    if (AC.pc7) {
+        Box(
+            modifier.clip(RoundedCornerShape(2.dp))
+                .background(Brush.verticalGradient(listOf(AC.NavyTop, AC.NavyBottom)))
+                .border(2.dp, AC.NavyBorder, RoundedCornerShape(2.dp))
+                .bevel(w = 1.dp)
+        ) { CompositionLocalProvider(LocalContentColor provides AC.Text) { content() } }
+        return
+    }
     Surface(
-        modifier = if (AC.pc7) modifier.bevel() else modifier,
+        modifier = modifier,
         shape = RoundedCornerShape(if (AC.pc7) 3.dp else 18.dp),
         color = AC.Surface,
         border = BorderStroke(if (AC.pc7) 2.dp else 1.dp, AC.Border),
@@ -183,6 +201,24 @@ fun StatChip(label: String, value: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    if (AC.pc7) {
+        Box(
+            modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Brush.verticalGradient(listOf(AC.SectionTop, AC.SectionBottom)))
+                .border(1.dp, Color(0xFF0B1240), RoundedCornerShape(2.dp))
+                .bevel(w = 1.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text.uppercase(Locale.ITALY), color = Color.White, fontFamily = PcTitle,
+                fontSize = 12.sp, letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall.copy(shadow = Shadow(Color(0xFF0B1240), Offset(1f, 1f), 2f))
+            )
+        }
+        return
+    }
     Text(
         text.uppercase(Locale.ITALY),
         modifier = modifier.padding(top = 8.dp, bottom = 4.dp),
@@ -244,3 +280,54 @@ fun PcChip(
 fun money(v: Long): String =
     if (v >= 1_000_000) String.format(Locale.ITALY, "€ %.1f M", v / 1_000_000.0)
     else String.format(Locale.ITALY, "€ %,d", v)
+
+
+/** Riquadro icona PC 7: quadratino in rilievo col colore della sezione e il pittogramma bianco. */
+@Composable
+fun PcIconBadge(icon: ImageVector, color: Color, size: Dp = 34.dp) {
+    Box(
+        Modifier.size(size).clip(RoundedCornerShape(3.dp))
+            .background(Brush.linearGradient(listOf(color.copy(alpha = 1f), Color(
+                (color.red * 0.45f), (color.green * 0.45f), (color.blue * 0.45f)))))
+            .border(1.dp, Color.Black.copy(alpha = 0.7f), RoundedCornerShape(3.dp))
+            .bevel(w = 1.5.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.62f))
+    }
+}
+
+/** Bandierina disegnata (niente emoji): strisce verticali o orizzontali per le nazioni del gioco. */
+@Composable
+fun FlagBox(nazione: String, modifier: Modifier = Modifier) {
+    val v: List<Color>? = when (nazione) {
+        "Italia" -> listOf(Color(0xFF009246), Color.White, Color(0xFFCE2B37))
+        "Francia" -> listOf(Color(0xFF0055A4), Color.White, Color(0xFFEF4135))
+        else -> null
+    }
+    val h: List<Color>? = when (nazione) {
+        "Germania" -> listOf(Color.Black, Color(0xFFDD0000), Color(0xFFFFCE00))
+        "Spagna" -> listOf(Color(0xFFAA151B), Color(0xFFF1BF00), Color(0xFFF1BF00), Color(0xFFAA151B))
+        "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF))
+        else -> null
+    }
+    Canvas(modifier.width(18.dp).height(12.dp).border(1.dp, Color.Black.copy(alpha = 0.6f))) {
+        when {
+            v != null -> v.forEachIndexed { i, c ->
+                drawRect(c, Offset(size.width / v.size * i, 0f), Size(size.width / v.size + 1f, size.height)) }
+            h != null -> h.forEachIndexed { i, c ->
+                drawRect(c, Offset(0f, size.height / h.size * i), Size(size.width, size.height / h.size + 1f)) }
+            nazione == "Inghilterra" -> {
+                drawRect(Color.White)
+                drawRect(Color(0xFFCE1124), Offset(size.width * 0.42f, 0f), Size(size.width * 0.16f, size.height))
+                drawRect(Color(0xFFCE1124), Offset(0f, size.height * 0.38f), Size(size.width, size.height * 0.24f))
+            }
+            nazione == "Brasile" -> {
+                drawRect(Color(0xFF009C3B))
+                drawCircle(Color(0xFFFFDF00), radius = size.height * 0.42f)
+                drawCircle(Color(0xFF002776), radius = size.height * 0.24f)
+            }
+            else -> drawRect(Color(0xFF8899CC))
+        }
+    }
+}

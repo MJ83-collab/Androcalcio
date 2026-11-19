@@ -47,6 +47,16 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.AccountCircle
+import it.androcalcio.ui.components.PcIconBadge
+import it.androcalcio.ui.components.FlagBox
+import it.androcalcio.ui.theme.PcTitle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -97,22 +107,22 @@ import it.androcalcio.ui.theme.AC
 import androidx.compose.foundation.layout.Spacer
 import it.androcalcio.engine.Bilancio
 
-enum class Screen(val label: String, val icon: ImageVector, val desc: String) {
-    HOME("Home", Icons.Filled.Home, ""),
-    ROSA("Rosa", Icons.Filled.Person, "Giocatori e valori"),
-    TATTICA("Tattica", Icons.Filled.Build, "Undici, ruoli e campo"),
-    AVVERSARIO("Avversario", Icons.Filled.Info, "Prossimo rivale e assistente"),
-    PARTITA("Partita", Icons.Filled.Star, "Simulazione 2D"),
-    MERCATO("Mercato", Icons.Filled.ShoppingCart, "Acquisti e cessioni"),
-    VIVAIO("Vivaio", Icons.Filled.Face, "Giovani e scouting"),
-    SQUADRE("Squadre", Icons.Filled.List, "Cambia squadra"),
-    CALENDARIO("Calendario", Icons.Filled.DateRange, "Giornate e risultati"),
-    FINANZE("Finanze", Icons.Filled.AccountBox, "Bilancio e sponsor"),
-    STAFF("Staff", Icons.Filled.Settings, "Allenatori e preparatori"),
-    STATISTICHE("Statistiche", Icons.Filled.Info, "Marcatori e portieri"),
-    EDITOR("Editor", Icons.Filled.Build, "Modifica i dati"),
-    SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita"),
-    ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione")
+enum class Screen(val label: String, val icon: ImageVector, val desc: String, val tint: Color) {
+    HOME("Home", Icons.Filled.Home, "", Color(0xFF3F6FD8)),
+    ROSA("Rosa", Icons.Filled.Person, "Giocatori e valori", Color(0xFF2F8F4E)),
+    TATTICA("Tattica", Icons.Filled.Place, "Undici, ruoli e campo", Color(0xFF3AA35B)),
+    AVVERSARIO("Avversario", Icons.Filled.Search, "Prossimo rivale e assistente", Color(0xFFC0392B)),
+    PARTITA("Partita", Icons.Filled.PlayArrow, "Simulazione 2D", Color(0xFFE08A12)),
+    MERCATO("Mercato", Icons.Filled.ShoppingCart, "Acquisti e cessioni", Color(0xFFD4A017)),
+    VIVAIO("Vivaio", Icons.Filled.Face, "Giovani e scouting", Color(0xFF4CAF50)),
+    SQUADRE("Squadre", Icons.Filled.Refresh, "Cambia squadra", Color(0xFF5B6BC8)),
+    CALENDARIO("Calendario", Icons.Filled.DateRange, "Giornate e risultati", Color(0xFF2E86C1)),
+    FINANZE("Finanze", Icons.Filled.AccountBox, "Bilancio e sponsor", Color(0xFF1E9E7A)),
+    STAFF("Staff", Icons.Filled.AccountCircle, "Allenatori e preparatori", Color(0xFF8E5BC8)),
+    STATISTICHE("Statistiche", Icons.Filled.List, "Marcatori e portieri", Color(0xFF2874A6)),
+    EDITOR("Editor", Icons.Filled.Edit, "Modifica i dati", Color(0xFF7F8C8D)),
+    SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita", Color(0xFF16A085)),
+    ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227))
 }
 
 private val bottomTabs = listOf(
@@ -330,12 +340,16 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
                 Text(team?.name ?: "Androcalcio", color = AC.PaperText, fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold, maxLines = 1)
             }
-            Text(
-                "${flagOf(team?.nazione ?: "")} ${team?.campionato ?: ""}",
+            Row(
                 Modifier.fillMaxWidth().clip(shape).background(Color(0xFF2E3F8F)).border(1.dp, AC.Btn, shape).bevel(w = 1.dp)
                     .padding(horizontal = 5.dp, vertical = 3.dp),
-                color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FlagBox(team?.nazione ?: "")
+                Spacer(Modifier.width(5.dp))
+                Text(team?.campionato ?: "", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
         Box(
             Modifier.weight(1.2f).height(40.dp).clip(shape)
@@ -345,8 +359,8 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
         ) {
             Text(
                 if (screen == Screen.HOME) "ANDROCALCIO" else screen.label.uppercase(),
-                color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.sp, maxLines = 1,
+                color = Color.White, fontSize = 13.sp, fontFamily = PcTitle,
+                letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.titleMedium.copy(
                     shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF1B2A66), blurRadius = 4f)
                 )
@@ -363,9 +377,42 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
     }
 }
 
-/** Menu laterale a elenco di testo, come nei gestionali di una volta. */
+/** Menu laterale: in PC 7 colonna di pulsanti navy in rilievo con icona e voce su una riga sola. */
 @Composable
 fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
+    if (AC.pc7) {
+        Column(
+            Modifier.width(104.dp).fillMaxHeight()
+                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF141B5C), Color(0xFF0A0F3A))))
+                .border(1.dp, Color(0xFF060A2A))
+                .verticalScroll(rememberScrollState()).padding(4.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Screen.values().forEach { sc ->
+                val on = sc == current
+                val shape = RoundedCornerShape(2.dp)
+                Row(
+                    Modifier.fillMaxWidth().clip(shape)
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                            if (on) listOf(Color(0xFF0A0A12), Color(0xFF23233A)) else listOf(AC.NavyTop, AC.NavyBottom)))
+                        .border(1.dp, if (on) AC.Accent else AC.NavyBorder, shape)
+                        .bevel(raised = !on, w = 1.dp)
+                        .clickable { onSelect(sc) }
+                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PcIconBadge(sc.icon, sc.tint, size = 20.dp)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        sc.label.uppercase(), color = if (on) AC.Accent else Color.White,
+                        fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.2.sp,
+                        maxLines = 1, softWrap = false, overflow = TextOverflow.Clip
+                    )
+                }
+            }
+        }
+        return
+    }
     Column(
         Modifier.width(84.dp).fillMaxHeight().background(Color.Black.copy(alpha = 0.3f))
             .verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
@@ -376,15 +423,13 @@ fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
             Text(
                 sc.label,
                 modifier = Modifier.fillMaxWidth()
-                    .background(if (AC.pc7) (if (on) it.androcalcio.ui.components.BtnGradient
-                        else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.SurfaceHi, AC.Surface)))
-                        else androidx.compose.ui.graphics.SolidColor(if (on) AC.Accent.copy(alpha = 0.2f) else Color.Transparent))
-                    .then(if (AC.pc7) Modifier.bevel(raised = !on, w = 1.dp) else Modifier)
+                    .background(if (on) AC.Accent.copy(alpha = 0.2f) else Color.Transparent)
                     .clickable { onSelect(sc) }
                     .padding(horizontal = 10.dp, vertical = 11.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Medium,
-                color = if (on) AC.Accent else AC.Text
+                color = if (on) AC.Accent else AC.Text,
+                maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -458,19 +503,23 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
 @Composable
 fun MenuTile(s: Screen, modifier: Modifier = Modifier, onClick: () -> Unit) {
     if (AC.pc7) {
-        // Pulsante nero con icona gialla, etichetta maiuscola e descrizione
-        val shape = RoundedCornerShape(3.dp)
-        Row(
-            modifier.clip(shape).background(AC.Btn).border(2.dp, AC.BtnBorder, shape)
-                .clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Pulsante navy in rilievo: icona colorata in alto, voce in maiuscolo e descrizione ben leggibile
+        val shape = RoundedCornerShape(2.dp)
+        Column(
+            modifier.height(112.dp).clip(shape)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.NavyTop, AC.NavyBottom)))
+                .border(2.dp, AC.NavyBorder, shape).bevel(w = 1.5.dp)
+                .clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(s.icon, contentDescription = s.label, tint = AC.Accent, modifier = Modifier.size(22.dp))
-            Column(Modifier.padding(start = 8.dp)) {
-                Text(s.label.uppercase(), color = Color.White, fontSize = 12.sp,
-                    fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                Text(s.desc, color = AC.BtnBorder, fontSize = 10.sp, maxLines = 2, lineHeight = 12.sp)
-            }
+            PcIconBadge(s.icon, s.tint, size = 38.dp)
+            Text(s.label.uppercase(), Modifier.padding(top = 6.dp), color = Color.White, fontSize = 13.sp,
+                fontWeight = FontWeight.Black, letterSpacing = 0.5.sp, maxLines = 1, softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(Color.Black, androidx.compose.ui.geometry.Offset(1f, 1f), 2f)))
+            Text(s.desc, color = AC.NavyText, fontSize = 11.sp, maxLines = 2, lineHeight = 13.sp,
+                textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
         }
         return
     }

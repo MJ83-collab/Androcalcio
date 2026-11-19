@@ -9,7 +9,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import it.androcalcio.R
 import androidx.compose.ui.unit.sp
 
 // Due temi: "scuro" (design canvas Androcalcio) e "PC Calcio" (turchese, stile dei vecchi gestionali).
@@ -33,7 +36,7 @@ object AC {
     val Warn get() = Color(0xFFFFC24B)
     val Danger get() = pick(0xFFFF5C72, 0xFFFF6B6B, 0xFFFF7A5C, 0xFFFF6B5C)
     val Text get() = pick(0xFFE8EEF4, 0xFFF2FBFA, 0xFFF4F7FF, 0xFFF6F8FF)
-    val TextDim get() = pick(0xFF8FA0B2, 0xFFA9DAD6, 0xFFB4C4EE, 0xFFCDD5F3)
+    val TextDim get() = pick(0xFF8FA0B2, 0xFFA9DAD6, 0xFFB4C4EE, 0xFFD9E1FF)
 
     // Tabelle su carta bianca (stile PC Calcio 7): valgono per tutti i temi, le usano le tabelle dei passi successivi.
     val Paper = Color(0xFFFFFFFF)
@@ -51,6 +54,14 @@ object AC {
     val BtnBorder = Color(0xFF6B6F80)
     val BannerTop = Color(0xFFA6C0F0)
     val BannerBottom = Color(0xFF4F6FB8)
+    /** Pannelli e pulsanti navy PC 7 (menu, riquadri), bordo azzurro e testo secondario ad alto contrasto. */
+    val NavyTop = Color(0xFF26338A)
+    val NavyBottom = Color(0xFF0E1550)
+    val NavyBorder = Color(0xFF9DB4F2)
+    val NavyText = Color(0xFFD9E1FF)
+    /** Banda delle intestazioni di sezione ("GIOCATORI CONVOCATI"). */
+    val SectionTop = Color(0xFF5C7BD6)
+    val SectionBottom = Color(0xFF223A98)
 }
 
 private fun scheme() = darkColorScheme(
@@ -66,15 +77,29 @@ private fun scheme() = darkColorScheme(
     error = AC.Danger
 )
 
+/** Caratteri stile PC Calcio 7: corpo stretto e squadrato (Roboto Condensed), titoli pesanti (Archivo Black). */
+val PcBody = FontFamily(
+    Font(R.font.pc_body, FontWeight.Normal),
+    Font(R.font.pc_body, FontWeight.Medium),
+    Font(R.font.pc_body_bold, FontWeight.SemiBold),
+    Font(R.font.pc_body_bold, FontWeight.Bold),
+    Font(R.font.pc_body_black, FontWeight.ExtraBold),
+    Font(R.font.pc_body_black, FontWeight.Black)
+)
+val PcTitle = FontFamily(Font(R.font.pc_title, FontWeight.Normal))
+
 private val AndrocalcioTypography = Typography(
-    headlineMedium = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.ExtraBold),
-    headlineSmall = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-    titleSmall = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 16.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp),
-    bodySmall = TextStyle(fontSize = 12.sp),
-    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    headlineMedium = TextStyle(fontFamily = PcTitle, fontSize = 24.sp),
+    headlineSmall = TextStyle(fontFamily = PcTitle, fontSize = 19.sp),
+    titleLarge = TextStyle(fontFamily = PcTitle, fontSize = 18.sp),
+    titleMedium = TextStyle(fontFamily = PcBody, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+    titleSmall = TextStyle(fontFamily = PcBody, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+    bodyLarge = TextStyle(fontFamily = PcBody, fontSize = 15.sp),
+    bodyMedium = TextStyle(fontFamily = PcBody, fontSize = 14.sp),
+    bodySmall = TextStyle(fontFamily = PcBody, fontSize = 12.sp),
+    labelLarge = TextStyle(fontFamily = PcBody, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+    labelMedium = TextStyle(fontFamily = PcBody, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+    labelSmall = TextStyle(fontFamily = PcBody, fontSize = 11.sp, fontWeight = FontWeight.Bold)
 )
 
 @Composable
