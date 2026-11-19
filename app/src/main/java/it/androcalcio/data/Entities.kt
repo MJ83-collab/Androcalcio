@@ -72,7 +72,9 @@ data class Staff(
     val name: String,
     val skill: Int,              // 1..99, mostrato all'utente come giudizio
     val salary: Long,
-    val contract: Int
+    val contract: Int,
+    // Tattica predefinita (v16): ATTACCO o DIFESA, vedi engine/Tattica.kt
+    @ColumnInfo(defaultValue = "DIFESA") val stile: String = "DIFESA"
 )
 
 @Entity(tableName = "matches")

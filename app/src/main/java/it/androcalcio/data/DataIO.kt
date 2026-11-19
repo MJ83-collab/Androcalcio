@@ -2,6 +2,7 @@ package it.androcalcio.data
 
 import it.androcalcio.engine.Attr
 import it.androcalcio.engine.Staffing
+import it.androcalcio.engine.Stile
 import kotlin.random.Random
 import org.json.JSONArray
 import org.json.JSONObject
@@ -36,7 +37,7 @@ object DataIO {
             val sa = JSONArray()
             (staff[t.id] ?: emptyList()).forEach { s ->
                 sa.put(JSONObject()
-                    .put("role", s.role).put("name", s.name).put("skill", s.skill)
+                    .put("role", s.role).put("name", s.name).put("skill", s.skill).put("stile", s.stile)
                     .put("salary", s.salary).put("contract", s.contract))
             }
             arr.put(JSONObject()
@@ -108,7 +109,8 @@ object DataIO {
                     name = s.getString("name"),
                     skill = s.getInt("skill").coerceIn(1, 99),
                     salary = s.getLong("salary"),
-                    contract = s.getInt("contract").coerceIn(1, 5)
+                    contract = s.getInt("contract").coerceIn(1, 5),
+                    stile = s.optString("stile", "DIFESA").takeIf { st -> Stile.values().any { it.name == st } } ?: "DIFESA"
                 )
             }
         }

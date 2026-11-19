@@ -48,7 +48,8 @@ object Staffing {
                 teamId = teamId, role = role,
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5)
+                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+                stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
         }
 
@@ -60,7 +61,8 @@ object Staffing {
                 teamId = 0, role = role,
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5)
+                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+                stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
         }
     }

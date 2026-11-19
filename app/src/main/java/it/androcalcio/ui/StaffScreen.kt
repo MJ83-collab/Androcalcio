@@ -33,7 +33,14 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Effetto dichiarato in chiaro, così si capisce cosa cambia assumendo questa figura. */
-private fun effetto(s: Staff): String = when (s.role) {
+private fun effetto(s: Staff): String {
+    if (s.role == Staffing.PREPARATORE) return effettoBase(s)
+    val stile = it.androcalcio.engine.Stile.values().firstOrNull { it.name == s.stile }
+        ?: it.androcalcio.engine.Stile.DIFESA
+    return effettoBase(s) + "\n" + stile.descrizione()
+}
+
+private fun effettoBase(s: Staff): String = when (s.role) {
     Staffing.ALLENATORE -> {
         val p = ((Staffing.coachFactor(s.skill) - 1.0) * 100).roundToInt()
         "Partita: ${if (p >= 0) "+" else ""}$p% · crescita dei giocatori fino a 28 anni"
