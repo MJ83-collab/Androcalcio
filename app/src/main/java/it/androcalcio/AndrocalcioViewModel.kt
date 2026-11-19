@@ -30,6 +30,7 @@ import it.androcalcio.data.Team
 import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Cup
+import it.androcalcio.engine.Friendlies
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
@@ -188,6 +189,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         combine(selectedTeam, _season) { t, s -> t to s }
             .flatMapLatest { (t, s) ->
                 if (t == null) flowOf(emptyList()) else dao.matches(key(t), s)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Amichevoli di precampionato della tua squadra (stagione corrente). */
+    val friendlyMatches: StateFlow<List<MatchResult>> =
+        combine(selectedTeam, _season) { t, s -> t to s }
+            .flatMapLatest { (t, s) ->
+                if (t == null) flowOf(emptyList()) else dao.matches(Friendlies.key(t.id), s)
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -1056,6 +1065,34 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val y = prefs.getInt("season_year", 2026) + 1
             prefs.edit().putInt("season_year", y).apply()
             _season.value = seasonName(y)
+
+            // 3) Precampionato: amichevoli della tua squadra nella nuova stagione
+            val newS = seasonName(y)
+            val fk = Friendlies.key(me.id)
+            if (dao.fixtureCount(fk, newS) == 0) {
+                val pool = dao.allTeams()
+                val myTeam = pool.first { it.id == me.id }
+                val byIdAll = pool.associateBy { it.id }
+                val fresh = HashMap(dao.allPlayers().groupBy { it.teamId })
+                val staffNew = dao.allStaff().groupBy { it.teamId }
+                val fx = Friendlies.fixtures(myTeam, pool, newS, rng)
+                dao.insertMatches(fx)
+                val done = fx.mapNotNull { m ->
+                    val h = byIdAll[m.homeTeamId] ?: return@mapNotNull null
+                    val a = byIdAll[m.awayTeamId] ?: return@mapNotNull null
+                    val r = simCupMatch(h, a, myTeam, fresh, staffNew, rng)
+                    m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
+                }
+                dao.updateMatches(done)
+                dao.updatePlayers(fresh.values.flatten())
+                val gate = fx.filter { it.homeTeamId == me.id }
+                    .sumOf { myTeam.stadiumCapacity.toLong() * myTeam.ticketPrice * 7 / 10 }
+                if (gate > 0) {
+                    val nt = myTeam.copy(budget = myTeam.budget + gate)
+                    dao.updateTeam(nt)
+                    registra(me.id, "Incasso amichevole di precampionato", gate, nt.budget)
+                }
+            }
             _notice.value = "Nuova stagione ${seasonName(y)}. $report" +
                 (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
         }

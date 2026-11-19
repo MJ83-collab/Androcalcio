@@ -65,7 +65,8 @@ fun CalendarioScreen(
     mentality: Mentality = Mentality.EQUILIBRATA,
     onMentality: (Mentality) -> Unit = {},
     onNextLive: () -> Unit = onNext,
-    cupMatches: List<MatchResult> = emptyList()
+    cupMatches: List<MatchResult> = emptyList(),
+    friendlyMatches: List<MatchResult> = emptyList()
 ) {
     var askNext by remember { mutableStateOf(false) }
     if (askNext) AlertDialog(
@@ -106,6 +107,12 @@ fun CalendarioScreen(
             Text("Coppa ${team.nazione} · $season", color = AC.Text,
                 style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                if (friendlyMatches.isNotEmpty()) {
+                    SectionTitle("Amichevoli di precampionato")
+                    PaperPanel(Modifier.fillMaxWidth()) {
+                        friendlyMatches.sortedBy { it.round }.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
+                    }
+                }
                 if (cupMatches.isEmpty()) {
                     Text("Coppa non ancora sorteggiata.", color = AC.Text)
                 }
