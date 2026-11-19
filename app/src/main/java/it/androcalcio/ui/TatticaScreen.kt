@@ -219,11 +219,9 @@ fun TatticaScreen(
         )
     }
     LazyColumn(contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { LineupTable(xi, onRole = { roleFor = it }) }
-        item { FormationBoard(xi, formation, Color(0xFFC62828)) }
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f).border2()) { TacticPitch(xi, formation) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                Box(Modifier.weight(1f)) { LineupTable(xi, onRole = { roleFor = it }) }
                 Column(Modifier.width(120.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     PcButton("Allenatore", onCoach, Modifier.fillMaxWidth())
                     PcButton("Consigliato", onApplyXI, Modifier.fillMaxWidth(), enabled = advice?.assistantName != null)
@@ -232,6 +230,8 @@ fun TatticaScreen(
                 }
             }
         }
+        item { FormationBoard(xi, formation, Color(0xFFC62828)) }
+        item { Box(Modifier.fillMaxWidth().border2()) { TacticPitch(xi, formation) } }
         item {
             SectionTitle("Tattiche predefinite")
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
