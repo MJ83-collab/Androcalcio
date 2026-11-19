@@ -51,6 +51,9 @@ import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.MatchReport
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
+import it.androcalcio.ui.components.PaperPanel
+import it.androcalcio.ui.components.PaperRow
+import it.androcalcio.ui.components.PcButton
 import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.theme.AC
 import kotlinx.coroutines.delay
@@ -81,21 +84,13 @@ fun PartitaScreen(
             SectionTitle("Avversario (${team.campionato})")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(rivals, key = { it.id }) { t ->
-                    FilterChip(
-                        selected = t.id == away?.id,
-                        onClick = { awayId = t.id },
-                        label = { Text(t.name) }
-                    )
+                    Choice(t.name, t.id == away?.id) { awayId = t.id }
                 }
             }
             SectionTitle("Il tuo modulo")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(Formation.values().toList()) { f ->
-                    FilterChip(
-                        selected = f == formation,
-                        onClick = { onFormation(f) },
-                        label = { Text(f.label) }
-                    )
+                    Choice(f.label, f == formation) { onFormation(f) }
                 }
             }
             MentalityPicker(mentality, onMentality)
@@ -115,7 +110,10 @@ fun PartitaScreen(
                         }
                     }
                 }
-                Button(
+                if (AC.pc7) {
+                    PcButton("Gioca partita (in casa)", { onPlay(team, away, formation) },
+                        Modifier.fillMaxWidth(), main = true)
+                } else Button(
                     onClick = { onPlay(team, away, formation) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
@@ -162,8 +160,13 @@ fun PartitaScreen(
         item { Pitch(report.home, report.away, bx, by, report.homeFormation, report.awayFormation) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { minute = 90 }) { Text("Salta") }
-                OutlinedButton(onClick = onReset) { Text("Nuova partita") }
+                if (AC.pc7) {
+                    PcButton("Salta", { minute = 90 })
+                    PcButton("Nuova partita", onReset)
+                } else {
+                    OutlinedButton(onClick = { minute = 90 }) { Text("Salta") }
+                    OutlinedButton(onClick = onReset) { Text("Nuova partita") }
+                }
             }
         }
         if (minute >= 90) item {
@@ -172,7 +175,19 @@ fun PartitaScreen(
                 color = AC.TextDim, style = MaterialTheme.typography.bodySmall
             )
         }
-        items(seen.reversed()) { e ->
+        if (AC.pc7) item {
+            PaperPanel(Modifier.fillMaxWidth()) {
+                seen.reversed().forEachIndexed { i, e ->
+                    PaperRow(i) {
+                        Text(
+                            "${e.minute}'  ${e.text}",
+                            color = pcEventColor(e.type),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+        } else items(seen.reversed()) { e ->
             val c = when (e.type) {
                 EventType.GOAL -> AC.Accent
                 EventType.YELLOW -> AC.Warn
@@ -183,6 +198,22 @@ fun PartitaScreen(
             Text("${e.minute}'  ${e.text}", color = c, style = MaterialTheme.typography.bodyMedium)
         }
     }
+}
+
+/** Colore del testo della cronaca nello stile PC 7 (su sfondo bianco). */
+private fun pcEventColor(t: EventType): Color = when (t) {
+    EventType.GOAL -> AC.ColEn
+    EventType.YELLOW -> AC.ColOrange
+    EventType.SAVE -> AC.ColBlue
+    EventType.TACTIC -> AC.ColGreen
+    else -> AC.PaperText
+}
+
+/** Scelta a pulsante (stile PC 7) oppure chip Material. */
+@Composable
+private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
+    if (AC.pc7) PcButton(label, onClick, main = selected)
+    else FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
 @Composable
@@ -219,7 +250,7 @@ fun MentalityPicker(current: Mentality, onPick: (Mentality) -> Unit) {
     SectionTitle("Mentalità")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Mentality.values().forEach { m ->
-            FilterChip(selected = m == current, onClick = { onPick(m) }, label = { Text(m.label) })
+            Choice(m.label, m == current) { onPick(m) }
         }
     }
 }
