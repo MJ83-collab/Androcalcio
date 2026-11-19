@@ -609,8 +609,8 @@ private fun RosaTable(
     players: List<Player>, onToggleStarter: (Player) -> Unit, onOpen: (Player) -> Unit,
     onRole: (Player, String) -> Unit
 ) {
-    val stats = listOf("EN", "VE", "RE", "AG", "QU", "FO", "CF", "LIV")
-    val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColGreen, AC.ColOrange)
+    val stats = listOf("EN", "VE", "RE", "AG", "QU", "SF", "MO", "ME")
+    val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColOrange)
     var roleFor by remember { mutableStateOf<Player?>(null) }
     roleFor?.let { rp ->
         AlertDialog(
@@ -637,6 +637,7 @@ private fun RosaTable(
         Column(Modifier.horizontalScroll(rememberScrollState())) {
             Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 HeadCell("T", AC.PaperText, Modifier.width(24.dp))
+                HeadCell("N°", AC.PaperText, Modifier.width(26.dp))
                 HeadCell("GIOCATORE", AC.PaperText, Modifier.width(118.dp), TextAlign.Start)
                 stats.forEachIndexed { i, h -> HeadCell(h, statColor[i], Modifier.width(30.dp)) }
                 HeadCell("RUOLO", AC.PaperText, Modifier.width(74.dp))
@@ -647,14 +648,16 @@ private fun RosaTable(
                         Modifier.width(24.dp).clickable { onToggleStarter(p) },
                         color = if (p.starter) AC.ColGreen else AC.PaperLine,
                         textAlign = TextAlign.Center, fontSize = 14.sp)
+                    Text(if (p.numero > 0) "${p.numero}" else "-", Modifier.width(26.dp), textAlign = TextAlign.Center,
+                        fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     Text(p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    val values = listOf(p.en, p.ve, p.re, p.ag, p.qu, p.fo, p.condition, p.overall)
+                    val values = listOf(p.condition, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall)
                     values.forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
                             fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (k == 6 && v < 60) AC.ColEn else if (k == 6 && v < 80) AC.ColOrange else AC.PaperText)
+                            color = if (k == 0 && v < 60) AC.ColEn else if (k == 0 && v < 80) AC.ColOrange else AC.PaperText)
                     }
                     // Ruolo in campo con l'affinità: tocca per passare al ruolo affine successivo
                     val opts = TacticalRoles.options(p)

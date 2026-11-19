@@ -117,10 +117,10 @@ fun LineupTable(xi: List<Player>, onRole: ((Player) -> Unit)? = null, onOpen: ((
                         textAlign = TextAlign.Center, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = AC.PaperText)
                     Text(p.name + if (p.condition < 60) " ↓" else "", Modifier.width(112.dp), maxLines = 1,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp, color = AC.PaperText)
-                    listOf(p.en, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall).forEachIndexed { k, v ->
+                    listOf(p.condition, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall).forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
                             fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (k == 0 && p.en < 60) AC.ColEn else cellColor(v))
+                            color = if (k == 0 && p.condition < 60) AC.ColEn else cellColor(v))
                     }
                     val code = TacticalRoles.assigned(p)
                     Row(
