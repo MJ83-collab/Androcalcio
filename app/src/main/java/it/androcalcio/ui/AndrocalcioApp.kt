@@ -104,7 +104,8 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String) {
     STAFF("Staff", Icons.Filled.Settings, "Allenatori e preparatori"),
     STATISTICHE("Statistiche", Icons.Filled.Info, "Marcatori e portieri"),
     EDITOR("Editor", Icons.Filled.Build, "Modifica i dati"),
-    SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita")
+    SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita"),
+    ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione")
 }
 
 private val bottomTabs = listOf(
@@ -240,6 +241,10 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         team, staffList, cands,
                         { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() }
                     )
+                }
+                Screen.ALBO -> {
+                    val albo by vm.albo.collectAsState()
+                    AlboScreen(albo)
                 }
                 Screen.SALVATAGGI -> {
                     val slots by vm.slots.collectAsState()
@@ -423,7 +428,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         val tiles = listOf(
             Screen.ROSA, Screen.PARTITA, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.STAFF, Screen.STATISTICHE, Screen.EDITOR,
-            Screen.SQUADRE, Screen.SALVATAGGI
+            Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {

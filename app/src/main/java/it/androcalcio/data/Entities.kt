@@ -112,6 +112,15 @@ data class ScoutReport(
     val observations: Int
 )
 
+@Entity(tableName = "albo")
+data class AlboEntry(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val season: String,
+    val nazione: String,
+    val competizione: String,
+    val vincitore: String
+)
+
 @Entity(tableName = "movimenti")
 data class Movimento(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

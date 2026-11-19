@@ -31,6 +31,7 @@ import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Cup
 import it.androcalcio.engine.Friendlies
+import it.androcalcio.data.AlboEntry
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
@@ -949,6 +950,25 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
 
+            // 1d) Albo d'oro: campioni di ogni divisione, coppa e supercoppa della stagione
+            val teamById = teamsNow.associateBy { it.id }
+            val alboRows = ArrayList<AlboEntry>()
+            leagues.keys.forEach { k ->
+                finals[k]?.firstOrNull()?.let {
+                    alboRows += AlboEntry(season = s, nazione = k.first, competizione = "Campionato ${k.second}",
+                        vincitore = it.team.name)
+                }
+            }
+            for (nazione in teamsNow.map { it.nazione }.distinct()) {
+                for ((label, key) in listOf("Coppa" to Cup.key(nazione), "Supercoppa" to Cup.superKey(nazione))) {
+                    val fin = Cup.finalMatch(dao.matchesOnce(key, s)) ?: continue
+                    val w = Cup.winnerOfTie(listOf(fin), strength)
+                    teamById[w]?.let { alboRows += AlboEntry(season = s, nazione = nazione, competizione = label, vincitore = it.name) }
+                }
+            }
+            dao.deleteAlboSeason(s)
+            dao.insertAlbo(alboRows)
+
             // 2) Premi, promozioni e retrocessioni (divisioni ordinate per comparsa nella lista)
             val moves = HashMap<Long, String>()
             val prizes = HashMap<Long, Long>()
@@ -1070,6 +1090,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
         }
     }
+
+    /** Albo d'oro: campioni per stagione. */
+    val albo: StateFlow<List<AlboEntry>> =
+        dao.albo().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Chiede un'amichevole per uno dei due posti: l'avversario può accettare o rifiutare. */
     fun requestFriendly(opponentId: Long) {
