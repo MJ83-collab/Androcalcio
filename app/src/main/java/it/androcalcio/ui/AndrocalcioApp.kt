@@ -645,10 +645,21 @@ private fun RosaTable(
                 HeadCell("T", AC.PaperText, Modifier.width(24.dp))
                 HeadCell("N°", AC.PaperText, Modifier.width(26.dp))
                 HeadCell("GIOCATORE", AC.PaperText, Modifier.width(118.dp), TextAlign.Start)
+                HeadCell("", AC.PaperText, Modifier.width(62.dp))
                 stats.forEachIndexed { i, h -> HeadCell(h, statColor[i], Modifier.width(30.dp)) }
                 HeadCell("RUOLO", AC.PaperText, Modifier.width(74.dp))
             }
-            players.forEachIndexed { i, p ->
+            // Sezioni come nell'originale: titolari, convocati (panchina), non convocati (infortunati)
+            val tit = players.filter { it.starter && it.injuredRounds == 0 }
+            val conv = players.filter { !it.starter && it.injuredRounds == 0 }
+            val fuori = players.filter { it.injuredRounds > 0 }
+            val sezioni = listOf("TITOLARI" to tit, "GIOCATORI CONVOCATI" to conv, "GIOCATORI NON CONVOCATI" to fuori)
+            var idx = 0
+            sezioni.forEach { (titolo, lista) -> if (lista.isNotEmpty()) {
+                Text("⚽  $titolo", Modifier.fillMaxWidth().background(AC.PaperAlt).padding(vertical = 4.dp),
+                    textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
+            lista.forEach { p ->
+                val i = idx++
                 PaperRow(i, Modifier.clickable { onOpen(p) }) {
                     Text(if (p.starter) "●" else "○",
                         Modifier.width(24.dp).clickable { onToggleStarter(p) },
@@ -659,6 +670,8 @@ private fun RosaTable(
                     Text(p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    val st = (p.overall / 20).coerceIn(0, 5)
+                    Text("★".repeat(st) + "☆".repeat(5 - st), Modifier.width(62.dp), fontSize = 11.sp, color = Color(0xFFE0A800))
                     val values = listOf(p.condition, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall)
                     values.forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
@@ -678,6 +691,7 @@ private fun RosaTable(
                     )
                 }
             }
+            } }
         }
     }
 }
