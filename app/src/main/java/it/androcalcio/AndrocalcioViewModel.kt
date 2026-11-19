@@ -29,6 +29,7 @@ import it.androcalcio.engine.EventType
 import it.androcalcio.data.Team
 import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
+import it.androcalcio.engine.Cup
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
@@ -190,6 +191,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Coppa nazionale della tua squadra (tutte le divisioni della nazione). */
+    val cupMatches: StateFlow<List<MatchResult>> =
+        combine(selectedTeam, _season) { t, s -> t to s }
+            .flatMapLatest { (t, s) ->
+                if (t == null) flowOf(emptyList()) else dao.matches(Cup.key(t.nazione), s)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     init {
         viewModelScope.launch {
             combine(selectedTeam.filterNotNull(), _season) { t, s -> t to s }.collect { (t, s) ->
@@ -198,9 +207,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val ids = dao.teamsOfLeague(t.nazione, t.campionato).map { it.id }
                     dao.insertMatches(Fixtures.generate(ids, s, k))
                 }
+                val ck = Cup.key(t.nazione)
+                if (dao.fixtureCount(ck, s) == 0) {
+                    val nation = dao.allTeams().filter { it.nazione == t.nazione }.map { it.id }
+                    dao.insertMatches(Cup.firstStage(nation, s, ck, kotlin.random.Random.Default, Cup.twoLegs(t.nazione)))
+                }
             }
         }
     }
+
+    /** Forza di ogni squadra: media dei valori dei giocatori (usata solo per le parità di coppa). */
+    private suspend fun strengthOf(): Map<Long, Double> =
+        dao.allPlayers().groupBy { it.teamId }
+            .mapValues { (_, ps) -> if (ps.isEmpty()) 0.0 else ps.map { it.overall }.average() }
 
     /** Squadre AI senza allenatore o preparatore: ne ricevono uno casuale (anche per i salvataggi esistenti). */
     private suspend fun ensureAiStaff(meId: Long) {
@@ -226,9 +245,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         run {
             val t = selectedTeam.value ?: return
             ensureAiStaff(t.id)
-            val ms = dao.matchesOnce(key(t), _season.value)
-            val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
+            val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value)
+            val teamsById = dao.allTeams().filter { it.nazione == t.nazione }.associateBy { it.id }
             val staffBy = dao.allStaff().groupBy { it.teamId }
+            var playedNow = 0
             val cache = HashMap<Long, List<Player>>()   // rose complete, aggiornate dopo ogni partita
             val lineupNotes = mutableListOf<String>()
             val formations = Formation.values()
@@ -260,8 +280,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     awayLine = if (a.id == t.id) _line.value else null
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
+                playedNow++
                 goalsAcc += r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
-                    Goal(season = _season.value, league = key(t), round = m.round,
+                    Goal(season = _season.value, league = m.league, round = m.round,
                         teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
                 }
                 cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
@@ -272,6 +293,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
             if (lineupNotes.isNotEmpty()) _notice.value = lineupNotes.distinct().joinToString("\n")
+            // Coppa: se il turno è finito, sorteggia il successivo
+            val ck = Cup.key(t.nazione)
+            dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), teamsById.values.toList(),
+                strengthOf(), _season.value, ck, Cup.twoLegs(t.nazione), kotlin.random.Random.Default))
+            // Con "Fine stagione" si gioca fino in fondo, anche i turni di coppa sorteggiati adesso
+            if (all && playedNow > 0) runRounds(true, skipId)
         }
     }
 
@@ -328,12 +355,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun playNextRoundLive() {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
-            val ms = dao.matchesOnce(key(t), _season.value)
+            val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value)
             val round = ms.filter { !it.played }.minOfOrNull { it.round } ?: return@launch
             val mine = ms.firstOrNull { !it.played && it.round == round && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
             runRounds(false, mine?.id)
             if (mine == null) { _notice.value = "In questa giornata la tua squadra riposa."; return@launch }
-            val teamsById = dao.teamsOfLeague(t.nazione, t.campionato).associateBy { it.id }
+            val teamsById = dao.allTeams().filter { it.nazione == t.nazione }.associateBy { it.id }
             val h = teamsById[mine.homeTeamId] ?: return@launch
             val a = teamsById[mine.awayTeamId] ?: return@launch
             _live.value = buildLive(h, a, h.id == t.id, mine)
@@ -369,7 +396,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (mr != null) {
             val r = i.m.report()
             val t = selectedTeam.value
-            val lg = t?.let { key(it) } ?: ""
+            val lg = mr.league
             dao.updateMatch(mr.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
             dao.insertGoals(r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
                 Goal(season = _season.value, league = lg, round = mr.round,
@@ -382,6 +409,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val beforeP = dao.playersOnce(id)
                 dao.updatePlayers(Medical.afterMatch(beforeP, played, Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng,
                     planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)).also { accrueInsurance(id, beforeP, it) })
+            }
+        }
+        if (mr != null && Cup.isCup(mr.round)) {
+            // Partita di coppa: se il turno è concluso, sorteggia il successivo
+            selectedTeam.value?.let { t ->
+                val ck = Cup.key(t.nazione)
+                val nation = dao.allTeams().filter { it.nazione == t.nazione }
+                dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), nation, strengthOf(),
+                    _season.value, ck, Cup.twoLegs(t.nazione), kotlin.random.Random.Default))
             }
         }
         _live.value = _live.value?.copy(saved = true, tick = i.tick + 1)
@@ -720,6 +756,44 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Fine stagione: età, crescita, ritiri, contratti, bilancio; nuova stagione. */
+    /** Simula una partita di coppa in chiusura stagione: stesse regole delle giornate di campionato. */
+    private suspend fun simCupMatch(
+        h: Team, a: Team, me: Team, cache: HashMap<Long, List<Player>>,
+        staffBy: Map<Long, List<Staff>>, rng: kotlin.random.Random
+    ): MatchReport {
+        val formations = Formation.values()
+        fun xi(id: Long) = cache[id].orEmpty().let {
+            if (id == me.id) Lineup.resolve(it, _formation.value).xi else Medical.available(it)
+        }
+        fun bench(id: Long, xi: List<Player>) =
+            if (id == me.id) Medical.available(cache[id].orEmpty()) - xi.toSet() else null
+        val hx = xi(h.id); val ax = xi(a.id)
+        val r = MatchEngine.simulate(
+            h, hx, a, ax,
+            if (h.id == me.id) _formation.value else formations.random(),
+            if (a.id == me.id) _formation.value else formations.random(),
+            Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
+            Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
+            homeMent = if (h.id == me.id) _mentality.value else null,
+            awayMent = if (a.id == me.id) _mentality.value else null,
+            homeBench = bench(h.id, hx), awayBench = bench(a.id, ax),
+            homePress = if (h.id == me.id) _pressing.value else null,
+            awayPress = if (a.id == me.id) _pressing.value else null,
+            homeLine = if (h.id == me.id) _line.value else null,
+            awayLine = if (a.id == me.id) _line.value else null,
+            rng = rng
+        )
+        cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
+            Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
+            planFor(h.id, me.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
+            .also { accrueInsurance(h.id, cache[h.id] ?: emptyList(), it) }
+        cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(), r.awayPlayed,
+            Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
+            planFor(a.id, me.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
+            .also { accrueInsurance(a.id, cache[a.id] ?: emptyList(), it) }
+        return r
+    }
+
     fun closeSeason() {
         viewModelScope.launch(Dispatchers.IO) {
             val me = selectedTeam.value ?: return@launch
@@ -780,6 +854,31 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 dao.updateMatches(sims)
                 finals[nc] = standings(ts, dao.matchesOnce(key, s))
+            }
+
+            // 1b) Coppe nazionali: tutti i turni, con i successivi sorteggiati man mano
+            val strength = strengthOf()
+            for (nazione in teamsNow.map { it.nazione }.distinct()) {
+                val nTeams = teamsNow.filter { it.nazione == nazione }
+                val ck = Cup.key(nazione)
+                if (dao.fixtureCount(ck, s) == 0) {
+                    dao.insertMatches(Cup.firstStage(nTeams.map { it.id }, s, ck, rng, Cup.twoLegs(nazione)))
+                }
+                val byId = nTeams.associateBy { it.id }
+                while (true) {
+                    val pending = dao.matchesOnce(ck, s).filter { !it.played }.sortedBy { it.round }
+                    if (pending.isEmpty()) break
+                    val done = pending.mapNotNull { m ->
+                        val h = byId[m.homeTeamId] ?: return@mapNotNull null
+                        val a = byId[m.awayTeamId] ?: return@mapNotNull null
+                        val r = simCupMatch(h, a, me, cache, staffBy, rng)
+                        m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
+                    }
+                    if (done.isEmpty()) break
+                    dao.updateMatches(done)
+                    dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, s), nTeams, strength, s, ck,
+                        Cup.twoLegs(nazione), rng))
+                }
             }
 
             // 2) Premi, promozioni e retrocessioni (divisioni ordinate per comparsa nella lista)

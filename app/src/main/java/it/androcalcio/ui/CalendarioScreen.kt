@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import it.androcalcio.data.MatchResult
 import it.androcalcio.data.Team
 import it.androcalcio.engine.standings
+import it.androcalcio.engine.Cup
+import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.theme.AC
 import it.androcalcio.ui.components.HeadCell
@@ -61,7 +63,8 @@ fun CalendarioScreen(
     onClose: () -> Unit,
     mentality: Mentality = Mentality.EQUILIBRATA,
     onMentality: (Mentality) -> Unit = {},
-    onNextLive: () -> Unit = onNext
+    onNextLive: () -> Unit = onNext,
+    cupMatches: List<MatchResult> = emptyList()
 ) {
     var askNext by remember { mutableStateOf(false) }
     if (askNext) AlertDialog(
@@ -76,6 +79,8 @@ fun CalendarioScreen(
     var tab by rememberSaveable { mutableStateOf(0) }
     var round by rememberSaveable { mutableStateOf(0) } // 0 = automatica
     val nextRound = matches.filter { !it.played }.minOfOrNull { it.round }
+    val cupPending = cupMatches.any { !it.played }
+    val pending = nextRound != null || cupPending
     val lastRound = matches.maxOfOrNull { it.round } ?: 1
     val shown = if (round == 0) (nextRound ?: lastRound) else round
 
@@ -83,50 +88,55 @@ fun CalendarioScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PcButton("Calendario", { tab = 0 }, Modifier.weight(1f), main = tab == 0)
             PcButton("Classifica", { tab = 1 }, Modifier.weight(1f), main = tab == 1)
+            PcButton("Coppa", { tab = 2 }, Modifier.weight(1f), main = tab == 2)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PcButton("Prossima giornata", { round = 0; askNext = true }, Modifier.weight(1f), main = true, enabled = nextRound != null)
-            PcButton("Fine stagione", { round = 0; onSeason() }, Modifier.weight(1f), enabled = nextRound != null)
+            PcButton("Prossima giornata", { round = 0; askNext = true }, Modifier.weight(1f), main = true, enabled = pending)
+            PcButton("Fine stagione", { round = 0; onSeason() }, Modifier.weight(1f), enabled = pending)
         }
 
-        if (nextRound != null) MentalityPicker(mentality, onMentality)
+        if (pending) MentalityPicker(mentality, onMentality)
 
-        if (nextRound == null && matches.isNotEmpty()) {
+        if (!pending && matches.isNotEmpty()) {
             PcButton("Chiudi stagione e passa alla successiva", { round = 0; onClose() }, Modifier.fillMaxWidth(), main = true)
         }
 
-        Text("Giornata $shown di $lastRound · ${team.campionato} $season", color = AC.Text,
-            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items((1..lastRound).toList()) { r ->
-                FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
-            }
-        }
-        if (tab == 0) {
+        if (tab == 2) {
+            Text("Coppa ${team.nazione} · $season", color = AC.Text,
+                style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                PaperPanel(Modifier.fillMaxWidth()) {
-                    matches.filter { it.round == shown }.forEachIndexed { i, m ->
-                        val h = byId[m.homeTeamId]
-                        val a = byId[m.awayTeamId]
-                        val mine = m.homeTeamId == team.id || m.awayTeamId == team.id
-                        val c = if (mine) AC.ColBlue else AC.PaperText
-                        val w = if (mine) FontWeight.ExtraBold else FontWeight.Medium
-                        PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
-                            Text(h?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w,
-                                textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)
-                            Box(
-                                Modifier.padding(horizontal = 6.dp).width(54.dp).background(AC.Btn).padding(vertical = 3.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(if (m.played) "${m.homeGoals} - ${m.awayGoals}" else "-", color = Color.White,
-                                    fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
-                            }
-                            Text(a?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w, fontSize = 12.sp, maxLines = 1)
-                        }
+                if (cupMatches.isEmpty()) {
+                    Text("Coppa non ancora sorteggiata.", color = AC.Text)
+                }
+                cupMatches.groupBy { Cup.stageOf(it.round) }.toSortedMap().forEach { (stage, ms) ->
+                    val teamsIn = ms.flatMap { listOf(it.homeTeamId, it.awayTeamId) }.toSet().size
+                    SectionTitle(Cup.stageName(stage, teamsIn))
+                    PaperPanel(Modifier.fillMaxWidth()) {
+                        ms.sortedBy { it.round }.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
                     }
                 }
             }
+        } else if (tab == 0) {
+            Text("Giornata $shown di $lastRound · ${team.campionato} $season", color = AC.Text,
+                style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items((1..lastRound).toList()) { r ->
+                    FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
+                }
+            }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                PaperPanel(Modifier.fillMaxWidth()) {
+                    matches.filter { it.round == shown }.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
+                }
+            }
         } else {
+            Text("Giornata $shown di $lastRound · ${team.campionato} $season", color = AC.Text,
+                style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items((1..lastRound).toList()) { r ->
+                    FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
+                }
+            }
             val league = teams.filter { it.nazione == team.nazione && it.campionato == team.campionato }
             // Divisioni della nazione in ordine: la prima è la massima serie
             val tiers = teams.filter { it.nazione == team.nazione }.groupBy { it.campionato }
@@ -175,5 +185,27 @@ fun CalendarioScreen(
                 }
             }
         }
+    }
+}
+
+/** Riga di una partita (casa - trasferta, risultato in riquadro nero), evidenziata se è della tua squadra. */
+@Composable
+private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: Int) {
+    val h = byId[m.homeTeamId]
+    val a = byId[m.awayTeamId]
+    val mine = m.homeTeamId == teamId || m.awayTeamId == teamId
+    val c = if (mine) AC.ColBlue else AC.PaperText
+    val w = if (mine) FontWeight.ExtraBold else FontWeight.Medium
+    PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
+        Text(h?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w,
+            textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)
+        Box(
+            Modifier.padding(horizontal = 6.dp).width(54.dp).background(AC.Btn).padding(vertical = 3.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(if (m.played) "${m.homeGoals} - ${m.awayGoals}" else "-", color = Color.White,
+                fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+        }
+        Text(a?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w, fontSize = 12.sp, maxLines = 1)
     }
 }

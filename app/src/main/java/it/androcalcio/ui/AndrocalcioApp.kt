@@ -119,6 +119,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     val players by vm.players.collectAsState()
     val report by vm.report.collectAsState()
     val matches by vm.matches.collectAsState()
+    val cupMatches by vm.cupMatches.collectAsState()
     val season by vm.season.collectAsState()
     val globalNotice by vm.notice.collectAsState()
 
@@ -187,7 +188,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 Screen.CALENDARIO -> {
                     val ment by vm.mentality.collectAsState()
                     CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() }, season,
-                        { vm.closeSeason() }, ment, { vm.setMentality(it) }, { vm.playNextRoundLive() })
+                        { vm.closeSeason() }, ment, { vm.setMentality(it) }, { vm.playNextRoundLive() },
+                        cupMatches = cupMatches)
                 }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsState()

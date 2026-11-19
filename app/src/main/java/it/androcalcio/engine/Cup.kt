@@ -1,0 +1,97 @@
+package it.androcalcio.engine
+
+import it.androcalcio.data.MatchResult
+import it.androcalcio.data.Team
+import kotlin.random.Random
+
+/**
+ * Coppa nazionale a eliminazione diretta, con il formato della coppa reale del paese:
+ * andata e ritorno in Spagna e Brasile (la finale è sempre secca), partita secca altrove.
+ *
+ * Le partite stanno nella tabella `matches`, con league = "COPPA|<nazione>".
+ * Codice turno: BASE + stadio * 10 + gamba (0 = andata o partita secca, 1 = ritorno).
+ * Stadio 0 = turno preliminare (solo se il numero di squadre non è una potenza di 2), poi 1, 2, ...
+ *
+ * Parità (dopo andata e ritorno, o in partita secca): passa la squadra con la rosa più forte
+ * (media dei valori), a parità il club con id più basso. Così il risultato non cambia se
+ * il calcolo viene ripetuto.
+ */
+object Cup {
+    const val BASE = 1000
+    private const val STEP = 10
+
+    fun key(nazione: String) = "COPPA|$nazione"
+    fun isCup(round: Int) = round >= BASE
+    fun stageOf(round: Int) = (round - BASE) / STEP
+    fun twoLegs(nazione: String) = nazione == "Spagna" || nazione == "Brasile"
+
+    /** Nome del turno per la scheda Coppa. */
+    fun stageName(stage: Int, teamsInStage: Int): String = when {
+        stage == 0 -> "Turno preliminare"
+        teamsInStage <= 2 -> "Finale"
+        teamsInStage <= 4 -> "Semifinali"
+        teamsInStage <= 8 -> "Quarti di finale"
+        teamsInStage <= 16 -> "Ottavi di finale"
+        else -> "Sedicesimi di finale"
+    }
+
+    /**
+     * Primo turno. Se le squadre sono più della potenza di 2 inferiore, le prime
+     * 2 * (n - potenza) del sorteggio giocano il turno preliminare; le altre passano direttamente.
+     */
+    fun firstStage(teamIds: List<Long>, season: String, key: String, rng: Random, twoLegs: Boolean): List<MatchResult> {
+        val n = teamIds.size
+        if (n < 2) return emptyList()
+        val target = Integer.highestOneBit(n)
+        val prelim = 2 * (n - target)
+        val shuffled = teamIds.shuffled(rng)
+        return if (prelim > 0) pairs(shuffled.take(prelim), 0, season, key, twoLegs)
+        else pairs(shuffled, 1, season, key, twoLegs)
+    }
+
+    /**
+     * Turno successivo: se l'ultimo stadio è finito, elimina i perdenti e sorteggia i
+     * qualificati. Restituisce lista vuota se un turno è ancora in corso o la coppa è finita.
+     */
+    fun nextStage(
+        cup: List<MatchResult>, teams: List<Team>, strength: Map<Long, Double>,
+        season: String, key: String, twoLegs: Boolean, rng: Random
+    ): List<MatchResult> {
+        if (cup.isEmpty() || cup.any { !it.played }) return emptyList()
+        val eliminated = HashSet<Long>()
+        cup.groupBy { stageOf(it.round) }.values.forEach { stage ->
+            stage.groupBy { setOf(it.homeTeamId, it.awayTeamId) }.values.forEach { tie ->
+                val a = tie.first().homeTeamId
+                val b = tie.first().awayTeamId
+                var ga = 0; var gb = 0
+                tie.forEach { m ->
+                    if (m.homeTeamId == a) { ga += m.homeGoals; gb += m.awayGoals }
+                    else { gb += m.homeGoals; ga += m.awayGoals }
+                }
+                val aWins = when {
+                    ga != gb -> ga > gb
+                    else -> {
+                        val sa = strength[a] ?: 0.0
+                        val sb = strength[b] ?: 0.0
+                        if (sa != sb) sa > sb else a < b
+                    }
+                }
+                eliminated += if (aWins) b else a
+            }
+        }
+        val alive = teams.map { it.id }.filter { it !in eliminated }
+        if (alive.size <= 1) return emptyList()
+        return pairs(alive.shuffled(rng), cup.maxOf { stageOf(it.round) } + 1, season, key, twoLegs)
+    }
+
+    private fun pairs(pool: List<Long>, stage: Int, season: String, key: String, twoLegs: Boolean): List<MatchResult> {
+        val legs = if (twoLegs && pool.size > 2) 2 else 1
+        return pool.chunked(2).filter { it.size == 2 }.flatMap { (a, b) ->
+            val andata = MatchResult(season = season, round = BASE + stage * STEP, homeTeamId = a,
+                awayTeamId = b, homeGoals = 0, awayGoals = 0, league = key)
+            if (legs == 1) listOf(andata)
+            else listOf(andata, MatchResult(season = season, round = BASE + stage * STEP + 1, homeTeamId = b,
+                awayTeamId = a, homeGoals = 0, awayGoals = 0, league = key))
+        }
+    }
+}
