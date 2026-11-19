@@ -58,6 +58,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import it.androcalcio.engine.AssistantCoach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -132,6 +134,21 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Applica l'undici consigliato dall'allenatore in seconda. */
+    fun applyAssistantXI() {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            val xi = assistantAdvice.value?.xi?.map { it.id }?.toSet()
+            if (xi.isNullOrEmpty()) {
+                _notice.value = "Non c'è un allenatore in seconda: nessun undici da applicare."
+                return@launch
+            }
+            val ps = dao.playersOnce(me.id)
+            dao.updatePlayers(ps.map { it.copy(starter = it.id in xi) })
+            _notice.value = "Applicato l'undici consigliato dall'allenatore in seconda."
+        }
+    }
+
     /** L'allenatore propone gli 11 migliori disponibili per il modulo scelto. */
     fun coachLineup() {
         viewModelScope.launch {
@@ -186,6 +203,35 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             .flatMapLatest { (t, s) -> if (t == null) flowOf(emptyList()) else dao.movimentiStagione(t.id, s) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private fun key(t: Team) = "${t.nazione}|${t.campionato}"
+
+    /** Consigli dell'allenatore in seconda: undici in forma e notizie sul prossimo avversario. */
+    val assistantAdvice: StateFlow<AssistantCoach.Advice?> =
+        combine(selectedTeam, matches, players) { t, ms, _ -> t to ms }
+            .map { (t, ms) -> if (t == null) null else buildAssistantAdvice(t, ms) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private suspend fun buildAssistantAdvice(me: Team, ms: List<MatchResult>): AssistantCoach.Advice {
+        val vice = dao.staffOnce(me.id).firstOrNull { it.role == Staffing.ASSISTENTE }
+        val mine = dao.playersOnce(me.id)
+        val f = _formation.value
+        val xi = AssistantCoach.startingXI(mine, f)
+        val prossima = ms.filter { !it.played && (it.homeTeamId == me.id || it.awayTeamId == me.id) }
+            .minByOrNull { it.round }
+        val opp = prossima?.let { m -> dao.team(if (m.homeTeamId == me.id) m.awayTeamId else m.homeTeamId) }
+        val notes = if (opp == null) emptyList() else AssistantCoach.opponentNotes(
+            opp, dao.playersOnce(opp.id), mine,
+            dao.staffOnce(opp.id).firstOrNull { it.role == Staffing.ALLENATORE }?.skill ?: Staffing.NEUTRAL,
+            dao.staffOnce(me.id).firstOrNull { it.role == Staffing.ALLENATORE }?.skill ?: Staffing.NEUTRAL,
+            f
+        )
+        return AssistantCoach.Advice(
+            assistantName = vice?.name,
+            xi = if (vice == null) emptyList() else xi,
+            xiNotes = if (vice == null) emptyList() else AssistantCoach.xiNotes(mine, xi),
+            opponent = opp?.name,
+            opponentNotes = if (vice == null) emptyList() else notes
+        )
+    }
 
     val matches: StateFlow<List<MatchResult>> =
         combine(selectedTeam, _season) { t, s -> t to s }
