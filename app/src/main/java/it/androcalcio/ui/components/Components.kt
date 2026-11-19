@@ -4,6 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -65,9 +71,71 @@ fun GlassCard(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(if (AC.pc7) 3.dp else 18.dp),
         color = AC.Surface,
-        border = BorderStroke(1.dp, AC.Border),
+        border = BorderStroke(if (AC.pc7) 2.dp else 1.dp, AC.Border),
+        content = content
+    )
+}
+
+/** Pulsante nero a spigoli vivi, testo maiuscolo bianco o giallo (azione principale). */
+@Composable
+fun PcButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    main: Boolean = false,
+    enabled: Boolean = true
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(3.dp))
+            .background(AC.Btn)
+            .border(2.dp, if (main) AC.Accent else AC.BtnBorder, RoundedCornerShape(3.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text.uppercase(Locale.ITALY),
+            color = if (!enabled) AC.BtnBorder else if (main) AC.Accent else Color.White,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 13.sp,
+            letterSpacing = 0.8.sp,
+            maxLines = 1
+        )
+    }
+}
+
+/** Pannello bianco che contiene una tabella (bordo scuro, spigoli vivi). */
+@Composable
+fun PaperPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(2.dp))
+            .background(AC.Paper)
+            .border(2.dp, AC.Btn, RoundedCornerShape(2.dp)),
+        content = content
+    )
+}
+
+/** Cella di intestazione di tabella: testo piccolo in grassetto con il colore della colonna. */
+@Composable
+fun HeadCell(text: String, color: Color, modifier: Modifier = Modifier, align: TextAlign = TextAlign.Center) {
+    Text(
+        text, modifier = modifier, color = color, textAlign = align,
+        fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, maxLines = 1
+    )
+}
+
+/** Riga di tabella con fondo alternato (indice pari chiaro, dispari bluastro). */
+@Composable
+fun PaperRow(index: Int, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = modifier.fillMaxWidth()
+            .background(if (index % 2 == 0) AC.Paper else AC.PaperAlt)
+            .padding(horizontal = 6.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
         content = content
     )
 }

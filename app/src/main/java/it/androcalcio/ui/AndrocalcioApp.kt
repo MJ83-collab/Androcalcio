@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -246,6 +248,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
 /** Barra in alto: squadra e stagione a sinistra, titolo della schermata a destra. */
 @Composable
 fun HeaderBar(team: Team?, season: String, screen: Screen) {
+    if (AC.pc7) { HeaderBarPc7(team, season, screen); return }
     Row(
         Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.45f))
             .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -266,6 +269,59 @@ fun HeaderBar(team: Team?, season: String, screen: Screen) {
     }
 }
 
+/** Barra in alto stile PC Calcio 7: riquadri squadra a sinistra, banda del titolo al centro, cartellino data a destra. */
+@Composable
+fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
+    val shape = RoundedCornerShape(3.dp)
+    Row(
+        Modifier.fillMaxWidth().background(AC.Surface).border(1.dp, AC.Border)
+            .padding(horizontal = 6.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Column(Modifier.weight(1.15f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(
+                Modifier.fillMaxWidth().clip(shape).background(Color(0xFFD5DEF5)).border(1.dp, AC.Btn, shape)
+                    .padding(horizontal = 5.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (team != null) { Crest(team, size = 20.dp); Spacer(Modifier.width(5.dp)) }
+                Text(team?.name ?: "Androcalcio", color = AC.PaperText, fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            }
+            Text(
+                "${flagOf(team?.nazione ?: "")} ${team?.campionato ?: ""}",
+                Modifier.fillMaxWidth().clip(shape).background(Color(0xFF2E3F8F)).border(1.dp, AC.Btn, shape)
+                    .padding(horizontal = 5.dp, vertical = 3.dp),
+                color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1
+            )
+        }
+        Box(
+            Modifier.weight(1.2f).height(40.dp).clip(shape)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.BannerTop, AC.BannerBottom)))
+                .border(2.dp, Color(0xFF2B3A7A), shape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                if (screen == Screen.HOME) "ANDROCALCIO" else screen.label.uppercase(),
+                color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.sp, maxLines = 1,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF1B2A66), blurRadius = 4f)
+                )
+            )
+        }
+        Column(
+            Modifier.weight(0.8f).clip(shape).background(Color.White).border(1.dp, AC.Btn, shape)
+                .padding(vertical = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Stagione", color = AC.PaperText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(season, color = Color(0xFF1E3FA0), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
 /** Menu laterale a elenco di testo, come nei gestionali di una volta. */
 @Composable
 fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
@@ -279,7 +335,7 @@ fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
             Text(
                 sc.label,
                 modifier = Modifier.fillMaxWidth()
-                    .background(if (on) AC.Accent.copy(alpha = 0.2f) else Color.Transparent)
+                    .background(if (AC.pc7) (if (on) AC.Btn else AC.Surface) else if (on) AC.Accent.copy(alpha = 0.2f) else Color.Transparent)
                     .clickable { onSelect(sc) }
                     .padding(horizontal = 10.dp, vertical = 11.dp),
                 style = MaterialTheme.typography.bodyMedium,
@@ -328,7 +384,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         val ctx = androidx.compose.ui.platform.LocalContext.current
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Tema", style = MaterialTheme.typography.titleSmall)
-            listOf("Scuro", "Turchese", "Blu").forEachIndexed { i, n ->
+            listOf("Scuro", "Turchese", "Blu", "PC 7").forEachIndexed { i, n ->
                 androidx.compose.material3.FilterChip(
                     selected = AC.tema == i,
                     onClick = {
