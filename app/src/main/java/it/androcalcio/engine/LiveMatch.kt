@@ -213,8 +213,8 @@ class LiveMatch(
             }
         }
         // Calci piazzati: rigore raro e in area, punizione più frequente dal limite
-        if (rng.nextDouble() < 0.0015) setPiece(penalty = true)
-        else if (rng.nextDouble() < 0.003) setPiece(penalty = false)
+        if (rng.nextDouble() < MatchEngine.PENALTY_PER_MINUTE) setPiece(penalty = true)
+        else if (rng.nextDouble() < MatchEngine.SHOT_FREEKICK_PER_MINUTE) setPiece(penalty = false)
         if (rng.nextDouble() < 0.018) {
             val side = rng.nextBoolean()
             val ps = (if (side) xiH else xiA).filter { it.role != "P" }

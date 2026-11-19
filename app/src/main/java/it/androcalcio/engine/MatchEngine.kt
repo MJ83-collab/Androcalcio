@@ -43,6 +43,12 @@ data class MatchReport(
 object MatchEngine {
 
     internal const val ATTACK_PER_MINUTE = 0.28
+
+    // Calci piazzati, tarati su medie reali (fonti: CIES, Premier League, Analyst, Fantacalcio):
+    /** Rigori: ~0,30 a partita. Serie A 2025/26 ~0,27 (102 in 380 gare); Champions ~0,47; top 5 leghe ~0,36. */
+    internal const val PENALTY_PER_MINUTE = 0.0033
+    /** Punizioni che finiscono in tiro: ~0,7 a partita. Nel terzo offensivo ne arrivano 3-4 a gara, tirate ~19,5% in Serie A. */
+    internal const val SHOT_FREEKICK_PER_MINUTE = 0.0078
     internal const val HOME_BONUS = 1.24
     internal const val HOME_FINISH = 1.05   // chi gioca in casa finalizza un po' meglio
 
