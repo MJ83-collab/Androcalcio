@@ -48,7 +48,7 @@ private fun effettoBase(s: Staff): String = when (s.role) {
     Staffing.PREPARATORE -> String.format(
         Locale.ITALY, "Rischio infortunio per partita: %.1f%%", Staffing.injuryChance(s.skill) * 100
     )
-    Staffing.GIOVANILI -> "Giudizi del vivaio sui giovani: più precisi con abilità alta"
+    Staffing.GIOVANILI -> "Giudizi del vivaio più precisi e giovani con potenziale più alto con abilità alta"
     Staffing.ASSISTENTE -> "Assegna i numeri di maglia a inizio stagione"
     else -> "Osservazioni dello scout: costo e precisione dipendono dall'abilità"
 }

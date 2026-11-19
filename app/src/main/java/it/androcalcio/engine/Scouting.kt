@@ -37,7 +37,9 @@ object Youths {
         val nat = SeedData.codes[team.nazione] ?: "ITA"
         val roles = listOf("P", "D", "D", "D", "C", "C", "C", "A", "A", "D")
         return roles.map { role ->
-            val pot = (52 + q / 2 + rng.nextInt(-8, 25)).coerceIn(45, 95)
+            // Allenatore delle giovanili: abilità alta = potenziale più alto (da -4 a +4 circa)
+            val vivaio = (team.youthCoachSkill - Staffing.NEUTRAL) / 10
+            val pot = (52 + q / 2 + vivaio + rng.nextInt(-8, 25)).coerceIn(45, 95)
             val ov = (pot - rng.nextInt(15, 36)).coerceIn(30, 80)
             Youth(
                 teamId = team.id, season = season,
