@@ -59,7 +59,9 @@ data class Player(
     @ColumnInfo(defaultValue = "") val sec2: String = "",
     @ColumnInfo(defaultValue = "0") val aff2: Int = 0,
     @ColumnInfo(defaultValue = "") val sec3: String = "",
-    @ColumnInfo(defaultValue = "0") val aff3: Int = 0
+    @ColumnInfo(defaultValue = "0") val aff3: Int = 0,
+    // Numero di maglia (v15): deciso a inizio stagione dall'allenatore in seconda; 0 = non ancora assegnato
+    @ColumnInfo(defaultValue = "0") val numero: Int = 0
 )
 
 @Entity(tableName = "staff")

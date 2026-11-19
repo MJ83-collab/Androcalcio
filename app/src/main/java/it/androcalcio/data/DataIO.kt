@@ -31,7 +31,7 @@ object DataIO {
                     .put("gm", p.gm).put("en", p.en).put("pa", p.pa).put("dr", p.dr).put("fi", p.fi)
                     .put("ti", p.ti).put("ri", p.ri).put("foot", p.foot).put("pos", p.pos)
                     .put("ruoloPartita", p.ruoloPartita).put("sec2", p.sec2).put("aff2", p.aff2)
-                    .put("sec3", p.sec3).put("aff3", p.aff3))
+                    .put("sec3", p.sec3).put("aff3", p.aff3).put("numero", p.numero))
             }
             val sa = JSONArray()
             (staff[t.id] ?: emptyList()).forEach { s ->
@@ -91,6 +91,7 @@ object DataIO {
                     dr = g.getInt("dr"), fi = g.getInt("fi"), ti = g.getInt("ti"), ri = g.getInt("ri"),
                     foot = g.optString("foot", "D"), pos = g.optString("pos", ""),
                     ruoloPartita = g.optString("ruoloPartita", ""),
+                    numero = g.optInt("numero", 0),
                     sec2 = g.optString("sec2", it.androcalcio.engine.TacticalRoles.affine(g.optString("pos", ""), 0).first),
                     aff2 = g.optInt("aff2", it.androcalcio.engine.TacticalRoles.affine(g.optString("pos", ""), 0).second),
                     sec3 = g.optString("sec3", it.androcalcio.engine.TacticalRoles.affine(g.optString("pos", ""), 1).first),

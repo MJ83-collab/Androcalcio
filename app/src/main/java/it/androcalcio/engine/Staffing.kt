@@ -11,13 +11,15 @@ object Staffing {
     const val PREPARATORE = "PRE"
     const val GIOVANILI = "GIO"     // allenatore delle giovanili: aggiorna Team.youthCoachSkill
     const val SCOUT = "SCO"         // scout: aggiorna Team.scoutSkill
+    const val ASSISTENTE = "ASS"    // allenatore in seconda: assegna i numeri di maglia a inizio stagione
     const val NEUTRAL = 50          // squadre AI e ruoli vuoti: effetto nullo
     const val VUOTO = 40            // abilità del club quando il ruolo resta scoperto
-    val ROLES = listOf(ALLENATORE, PREPARATORE, GIOVANILI, SCOUT)
+    val ROLES = listOf(ALLENATORE, PREPARATORE, GIOVANILI, SCOUT, ASSISTENTE)
 
     fun roleName(role: String): String = when (role) {
         ALLENATORE -> "Allenatore"
         PREPARATORE -> "Preparatore"
+        ASSISTENTE -> "Allenatore in seconda"
         GIOVANILI -> "Allenatore delle giovanili"
         else -> "Scout"
     }

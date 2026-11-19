@@ -56,7 +56,8 @@ fun PlayerSheet(p: Player, team: Team?, onClose: () -> Unit, onRenew: (() -> Uni
                 if (p.role == "P") Bar("Gioco di mani", p.gm)
                 Bar("Entrate", p.en); Bar("Passaggi", p.pa); Bar("Dribbling", p.dr)
                 Bar("Finalizzazione", p.fi); Bar("Tiro", p.ti); Bar("Rigori", p.ri)
-                Text("Morale ${p.morale} · Contratto ${p.contract} anni · ${money(p.salary)}",
+                Text((if (p.numero > 0) "Maglia ${p.numero} · " else "") +
+                    "Morale ${p.morale} · Contratto ${p.contract} anni · ${money(p.salary)}",
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
             }
         },

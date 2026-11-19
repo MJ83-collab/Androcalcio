@@ -2,6 +2,7 @@ package it.androcalcio
 
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
+import it.androcalcio.engine.ShirtNumbers
 import it.androcalcio.engine.Stadium
 import it.androcalcio.engine.Insurance
 import it.androcalcio.engine.Sponsorship
@@ -653,6 +654,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putInt("season_year", 2026).apply()
         _season.value = seasonName(2026)
         SeedData.insertInto(ctx, dao)
+        assegnaNumeri(0L)
     }
 
     fun resetDefaults() {
@@ -824,6 +826,21 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             planFor(a.id, me.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
             .also { accrueInsurance(a.id, cache[a.id] ?: emptyList(), it) }
         return r
+    }
+
+    /**
+     * Numeri di maglia di inizio stagione, per tutte le squadre. Chi ha già un numero lo mantiene.
+     * Restituisce la nota da mostrare: chi li ha assegnati (allenatore in seconda o società).
+     */
+    private suspend fun assegnaNumeri(meId: Long): String {
+        val updated = dao.allPlayers().groupBy { it.teamId }.flatMap { (_, ps) ->
+            val nums = ShirtNumbers.assign(ps)
+            ps.filter { nums[it.id] != it.numero }.map { it.copy(numero = nums[it.id] ?: 0) }
+        }
+        if (updated.isNotEmpty()) dao.updatePlayers(updated)
+        val vice = meId != 0L && dao.staffOnce(meId).any { it.role == Staffing.ASSISTENTE }
+        return if (vice) "I numeri di maglia li ha assegnati l'allenatore in seconda."
+        else "Senza allenatore in seconda, i numeri di maglia li ha assegnati la società."
     }
 
     fun closeSeason() {
@@ -1087,8 +1104,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val y = prefs.getInt("season_year", 2026) + 1
             prefs.edit().putInt("season_year", y).apply()
             _season.value = seasonName(y)
+            val numeri = assegnaNumeri(me.id)
 
-            _notice.value = "Nuova stagione ${seasonName(y)}. $report" +
+            _notice.value = "Nuova stagione ${seasonName(y)}. $report $numeri" +
                 (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
         }
     }

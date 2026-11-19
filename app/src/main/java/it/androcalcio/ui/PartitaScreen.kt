@@ -249,7 +249,10 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
     else PcChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
-/** Ordine dei numeri stile PC 7: 1 portiere, poi difensori, centrocampisti e attaccanti (per overall). */
+/**
+ * Giocatori in campo nell'ordine delle posizioni (1 portiere, poi difensori, centrocampisti, attaccanti).
+ * Il primo valore è la posizione; il numero mostrato è quello di maglia, se assegnato.
+ */
 private fun numbered(xi: List<Player>): List<Pair<Int, Player>> {
     fun rank(role: String) = when (role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
     return xi.sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }))
@@ -288,12 +291,12 @@ fun Pitch(
         homePos.forEachIndexed { i, (fx, fy) ->
             val c = Offset((fx + shift).coerceIn(0.02f, 0.98f) * w, fy * h)
             drawCircle(homeColor, r, c)
-            homeNums.firstOrNull { it.first == i + 1 }?.let { drawNumber(it.first, c) }
+            homeNums.firstOrNull { it.first == i + 1 }?.let { (pos, p) -> drawNumber(if (p.numero > 0) p.numero else pos, c) }
         }
         awayPos.forEachIndexed { i, (fx, fy) ->
             val c = Offset(((1f - fx) + shift).coerceIn(0.02f, 0.98f) * w, fy * h)
             drawCircle(awayColor, r, c)
-            awayNums.firstOrNull { it.first == i + 1 }?.let { drawNumber(it.first, c) }
+            awayNums.firstOrNull { it.first == i + 1 }?.let { (pos, p) -> drawNumber(if (p.numero > 0) p.numero else pos, c) }
         }
         drawCircle(Color.White, r * 0.8f, Offset(bx * w, by * h))
     }
