@@ -23,7 +23,7 @@ object AC {
 
     private fun pick(a: Long, b: Long, c: Long, d: Long = c) = Color(when (tema) { 1 -> b; 2 -> c; 3 -> d; else -> a })
 
-    val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740, 0xFF5A4C9E)
+    val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740, 0xFF2A3A8C)
     val Surface get() = pick(0xFF131A22, 0xFF0C5A60, 0xFF14307A, 0xFF27358A)
     val SurfaceHi get() = pick(0xFF1B2530, 0xFF14787D, 0xFF2243A0, 0xFF3B4FA6)
     val Border get() = pick(0x1FFFFFFF, 0x80A5F2EC, 0x80B4C8FF, 0xFFA9B9EA)

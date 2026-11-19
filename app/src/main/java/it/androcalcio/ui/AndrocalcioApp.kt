@@ -411,19 +411,6 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
             StatChip("Rosa", "${players.size}", Modifier.weight(1f))
         }
 
-        val ctx = androidx.compose.ui.platform.LocalContext.current
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Tema", style = MaterialTheme.typography.titleSmall)
-            listOf("Scuro", "Turchese", "Blu", "PC 7").forEachIndexed { i, n ->
-                val pick = {
-                    AC.tema = i
-                    ctx.getSharedPreferences("androcalcio", 0).edit().putInt("tema", i).apply()
-                }
-                if (AC.pc7) PcButton(n, pick, main = AC.tema == i)
-                else androidx.compose.material3.FilterChip(selected = AC.tema == i, onClick = pick, label = { Text(n) })
-            }
-        }
-
         SectionTitle("Menu")
         val tiles = listOf(
             Screen.ROSA, Screen.PARTITA, Screen.MERCATO, Screen.VIVAIO,

@@ -10,8 +10,8 @@ import it.androcalcio.ui.theme.AndrocalcioTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val prefs = getSharedPreferences("androcalcio", 0)
-        AC.tema = prefs.getInt("tema", if (prefs.getBoolean("tema_pc", false)) 1 else 0)
+        // Tema unico: PC Calcio 7 (le preferenze salvate sul tema vengono ignorate).
+        AC.tema = 3
         setContent {
             AndrocalcioTheme {
                 AndrocalcioApp()
