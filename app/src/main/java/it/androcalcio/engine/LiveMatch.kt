@@ -3,6 +3,7 @@ package it.androcalcio.engine
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
@@ -36,6 +37,10 @@ class LiveMatch(
     // Chi è sceso in campo (titolari + chi è entrato), per il calo di condizione a fine partita
     private val playedH = xiH.map { it.id }.toMutableSet()
     private val playedA = xiA.map { it.id }.toMutableSet()
+    // Pagelle: partono da 6, salgono con i gol, scendono con i cartellini
+    private val rated = HashMap<Long, Player>().apply { (xiH + xiA).forEach { put(it.id, it) } }
+    private val pRatings = HashMap<Long, Double>().apply { rated.keys.forEach { put(it, 6.0) } }
+    private fun bump(p: Player, d: Double) { pRatings[p.id] = (pRatings[p.id] ?: 6.0) + d }
 
     private val energy = HashMap<Long, Double>()
     var subsH = 0; private set
@@ -113,6 +118,7 @@ class LiveMatch(
         val bench = if (homeSide) benchH else benchA
         xi[xi.indexOf(out)] = inP; bench -= inP
         (if (homeSide) playedH else playedA) += inP.id
+        rated[inP.id] = inP; pRatings.putIfAbsent(inP.id, 6.0)
         if (homeSide) subsH++ else subsA++
         val t = if (homeSide) home else away
         events += MatchEvent(minute, EventType.SUB, homeSide,
@@ -196,6 +202,7 @@ class LiveMatch(
                 when {
                     r < pGoal -> {
                         if (homeAtt) hg++ else ag++
+                        sh?.let { bump(it, 1.0) }
                         events += MatchEvent(minute, EventType.GOAL, homeAtt,
                             "Gol! $who (${team.shortName})", x, y, sh?.id ?: 0L)
                     }
@@ -205,18 +212,48 @@ class LiveMatch(
                 }
             }
         }
+        // Calci piazzati: rigore raro e in area, punizione più frequente dal limite
+        if (rng.nextDouble() < 0.0015) setPiece(penalty = true)
+        else if (rng.nextDouble() < 0.003) setPiece(penalty = false)
         if (rng.nextDouble() < 0.018) {
             val side = rng.nextBoolean()
             val ps = (if (side) xiH else xiA).filter { it.role != "P" }
             if (ps.isNotEmpty()) {
                 val p = MatchEngine.aggressive(ps, rng)
                 val t = if (side) home else away
+                bump(p, -0.5)
                 events += MatchEvent(minute, EventType.YELLOW, side, "Ammonito ${p.name} (${t.shortName})", 0.5f, 0.5f)
             }
         }
         if (minute == 45) events += MatchEvent(45, EventType.HALFTIME, true, "Fine primo tempo", 0.5f, 0.5f)
         if (minute == 90) events += MatchEvent(90, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
     }
+
+    /** Rigore o punizione per una squadra a caso: tira il giocatore più adatto tra quelli in campo. */
+    private fun setPiece(penalty: Boolean) {
+        val homeAtt = rng.nextBoolean()
+        val takers = (if (homeAtt) xiH else xiA).filter { it.role != "P" }
+        val taker = MatchEngine.shooter(takers, rng) ?: return
+        val team = if (homeAtt) home else away
+        val (x, y) = if (penalty) Pair(if (homeAtt) 0.9f else 0.1f, 0.5f) else pos(homeAtt)
+        val kind = if (penalty) "Rigore" else "Punizione"
+        if (homeAtt) hs++ else asht++
+        val pGoal = if (penalty) 0.70 + 0.2 * taker.fi / 99.0 else 0.04 + 0.08 * taker.ti / 99.0
+        if (rng.nextDouble() < pGoal) {
+            if (homeAtt) hg++ else ag++
+            bump(taker, 1.0)
+            events += MatchEvent(minute, EventType.GOAL, homeAtt,
+                "Gol su $kind! ${taker.name} (${team.shortName})", x, y, taker.id)
+        } else if (rng.nextBoolean()) {
+            events += MatchEvent(minute, EventType.SAVE, homeAtt, "$kind di ${taker.name}, para il portiere", x, y)
+        } else {
+            events += MatchEvent(minute, EventType.MISS, homeAtt, "$kind di ${taker.name} fuori", x, y)
+        }
+    }
+
+    /** Pagelle finali: 3 minimo, 10 massimo, con un decimale. */
+    private fun finalRatings(): Map<Long, Double> =
+        pRatings.mapValues { (_, v) -> (v.coerceIn(3.0, 10.0) * 10).roundToInt() / 10.0 }
 
     /** Gioca fino alla fine; i cambi rimasti li fa l'allenatore. */
     fun runToEnd() {
@@ -225,5 +262,6 @@ class LiveMatch(
     }
 
     fun report() = MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events.toList(), homeF, awayF,
-        playedH.toSet(), playedA.toSet(), xiH.toList(), xiA.toList())
+        playedH.toSet(), playedA.toSet(), xiH.toList(), xiA.toList(),
+        rated.values.toList(), finalRatings())
 }

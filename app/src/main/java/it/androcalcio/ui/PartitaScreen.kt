@@ -184,6 +184,9 @@ fun PartitaScreen(
                 color = AC.TextDim, style = MaterialTheme.typography.bodySmall
             )
         }
+        if (minute >= 90 && report.playerRatings.isNotEmpty()) item {
+            Pagelle(report)
+        }
         if (AC.pc7) item {
             PaperPanel(Modifier.fillMaxWidth()) {
                 seen.reversed().forEachIndexed { i, e ->
@@ -205,6 +208,27 @@ fun PartitaScreen(
                 else -> AC.TextDim
             }
             Text("${e.minute}'  ${e.text}", color = c, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/** Pagelle a fine partita: chi è sceso in campo, dalla migliore alla peggiore, per squadra. */
+@Composable
+private fun Pagelle(report: MatchReport) {
+    Column(Modifier.fillMaxWidth()) {
+        SectionTitle("Pagelle")
+        PagelleTeam(report.home.shortName, report.playedPlayers.filter { it.id in report.homePlayed }, report.playerRatings)
+        PagelleTeam(report.away.shortName, report.playedPlayers.filter { it.id in report.awayPlayed }, report.playerRatings)
+    }
+}
+
+@Composable
+private fun PagelleTeam(name: String, ps: List<Player>, ratings: Map<Long, Double>) {
+    Text(name, style = MaterialTheme.typography.titleSmall)
+    ps.sortedByDescending { ratings[it.id] ?: 6.0 }.forEach { p ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(p.name, style = MaterialTheme.typography.bodyMedium)
+            Text("%.1f".format(ratings[p.id] ?: 6.0), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

@@ -31,7 +31,9 @@ data class MatchReport(
     val homePlayed: Set<Long> = emptySet(),   // chi è sceso in campo (titolari + subentrati), per la condizione
     val awayPlayed: Set<Long> = emptySet(),
     val homeXI: List<Player> = emptyList(),   // gli 11 in campo a fine partita, per i numeri sul campo
-    val awayXI: List<Player> = emptyList()
+    val awayXI: List<Player> = emptyList(),
+    val playedPlayers: List<Player> = emptyList(),  // tutti quelli scesi in campo, titolari e subentrati, per le pagelle
+    val playerRatings: Map<Long, Double> = emptyMap()  // pagella 3..10 per id giocatore
 )
 
 /**
@@ -66,9 +68,12 @@ object MatchEngine {
         return ps.last()
     }
 
+    /** Morale sul rendimento: da 0,95 (morale 0) a 1,05 (morale 100); 50 non cambia nulla. */
+    internal fun moraleFactor(p: Player): Double = 0.95 + 0.001 * p.morale.coerceIn(0, 100)
+
     internal fun ratings(ps: List<Player>, f: Formation, coach: Int, en: Map<Long, Double> = emptyMap()): Ratings {
         val k = Staffing.coachFactor(coach)
-        fun e(p: Player) = (en[p.id] ?: 1.0) * TacticalRoles.factor(p)
+        fun e(p: Player) = (en[p.id] ?: 1.0) * TacticalRoles.factor(p) * moraleFactor(p)
         return Ratings(
             atk = (top(ps, "A", 3) { Attr.atk(it) * e(it) } * 0.6 + top(ps, "C", 3) { Attr.atk(it) * e(it) } * 0.4) * f.atkMod * k,
             mid = top(ps, "C", 4) { Attr.mid(it) * e(it) } * f.midMod * k,
