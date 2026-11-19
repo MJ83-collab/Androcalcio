@@ -66,7 +66,7 @@ object MatchEngine {
 
     internal fun ratings(ps: List<Player>, f: Formation, coach: Int, en: Map<Long, Double> = emptyMap()): Ratings {
         val k = Staffing.coachFactor(coach)
-        fun e(p: Player) = en[p.id] ?: 1.0
+        fun e(p: Player) = (en[p.id] ?: 1.0) * TacticalRoles.factor(p)
         return Ratings(
             atk = (top(ps, "A", 3) { Attr.atk(it) * e(it) } * 0.6 + top(ps, "C", 3) { Attr.atk(it) * e(it) } * 0.4) * f.atkMod * k,
             mid = top(ps, "C", 4) { Attr.mid(it) * e(it) } * f.midMod * k,

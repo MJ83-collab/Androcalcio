@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -65,6 +65,22 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
                         "`season` TEXT NOT NULL, `nazione` TEXT NOT NULL, " +
                         "`competizione` TEXT NOT NULL, `vincitore` TEXT NOT NULL)"
                 )
+            }
+        }
+        /** 13 -> 14: ruoli tattici dei giocatori (ruolo in campo e due ruoli affini), senza perdere i dati. */
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `Player` ADD COLUMN `ruoloPartita` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `Player` ADD COLUMN `sec2` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `Player` ADD COLUMN `aff2` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `Player` ADD COLUMN `sec3` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `Player` ADD COLUMN `aff3` INTEGER NOT NULL DEFAULT 0")
+                // Ruoli affini di default per i giocatori esistenti, come in TacticalRoles.AFFINI
+                it.androcalcio.engine.TacticalRoles.AFFINI.forEach { (pos, affini) ->
+                    val (s2, a2) = affini.getOrNull(0) ?: ("" to 0)
+                    val (s3, a3) = affini.getOrNull(1) ?: ("" to 0)
+                    db.execSQL("UPDATE Player SET sec2 = '$s2', aff2 = $a2, sec3 = '$s3', aff3 = $a3 WHERE pos = '$pos'")
+                }
             }
         }
         val MIGRATION_10_11 = object : Migration(10, 11) {
@@ -125,6 +141,6 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14).fallbackToDestructiveMigration().build()
     }
 }

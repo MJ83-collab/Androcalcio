@@ -37,12 +37,17 @@ object Attr {
         fun v(i: Int) = (p.overall + b[i] + rng.nextInt(-6, 7)).coerceIn(25, 99)
         val old = if (p.age > 31) (p.age - 31) * 2 else 0
         val foot = when (rng.nextInt(100)) { in 0..24 -> "S"; in 25..29 -> "A"; else -> "D" }
+        val pos = randomPos(p.role, rng)
+        val affini = TacticalRoles.AFFINI[pos].orEmpty()
         return p.copy(
             ve = (v(0) - old).coerceIn(25, 99), re = (v(1) - old).coerceIn(25, 99),
             ag = v(2), qu = v(3), fo = rng.nextInt(60, 100),
             gm = if (p.role == "P") (p.overall + 8 + rng.nextInt(-6, 7)).coerceIn(25, 99) else rng.nextInt(8, 31),
             en = v(4), pa = v(5), dr = v(6), fi = v(7), ti = v(8), ri = v(9),
-            foot = foot, pos = randomPos(p.role, rng)
+            foot = foot, pos = pos,
+            ruoloPartita = "",
+            sec2 = affini.getOrNull(0)?.first ?: "", aff2 = affini.getOrNull(0)?.second ?: 0,
+            sec3 = affini.getOrNull(1)?.first ?: "", aff3 = affini.getOrNull(1)?.second ?: 0
         )
     }
 

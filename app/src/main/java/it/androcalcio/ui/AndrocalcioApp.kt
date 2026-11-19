@@ -5,6 +5,7 @@ import it.androcalcio.ui.components.PcChip
 
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
+import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.engine.TrainingPlan
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Lineup
@@ -178,7 +179,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     RosaScreen(team, players, { p, y -> vm.renew(p, y) },
                         modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() },
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
-                        allen, { vm.setTraining(it) })
+                        allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) })
                 }
                 Screen.SQUADRE -> TeamList(teams, team?.id) {
                     vm.selectTeam(it)
@@ -540,7 +541,8 @@ fun RosaScreen(
     formation: Formation, onFormation: (Formation) -> Unit,
     onToggleStarter: (Player) -> Unit, onCoach: () -> Unit,
     press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit,
-    training: TrainingPlan, onTraining: (TrainingPlan) -> Unit
+    training: TrainingPlan, onTraining: (TrainingPlan) -> Unit,
+    onRole: (Player, String) -> Unit = { _, _ -> }
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -570,7 +572,7 @@ fun RosaScreen(
         contentPadding = PaddingValues(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { RosaTable(players, onToggleStarter) { sheet = it } }
+        item { RosaTable(players, onToggleStarter, { sheet = it }, onRole) }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
@@ -581,7 +583,10 @@ private fun roleName(r: String) = when (r) { "P" -> "POR"; "D" -> "DIF"; "C" -> 
 
 /** Rosa a tabella su carta bianca (stile PC Calcio 7). Scorre in orizzontale per mostrare tutte le colonne. */
 @Composable
-private fun RosaTable(players: List<Player>, onToggleStarter: (Player) -> Unit, onOpen: (Player) -> Unit) {
+private fun RosaTable(
+    players: List<Player>, onToggleStarter: (Player) -> Unit, onOpen: (Player) -> Unit,
+    onRole: (Player, String) -> Unit
+) {
     val stats = listOf("EN", "VE", "RE", "AG", "QU", "FO", "CF", "LIV")
     val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColGreen, AC.ColOrange)
     PaperPanel(Modifier.fillMaxWidth()) {
@@ -590,7 +595,7 @@ private fun RosaTable(players: List<Player>, onToggleStarter: (Player) -> Unit, 
                 HeadCell("T", AC.PaperText, Modifier.width(24.dp))
                 HeadCell("GIOCATORE", AC.PaperText, Modifier.width(118.dp), TextAlign.Start)
                 stats.forEachIndexed { i, h -> HeadCell(h, statColor[i], Modifier.width(30.dp)) }
-                HeadCell("POS", AC.PaperText, Modifier.width(38.dp))
+                HeadCell("RUOLO", AC.PaperText, Modifier.width(74.dp))
             }
             players.forEachIndexed { i, p ->
                 PaperRow(i, Modifier.clickable { onOpen(p) }) {
@@ -607,8 +612,20 @@ private fun RosaTable(players: List<Player>, onToggleStarter: (Player) -> Unit, 
                             fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium,
                             color = if (k == 6 && v < 60) AC.ColEn else if (k == 6 && v < 80) AC.ColOrange else AC.PaperText)
                     }
-                    Text(roleName(p.role), Modifier.width(38.dp), textAlign = TextAlign.Center,
-                        fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
+                    // Ruolo in campo con l'affinità: tocca per passare al ruolo affine successivo
+                    val opts = TacticalRoles.options(p)
+                    val cur = TacticalRoles.assigned(p)
+                    val affCur = opts.firstOrNull { it.first == cur }?.second ?: 100
+                    Text(
+                        if (p.pos.isEmpty()) roleName(p.role) else "$cur $affCur%",
+                        Modifier.width(74.dp).clickable(enabled = opts.size > 1) {
+                            val next = opts[(opts.indexOfFirst { it.first == cur } + 1) % opts.size].first
+                            onRole(p, if (next == p.pos) "" else next)
+                        },
+                        textAlign = TextAlign.Center,
+                        fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
+                        color = if (affCur < 100) AC.ColOrange else AC.PaperText
+                    )
                 }
             }
         }

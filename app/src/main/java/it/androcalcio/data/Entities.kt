@@ -53,7 +53,13 @@ data class Player(
     val foot: String = "D",      // D destro, S mancino, A ambidestro
     val pos: String = "",        // ruolo dettagliato: POR TD TS DC MED REG INT MP ES CA
     @ColumnInfo(defaultValue = "0") val starter: Boolean = false,  // titolare scelto dall'utente
-    @ColumnInfo(defaultValue = "100") val condition: Int = 100     // condizione fisica 0..100, tra una partita e l'altra
+    @ColumnInfo(defaultValue = "100") val condition: Int = 100,    // condizione fisica 0..100, tra una partita e l'altra
+    // Ruoli tattici (v14): ruolo in campo ("" = naturale), primo e secondo ruolo affine con affinità in %
+    @ColumnInfo(defaultValue = "") val ruoloPartita: String = "",
+    @ColumnInfo(defaultValue = "") val sec2: String = "",
+    @ColumnInfo(defaultValue = "0") val aff2: Int = 0,
+    @ColumnInfo(defaultValue = "") val sec3: String = "",
+    @ColumnInfo(defaultValue = "0") val aff3: Int = 0
 )
 
 @Entity(tableName = "staff")

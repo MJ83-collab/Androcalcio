@@ -696,6 +696,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveTeam(t: Team) { viewModelScope.launch { dao.updateTeam(t) } }
     fun savePlayer(p: Player) { viewModelScope.launch { dao.updatePlayer(p) } }
+    /** Ruolo in cui il giocatore scende in campo (uno dei tre ruoli: naturale o affine). */
+    fun setRuoloPartita(p: Player, ruolo: String) { viewModelScope.launch { dao.updatePlayer(p.copy(ruoloPartita = ruolo)) } }
     fun deletePlayer(p: Player) { viewModelScope.launch { dao.deletePlayer(p) } }
 
     fun addPlayer() {
