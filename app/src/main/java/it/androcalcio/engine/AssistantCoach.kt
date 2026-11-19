@@ -18,7 +18,10 @@ object AssistantCoach {
         val opponent: String?,               // null = nessuna prossima partita di campionato
         val opponentNotes: List<String>,
         val tattica: Stile? = null,          // stile consigliato; null = nessun consiglio
-        val tatticaNota: String? = null
+        val tatticaNota: String? = null,
+        val opponentXI: List<Player> = emptyList(),   // undici previsto dell'avversario
+        val opponentSchema: Formation? = null,        // schema abituale
+        val opponentMedia: Int = 0                    // media squadra (overall medio dei titolari)
     )
 
     /**

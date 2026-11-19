@@ -99,6 +99,8 @@ import it.androcalcio.engine.Bilancio
 enum class Screen(val label: String, val icon: ImageVector, val desc: String) {
     HOME("Home", Icons.Filled.Home, ""),
     ROSA("Rosa", Icons.Filled.Person, "Giocatori e valori"),
+    TATTICA("Tattica", Icons.Filled.Build, "Undici, ruoli e campo"),
+    AVVERSARIO("Avversario", Icons.Filled.Info, "Prossimo rivale e assistente"),
     PARTITA("Partita", Icons.Filled.Star, "Simulazione 2D"),
     MERCATO("Mercato", Icons.Filled.ShoppingCart, "Acquisti e cessioni"),
     VIVAIO("Vivaio", Icons.Filled.Face, "Giovani e scouting"),
@@ -247,6 +249,21 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         team, staffList, cands,
                         { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() }
                     )
+                }
+                Screen.TATTICA -> {
+                    val modulo by vm.formation.collectAsState()
+                    val press by vm.pressing.collectAsState()
+                    val linea by vm.line.collectAsState()
+                    val consigli by vm.assistantAdvice.collectAsState()
+                    TatticaScreen(players, modulo, { vm.setFormation(it) }, { vm.coachLineup() },
+                        press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
+                        { p, r -> vm.setRuoloPartita(p, r) },
+                        consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
+                        { screen = Screen.AVVERSARIO })
+                }
+                Screen.AVVERSARIO -> {
+                    val consigli by vm.assistantAdvice.collectAsState()
+                    AvversarioScreen(consigli)
                 }
                 Screen.ALBO -> {
                     val albo by vm.albo.collectAsState()
@@ -419,7 +436,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
 
         SectionTitle("Menu")
         val tiles = listOf(
-            Screen.ROSA, Screen.PARTITA, Screen.MERCATO, Screen.VIVAIO,
+            Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.STAFF, Screen.STATISTICHE, Screen.EDITOR,
             Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO
         )

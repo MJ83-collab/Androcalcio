@@ -60,6 +60,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import it.androcalcio.engine.AssistantCoach
+import it.androcalcio.engine.schemaAbituale
 import it.androcalcio.engine.schemaInPartita
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -239,6 +240,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.staffOnce(me.id).firstOrNull { it.role == Staffing.ALLENATORE }?.skill ?: Staffing.NEUTRAL,
             f
         )
+        val oppSchema = opp?.let { schemaAbituale(it.id) }
+        val oppXI = if (opp == null || oppSchema == null) emptyList()
+            else AssistantCoach.startingXI(dao.playersOnce(opp.id), oppSchema)
         val miaStile = Staffing.stile(mapOf(me.id to dao.staffOnce(me.id)), me.id)
         val consiglio = if (opp == null) null else AssistantCoach.tattica(
             dao.playersOnce(opp.id), mine, opp.id,
@@ -253,7 +257,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             opponent = opp?.name,
             opponentNotes = if (vice == null) emptyList() else notes,
             tattica = if (vice == null) null else consiglio?.first,
-            tatticaNota = if (vice == null) null else consiglio?.second
+            tatticaNota = if (vice == null) null else consiglio?.second,
+            opponentXI = oppXI,
+            opponentSchema = oppSchema,
+            opponentMedia = if (oppXI.isEmpty()) 0 else oppXI.map { it.overall }.average().toInt()
         )
     }
 
