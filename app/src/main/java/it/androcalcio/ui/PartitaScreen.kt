@@ -51,6 +51,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
@@ -150,22 +153,7 @@ fun PartitaScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item {
-            GlassCard(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.padding(16.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Crest(report.home, 44.dp)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("$hg - $ag", style = MaterialTheme.typography.headlineMedium)
-                        Text("$minute'", color = AC.Accent)
-                    }
-                    Crest(report.away, 44.dp)
-                }
-            }
-        }
+        item { Scoreboard(report.home, report.away, hg, ag, if (minute >= 90) "Finale" else "$minute'") }
         item { Pitch(report.home, report.away, bx, by, report.homeFormation, report.awayFormation, report.homeXI, report.awayXI) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -187,28 +175,7 @@ fun PartitaScreen(
         if (minute >= 90 && report.playerRatings.isNotEmpty()) item {
             Pagelle(report)
         }
-        if (AC.pc7) item {
-            PaperPanel(Modifier.fillMaxWidth()) {
-                seen.reversed().forEachIndexed { i, e ->
-                    PaperRow(i) {
-                        Text(
-                            "${e.minute}'  ${e.text}",
-                            color = pcEventColor(e.type),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-        } else items(seen.reversed()) { e ->
-            val c = when (e.type) {
-                EventType.GOAL -> AC.Accent
-                EventType.YELLOW -> AC.Warn
-                EventType.SAVE -> AC.Accent2
-                EventType.TACTIC -> AC.Ok
-                else -> AC.TextDim
-            }
-            Text("${e.minute}'  ${e.text}", color = c, style = MaterialTheme.typography.bodyMedium)
-        }
+        item { CronacaPanel(seen.reversed()) }
     }
 }
 
@@ -349,5 +316,41 @@ fun TrainingPicker(plan: TrainingPlan, onChange: (TrainingPlan) -> Unit) {
             TrainIntensity.ALTA -> "Crescita rapida, condizione −4, infortuni +30%"
         }
         Text(txt, style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+    }
+}
+
+/** Tabellone della partita: squadre a sinistra e destra, punteggio al centro e minuto, come nel gioco originale. */
+@Composable
+fun Scoreboard(home: Team, away: Team, hg: Int, ag: Int, status: String) {
+    Row(
+        Modifier.fillMaxWidth().background(AC.Btn).border(2.dp, AC.BtnBorder).padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Crest(home, 40.dp)
+            Text(home.shortName.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$hg - $ag", color = AC.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 34.sp)
+            Text(status, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        }
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Crest(away, 40.dp)
+            Text(away.shortName.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+        }
+    }
+}
+
+/** Cronaca su carta bianca, dall'evento più recente, con il minuto in colonna. */
+@Composable
+fun CronacaPanel(events: List<it.androcalcio.engine.MatchEvent>) {
+    PaperPanel(Modifier.fillMaxWidth()) {
+        events.forEachIndexed { i, e ->
+            PaperRow(i) {
+                Text("${e.minute}'", Modifier.width(30.dp), fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = AC.PaperText)
+                Text(e.text, color = pcEventColor(e.type), fontSize = 12.sp,
+                    fontWeight = if (e.type == EventType.GOAL) FontWeight.ExtraBold else FontWeight.Medium)
+            }
+        }
     }
 }

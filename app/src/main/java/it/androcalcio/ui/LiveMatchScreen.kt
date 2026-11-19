@@ -52,20 +52,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
     val mySubs = if (info.userHome) m.subsH else m.subsA
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            GlassCard(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Crest(m.home, 44.dp)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${m.hg} - ${m.ag}", style = MaterialTheme.typography.headlineMedium)
-                        Text(if (m.finished) "Finale" else "${m.minute}'" + if (info.paused) " · pausa" else "",
-                            color = AC.Accent)
-                    }
-                    Crest(m.away, 44.dp)
-                }
-            }
-        }
+        item { Scoreboard(m.home, m.away, m.hg, m.ag, if (m.finished) "Finale" else "${m.minute}'" + if (info.paused) " · pausa" else "") }
         item { Pitch(m.home, m.away, bx, by, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList()) }
         if (!m.finished) {
             item {
@@ -110,16 +97,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                     color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
             }
         }
-        items(events.reversed()) { e ->
-            val c = when (e.type) {
-                EventType.GOAL -> AC.Accent
-                EventType.YELLOW -> AC.Warn
-                EventType.SAVE -> AC.Accent2
-                EventType.TACTIC, EventType.SUB -> AC.Ok
-                else -> AC.TextDim
-            }
-            Text("${e.minute}'  ${e.text}", color = c, style = MaterialTheme.typography.bodyMedium)
-        }
+        item { CronacaPanel(events.reversed()) }
     }
 
     if (subOpen) SubDialog(
