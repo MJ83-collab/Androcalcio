@@ -26,6 +26,21 @@ object SeedData {
     )
     private val roles = List(2) { "P" } + List(6) { "D" } + List(6) { "C" } + List(4) { "A" }
 
+    /** Titolari: 1 portiere, 4 difensori, 4 centrocampisti, 2 attaccanti (indici in [roles]). */
+    private val STARTERS = listOf(0, 2, 3, 4, 5, 8, 9, 10, 11, 14, 15)
+    /** Posti in rosa dove può comparire un wonderkid (riserve di centrocampo e attacco). */
+    private val WK_SLOTS = listOf(12, 13, 16, 17)
+
+    /** Forza (scala FC) della prima e dell'ultima squadra di ogni campionato. */
+    private fun leagueRange(nazione: String, tier: Int): Pair<Int, Int> = when (nazione) {
+        "Inghilterra" -> if (tier == 0) 83 to 72 else 69 to 62
+        "Spagna", "Italia" -> if (tier == 0) 82 to 70 else 67 to 59
+        "Germania" -> if (tier == 0) 82 to 69 else 67 to 59
+        "Francia" -> if (tier == 0) 80 to 67 else 66 to 58
+        "Brasile", "Argentina" -> if (tier == 0) 74 to 63 else 64 to 55
+        else -> if (tier == 0) 72 to 62 else 62 to 54
+    }
+
     suspend fun insertInto(context: Context, dao: AndrocalcioDao) {
         val text = context.assets.open("squadre.json").bufferedReader().use { it.readText() }
         val arr = JSONArray(text)
@@ -73,16 +88,64 @@ object SeedData {
 
         val ids = dao.insertTeams(teams)
 
+        // Posizione di ogni squadra nel suo campionato (la lista è in ordine di forza) e numero di squadre
+        val leagueKey = teams.map { it.nazione + "|" + it.campionato }
+        val leagueSize = leagueKey.groupingBy { it }.eachCount()
+        val seen = mutableMapOf<String, Int>()
+        val rank = leagueKey.map { k -> seen.getOrDefault(k, 0).also { seen[k] = it + 1 } }
+
         val players = mutableListOf<Player>()
         teams.forEachIndexed { idx, team ->
             val rng = Random(team.name.hashCode() + 7)
-            val base = 82 - tiers[idx] * 9 + rng.nextInt(-4, 5)   // massima serie ~82, seconda ~73
+            val southAm = team.nazione == "Brasile" || team.nazione == "Argentina"
+            val (top, bottom) = leagueRange(team.nazione, tiers[idx])
+            val n = leagueSize.getValue(leagueKey[idx])
+            // forza della squadra (scala FC): prima del campionato = top, ultima = bottom
+            val strength = top - (top - bottom) * rank[idx] / (n - 1).coerceAtLeast(1) + rng.nextInt(-1, 2)
             val nat = codes[team.nazione] ?: "ITA"
+
+            // stelle 88-95: poche, solo nelle europee di vertice
+            val starSlots = mutableSetOf<Int>()
+            if (!southAm && tiers[idx] == 0) {
+                val stars = when {
+                    strength >= 81 -> rng.nextInt(1, 3)
+                    strength >= 79 -> if (rng.nextInt(100) < 50) 1 else 0
+                    strength >= 76 -> if (rng.nextInt(100) < 12) 1 else 0
+                    else -> 0
+                }
+                repeat(stars) { starSlots += STARTERS.random(rng) }
+            }
+            // Sudamerica: ogni tanto un titolare da esportazione (78-84)
+            val exportSlot = if (southAm && tiers[idx] == 0 && rng.nextInt(100) < 30) STARTERS.random(rng) else -1
+            // wonderkid alla FM: giovane con potenziale altissimo, più frequente in Sudamerica
+            val wkSlot = if (rng.nextInt(100) < (if (southAm) 35 else 20)) WK_SLOTS.random(rng) else -1
+
             roles.forEachIndexed { slot, role ->
-                val age = rng.nextInt(17, 37)
-                // i primi di ogni reparto sono i titolari di qualità: qualche stella per squadra
-                val star = if (slot == 2 || slot == 8 || slot == 14 || slot == 0) 4 else 0
-                val ov = (base + star + rng.nextInt(-9, 9) - if (age < 21) 6 else 0).coerceIn(35, 95)
+                var age = rng.nextInt(17, 37)
+                val starter = slot in STARTERS
+                var ov = strength + (if (starter) rng.nextInt(-3, 4) else rng.nextInt(-9, -1)) -
+                    (if (age < 21) rng.nextInt(6, 11) else 0)
+                var pot: Int
+                when (slot) {
+                    in starSlots -> {
+                        age = rng.nextInt(23, 33)
+                        ov = when (rng.nextInt(100)) {
+                            in 0..54 -> rng.nextInt(88, 90)
+                            in 55..84 -> rng.nextInt(90, 92)
+                            in 85..96 -> rng.nextInt(92, 94)
+                            else -> rng.nextInt(94, 96)
+                        }
+                        pot = ov + rng.nextInt(0, 3)
+                    }
+                    exportSlot -> { age = rng.nextInt(21, 30); ov = rng.nextInt(78, 85); pot = ov + rng.nextInt(0, 5) }
+                    wkSlot -> { age = rng.nextInt(17, 21); ov = rng.nextInt(65, 76); pot = rng.nextInt(86, 95) }
+                    else -> pot = ov + when {               // potenziale alla FM (PA rispetto alla CA)
+                        age < 21 -> rng.nextInt(8, 17)
+                        age < 24 -> rng.nextInt(4, 11)
+                        else -> rng.nextInt(0, 4)
+                    }
+                }
+                ov = ov.coerceIn(40, 95)
                 players += Attr.fill(Player(
                     teamId = ids[idx],
                     name = "${initials[rng.nextInt(initials.length)]}. ${surnames[rng.nextInt(surnames.size)]}",
@@ -92,7 +155,7 @@ object SeedData {
                     morale = rng.nextInt(50, 91),
                     salary = (ov - 30).coerceAtLeast(5) * 9_000L,
                     nationality = if (rng.nextInt(100) < 75) nat else codes.values.random(rng),
-                    potential = (ov + if (age < 24) rng.nextInt(0, 16) else rng.nextInt(0, 3)).coerceAtMost(99),
+                    potential = pot.coerceIn(ov, 99),
                     contract = rng.nextInt(1, 5)
                 ), rng)
             }
