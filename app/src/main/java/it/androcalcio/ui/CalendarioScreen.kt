@@ -219,11 +219,11 @@ fun CalendarioScreen(
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 PaperPanel(Modifier.fillMaxWidth()) {
                     Column(Modifier.horizontalScroll(rememberScrollState())) {
-                        Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            HeadCell("", AC.PaperText, Modifier.width(14.dp))
-                            HeadCell("N", AC.PaperText, Modifier.width(22.dp))
-                            HeadCell("SQUADRA", AC.PaperText, Modifier.width(128.dp), TextAlign.Start)
-                            heads.forEachIndexed { k, h -> HeadCell(h, headColor[k], Modifier.width(if (k >= 6) 32.dp else 26.dp)) }
+                        Row(Modifier.background(androidx.compose.ui.graphics.Color(0xFF0A1A6B)).padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            HeadCell("", androidx.compose.ui.graphics.Color.White, Modifier.width(14.dp))
+                            HeadCell("N", androidx.compose.ui.graphics.Color.White, Modifier.width(22.dp))
+                            HeadCell("SQUADRA", androidx.compose.ui.graphics.Color.White, Modifier.width(128.dp), TextAlign.Start)
+                            heads.forEach { h -> HeadCell(h, androidx.compose.ui.graphics.Color(0xFF8FB4FF), Modifier.width(if (h == "DR" || h == "PT") 32.dp else 26.dp)) }
                         }
                         rows.forEachIndexed { i, r ->
                             val mine = r.team.id == team.id
@@ -236,8 +236,9 @@ fun CalendarioScreen(
                             PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
                                 Text(zone, Modifier.width(14.dp), fontSize = 10.sp,
                                     color = if (zone == "▲") AC.ColGreen else AC.ColEn)
-                                Text("${i + 1}", Modifier.width(22.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold, color = AC.PaperText)
+                                Text("${i + 1}", Modifier.width(22.dp).background(androidx.compose.ui.graphics.Color(0xFF0A1A6B)),
+                                    textAlign = TextAlign.Center, fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold, color = androidx.compose.ui.graphics.Color.White)
                                 Row(Modifier.width(128.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Crest(r.team, 18.dp)
                                     Text(r.team.name, Modifier.padding(start = 6.dp), color = c, maxLines = 1,
