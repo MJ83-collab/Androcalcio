@@ -96,6 +96,7 @@ fun CalendarioScreen(
             PcButton("Calendario", { tab = 0 }, Modifier.weight(1f), main = tab == 0)
             PcButton("Classifica", { tab = 1 }, Modifier.weight(1f), main = tab == 1)
             PcButton("Coppa", { tab = 2 }, Modifier.weight(1f), main = tab == 2)
+            PcButton("Tutte", { tab = 3 }, Modifier.weight(1f), main = tab == 3)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PcButton("Prossima giornata", { round = 0; askNext = true }, Modifier.weight(1f), main = true, enabled = pending)
@@ -150,6 +151,36 @@ fun CalendarioScreen(
                     PaperPanel(Modifier.fillMaxWidth()) {
                         ms.sortedBy { it.round }.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
                     }
+                }
+            }
+        } else if (tab == 3) {
+            Text("Tutte le tue partite · $season", color = AC.Text,
+                style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                fun mine(m: MatchResult) = m.homeTeamId == team.id || m.awayTeamId == team.id
+                val league = matches.filter(::mine).sortedBy { it.round }
+                val cups = cupMatches.filter(::mine).sortedBy { it.round }
+                val friends = friendlyMatches.sortedBy { it.round }
+                if (league.isNotEmpty()) {
+                    SectionTitle("Campionato")
+                    PaperPanel(Modifier.fillMaxWidth()) {
+                        league.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
+                    }
+                }
+                if (cups.isNotEmpty()) {
+                    SectionTitle("Coppa e supercoppa")
+                    PaperPanel(Modifier.fillMaxWidth()) {
+                        cups.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
+                    }
+                }
+                if (friends.isNotEmpty()) {
+                    SectionTitle("Amichevoli")
+                    PaperPanel(Modifier.fillMaxWidth()) {
+                        friends.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
+                    }
+                }
+                if (league.isEmpty() && cups.isEmpty() && friends.isEmpty()) {
+                    Text("Nessuna partita in programma.", color = AC.Text)
                 }
             }
         } else if (tab == 0) {
