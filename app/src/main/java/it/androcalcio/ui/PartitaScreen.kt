@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.TrainFocus
@@ -113,7 +116,7 @@ fun PartitaScreen(
                 if (AC.pc7) {
                     PcButton("Gioca partita (in casa)", { onPlay(team, away, formation) },
                         Modifier.fillMaxWidth(), main = true)
-                } else Button(
+                } else PcAction(
                     onClick = { onPlay(team, away, formation) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
@@ -164,8 +167,8 @@ fun PartitaScreen(
                     PcButton("Salta", { minute = 90 })
                     PcButton("Nuova partita", onReset)
                 } else {
-                    OutlinedButton(onClick = { minute = 90 }) { Text("Salta") }
-                    OutlinedButton(onClick = onReset) { Text("Nuova partita") }
+                    PcAction(onClick = { minute = 90 }) { Text("Salta") }
+                    PcAction(onClick = onReset) { Text("Nuova partita") }
                 }
             }
         }
@@ -213,7 +216,7 @@ private fun pcEventColor(t: EventType): Color = when (t) {
 @Composable
 private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
     if (AC.pc7) PcButton(label, onClick, main = selected)
-    else FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
+    else PcChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
 @Composable
@@ -260,11 +263,11 @@ fun MentalityPicker(current: Mentality, onPick: (Mentality) -> Unit) {
 fun TacticsPicker(press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit) {
     SectionTitle("Pressing")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Pressing.values().forEach { p -> FilterChip(selected = p == press, onClick = { onPress(p) }, label = { Text(p.label) }) }
+        Pressing.values().forEach { p -> PcChip(selected = p == press, onClick = { onPress(p) }, label = { Text(p.label) }) }
     }
     SectionTitle("Linea difensiva")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        DefLine.values().forEach { l -> FilterChip(selected = l == line, onClick = { onLine(l) }, label = { Text(l.label) }) }
+        DefLine.values().forEach { l -> PcChip(selected = l == line, onClick = { onLine(l) }, label = { Text(l.label) }) }
     }
 }
 
@@ -274,7 +277,7 @@ fun TrainingPicker(plan: TrainingPlan, onChange: (TrainingPlan) -> Unit) {
     SectionTitle("Allenamento")
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         TrainFocus.values().forEach { f ->
-            FilterChip(selected = f == plan.focus, onClick = { onChange(plan.copy(focus = f)) }, label = { Text(f.label) })
+            PcChip(selected = f == plan.focus, onClick = { onChange(plan.copy(focus = f)) }, label = { Text(f.label) })
         }
     }
     Text(plan.focus.info, style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
@@ -282,7 +285,7 @@ fun TrainingPicker(plan: TrainingPlan, onChange: (TrainingPlan) -> Unit) {
         SectionTitle("Intensità")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TrainIntensity.values().forEach { i ->
-                FilterChip(selected = i == plan.intensity, onClick = { onChange(plan.copy(intensity = i)) }, label = { Text(i.label) })
+                PcChip(selected = i == plan.intensity, onClick = { onChange(plan.copy(intensity = i)) }, label = { Text(i.label) })
             }
         }
         val txt = when (plan.intensity) {

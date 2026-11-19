@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.TrainingPlan
@@ -133,8 +136,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
             text = { Text("Hai una copia personalizzata. Nessuna copia viene sovrascritta.") },
             confirmButton = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(onClick = { vm.chooseStartup(0) }, modifier = Modifier.fillMaxWidth()) { Text("Personalizzati") }
-                    Button(onClick = { vm.chooseStartup(1) }, modifier = Modifier.fillMaxWidth()) { Text("Predefiniti") }
+                    PcAction(onClick = { vm.chooseStartup(0) }, modifier = Modifier.fillMaxWidth()) { Text("Personalizzati") }
+                    PcAction(onClick = { vm.chooseStartup(1) }, modifier = Modifier.fillMaxWidth()) { Text("Predefiniti") }
                     TextButton(onClick = { vm.chooseStartup(2) }, modifier = Modifier.fillMaxWidth()) { Text("Continua come ora") }
                 }
             }
@@ -486,7 +489,7 @@ fun TeamList(teams: List<Team>, selectedId: Long?, onSelect: (Team) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(leagues) { l ->
-                FilterChip(
+                PcChip(
                     selected = l == active,
                     onClick = { league = l },
                     label = { Text(l) }
@@ -554,12 +557,12 @@ fun RosaScreen(
                     Text("Richiesta: ${money(Progression.wage(p))} l'anno", color = AC.Accent)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         (1..5).forEach { y ->
-                            FilterChip(selected = years == y, onClick = { years = y }, label = { Text("$y") })
+                            PcChip(selected = years == y, onClick = { years = y }, label = { Text("$y") })
                         }
                     }
                 }
             },
-            confirmButton = { Button(onClick = { onRenew(p, years); renew = null }) { Text("Rinnova") } },
+            confirmButton = { PcAction(onClick = { onRenew(p, years); renew = null }) { Text("Rinnova") } },
             dismissButton = { TextButton(onClick = { renew = null }) { Text("Annulla") } }
         )
     }
@@ -782,7 +785,7 @@ private fun FormazioneCard(
             Text("Formazione", style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(Formation.values().toList()) { f ->
-                    FilterChip(selected = f == formation, onClick = { onFormation(f) }, label = { Text(f.label) })
+                    PcChip(selected = f == formation, onClick = { onFormation(f) }, label = { Text(f.label) })
                 }
             }
             val ok = xi.size == 11 && need.all { (r, n) -> xi.count { it.role == r } == n }
@@ -796,7 +799,7 @@ private fun FormazioneCard(
             )
             if (xi.isEmpty()) Text("Nessun titolare scelto: decide l'allenatore.",
                 color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
-            Button(onClick = onCoach) { Text("Chiedi all'allenatore") }
+            PcAction(onClick = onCoach) { Text("Chiedi all'allenatore") }
             Text("Tocca ● / ○ per mettere o togliere un titolare.",
                 color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
         }

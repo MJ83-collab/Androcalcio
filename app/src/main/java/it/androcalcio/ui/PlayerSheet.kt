@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,7 +60,7 @@ fun PlayerSheet(p: Player, team: Team?, onClose: () -> Unit, onRenew: (() -> Uni
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
             }
         },
-        confirmButton = { if (onRenew != null) Button(onClick = onRenew) { Text("Rinnova") } },
+        confirmButton = { if (onRenew != null) PcAction(onClick = onRenew) { Text("Rinnova") } },
         dismissButton = { TextButton(onClick = onClose) { Text("Chiudi") } }
     )
 }

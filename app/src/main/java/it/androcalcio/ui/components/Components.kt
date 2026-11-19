@@ -15,8 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -163,6 +168,54 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
         color = AC.TextDim,
         letterSpacing = 1.2.sp
     )
+}
+
+/** Bottone PC 7 per le azioni: nero, spigoli vivi, bordo giallo. Sostituisce i Button Material. */
+@Composable
+fun PcAction(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(
+        containerColor = AC.Btn,
+        contentColor = AC.Accent,
+        disabledContainerColor = AC.Surface,
+        disabledContentColor = AC.BtnBorder
+    ),
+    content: @Composable RowScope.() -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        shape = RoundedCornerShape(3.dp),
+        colors = colors,
+        border = BorderStroke(2.dp, if (enabled) AC.Accent else AC.BtnBorder),
+        content = content
+    )
+}
+
+/** Scheda PC 7 (selezionabile): quadrato nero se attiva, grigio se no. Sostituisce i FilterChip. */
+@Composable
+fun PcChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(3.dp))
+            .background(if (selected) AC.Btn else AC.Surface)
+            .border(2.dp, if (selected) AC.Accent else AC.BtnBorder, RoundedCornerShape(3.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CompositionLocalProvider(LocalContentColor provides if (selected) AC.Accent else AC.Text) {
+            label()
+        }
+    }
 }
 
 fun money(v: Long): String =

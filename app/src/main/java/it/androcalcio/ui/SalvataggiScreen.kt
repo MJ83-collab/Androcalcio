@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,11 +58,11 @@ fun SalvataggiScreen(
                     if (s.empty) Text("Vuoto", color = AC.TextDim)
                     else Text("${s.teamName} · ${s.season}\nSalvato il ${s.date}")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
+                        PcAction(onClick = {
                             if (s.empty) onSave(s.n) else pending = SlotAction.SALVA to s
                         }) { Text("Salva") }
                         if (!s.empty) {
-                            Button(onClick = { pending = SlotAction.CARICA to s }) { Text("Carica") }
+                            PcAction(onClick = { pending = SlotAction.CARICA to s }) { Text("Carica") }
                             TextButton(onClick = { pending = SlotAction.CANCELLA to s }) {
                                 Text("Cancella", color = AC.Danger)
                             }
@@ -84,7 +87,7 @@ fun SalvataggiScreen(
             title = { Text(title) },
             text = { Text(body) },
             confirmButton = {
-                Button(onClick = {
+                PcAction(onClick = {
                     when (action) {
                         SlotAction.SALVA -> onSave(s.n)
                         SlotAction.CARICA -> onLoad(s.n)

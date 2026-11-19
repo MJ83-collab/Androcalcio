@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.runtime.remember
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
@@ -78,7 +81,7 @@ fun CalendarioScreen(
         onDismissRequest = { askNext = false },
         title = { Text("Prossima giornata") },
         text = { Text("Vuoi guardare la tua partita dal vivo (pausa, cambi, mentalità) o avere solo il risultato?") },
-        confirmButton = { Button(onClick = { askNext = false; onNextLive() }) { Text("Guarda la partita") } },
+        confirmButton = { PcAction(onClick = { askNext = false; onNextLive() }) { Text("Guarda la partita") } },
         dismissButton = { TextButton(onClick = { askNext = false; onNext() }) { Text("Solo risultato") } }
     )
     if (team == null) return
@@ -188,7 +191,7 @@ fun CalendarioScreen(
                 style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items((1..lastRound).toList()) { r ->
-                    FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
+                    PcChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
                 }
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -201,7 +204,7 @@ fun CalendarioScreen(
                 style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items((1..lastRound).toList()) { r ->
-                    FilterChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
+                    PcChip(selected = r == shown, onClick = { round = r }, label = { Text("$r") })
                 }
             }
             val league = teams.filter { it.nazione == team.nazione && it.campionato == team.campionato }

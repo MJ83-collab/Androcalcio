@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -83,17 +86,17 @@ fun MercatoScreen(
             StatChip("Rosa", "${mySquad.size} / ${Market.MAX_SQUAD}", Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Acquista") })
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Vendi") })
+            PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Acquista") })
+            PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Vendi") })
         }
 
         if (tab == 0) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(roleFilters) { (code, label) ->
-                    FilterChip(selected = role == code, onClick = { onRole(code) }, label = { Text(label) })
+                    PcChip(selected = role == code, onClick = { onRole(code) }, label = { Text(label) })
                 }
                 item {
-                    FilterChip(
+                    PcChip(
                         selected = affordable, onClick = { affordable = !affordable },
                         label = { Text("Alla mia portata") }
                     )
@@ -136,14 +139,14 @@ fun MercatoScreen(
                     Text("Valore di mercato ${money(Market.value(p))}", color = AC.TextDim)
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(onClick = { amount = (amount - step).coerceAtLeast(step) }) { Text("−") }
+                        PcAction(onClick = { amount = (amount - step).coerceAtLeast(step) }) { Text("−") }
                         Text(money(amount), fontWeight = FontWeight.Bold, color = AC.Accent)
-                        OutlinedButton(onClick = { amount += step }) { Text("+") }
+                        PcAction(onClick = { amount += step }) { Text("+") }
                     }
                 }
             },
             confirmButton = {
-                Button(
+                PcAction(
                     onClick = { onOffer(p, amount); target = null },
                     colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
                 ) { Text("Offri") }
@@ -158,7 +161,7 @@ fun MercatoScreen(
             onDismissRequest = { sellTarget = null },
             title = { Text("Vendere ${p.name}?") },
             text = { Text("Un club offre ${money(price)}.") },
-            confirmButton = { Button(onClick = { onSell(p); sellTarget = null }) { Text("Vendi") } },
+            confirmButton = { PcAction(onClick = { onSell(p); sellTarget = null }) { Text("Vendi") } },
             dismissButton = { TextButton(onClick = { sellTarget = null }) { Text("Annulla") } }
         )
     }
@@ -169,7 +172,7 @@ fun MercatoScreen(
                 onDismissRequest = onDismiss,
                 title = { Text("Controfferta") },
                 text = { Text("Il club chiede ${money(r.price)} per ${r.player.name}.") },
-                confirmButton = { Button(onClick = { onOffer(r.player, r.price) }) { Text("Accetta") } },
+                confirmButton = { PcAction(onClick = { onOffer(r.player, r.price) }) { Text("Accetta") } },
                 dismissButton = { TextButton(onClick = onDismiss) { Text("Rifiuta") } }
             )
             is OfferResult.Accepted -> AlertDialog(

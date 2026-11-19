@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -93,13 +96,13 @@ fun VivaioScreen(
             StatChip("Budget", money(team.budget), Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Giovani") })
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Scouting") })
+            PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Giovani") })
+            PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Scouting") })
         }
 
         if (tab == 0) {
             if (team.youthClaimed != season) {
-                Button(
+                PcAction(
                     onClick = onGenerate, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
                 ) { Text("Nuova leva $season") }
@@ -128,7 +131,7 @@ fun VivaioScreen(
                                 modifier = Modifier.padding(top = 8.dp), color = AC.Accent
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = { onPromote(y) }) { Text("Promuovi") }
+                                PcAction(onClick = { onPromote(y) }) { Text("Promuovi") }
                                 TextButton(onClick = { onDiscard(y) }) { Text("Scarta") }
                             }
                         }
@@ -138,13 +141,13 @@ fun VivaioScreen(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(leagues) { l ->
-                    FilterChip(
+                    PcChip(
                         selected = l == active, onClick = { league = l },
                         label = { Text(l.replace("|", " · ")) }
                     )
                 }
             }
-            Button(
+            PcAction(
                 onClick = { val (n, c) = active.split("|"); onScout(n, c) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)

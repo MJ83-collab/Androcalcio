@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,8 +58,8 @@ fun StatsScreen(
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("${team.campionato} $season", style = MaterialTheme.typography.headlineSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Marcatori") })
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Portieri") })
+            PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Marcatori") })
+            PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Portieri") })
         }
         if (lastPlayed == 0) {
             Text("Nessuna giornata giocata: gioca dal Calendario.", color = AC.TextDim)
@@ -64,7 +67,7 @@ fun StatsScreen(
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items((1..lastPlayed).toList()) { r ->
-                FilterChip(selected = r == upTo, onClick = { pick = r }, label = { Text("$r") })
+                PcChip(selected = r == upTo, onClick = { pick = r }, label = { Text("$r") })
             }
         }
         Text("Fino alla giornata $upTo", style = MaterialTheme.typography.bodySmall, color = AC.TextDim)

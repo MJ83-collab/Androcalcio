@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -100,13 +103,13 @@ fun EditorScreen(
                             "Caricare personalizzati o predefiniti azzera calendario, risultati e giovani.",
                         style = MaterialTheme.typography.bodySmall, color = AC.TextDim
                     )
-                    Button(
+                    PcAction(
                         onClick = { vm.saveCustom() }, modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
                     ) { Text("Salva come personalizzati") }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { export.launch("androcalcio-dati.json") }) { Text("Esporta JSON") }
-                        OutlinedButton(onClick = { import.launch(arrayOf("*/*")) }) { Text("Importa JSON") }
+                        PcAction(onClick = { export.launch("androcalcio-dati.json") }) { Text("Esporta JSON") }
+                        PcAction(onClick = { import.launch(arrayOf("*/*")) }) { Text("Importa JSON") }
                     }
                     TextButton(onClick = { confirmReset = true }) { Text("Ripristina dati predefiniti") }
                 }
@@ -123,7 +126,7 @@ fun EditorScreen(
                 NumF("Prezzo biglietto (€)", ticket) { ticket = it }
                 NumF("Abilità allenatore giovanili (1-99)", coach) { coach = it }
                 NumF("Abilità scout (1-99)", scout) { scout = it }
-                Button(onClick = {
+                PcAction(onClick = {
                     vm.saveTeam(team.copy(
                         name = name.ifBlank { team.name },
                         shortName = sigla.uppercase().ifBlank { team.shortName },
@@ -138,7 +141,7 @@ fun EditorScreen(
             }
         }
         item { SectionTitle("Giocatori (tocca per modificare)") }
-        item { OutlinedButton(onClick = { vm.addPlayer() }) { Text("Aggiungi giocatore") } }
+        item { PcAction(onClick = { vm.addPlayer() }) { Text("Aggiungi giocatore") } }
         items(players, key = { it.id }) { p ->
             GlassCard(Modifier.fillMaxWidth().clickable { editing = p }) {
                 Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -166,7 +169,7 @@ fun EditorScreen(
                     TextF("Nome", pn) { pn = it }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("P", "D", "C", "A").forEach { r ->
-                            FilterChip(selected = role == r, onClick = { role = r }, label = { Text(r) })
+                            PcChip(selected = role == r, onClick = { role = r }, label = { Text(r) })
                         }
                     }
                     NumF("Età", age) { age = it }
@@ -178,7 +181,7 @@ fun EditorScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = {
+                PcAction(onClick = {
                     val newOv = (ov.toIntOrNull() ?: p.overall).coerceIn(1, 99)
                     vm.savePlayer(p.copy(
                         name = pn.ifBlank { p.name }, role = role,
@@ -206,7 +209,7 @@ fun EditorScreen(
             onDismissRequest = { confirmReset = false },
             title = { Text("Ripristinare i predefiniti?") },
             text = { Text("Le squadre tornano ai dati iniziali e calendario, risultati e giovani vengono azzerati. La copia personalizzata salvata non viene toccata.") },
-            confirmButton = { Button(onClick = { vm.resetDefaults(); confirmReset = false }) { Text("Ripristina") } },
+            confirmButton = { PcAction(onClick = { vm.resetDefaults(); confirmReset = false }) { Text("Ripristina") } },
             dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Annulla") } }
         )
     }

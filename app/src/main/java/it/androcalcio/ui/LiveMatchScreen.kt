@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -67,21 +70,21 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         if (!m.finished) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { vm.setLivePaused(!info.paused) },
+                    PcAction(onClick = { vm.setLivePaused(!info.paused) },
                         colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)) {
                         Text(if (info.paused) "Riprendi" else "Pausa")
                     }
-                    Button(onClick = { vm.setLivePaused(true); subOpen = true },
+                    PcAction(onClick = { vm.setLivePaused(true); subOpen = true },
                         enabled = mySubs < MatchEngine.MAX_SUBS) {
                         Text("Cambi ($mySubs/${MatchEngine.MAX_SUBS})")
                     }
-                    OutlinedButton(onClick = { vm.liveSkip() }) { Text("Fine") }
+                    PcAction(onClick = { vm.liveSkip() }) { Text("Fine") }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(1, 2, 4, 20).forEach { x ->
-                        FilterChip(selected = info.speed == x, onClick = { vm.setLiveSpeed(x) }, label = { Text("×$x") })
+                        PcChip(selected = info.speed == x, onClick = { vm.setLiveSpeed(x) }, label = { Text("×$x") })
                     }
                 }
             }
@@ -96,7 +99,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
             }
         } else {
             item {
-                Button(onClick = { vm.closeLive() }, modifier = Modifier.fillMaxWidth(), enabled = info.saved || info.league == null,
+                PcAction(onClick = { vm.closeLive() }, modifier = Modifier.fillMaxWidth(), enabled = info.saved || info.league == null,
                     colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)) {
                     Text(if (info.league != null) "Torna al calendario" else "Chiudi")
                 }
@@ -153,7 +156,7 @@ private fun SubDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onDone(out, inP) }, enabled = out != null && inP != null) { Text("Conferma cambio") }
+            PcAction(onClick = { onDone(out, inP) }, enabled = out != null && inP != null) { Text("Conferma cambio") }
         },
         dismissButton = {
             TextButton(onClick = { if (out != null) { out = null; inP = null } else onDone(null, null) }) {

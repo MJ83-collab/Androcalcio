@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.PcChip
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -101,7 +104,7 @@ fun StaffScreen(
 
         item { SectionTitle("Candidati") }
         item {
-            Button(
+            PcAction(
                 onClick = onRefresh, modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
             ) { Text("Nuovi candidati") }
@@ -117,7 +120,7 @@ fun StaffScreen(
                     )
                     Text(effetto(c), modifier = Modifier.padding(top = 6.dp),
                         style = MaterialTheme.typography.bodySmall, color = AC.Accent)
-                    Button(onClick = { onHire(c) }, modifier = Modifier.padding(top = 6.dp)) { Text("Ingaggia") }
+                    PcAction(onClick = { onHire(c) }, modifier = Modifier.padding(top = 6.dp)) { Text("Ingaggia") }
                 }
             }
         }
