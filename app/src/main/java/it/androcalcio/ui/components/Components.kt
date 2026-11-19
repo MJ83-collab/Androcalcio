@@ -30,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -38,6 +41,22 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.data.Team
 import it.androcalcio.ui.theme.AC
 import java.util.Locale
+
+
+/** Effetto rilievo dei vecchi gestionali: luce in alto a sinistra, ombra in basso a destra (invertiti se premuto). */
+fun Modifier.bevel(raised: Boolean = true, w: Dp = 2.dp): Modifier = this.drawBehind {
+    val t = w.toPx()
+    val light = Color.White.copy(alpha = 0.55f)
+    val dark = Color.Black.copy(alpha = 0.55f)
+    val (tl, br) = if (raised) light to dark else dark to light
+    drawRect(tl, topLeft = Offset(0f, 0f), size = Size(size.width, t))
+    drawRect(tl, topLeft = Offset(0f, 0f), size = Size(t, size.height))
+    drawRect(br, topLeft = Offset(0f, size.height - t), size = Size(size.width, t))
+    drawRect(br, topLeft = Offset(size.width - t, 0f), size = Size(t, size.height))
+}
+
+/** Sfumatura verticale dei pulsanti PC 7. */
+val BtnGradient = Brush.verticalGradient(listOf(Color(0xFF30303C), Color(0xFF07070B)))
 
 /** Stemma generato dai colori della squadra: due tinte in diagonale e la sigla. */
 @Composable
@@ -75,7 +94,7 @@ fun GlassCard(
     content: @Composable () -> Unit
 ) {
     Surface(
-        modifier = modifier,
+        modifier = if (AC.pc7) modifier.bevel() else modifier,
         shape = RoundedCornerShape(if (AC.pc7) 3.dp else 18.dp),
         color = AC.Surface,
         border = BorderStroke(if (AC.pc7) 2.dp else 1.dp, AC.Border),
@@ -95,8 +114,9 @@ fun PcButton(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(3.dp))
-            .background(AC.Btn)
+            .background(BtnGradient)
             .border(2.dp, if (main) AC.Accent else AC.BtnBorder, RoundedCornerShape(3.dp))
+            .bevel()
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
@@ -119,7 +139,8 @@ fun PaperPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.(
         modifier = modifier
             .clip(RoundedCornerShape(2.dp))
             .background(AC.Paper)
-            .border(2.dp, AC.Btn, RoundedCornerShape(2.dp)),
+            .border(2.dp, AC.Btn, RoundedCornerShape(2.dp))
+            .bevel(w = 1.dp),
         content = content
     )
 }
@@ -139,6 +160,7 @@ fun PaperRow(index: Int, modifier: Modifier = Modifier, content: @Composable Row
     Row(
         modifier = modifier.fillMaxWidth()
             .background(if (index % 2 == 0) AC.Paper else AC.PaperAlt)
+            .drawBehind { drawRect(AC.PaperLine, Offset(0f, size.height - 1f), Size(size.width, 1f)) }
             .padding(horizontal = 6.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content
@@ -206,8 +228,9 @@ fun PcChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(3.dp))
-            .background(if (selected) AC.Btn else AC.Surface)
+            .background(if (selected) BtnGradient else Brush.verticalGradient(listOf(AC.SurfaceHi, AC.Surface)))
             .border(2.dp, if (selected) AC.Accent else AC.BtnBorder, RoundedCornerShape(3.dp))
+            .bevel(raised = !selected)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center

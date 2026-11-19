@@ -1,6 +1,7 @@
 package it.androcalcio.ui
 
 import it.androcalcio.ui.components.PcAction
+import it.androcalcio.ui.components.bevel
 import it.androcalcio.ui.components.PcChip
 
 import it.androcalcio.engine.DefLine
@@ -163,7 +164,9 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     ) { padding ->
         Column(
             Modifier.padding(padding).fillMaxSize().background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.Bg, AC.Surface))
+                if (AC.pc7) androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(Color(0xFF4652B8), Color(0xFF2A3A8C), Color(0xFF1B2461)))
+                else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.Bg, AC.Surface))
             )
         ) {
         HeaderBar(team, season, screen)
@@ -319,7 +322,7 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
     ) {
         Column(Modifier.weight(1.15f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(
-                Modifier.fillMaxWidth().clip(shape).background(Color(0xFFD5DEF5)).border(1.dp, AC.Btn, shape)
+                Modifier.fillMaxWidth().clip(shape).background(Color(0xFFD5DEF5)).border(1.dp, AC.Btn, shape).bevel(w = 1.dp)
                     .padding(horizontal = 5.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -329,7 +332,7 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
             }
             Text(
                 "${flagOf(team?.nazione ?: "")} ${team?.campionato ?: ""}",
-                Modifier.fillMaxWidth().clip(shape).background(Color(0xFF2E3F8F)).border(1.dp, AC.Btn, shape)
+                Modifier.fillMaxWidth().clip(shape).background(Color(0xFF2E3F8F)).border(1.dp, AC.Btn, shape).bevel(w = 1.dp)
                     .padding(horizontal = 5.dp, vertical = 3.dp),
                 color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1
             )
@@ -337,7 +340,7 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
         Box(
             Modifier.weight(1.2f).height(40.dp).clip(shape)
                 .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.BannerTop, AC.BannerBottom)))
-                .border(2.dp, Color(0xFF2B3A7A), shape),
+                .border(2.dp, Color(0xFF2B3A7A), shape).bevel(),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -350,7 +353,7 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
             )
         }
         Column(
-            Modifier.weight(0.8f).clip(shape).background(Color.White).border(1.dp, AC.Btn, shape)
+            Modifier.weight(0.8f).clip(shape).background(Color.White).border(1.dp, AC.Btn, shape).bevel(w = 1.dp)
                 .padding(vertical = 3.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -373,7 +376,10 @@ fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
             Text(
                 sc.label,
                 modifier = Modifier.fillMaxWidth()
-                    .background(if (AC.pc7) (if (on) AC.Btn else AC.Surface) else if (on) AC.Accent.copy(alpha = 0.2f) else Color.Transparent)
+                    .background(if (AC.pc7) (if (on) it.androcalcio.ui.components.BtnGradient
+                        else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.SurfaceHi, AC.Surface)))
+                        else androidx.compose.ui.graphics.SolidColor(if (on) AC.Accent.copy(alpha = 0.2f) else Color.Transparent))
+                    .then(if (AC.pc7) Modifier.bevel(raised = !on, w = 1.dp) else Modifier)
                     .clickable { onSelect(sc) }
                     .padding(horizontal = 10.dp, vertical = 11.dp),
                 style = MaterialTheme.typography.bodyMedium,
