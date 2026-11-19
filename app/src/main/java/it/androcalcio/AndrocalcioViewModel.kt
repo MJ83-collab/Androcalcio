@@ -205,10 +205,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private fun key(t: Team) = "${t.nazione}|${t.campionato}"
 
     /** Consigli dell'allenatore in seconda: undici in forma e notizie sul prossimo avversario. */
-    val assistantAdvice: StateFlow<AssistantCoach.Advice?> =
+    val assistantAdvice: StateFlow<AssistantCoach.Advice?> by lazy {
         combine(selectedTeam, matches, players) { t, ms, _ -> t to ms }
             .map { (t, ms) -> if (t == null) null else buildAssistantAdvice(t, ms) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    }
 
     private suspend fun buildAssistantAdvice(me: Team, ms: List<MatchResult>): AssistantCoach.Advice {
         val vice = dao.staffOnce(me.id).firstOrNull { it.role == Staffing.ASSISTENTE }
