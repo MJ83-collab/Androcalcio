@@ -81,6 +81,9 @@ import it.androcalcio.data.Team
 import it.androcalcio.engine.Progression
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
+import it.androcalcio.ui.components.PaperRow
+import it.androcalcio.ui.components.HeadCell
+import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.components.StatChip
 import it.androcalcio.ui.components.money
@@ -532,62 +535,50 @@ fun RosaScreen(
         )
     }
     LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Crest(team, size = 40.dp)
-                Text(
-                    team.name,
-                    modifier = Modifier.padding(start = 12.dp),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            }
-        }
+        item { RosaTable(players, onToggleStarter) { sheet = it } }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
-        item { RosaHeaderRow() }
-        items(players, key = { it.id }) { p ->
-            val idx = players.indexOf(p)
-            Row(
-                Modifier.fillMaxWidth()
-                    .background(if (idx % 2 == 0) AC.Surface else AC.SurfaceHi.copy(alpha = 0.55f))
-                    .clickable { sheet = p }.padding(horizontal = 6.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Tocco sul pallino: titolare sì/no
-                Text(if (p.starter) "●" else "○", Modifier.width(24.dp).clickable { onToggleStarter(p) },
-                    color = if (p.starter) AC.Accent else AC.TextDim, textAlign = TextAlign.Center)
-                Text(p.role, Modifier.width(18.dp), color = roleColor(p.role), fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall)
-                Text(p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.weight(1f), maxLines = 1,
-                    color = if (p.injuredRounds > 0) AC.Danger else AC.Text, style = MaterialTheme.typography.bodySmall)
-                listOf(p.age, p.ve, p.re, p.qu, p.fo, p.overall).forEach { v ->
-                    Text("$v", Modifier.width(26.dp), textAlign = TextAlign.End,
-                        color = if (v == p.overall) AC.Accent else AC.Text,
-                        fontWeight = if (v == p.overall) FontWeight.Bold else FontWeight.Normal,
-                        style = MaterialTheme.typography.bodySmall)
-                }
-                Text("${p.condition}", Modifier.width(26.dp), textAlign = TextAlign.End,
-                    color = if (p.condition < 60) AC.Danger else if (p.condition < 80) AC.Warn else AC.Ok,
-                    style = MaterialTheme.typography.bodySmall)
-            }
-        }
     }
 }
 
+private fun roleName(r: String) = when (r) { "P" -> "POR"; "D" -> "DIF"; "C" -> "MED"; else -> "ATT" }
+
+/** Rosa a tabella su carta bianca (stile PC Calcio 7). Scorre in orizzontale per mostrare tutte le colonne. */
 @Composable
-private fun RosaHeaderRow() {
-    Row(Modifier.fillMaxWidth().background(AC.Accent.copy(alpha = 0.18f)).padding(horizontal = 6.dp, vertical = 6.dp)) {
-        Text("T", Modifier.width(24.dp), color = AC.Accent, textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelSmall)
-        Text("R", Modifier.width(18.dp), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
-        Text("Nome", Modifier.weight(1f), color = AC.Accent, style = MaterialTheme.typography.labelSmall)
-        listOf("ET", "VE", "RE", "QU", "FO", "LIV", "CF").forEach {
-            Text(it, Modifier.width(26.dp), textAlign = TextAlign.End, color = AC.Accent,
-                style = MaterialTheme.typography.labelSmall)
+private fun RosaTable(players: List<Player>, onToggleStarter: (Player) -> Unit, onOpen: (Player) -> Unit) {
+    val stats = listOf("EN", "VE", "RE", "AG", "QU", "FO", "CF", "LIV")
+    val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColGreen, AC.ColOrange)
+    PaperPanel(Modifier.fillMaxWidth()) {
+        Column(Modifier.horizontalScroll(rememberScrollState())) {
+            Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                HeadCell("T", AC.PaperText, Modifier.width(24.dp))
+                HeadCell("GIOCATORE", AC.PaperText, Modifier.width(118.dp), TextAlign.Start)
+                stats.forEachIndexed { i, h -> HeadCell(h, statColor[i], Modifier.width(30.dp)) }
+                HeadCell("POS", AC.PaperText, Modifier.width(38.dp))
+            }
+            players.forEachIndexed { i, p ->
+                PaperRow(i, Modifier.clickable { onOpen(p) }) {
+                    Text(if (p.starter) "●" else "○",
+                        Modifier.width(24.dp).clickable { onToggleStarter(p) },
+                        color = if (p.starter) AC.ColGreen else AC.PaperLine,
+                        textAlign = TextAlign.Center, fontSize = 14.sp)
+                    Text(p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
+                        color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
+                        fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    val values = listOf(p.en, p.ve, p.re, p.ag, p.qu, p.fo, p.condition, p.overall)
+                    values.forEachIndexed { k, v ->
+                        Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
+                            fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium,
+                            color = if (k == 6 && v < 60) AC.ColEn else if (k == 6 && v < 80) AC.ColOrange else AC.PaperText)
+                    }
+                    Text(roleName(p.role), Modifier.width(38.dp), textAlign = TextAlign.Center,
+                        fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
+                }
+            }
         }
     }
 }
