@@ -42,7 +42,8 @@ data class MatchReport(
  */
 object MatchEngine {
 
-    internal const val ATTACK_PER_MINUTE = 0.28
+    // Ritoccato da 0,28 a 0,26 per compensare i rigori e le punizioni in più (gol/partita tornava vicino a 3,0)
+    internal const val ATTACK_PER_MINUTE = 0.26
 
     // Calci piazzati, tarati su medie reali (fonti: CIES, Premier League, Analyst, Fantacalcio):
     /** Rigori: ~0,30 a partita. Serie A 2025/26 ~0,27 (102 in 380 gare); Champions ~0,47; top 5 leghe ~0,36. */
