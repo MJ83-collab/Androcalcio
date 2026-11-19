@@ -77,7 +77,9 @@ data class MatchResult(
     val homeGoals: Int,
     val awayGoals: Int,
     val league: String = "",
-    val played: Boolean = false
+    val played: Boolean = false,
+    @ColumnInfo(defaultValue = "-1") val homePens: Int = -1,   // rigori in coppa; -1 = non giocati
+    @ColumnInfo(defaultValue = "-1") val awayPens: Int = -1
 )
 
 @Entity(tableName = "youths")

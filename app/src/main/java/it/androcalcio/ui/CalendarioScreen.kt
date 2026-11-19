@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -200,10 +201,11 @@ private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: In
         Text(h?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w,
             textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)
         Box(
-            Modifier.padding(horizontal = 6.dp).width(54.dp).background(AC.Btn).padding(vertical = 3.dp),
+            Modifier.padding(horizontal = 6.dp).widthIn(min = 54.dp).background(AC.Btn).padding(vertical = 3.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(if (m.played) "${m.homeGoals} - ${m.awayGoals}" else "-", color = Color.White,
+            val pens = if (m.homePens >= 0) "  rig ${m.homePens}-${m.awayPens}" else ""
+            Text(if (m.played) "${m.homeGoals} - ${m.awayGoals}$pens" else "-", color = Color.White,
                 fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
         }
         Text(a?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w, fontSize = 12.sp, maxLines = 1)

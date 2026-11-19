@@ -293,7 +293,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
             if (lineupNotes.isNotEmpty()) _notice.value = lineupNotes.distinct().joinToString("\n")
-            // Coppa: se il turno è finito, sorteggia il successivo
+            // Coppa: supplementari e rigori nelle parità, poi il turno successivo se è finito
+            finalizeCup(t.nazione, _season.value, rng)
             val ck = Cup.key(t.nazione)
             dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), teamsById.values.toList(),
                 strengthOf(), _season.value, ck, t.nazione, kotlin.random.Random.Default))
@@ -412,8 +413,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         if (mr != null && Cup.isCup(mr.round)) {
-            // Partita di coppa: se il turno è concluso, sorteggia il successivo
+            // Partita di coppa: supplementari e rigori se in parità, poi il turno successivo se è finito
             selectedTeam.value?.let { t ->
+                val fin = finalizeCup(t.nazione, _season.value, kotlin.random.Random.Default)
+                fin.find { it.id == mr.id && it.homePens >= 0 }?.let {
+                    _notice.value = "Parità dopo 90': supplementari e rigori, ${it.homePens}-${it.awayPens}."
+                }
                 val ck = Cup.key(t.nazione)
                 val nation = dao.allTeams().filter { it.nazione == t.nazione }
                 dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), nation, strengthOf(),
@@ -756,6 +761,16 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Fine stagione: età, crescita, ritiri, contratti, bilancio; nuova stagione. */
+    /** Supplementari e rigori per le partite di coppa giocate in parità (una sola volta per partita). */
+    private suspend fun finalizeCup(nazione: String, s: String, rng: kotlin.random.Random): List<MatchResult> {
+        val all = dao.matchesOnce(Cup.key(nazione), s)
+        val changed = all.filter { it.played && it.homePens < 0 }.mapNotNull { m ->
+            Cup.finalize(m, all, rng).takeIf { it != m }
+        }
+        if (changed.isNotEmpty()) dao.updateMatches(changed)
+        return changed
+    }
+
     /** Simula una partita di coppa in chiusura stagione: stesse regole delle giornate di campionato. */
     private suspend fun simCupMatch(
         h: Team, a: Team, me: Team, cache: HashMap<Long, List<Player>>,
@@ -876,6 +891,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     if (done.isEmpty()) break
                     dao.updateMatches(done)
+                    finalizeCup(nazione, s, rng)
                     dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, s), nTeams, strength, s, ck,
                         nazione, rng))
                 }
