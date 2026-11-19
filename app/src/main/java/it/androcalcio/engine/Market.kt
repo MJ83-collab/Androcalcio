@@ -13,17 +13,23 @@ object Market {
     const val MAX_SQUAD = 30
     const val MIN_SQUAD = 15
 
-    /** Valore di mercato: cresce col quadrato del livello, scende con l'età. */
+    /** Valore di mercato di un giocatore di quel livello a 26-29 anni, scala reale:
+     *  60 ≈ 0,6 M · 70 ≈ 4 M · 75 ≈ 10 M · 80 ≈ 25 M · 85 ≈ 62 M · 90 ≈ 153 M (+20% per punto). */
+    fun valueAt(level: Int): Double = 4_000_000.0 * Math.pow(1.2, (level - 70).toDouble())
+
+    /** Valore di mercato alla FM: livello attuale, per i giovani conta metà del potenziale, poi l'età. */
     fun value(p: Player): Long {
-        val base = (p.overall - 40).coerceAtLeast(1).let { it.toLong() * it } * 12_000L
+        val level = if (p.age < 24) p.overall + (p.potential - p.overall).coerceAtLeast(0) / 2 else p.overall
         val age = when {
-            p.age < 22 -> 1.4
-            p.age < 26 -> 1.2
+            p.age < 22 -> 1.3
+            p.age < 26 -> 1.15
             p.age < 30 -> 1.0
-            p.age < 33 -> 0.6
-            else -> 0.3
+            p.age < 32 -> 0.7
+            p.age < 34 -> 0.45
+            else -> 0.25
         }
-        return ((base * age).toLong() / 10_000L) * 10_000L
+        val v = (valueAt(level) * age).toLong().coerceAtLeast(50_000L)
+        return if (v >= 1_000_000L) v / 100_000L * 100_000L else v / 10_000L * 10_000L
     }
 
     /** Richiesta del club venditore: tra 95% e 125% del valore, fissa per ogni giocatore. */

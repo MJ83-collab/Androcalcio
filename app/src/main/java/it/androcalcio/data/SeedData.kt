@@ -1,5 +1,6 @@
 package it.androcalcio.data
 
+import it.androcalcio.engine.Market
 import android.content.Context
 import android.graphics.Color
 import it.androcalcio.engine.Attr
@@ -59,6 +60,9 @@ object SeedData {
             }
         }
 
+        val sizes = (0 until arr.length()).map { arr.getJSONObject(it).let { o -> o.getString("nazione") + "|" + o.getString("campionato") } }
+            .groupingBy { it }.eachCount()
+        val posSeen = mutableMapOf<String, Int>()
         val teams = mutableListOf<Team>()
         val tiers = mutableListOf<Int>()
         for (i in 0 until arr.length()) {
@@ -68,13 +72,18 @@ object SeedData {
             val name = o.getString("squadra")
             val tier = tierOf[n + "|" + camp] ?: 0
             val rng = Random(name.hashCode())
+            // budget: circa 3 volte il valore di un titolare medio della squadra (scala FC)
+            val key = n + "|" + camp
+            val pos = posSeen.getOrDefault(key, 0).also { posSeen[key] = it + 1 }
+            val (top, bottom) = leagueRange(n, tier)
+            val baseStrength = top - (top - bottom) * pos / (sizes.getValue(key) - 1).coerceAtLeast(1)
+            val budget = (3.0 * Market.valueAt(baseStrength)).toLong()
             teams += Team(
                 name = name,
                 shortName = o.getString("sigla"),
                 colorPrimary = Color.parseColor(o.getString("colore1")).toLong() and 0xFFFFFFFFL,
                 colorSecondary = Color.parseColor(o.getString("colore2")).toLong() and 0xFFFFFFFFL,
-                budget = (40_000_000L - tier * 9_000_000L).coerceAtLeast(1_000_000L) +
-                    rng.nextLong(0, 5_000_000L),
+                budget = (budget + rng.nextLong(0, budget / 10 + 1)) / 100_000L * 100_000L,
                 stadiumCapacity = (50_000 - tier * 9_000).coerceAtLeast(3_000) + rng.nextInt(0, 4_000),
                 ticketPrice = (45 - tier * 8).coerceAtLeast(8),
                 sponsor = o.getString("sponsor"),
@@ -104,13 +113,12 @@ object SeedData {
             val strength = top - (top - bottom) * rank[idx] / (n - 1).coerceAtLeast(1) + rng.nextInt(-1, 2)
             val nat = codes[team.nazione] ?: "ITA"
 
-            // stelle 88-95: poche, solo nelle europee di vertice
+            // stelle 86-91: poche, solo nelle europee di vertice
             val starSlots = mutableSetOf<Int>()
             if (!southAm && tiers[idx] == 0) {
-                val stars = when {
-                    strength >= 81 -> rng.nextInt(1, 3)
-                    strength >= 79 -> if (rng.nextInt(100) < 50) 1 else 0
-                    strength >= 76 -> if (rng.nextInt(100) < 12) 1 else 0
+                val stars = when {                  // al massimo una stella per squadra
+                    strength >= 81 -> 1
+                    strength >= 79 -> if (rng.nextInt(100) < 35) 1 else 0
                     else -> 0
                 }
                 repeat(stars) { starSlots += STARTERS.random(rng) }
@@ -129,11 +137,11 @@ object SeedData {
                 when (slot) {
                     in starSlots -> {
                         age = rng.nextInt(23, 33)
-                        ov = when (rng.nextInt(100)) {
-                            in 0..54 -> rng.nextInt(88, 90)
-                            in 55..84 -> rng.nextInt(90, 92)
-                            in 85..96 -> rng.nextInt(92, 94)
-                            else -> rng.nextInt(94, 96)
+                        ov = when (rng.nextInt(100)) {   // scala FC: 91 è il massimo
+                            in 0..49 -> rng.nextInt(86, 88)
+                            in 50..84 -> rng.nextInt(88, 90)
+                            in 85..96 -> 90
+                            else -> 91
                         }
                         pot = ov + rng.nextInt(0, 3)
                     }
@@ -145,7 +153,7 @@ object SeedData {
                         else -> rng.nextInt(0, 4)
                     }
                 }
-                ov = ov.coerceIn(40, 95)
+                ov = ov.coerceIn(40, 91)
                 players += Attr.fill(Player(
                     teamId = ids[idx],
                     name = "${initials[rng.nextInt(initials.length)]}. ${surnames[rng.nextInt(surnames.size)]}",
