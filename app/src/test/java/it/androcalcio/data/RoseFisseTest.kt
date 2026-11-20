@@ -46,6 +46,11 @@ class RoseFisseTest {
                 "Le rose generate non coincidono con assets/rose_fisse.csv: rigenera il file dall'artifact",
                 congelato.readText(), csv
             )
+        } else {
+            // Primo congelamento: il CSV finisce nel log della CI tra i due marcatori
+            println("ROSE_FISSE_INIZIO")
+            print(csv)
+            println("ROSE_FISSE_FINE")
         }
         assertTrue(csv.lines().size > 500)
     }
