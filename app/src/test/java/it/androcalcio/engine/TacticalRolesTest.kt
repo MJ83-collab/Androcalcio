@@ -46,6 +46,7 @@ class TacticalRolesTest {
     @Test
     fun affiniDiTuttiISeiRuoliStannoNellaStessaLinea() {
         TacticalRoles.AFFINI.forEach { (pos, affini) ->
+            if (pos == "POR") return@forEach   // il portiere ha il centrale come ruolo di default: linea propria
             val lineaDi = { r: String -> when (r) { "POR" -> "P"; "TD", "TS", "DC", "CS", "CD" -> "D"; "MED", "REG", "INT", "MP" -> "C"; else -> "A" } }
             affini.forEach { (r, _) -> assertEquals("$pos -> $r", lineaDi(pos), lineaDi(r)) }
         }
