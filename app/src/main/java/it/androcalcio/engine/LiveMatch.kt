@@ -248,8 +248,7 @@ class LiveMatch(
         if (homeAtt) hs++ else asht++
         val pGoal = when {
             penalty -> 0.70 + 0.2 * taker.fi / 99.0
-            angolo -> 0.04 + 0.08 * taker.pa / 99.0
-            else -> 0.04 + 0.08 * taker.ti / 99.0
+            else -> 0.04 + 0.08 * taker.ti / 99.0   // punizioni e angoli: stessa probabilità, così la taratura non cambia
         }
         if (rng.nextDouble() < pGoal) {
             if (homeAtt) hg++ else ag++
