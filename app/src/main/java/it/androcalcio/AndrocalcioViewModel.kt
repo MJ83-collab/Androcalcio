@@ -5,10 +5,10 @@ import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.ShirtNumbers
 import it.androcalcio.engine.Stadium
 import it.androcalcio.engine.Insurance
-import it.androcalcio.engine.Sponsors
+import it.androcalcio.engine.Sponsorship
 import it.androcalcio.engine.Evento
 import it.androcalcio.engine.Scelta
-import it.androcalcio.engine.Spogliatoiohip
+import it.androcalcio.engine.Spogliatoio
 import it.androcalcio.engine.TrainFocus
 import it.androcalcio.engine.TrainIntensity
 import it.androcalcio.engine.TrainingPlan
