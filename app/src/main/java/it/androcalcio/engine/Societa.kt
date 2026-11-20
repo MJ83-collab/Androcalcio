@@ -1,24 +1,48 @@
 package it.androcalcio.engine
 
 /**
- * Qualificazioni europee della Serie A (regole 2026-27 secondo Sky Sport):
- * 1°-4° in Champions League, 5° e vincitrice della Coppa Italia in Europa League, 6° in Conference League.
- * Semplificazione: se la vincitrice di coppa è già nei primi cinque, il posto extra non passa al sesto.
+ * Posti europei per la prima divisione di ogni nazione (2026-27): in Champions i primi `champions` in classifica,
+ * in Europa League `europa` posti (il secondo è della vincitrice di coppa nazionale, se non è già qualificata),
+ * in Conference League `conference` posti. Il posto che non va a una squadra scende alla successiva in classifica.
  */
 object Europa {
     const val CHAMPIONS = "Champions League"
     const val EUROPA = "Europa League"
     const val CONFERENCE = "Conference League"
 
+    data class Posti(val champions: Int, val europa: Int = 2, val conference: Int = 1)
+
+    /** Posti per nazione. Italia, Germania e Francia 4 in Champions; Spagna e Inghilterra 5 (posto extra per ranking). */
+    val POSTI = mapOf(
+        "Italia" to Posti(4), "Germania" to Posti(4), "Francia" to Posti(4),
+        "Spagna" to Posti(5), "Inghilterra" to Posti(5)
+    )
+
     /** classifica: id delle squadre in ordine di posizione; restituisce l'esito europeo per id. */
-    fun assegna(classifica: List<Long>, vincitriceCoppa: Long?): Map<Long, String> {
+    fun assegna(classifica: List<Long>, vincitriceCoppa: Long?, posti: Posti): Map<Long, String> {
         val out = HashMap<Long, String>()
-        classifica.take(4).forEach { out[it] = CHAMPIONS }
-        classifica.getOrNull(4)?.let { out[it] = EUROPA }
+        classifica.take(posti.champions).forEach { out[it] = CHAMPIONS }
+        // La vincitrice di coppa occupa un posto di Europa League solo se non è già qualificata
         if (vincitriceCoppa != null && vincitriceCoppa !in out) out[vincitriceCoppa] = EUROPA
-        classifica.firstOrNull { it !in out }?.let { out[it] = CONFERENCE }
+        for (id in classifica) {
+            if (out.values.count { it == EUROPA } >= posti.europa) break
+            if (id !in out) out[id] = EUROPA
+        }
+        var conf = 0
+        for (id in classifica) {
+            if (conf >= posti.conference) break
+            if (id !in out) { out[id] = CONFERENCE; conf++ }
+        }
         return out
     }
+}
+
+/** Copa Sudamericana: per Brasile e Argentina, 6 posti (qui i posti dal 7° al 12° della prima divisione). */
+object Sudamericana {
+    const val NOME = "Copa Sudamericana"
+
+    fun assegna(classifica: List<Long>): Map<Long, String> =
+        classifica.drop(6).take(6).associateWith { NOME }
 }
 
 /** Una riga della classifica di fine stagione. */

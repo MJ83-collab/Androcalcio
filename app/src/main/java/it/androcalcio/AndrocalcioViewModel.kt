@@ -6,6 +6,7 @@ import it.androcalcio.engine.Europa
 import it.androcalcio.engine.FineStagione
 import it.androcalcio.engine.Presidente
 import it.androcalcio.engine.RigaFine
+import it.androcalcio.engine.Sudamericana
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.ShirtNumbers
 import it.androcalcio.engine.Stadium
@@ -1737,12 +1738,22 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         }
                 }
             }
-            // Qualificazioni europee: solo Serie A, come da regole UEFA 2026-27
+            // Qualificazioni: prima divisione di ogni nazione europea (Champions, Europa, Conference)
+            // e di Brasile e Argentina (Copa Sudamericana)
             val europei = HashMap<Long, String>()
-            leagues.keys.firstOrNull { it.first == "Italia" && it.second == "Serie A" }?.let { ka ->
-                val vincitriceCoppa = Cup.finalMatch(dao.matchesOnce(Cup.key("Italia"), s))
-                    ?.let { Cup.winnerOfTie(listOf(it), strength) }
-                europei.putAll(Europa.assegna(finals.getValue(ka).map { it.team.id }, vincitriceCoppa))
+            val primeDivisioni = mapOf("Italia" to "Serie A", "Spagna" to "Primera", "Inghilterra" to "Premier",
+                "Germania" to "Bundesliga", "Francia" to "Ligue 1", "Brasile" to "Serie A", "Argentina" to "Primera")
+            primeDivisioni.forEach { (nazione, camp) ->
+                val st = finals[nazione to camp] ?: return@forEach
+                val ids = st.map { it.team.id }
+                val posti = Europa.POSTI[nazione]
+                if (posti != null) {
+                    val vincitriceCoppa = Cup.finalMatch(dao.matchesOnce(Cup.key(nazione), s))
+                        ?.let { Cup.winnerOfTie(listOf(it), strength) }
+                    europei.putAll(Europa.assegna(ids, vincitriceCoppa, posti))
+                } else {
+                    europei.putAll(Sudamericana.assegna(ids))
+                }
             }
             // Classifiche di fine stagione della tua nazione, con l'esito di ogni squadra
             _fine.value = FineStagione(
