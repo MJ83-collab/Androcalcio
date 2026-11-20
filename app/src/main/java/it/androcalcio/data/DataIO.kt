@@ -37,7 +37,7 @@ object DataIO {
             val sa = JSONArray()
             (staff[t.id] ?: emptyList()).forEach { s ->
                 sa.put(JSONObject()
-                    .put("role", s.role).put("name", s.name).put("skill", s.skill).put("stile", s.stile)
+                    .put("role", s.role).put("specialita", s.specialita).put("name", s.name).put("skill", s.skill).put("stile", s.stile)
                     .put("salary", s.salary).put("contract", s.contract))
             }
             arr.put(JSONObject()
@@ -111,7 +111,7 @@ object DataIO {
                     skill = s.getInt("skill").coerceIn(1, 99),
                     salary = s.getLong("salary"),
                     contract = s.getInt("contract").coerceIn(1, 5),
-                    stile = s.optString("stile", "DIFESA").takeIf { st -> Stile.values().any { it.name == st } } ?: "DIFESA"
+                    specialita = s.optString("specialita", ""), stile = s.optString("stile", "DIFESA").takeIf { st -> Stile.values().any { it.name == st } } ?: "DIFESA"
                 )
             }
         }
