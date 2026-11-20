@@ -13,7 +13,7 @@ object DataIO {
 
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()
-        dao.clearStaff(); dao.clearGoals(); dao.clearPlayers(); dao.clearTeams(); dao.clearMovimenti()
+        dao.clearStaff(); dao.clearGoals(); dao.clearPlayers(); dao.clearTeams(); dao.clearMovimenti(); dao.clearStato()
     }
 
     suspend fun export(dao: AndrocalcioDao): String {

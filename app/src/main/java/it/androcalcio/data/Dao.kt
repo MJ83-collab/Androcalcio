@@ -89,6 +89,14 @@ interface AndrocalcioDao {
     @Delete
     suspend fun deletePlayer(p: Player)
 
+    @Query("SELECT valore FROM stato WHERE chiave = :chiave")
+    suspend fun stato(chiave: String): String?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setStato(s: Stato)
+
+    @Query("DELETE FROM stato") suspend fun clearStato()
+
     @Query("DELETE FROM matches") suspend fun clearMatches()
     @Query("DELETE FROM youths") suspend fun clearYouths()
     @Query("DELETE FROM scout_reports") suspend fun clearReports()

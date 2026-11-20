@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class],
-    version = 17,
+    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class, Stato::class],
+    version = 18,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -78,6 +78,12 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `teams` ADD COLUMN `wageBudget` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("UPDATE `teams` SET `wageBudget` = CAST((SELECT COALESCE(SUM(salary), 0) FROM `Player` WHERE teamId = teams.id) * 1.2 AS INTEGER)")
+            }
+        }
+        /** 17 -> 18: tabella dello stato dell'utente (fiducia, tifosi, reputazione, clima). */
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `stato` (`chiave` TEXT NOT NULL, `valore` TEXT NOT NULL, PRIMARY KEY(`chiave`))")
             }
         }
         val MIGRATION_14_15 = object : Migration(14, 15) {
@@ -158,6 +164,6 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18).fallbackToDestructiveMigration().build()
     }
 }
