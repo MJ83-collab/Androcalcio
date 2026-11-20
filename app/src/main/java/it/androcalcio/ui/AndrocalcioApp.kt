@@ -171,6 +171,21 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
         )
     }
 
+    val presidente by vm.presidente.collectAsState()
+    presidente?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { vm.chiudiPresidente() },
+            title = { Text("Il presidente") },
+            text = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.CALENDARIO }) { Text("Al calendario") }
+            },
+            dismissButton = { TextButton(onClick = { vm.chiudiPresidente() }) { Text("Più tardi") } }
+        )
+    }
+    val fineStagione by vm.fine.collectAsState()
+    fineStagione?.let { f -> FineStagioneDialog(f) { vm.chiudiFine() } }
+
     val clubNow by vm.club.collectAsState()
     if (clubNow.esonero && screen != Screen.DIRIGENZA) {
         AlertDialog(
@@ -196,7 +211,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     val started by vm.started.collectAsState()
     if (!started && teams.isNotEmpty()) {
         val info by vm.teamInfo.collectAsState()
-        NuovaPartitaScreen(teams, info) { vm.startGame(it); screen = Screen.HOME }
+        NuovaPartitaScreen(teams, info) { t, nome, cognome -> vm.startGame(t, nome, cognome); screen = Screen.HOME }
         return
     }
 

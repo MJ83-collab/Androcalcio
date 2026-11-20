@@ -14,11 +14,15 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,7 +39,7 @@ import it.androcalcio.ui.theme.AC
 
 /** Inizio di una nuova partita: nazione, poi campionato, poi squadra (con forza, budget e ingaggi). */
 @Composable
-fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (Team) -> Unit) {
+fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (Team, String, String) -> Unit) {
     val nations = teams.map { it.nazione }.distinct()
     var nation by rememberSaveable { mutableStateOf("") }
     val nat = if (nation in nations) nation else nations.first()
@@ -43,6 +47,9 @@ fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (T
     var league by rememberSaveable { mutableStateOf("") }
     val lg = if (league in leagues) league else leagues.first()
     val shown = teams.filter { it.nazione == nat && it.campionato == lg }
+    var pick by remember { mutableStateOf<Team?>(null) }
+    var nomeAll by rememberSaveable { mutableStateOf("") }
+    var cognomeAll by rememberSaveable { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().background(AC.Bg).statusBarsPadding()) {
         Text("Nuova partita", Modifier.padding(start = 16.dp, top = 16.dp),
@@ -60,7 +67,7 @@ fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (T
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(shown, key = { it.id }) { t ->
                 val i = info[t.id]
-                GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { onStart(t) }) {
+                GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { pick = t }) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Crest(t, size = 48.dp)
                         Column(Modifier.padding(start = 14.dp)) {
@@ -76,5 +83,25 @@ fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (T
                 }
             }
         }
+    }
+    pick?.let { t ->
+        AlertDialog(
+            onDismissRequest = { pick = null },
+            title = { Text("Allenatore della ${t.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Inserisci nome e cognome dell'allenatore.")
+                    OutlinedTextField(value = nomeAll, onValueChange = { nomeAll = it },
+                        label = { Text("Nome") }, singleLine = true)
+                    OutlinedTextField(value = cognomeAll, onValueChange = { cognomeAll = it },
+                        label = { Text("Cognome") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = nomeAll.isNotBlank() && cognomeAll.isNotBlank(),
+                    onClick = { onStart(t, nomeAll.trim(), cognomeAll.trim()) }) { Text("Confermo") }
+            },
+            dismissButton = { TextButton(onClick = { pick = null }) { Text("Annulla") } }
+        )
     }
 }

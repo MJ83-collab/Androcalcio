@@ -1,6 +1,11 @@
 package it.androcalcio
 
 import it.androcalcio.engine.DefLine
+import it.androcalcio.engine.DivisioneFine
+import it.androcalcio.engine.Europa
+import it.androcalcio.engine.FineStagione
+import it.androcalcio.engine.Presidente
+import it.androcalcio.engine.RigaFine
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.ShirtNumbers
 import it.androcalcio.engine.Stadium
@@ -1707,13 +1712,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         low.take(kk).forEach { moves[it.team.id] = k.second; promoted += it.team.id }
                     }
                 }
-                // Serie B ↔ gironi di Serie C: le ultime della B scendono (una per girone),
-                // la prima di ogni girone sale in B
+                // Serie B ↔ gironi di Serie C: 4 retrocessioni dalla B (distribuite sui gironi),
+                // 4 promozioni in B: la vincitrice di ogni girone più la migliore seconda
                 val b = catena.getOrNull(1)
                 val gironi = keys.filter { serieC(it) }.sortedBy { it.second }
                 if (b != null && gironi.isNotEmpty()) {
                     val stB = finals.getValue(b)
-                    val giu = stB.takeLast(minOf(gironi.size, stB.size / 4))
+                    val giu = stB.takeLast(minOf(4, stB.size / 4))
                     giu.forEachIndexed { i, row ->
                         moves[row.team.id] = gironi[i % gironi.size].second
                         relegated += row.team.id
@@ -1724,8 +1729,38 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             promoted += w.team.id
                         }
                     }
+                    gironi.mapNotNull { g -> finals.getValue(g).getOrNull(1) }
+                        .sortedWith(compareByDescending<it.androcalcio.engine.StandingRow> { it.pts }.thenByDescending { it.gd })
+                        .firstOrNull()?.let { s2 ->
+                            moves[s2.team.id] = b.second
+                            promoted += s2.team.id
+                        }
                 }
             }
+            // Qualificazioni europee: solo Serie A, come da regole UEFA 2026-27
+            val europei = HashMap<Long, String>()
+            leagues.keys.firstOrNull { it.first == "Italia" && it.second == "Serie A" }?.let { ka ->
+                val vincitriceCoppa = Cup.finalMatch(dao.matchesOnce(Cup.key("Italia"), s))
+                    ?.let { Cup.winnerOfTie(listOf(it), strength) }
+                europei.putAll(Europa.assegna(finals.getValue(ka).map { it.team.id }, vincitriceCoppa))
+            }
+            // Classifiche di fine stagione della tua nazione, con l'esito di ogni squadra
+            _fine.value = FineStagione(
+                stagione = s,
+                divisioni = leagues.keys.filter { it.first == me.nazione }
+                    .sortedBy { k -> leagues.getValue(k).minOf { it.id } }
+                    .map { k ->
+                        DivisioneFine(k.second, finals.getValue(k).mapIndexed { i, row ->
+                            val id = row.team.id
+                            val esito = when {
+                                id in promoted -> "Promossa in ${moves[id]}"
+                                id in relegated -> "Retrocessa in ${moves[id]}"
+                                else -> europei[id].orEmpty()
+                            }
+                            RigaFine(i + 1, row.team.name, row.pts, esito, id == me.id)
+                        })
+                    }
+            )
             // Promozione o retrocessione incidono sulla reputazione dell'allenatore
             if (me.id in promoted) dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) + 4)
             if (me.id in relegated) dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) - 8)
@@ -1934,6 +1969,16 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         app.getSharedPreferences("androcalcio", 0).let { it.getBoolean("partita_iniziata", it.contains("team_id")) })
     val started: StateFlow<Boolean> = _started
 
+    /** Messaggio di benvenuto del presidente, mostrato una volta all'inizio della carriera. */
+    private val _presidente = MutableStateFlow<String?>(null)
+    val presidente: StateFlow<String?> = _presidente
+    fun chiudiPresidente() { _presidente.value = null }
+
+    /** Classifiche e esiti dell'ultima fine stagione (null finché non si chiude una stagione). */
+    private val _fine = MutableStateFlow<FineStagione?>(null)
+    val fine: StateFlow<FineStagione?> = _fine
+    fun chiudiFine() { _fine.value = null }
+
     /** Forza (media dei migliori 11) e monte ingaggi attuale di ogni squadra, per la schermata di scelta. */
     data class TeamInfo(val strength: Int, val wages: Long)
     val teamInfo: StateFlow<Map<Long, TeamInfo>> = dao.allPlayersFlow().map { all ->
@@ -2125,9 +2170,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun startGame(team: Team) {
+    fun startGame(team: Team, nome: String, cognome: String) {
         selectTeam(team)
-        prefs.edit().putBoolean("partita_iniziata", true).apply()
+        prefs.edit().putBoolean("partita_iniziata", true)
+            .putString("coach_nome", nome).putString("coach_cognome", cognome).apply()
+        _presidente.value = Presidente.benvenuto(team.name, nome, cognome)
         _started.value = true
         viewModelScope.launch(Dispatchers.IO) { refreshSponsorOffers(team.id); refreshClub() }
     }
