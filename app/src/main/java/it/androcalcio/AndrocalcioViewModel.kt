@@ -43,6 +43,8 @@ import it.androcalcio.data.statoInt
 import it.androcalcio.engine.Club
 import it.androcalcio.engine.ClubRequests
 import it.androcalcio.engine.ClubOffer
+import it.androcalcio.engine.SetPieces
+import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.engine.ClubOffers
 import it.androcalcio.engine.SponsorDeal
 import it.androcalcio.engine.Sponsors
@@ -95,6 +97,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
+/** Partite in un ruolo diverso dal naturale per impararlo (rendimento 100%). */
+private const val PARTITE_PER_RUOLO = 10
+
 class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private val ctx: Application = app
@@ -461,6 +466,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val myBench = Medical.available(all) - res.xi.toSet()
         val opp = Medical.available(dao.playersOnce(if (userHome) away.id else home.id))
         val oppF = schemaInPartita(if (userHome) away.id else home.id, kotlin.random.Random.Default)
+        val tiriMe = tiriDi(me.id)
         val m = LiveMatch(
             home, if (userHome) res.xi else opp, away, if (userHome) opp else res.xi,
             if (userHome) _formation.value else oppF, if (userHome) oppF else _formation.value,
@@ -471,7 +477,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             homePress = if (userHome) _pressing.value else null, awayPress = if (userHome) null else _pressing.value,
             homeLine = if (userHome) _line.value else null, awayLine = if (userHome) null else _line.value,
             homeStile = if (userHome) null else Staffing.stile(staffBy, home.id),
-            awayStile = if (userHome) Staffing.stile(staffBy, away.id) else null
+            awayStile = if (userHome) Staffing.stile(staffBy, away.id) else null,
+            homeTiri = if (userHome) tiriMe else SetPieces.NONE, awayTiri = if (userHome) SetPieces.NONE else tiriMe
         )
         return LiveInfo(m, userHome = userHome, league = league)
     }
@@ -547,8 +554,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             for (id in listOf(mr.homeTeamId, mr.awayTeamId)) {
                 val played = if (id == mr.homeTeamId) r.homePlayed else r.awayPlayed
                 val beforeP = dao.playersOnce(id)
-                dao.updatePlayers(Medical.afterMatch(beforeP, played, Staffing.cura(staffBy, id), rng,
-                    planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)).also { accrueInsurance(id, beforeP, it) })
+                val aggiornati = Medical.afterMatch(beforeP, played, Staffing.cura(staffBy, id), rng,
+                    planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)).also { accrueInsurance(id, beforeP, it) }
+                dao.updatePlayers(aggiornati.map { p -> if (p.id in played) apprendiRuolo(p) else p })
             }
         }
         if (mr != null && Cup.isCup(mr.round)) {
@@ -652,6 +660,45 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val nazStagione: StateFlow<String> = combine(_nazStagione, _season) { a, b -> a ?: b }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _season.value)
     fun pickNazStagione(s: String) { _nazStagione.value = s }
+
+    /** Tiri della squadra: rigoristi, punizionisti, battitori d'angolo e capitano scelto (liste in ordine di priorità). */
+    suspend fun tiriDi(teamId: Long): SetPieces {
+        suspend fun ids(k: String): List<Long> = dao.stato(k).orEmpty().split(",").mapNotNull { it.toLongOrNull() }
+        return SetPieces(ids("rig_$teamId"), ids("pun_$teamId"), ids("ang_$teamId"), dao.stato("cap_$teamId")?.toLongOrNull())
+    }
+
+    /** Salva i tiri della squadra scelta; liste vuote o capitano vuoto = decide il capitano in campo. */
+    fun salvaTiri(t: SetPieces) {
+        val id = selectedTeam.value?.id ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.setStato(Stato("rig_$id", t.rigori.joinToString(",")))
+            dao.setStato(Stato("pun_$id", t.punizioni.joinToString(",")))
+            dao.setStato(Stato("ang_$id", t.angoli.joinToString(",")))
+            dao.setStato(Stato("cap_$id", t.capitano?.toString().orEmpty()))
+            _notice.value = "Tiri e capitano salvati."
+        }
+    }
+
+    val tiriUser: StateFlow<SetPieces> = selectedTeam.flatMapLatest { t ->
+        flow { while (true) { emit(if (t == null) SetPieces.NONE else tiriDi(t.id)); delay(1500) } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetPieces.NONE)
+
+    /** Un ruolo diverso dal naturale si impara giocandoci: dopo [PARTITE_PER_RUOLO] partite rende al 100%. */
+    private suspend fun apprendiRuolo(p: Player): Player {
+        val r = TacticalRoles.assigned(p)
+        if (r.isEmpty() || r == p.pos) return p
+        if ((r == p.sec2 && p.aff2 >= 100) || (r == p.sec3 && p.aff3 >= 100)) return p
+        val key = "esp_${p.id}_$r"
+        val n = (dao.stato(key)?.toIntOrNull() ?: 0) + 1
+        dao.setStato(Stato(key, n.toString()))
+        if (n < PARTITE_PER_RUOLO) return p
+        return when {
+            r == p.sec2 -> p.copy(aff2 = 100)
+            r == p.sec3 -> p.copy(aff3 = 100)
+            p.sec2.isEmpty() -> p.copy(sec2 = r, aff2 = 100)
+            else -> p.copy(sec3 = r, aff3 = 100)   // sostituisce il terzo ruolo
+        }
+    }
 
     /** Nazionale allenata dall'utente ("" = nessuna), offerta pendente e rosa convocabile. */
     val nazioneAllenata: StateFlow<String> = flow {

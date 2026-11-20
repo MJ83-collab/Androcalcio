@@ -124,11 +124,12 @@ object MatchEngine {
         homePress: Pressing? = null, awayPress: Pressing? = null,
         homeLine: DefLine? = null, awayLine: DefLine? = null,
         homeStile: Stile? = null, awayStile: Stile? = null,   // tattica di base dell'allenatore (squadre AI)
+        homeTiri: SetPieces = SetPieces.NONE, awayTiri: SetPieces = SetPieces.NONE,
         rng: Random = Random.Default
     ): MatchReport = LiveMatch(
         home, homePlayers, away, awayPlayers, homeF, awayF, homeCoach, awayCoach,
         homeMent, awayMent, homeBench, awayBench, rng,
         homePress = homePress, awayPress = awayPress, homeLine = homeLine, awayLine = awayLine,
-        homeStile = homeStile, awayStile = awayStile
+        homeStile = homeStile, awayStile = awayStile, homeTiri = homeTiri, awayTiri = awayTiri
     ).also { it.runToEnd() }.report()
 }

@@ -334,11 +334,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val press by vm.pressing.collectAsState()
                     val linea by vm.line.collectAsState()
                     val consigli by vm.assistantAdvice.collectAsState()
+                    val tiriU by vm.tiriUser.collectAsState()
                     TatticaScreen(players, modulo, { vm.setFormation(it) }, { vm.coachLineup() },
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         { p, r -> vm.setRuoloPartita(p, r) },
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
-                        { screen = Screen.AVVERSARIO })
+                        { screen = Screen.AVVERSARIO }, tiriU, { vm.salvaTiri(it) })
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsState()

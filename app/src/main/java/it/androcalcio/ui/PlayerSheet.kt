@@ -97,7 +97,7 @@ fun PlayerSheet(
                 Row(Modifier.fillMaxWidth().background(AC.PaperAlt).padding(6.dp)) {
                     Column(Modifier.weight(1f)) {
                         Param("VELOCITÀ", p.ve); Param("RESISTENZA", p.re); Param("AGGRESSIVITÀ", p.ag)
-                        Param("QUALITÀ", p.qu); Param("STATO DI FORMA", p.fo); Param("MORALE", p.morale)
+                        Param("QUALITÀ", p.qu); Param("STATO DI FORMA", p.fo); Param("MORALE", p.morale); Param("CARISMA", it.androcalcio.engine.Leadership.carisma(p))
                     }
                     Column(Modifier.padding(start = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("MEDIA", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)

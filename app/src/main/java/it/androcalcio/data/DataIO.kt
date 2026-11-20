@@ -73,10 +73,17 @@ object DataIO {
             cvJ.put(JSONObject().put("season", c.season).put("competizione", c.competizione).put("round", c.round)
                 .put("playerId", c.playerId).put("nazione", c.nazione).put("risultato", c.risultato))
         }
+        val tiriJ = JSONArray()
+        dao.allTeams().forEach { t ->
+            val chiavi = listOf("rig_", "pun_", "ang_", "cap_").associateWith { dao.stato(it + t.id) }
+            if (chiavi.values.any { !it.isNullOrEmpty() }) tiriJ.put(JSONObject().put("teamId", t.id)
+                .put("rig", chiavi["rig_"].orEmpty()).put("pun", chiavi["pun_"].orEmpty())
+                .put("ang", chiavi["ang_"].orEmpty()).put("cap", chiavi["cap_"].orEmpty()))
+        }
         val rnJ = JSONArray()
         dao.rosaNazionale().forEach { r -> rnJ.put(JSONObject().put("playerId", r.playerId).put("nazione", r.nazione)) }
         return JSONObject().put("formato", FORMAT).put("versione", 3).put("convocazioni", cvJ).put("nazionaleStats", nzJ)
-            .put("rosaNazionale", rnJ).put("nazioneAllenata", dao.stato("nazione_allenata").orEmpty())
+            .put("rosaNazionale", rnJ).put("nazioneAllenata", dao.stato("nazione_allenata").orEmpty()).put("tiri", tiriJ)
             .put("squadre", arr).put("statistiche", statJ).put("clausole", clJ).put("missioni", miJ).toString(1)
     }
 
@@ -187,6 +194,17 @@ object DataIO {
             (0 until a.length()).forEach { k ->
                 val o = a.getJSONObject(k)
                 pMap[o.getLong("playerId")]?.let { pid -> dao.insertRosaNazionale(RosaNazionale(pid, o.getString("nazione"))) }
+            }
+        }
+        root.optJSONArray("tiri")?.let { a ->
+            fun mappa(s: String) = s.split(",").mapNotNull { it.toLongOrNull()?.let { id -> pMap[id] } }.joinToString(",")
+            for (k in 0 until a.length()) {
+                val o = a.getJSONObject(k)
+                val tid = tMap[o.getLong("teamId")] ?: continue
+                dao.setStato(Stato("rig_$tid", mappa(o.optString("rig"))))
+                dao.setStato(Stato("pun_$tid", mappa(o.optString("pun"))))
+                dao.setStato(Stato("ang_$tid", mappa(o.optString("ang"))))
+                dao.setStato(Stato("cap_$tid", pMap[o.optString("cap").toLongOrNull() ?: -1L]?.toString().orEmpty()))
             }
         }
         root.optString("nazioneAllenata", "").takeIf { it.isNotEmpty() }?.let { dao.setStato(Stato("nazione_allenata", it)) }

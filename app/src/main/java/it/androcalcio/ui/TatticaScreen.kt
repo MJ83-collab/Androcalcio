@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -193,10 +194,14 @@ fun TatticaScreen(
     press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit,
     onRole: (Player, String) -> Unit,
     advice: AssistantCoach.Advice?, onApplyXI: () -> Unit, onApplyTattica: () -> Unit,
-    onOpenAvversario: () -> Unit
+    onOpenAvversario: () -> Unit,
+    tiri: it.androcalcio.engine.SetPieces = it.androcalcio.engine.SetPieces.NONE,
+    onSalvaTiri: (it.androcalcio.engine.SetPieces) -> Unit = {}
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi)
     var roleFor by remember { mutableStateOf<Player?>(null) }
+    var tiriAperti by remember { mutableStateOf(false) }
+    if (tiriAperti) TiriDialog(players, tiri, { tiriAperti = false }, { onSalvaTiri(it); tiriAperti = false })
     roleFor?.let { rp ->
         AlertDialog(
             onDismissRequest = { roleFor = null },
@@ -219,6 +224,7 @@ fun TatticaScreen(
         )
     }
     LazyColumn(contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { PcButton("Tiri e capitano", { tiriAperti = true }, Modifier.fillMaxWidth()) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
                 Box(Modifier.weight(1f)) { LineupTable(xi, onRole = { roleFor = it }) }
@@ -297,4 +303,41 @@ fun FormationBoard(xi: List<Player>, formation: Formation, shirt: Color, modifie
             }
         }
     }
+}
+
+/** Rigoristi, punizionisti, battitori d'angolo e capitano. Ordine = priorità; se vuoto decide il capitano in campo. */
+@Composable
+private fun TiriDialog(
+    players: List<Player>,
+    iniziali: it.androcalcio.engine.SetPieces,
+    onChiudi: () -> Unit,
+    onSalva: (it.androcalcio.engine.SetPieces) -> Unit
+) {
+    var rig by remember { mutableStateOf(iniziali.rigori) }
+    var pun by remember { mutableStateOf(iniziali.punizioni) }
+    var ang by remember { mutableStateOf(iniziali.angoli) }
+    var cap by remember { mutableStateOf(iniziali.capitano) }
+    fun alterna(l: List<Long>, id: Long) = if (id in l) l - id else l + id
+    AlertDialog(
+        onDismissRequest = onChiudi,
+        title = { Text("Tiri e capitano") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("R = rigori, P = punizioni, A = angoli: il numero indica la priorità. " +
+                    "Se una lista è vuota o i suoi giocatori sono fuori, decide il capitano (C) in campo.",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                players.sortedByDescending { it.overall }.forEach { p ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${p.name} (${p.role})", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                        PcButton(if (p.id in rig) "R${rig.indexOf(p.id) + 1}" else "R", { rig = alterna(rig, p.id) }, main = p.id in rig)
+                        PcButton(if (p.id in pun) "P${pun.indexOf(p.id) + 1}" else "P", { pun = alterna(pun, p.id) }, main = p.id in pun)
+                        PcButton(if (p.id in ang) "A${ang.indexOf(p.id) + 1}" else "A", { ang = alterna(ang, p.id) }, main = p.id in ang)
+                        PcButton("C", { cap = if (cap == p.id) null else p.id }, main = cap == p.id)
+                    }
+                }
+            }
+        },
+        confirmButton = { PcButton("Salva", { onSalva(it.androcalcio.engine.SetPieces(rig, pun, ang, cap)) }, main = true) },
+        dismissButton = { PcButton("Annulla", onChiudi) }
+    )
 }

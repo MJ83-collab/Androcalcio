@@ -34,7 +34,7 @@ object SquadraInfo {
 
     /** Capitano: il più forte tra i giocatori nel pieno della carriera (24-33 anni), altrimenti il più forte. */
     fun capitano(ps: List<Player>): Player? =
-        ps.filter { it.age in 24..33 }.maxByOrNull { it.overall } ?: ps.maxByOrNull { it.overall }
+        Leadership.capitano(ps)
 
     /** Ruoli sotto l'organico ideale, con quanti ne ha e quanti ne vorrebbe. */
     fun ruoliCarenti(ps: List<Player>): List<String> {

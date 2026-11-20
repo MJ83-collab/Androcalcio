@@ -11,6 +11,8 @@ import kotlin.random.Random
  * poi riprendere. Quello che è già successo resta. MatchEngine.simulate la gioca tutta di fila.
  * manualHome / manualAway: i cambi di quella squadra li decide l'utente (niente cambi automatici).
  */
+private const val ANGOLO_QUOTA = 0.4
+
 class LiveMatch(
     val home: Team, homePlayers: List<Player>,
     val away: Team, awayPlayers: List<Player>,
@@ -23,7 +25,8 @@ class LiveMatch(
     var manualAway: Boolean = false,
     homePress: Pressing? = null, awayPress: Pressing? = null,   // null = sceglie l'AI
     homeLine: DefLine? = null, awayLine: DefLine? = null,
-    homeStile: Stile? = null, awayStile: Stile? = null
+    homeStile: Stile? = null, awayStile: Stile? = null,
+    homeTiri: SetPieces = SetPieces.NONE, awayTiri: SetPieces = SetPieces.NONE
 ) {
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
         if (bench != null) ps.toMutableList() to bench.toMutableList()
@@ -231,16 +234,23 @@ class LiveMatch(
         if (minute == 90) events += MatchEvent(90, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
     }
 
-    /** Rigore o punizione per una squadra a caso: tira il giocatore più adatto tra quelli in campo. */
+    /** Rigore, punizione o calcio d'angolo per una squadra a caso: tira il primo della lista in campo, altrimenti il capitano. */
     private fun setPiece(penalty: Boolean) {
         val homeAtt = rng.nextBoolean()
-        val takers = (if (homeAtt) xiH else xiA).filter { it.role != "P" }
-        val taker = MatchEngine.shooter(takers, rng) ?: return
+        val inCampo = (if (homeAtt) xiH else xiA)
+        val tiri = if (homeAtt) homeTiri else awayTiri
+        val angolo = !penalty && rng.nextDouble() < ANGOLO_QUOTA
+        val lista = when { penalty -> tiri.rigori; angolo -> tiri.angoli; else -> tiri.punizioni }
+        val taker = tiri.tiratore(lista, inCampo.filter { it.role != "P" }) ?: return
         val team = if (homeAtt) home else away
         val (x, y) = if (penalty) Pair(if (homeAtt) 0.9f else 0.1f, 0.5f) else pos(homeAtt)
-        val kind = if (penalty) "Rigore" else "Punizione"
+        val kind = when { penalty -> "Rigore"; angolo -> "Calcio d'angolo"; else -> "Punizione" }
         if (homeAtt) hs++ else asht++
-        val pGoal = if (penalty) 0.70 + 0.2 * taker.fi / 99.0 else 0.04 + 0.08 * taker.ti / 99.0
+        val pGoal = when {
+            penalty -> 0.70 + 0.2 * taker.fi / 99.0
+            angolo -> 0.04 + 0.08 * taker.pa / 99.0
+            else -> 0.04 + 0.08 * taker.ti / 99.0
+        }
         if (rng.nextDouble() < pGoal) {
             if (homeAtt) hg++ else ag++
             bump(taker, 1.0)
