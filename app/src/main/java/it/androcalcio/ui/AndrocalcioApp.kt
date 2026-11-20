@@ -769,8 +769,9 @@ fun FinanzeScreen(
         // Situazione: tabella a due colonne
         PaperPanel(Modifier.fillMaxWidth()) {
             listOf(
-                "Budget disponibile" to money(team.budget),
-                "Monte ingaggi (annuo)" to money(wages),
+                "Budget mercato" to money(team.budget),
+                "Budget ingaggi (annuo)" to money(team.wageBudget),
+                "Ingaggi della rosa (annui)" to money(wages),
                 "Incasso stimato a partita" to money(gate),
                 "Prezzo biglietto" to "€ ${team.ticketPrice}",
                 "Stadio" to "${team.stadiumCapacity} posti",
