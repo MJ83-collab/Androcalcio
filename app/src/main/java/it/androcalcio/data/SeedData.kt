@@ -12,6 +12,11 @@ import kotlin.random.Random
  */
 object SeedData {
 
+    /** Liste di nomi per i giocatori generati in partita (stessi valori delle rose fisse). */
+    val initials = RoseFisse.initials
+    val surnames = RoseFisse.surnames
+    val codes = RoseFisse.codes
+
     suspend fun insertInto(context: Context, dao: AndrocalcioDao) {
         val text = context.assets.open("squadre.json").bufferedReader().use { it.readText() }
         val arr = JSONArray(text)

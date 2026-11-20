@@ -25,15 +25,15 @@ object RoseFisse {
     private const val SEME_SVINCOLATI = 20_260_101
     private const val SEME_TALENTI = 20_260_102
 
-    private val initials = "ABCDEFGILMNPRSTV"
-    private val surnames = listOf(
+    val initials = "ABCDEFGILMNPRSTV"
+    val surnames = listOf(
         "Rossi", "Bianchi", "Verdi", "Neri", "Costa", "Ferri", "Greco", "Russo", "Conti", "Moretti",
         "Galli", "Fontana", "Serra", "Pace", "Leone", "Sala", "Longo", "Rinaldi", "Barone", "Mariani",
         "Silva", "Souza", "Lima", "Pires", "Duarte", "Navarro", "Ortega", "Molina", "Vega", "Castro",
         "Keller", "Brandt", "Vogel", "Hahn", "Lang", "Dubois", "Moreau", "Laurent", "Roche", "Perrin",
         "Hughes", "Walker", "Bennett", "Cooper", "Wells", "Gomez", "Rojas", "Acosta", "Diaz", "Sosa"
     )
-    private val codes = mapOf(
+    val codes = mapOf(
         "Italia" to "ITA", "Spagna" to "ESP", "Inghilterra" to "ENG", "Germania" to "GER",
         "Francia" to "FRA", "Brasile" to "BRA", "Argentina" to "ARG",
         "Portogallo" to "POR", "Olanda" to "OLA", "Belgio" to "BEL", "Croazia" to "CRO",
