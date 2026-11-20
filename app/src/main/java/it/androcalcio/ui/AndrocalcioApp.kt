@@ -123,6 +123,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     DIRIGENZA("Dirigenza", Icons.Filled.AccountBox, "Fiducia, tifosi, fondi", Color(0xFFB9770E)),
     STAFF("Staff", Icons.Filled.AccountCircle, "Allenatori e preparatori", Color(0xFF8E5BC8)),
     STATISTICHE("Statistiche", Icons.Filled.List, "Marcatori e portieri", Color(0xFF2874A6)),
+    NAZIONALI("Nazionali", Icons.Filled.Star, "Convocazioni e tornei", Color(0xFF8E44AD)),
     EDITOR("Editor", Icons.Filled.Edit, "Modifica i dati", Color(0xFF7F8C8D)),
     SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita", Color(0xFF16A085)),
     ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227))
@@ -287,6 +288,15 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) },
                         cl.livAllenamento, cl.livVivaio, { vm.upgrade(it) },
                         assicurazione, { vm.setInsurance(it) }, movStagione, stagione)
+                }
+                Screen.NAZIONALI -> {
+                    val conv by vm.convocazioniAll.collectAsState()
+                    val nazStats by vm.nazionaleAll.collectAsState()
+                    val alboNaz by vm.albo.collectAsState()
+                    val nazStagione by vm.nazStagione.collectAsState()
+                    val stagioniNaz by vm.statSeasons.collectAsState()
+                    NazionaleScreen((stagioniNaz + season).distinct().sorted(), nazStagione,
+                        { vm.pickNazStagione(it) }, conv, nazStats, alboNaz)
                 }
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
@@ -538,7 +548,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         SectionTitle("Menu")
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
-            Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.EDITOR,
+            Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
             Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO
         )
         tiles.chunked(2).forEach { row ->

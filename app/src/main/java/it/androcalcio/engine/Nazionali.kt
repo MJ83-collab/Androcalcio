@@ -6,8 +6,12 @@ import kotlin.random.Random
 
 /** Nazionali: convocazioni alle date internazionali (giornate di campionato) e tornei a fine stagione. */
 object Nazionali {
-    /** Giornate di campionato usate come date internazionali: i convocati non giocano il club quel giorno. */
-    val DATE = setOf(6, 12, 18, 24, 30, 36)
+    /**
+     * Giornate di campionato usate come date internazionali (due per finestra FIFA 2026-27):
+     * 21 set-6 ott 2026 → 5, 6 · 9-17 nov 2026 → 11, 12 · 22-30 mar 2027 → 29, 30 · 7-15 giu 2027 → 35, 36.
+     * I convocati non giocano il club in quella giornata.
+     */
+    val DATE = setOf(5, 6, 11, 12, 29, 30, 35, 36)
     const val CONVOCATI = 23
     const val MIN_ROSA = 11
     val EUROPA = setOf("Italia", "Spagna", "Inghilterra", "Germania", "Francia", "Portogallo", "Olanda",

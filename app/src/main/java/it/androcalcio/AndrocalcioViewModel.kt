@@ -640,6 +640,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun pickStatSeason(s: String) { _statSeason.value = s }
 
+    /** Convocazioni e presenze in nazionale, per la schermata Nazionali. */
+    val convocazioniAll: StateFlow<List<Convocazione>> = flow {
+        while (true) { emit(dao.allConvocazioni()); delay(1500) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val nazionaleAll: StateFlow<List<NazionaleStat>> = flow {
+        while (true) { emit(dao.allNazionaleStats()); delay(1500) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _nazStagione = MutableStateFlow<String?>(null)
+    val nazStagione: StateFlow<String> = combine(_nazStagione, _season) { a, b -> a ?: b }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _season.value)
+    fun pickNazStagione(s: String) { _nazStagione.value = s }
+
     /** Parere del vice allenatore sulla trattativa con il giocatore: monte ingaggi, durata e clausole richieste. */
     fun consiglioVice(p: Player, years: Int): String {
         val ask = wageAsk(p, years)
