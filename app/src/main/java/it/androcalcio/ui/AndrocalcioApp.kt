@@ -1,5 +1,7 @@
 package it.androcalcio.ui
 
+import android.app.Activity
+
 import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.bevel
 import it.androcalcio.ui.components.PcChip
@@ -61,6 +63,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
@@ -184,7 +187,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
         )
     }
     val fineStagione by vm.fine.collectAsState()
-    fineStagione?.let { f -> FineStagioneDialog(f) { vm.chiudiFine() } }
+    val activity = LocalContext.current as? Activity
+    fineStagione?.let { f ->
+        FineStagioneDialog(f,
+            onSalvaEsci = { vm.salvaEEsci { activity?.finishAffinity() } },
+            onNuovo = { vm.nuovoCampionato() }) { vm.chiudiFine() }
+    }
 
     val clubNow by vm.club.collectAsState()
     if (clubNow.esonero && screen != Screen.DIRIGENZA) {

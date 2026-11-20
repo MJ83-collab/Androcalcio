@@ -18,11 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import it.androcalcio.engine.FineStagione
+import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.theme.AC
 
 /** Fine stagione: classifica di ogni divisione della tua nazione, con promozioni, retrocessioni e coppe europee. */
 @Composable
-fun FineStagioneDialog(fine: FineStagione, onChiudi: () -> Unit) {
+fun FineStagioneDialog(fine: FineStagione, onSalvaEsci: () -> Unit, onNuovo: () -> Unit, onChiudi: () -> Unit) {
     Dialog(onDismissRequest = onChiudi, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(AC.Bg).padding(16.dp)) {
             Text("Fine stagione ${fine.stagione}", style = MaterialTheme.typography.headlineSmall, color = AC.Text)
@@ -43,6 +44,8 @@ fun FineStagioneDialog(fine: FineStagione, onChiudi: () -> Unit) {
                     }
                 }
             }
+            PcAction(onClick = onSalvaEsci, modifier = Modifier.fillMaxWidth()) { Text("Salva ed esci") }
+            PcAction(onClick = onNuovo, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) { Text("Nuovo campionato") }
             TextButton(onClick = onChiudi, modifier = Modifier.fillMaxWidth()) { Text("Chiudi") }
         }
     }

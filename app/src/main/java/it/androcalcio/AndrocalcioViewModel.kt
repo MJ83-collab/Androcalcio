@@ -25,6 +25,7 @@ import it.androcalcio.data.SaveSlots
 import it.androcalcio.data.SlotInfo
 import it.androcalcio.data.DataIO
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -2221,6 +2222,33 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Carica lo slot e riavvia l'app: il database in uso non si può sostituire a caldo. */
+    /** Salva nel primo slot libero (o nello slot 1 se sono tutti pieni), poi chiude l'app. */
+    fun salvaEEsci(onFatto: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val t = selectedTeam.value
+            if (t != null) {
+                val libero = _slots.value.firstOrNull { it.teamName == null }?.n ?: 1
+                try {
+                    SaveSlots.save(ctx, db, libero, t.id, t.name, prefs.getInt("season_year", 2026), _season.value)
+                } catch (e: Exception) {
+                    _notice.value = "Salvataggio non riuscito: ${e.message}"
+                    return@launch
+                }
+                _slots.value = SaveSlots.list(ctx)
+            }
+            withContext(Dispatchers.Main) { onFatto() }
+        }
+    }
+
+    /** Nuovo campionato: stessi club e giocatori; si ricomincia dalla scelta di squadra e allenatore. */
+    fun nuovoCampionato() {
+        prefs.edit().remove("team_id").putBoolean("partita_iniziata", false).apply()
+        selectedId.value = null
+        _started.value = false
+        _fine.value = null
+        _presidente.value = null
+    }
+
     fun loadSlot(n: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val ok = try { SaveSlots.load(ctx, n) } catch (e: Exception) { false }
