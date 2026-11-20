@@ -43,7 +43,7 @@ object TacticalRoles {
     /** Efficacia in campo: 1.0 nel ruolo naturale, l'affinità % in un ruolo affine. */
     fun factor(p: Player): Double {
         val r = assigned(p)
-        return when {
+        return Compiti.effetto(p.compito, r) * when {
             r == p.pos -> 1.0
             r == p.sec2 -> p.aff2 / 100.0
             r == p.sec3 -> p.aff3 / 100.0

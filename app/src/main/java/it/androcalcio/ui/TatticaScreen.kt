@@ -196,7 +196,8 @@ fun TatticaScreen(
     advice: AssistantCoach.Advice?, onApplyXI: () -> Unit, onApplyTattica: () -> Unit,
     onOpenAvversario: () -> Unit,
     tiri: it.androcalcio.engine.SetPieces = it.androcalcio.engine.SetPieces.NONE,
-    onSalvaTiri: (it.androcalcio.engine.SetPieces) -> Unit = {}
+    onSalvaTiri: (it.androcalcio.engine.SetPieces) -> Unit = {},
+    onCompito: (Player, String) -> Unit = { _, _ -> }
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi)
     var roleFor by remember { mutableStateOf<Player?>(null) }
@@ -217,6 +218,19 @@ fun TatticaScreen(
                             label = { Text("${TacticalRoles.label(r)} · $a%") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                    }
+                    Text("Compiti di ruolo: bonus di rendimento in questo ruolo.", color = AC.TextDim,
+                        style = MaterialTheme.typography.bodySmall)
+                    it.androcalcio.engine.Compiti.perRuolo(TacticalRoles.assigned(rp)).forEach { c ->
+                        PcChip(
+                            selected = rp.compito == c.codice,
+                            onClick = { onCompito(rp, if (rp.compito == c.codice) "" else c.codice) },
+                            label = { Text(c.nome) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    it.androcalcio.engine.Compiti.trova(rp.compito)?.let { c ->
+                        Text(c.descrizione, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             },

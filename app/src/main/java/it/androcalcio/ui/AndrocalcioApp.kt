@@ -339,7 +339,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         { p, r -> vm.setRuoloPartita(p, r) },
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
-                        { screen = Screen.AVVERSARIO }, tiriU, { vm.salvaTiri(it) })
+                        { screen = Screen.AVVERSARIO }, tiriU, { vm.salvaTiri(it) }, { p, c -> vm.setCompito(p, c) })
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsState()
