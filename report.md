@@ -1,9 +1,16 @@
 # Androcalcio – report (stato al 20/11/2026, sera)
 
 ## Dove siamo
-- Branch `feat/pc7-meccaniche` (repo `MJ83-collab/Androcalcio`), ultimo commit `0e5ac1c`.
-- Build APK e test unitari: CI verde sull'ultimo commit (run `44783330476`).
+- Branch `feat/pc7-meccaniche` (repo `MJ83-collab/Androcalcio`), ultimo commit `8973b5d`.
+- Build APK e test unitari: CI verde sull'ultimo commit (run `44796372608`).
 - Non ho mai avviato l'app sul telefono: tutte le verifiche sono compilazione e test in CI.
+
+## Rose fisse
+- I giocatori di partenza (rose delle 332 squadre, talento della Valceresio, 40 svincolati) sono in `app/src/main/assets/rose_fisse.csv`, 6018 righe.
+- Il file è generato da `RoseFisse.genera` con semi fissi. `RoseFisseTest` fallisce se il generatore cambia senza rigenerare il file.
+- Per rigenerare: cancellare il file, far girare la CI (il test stampa il CSV nel log tra `ROSE_FISSE_INIZIO` e `ROSE_FISSE_FINE`), ricopiarlo in assets.
+- L'avvio legge le rose da questo file (`SeedData.insertInto`), non le genera più.
+- Il database modificato dall'utente resta separato e si usa solo se viene scelto e applicato.
 
 ## Fatto in questa parte
 - **Avvio:** scelta nazione, campionato e squadra. Toccando una squadra si apre la conferma con nome e cognome dell'allenatore. Poi il messaggio del presidente, con il pulsante "Inizia la stagione" che porta al calendario.
