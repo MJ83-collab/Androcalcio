@@ -46,20 +46,24 @@ object SeedData {
     }
 
     /** Svincolati di partenza (nessun club, teamId = SVINCOLATO_ID): ruoli e livelli vari, stipendio da firmare. */
-    private fun freeAgents(n: Int = 40): List<Player> = List(n) { i ->
-        val ovr = Random.nextInt(55, 80)
-        Player(
-            teamId = Market.SVINCOLATO_ID,
-            name = "${initials[Random.nextInt(initials.length)]}. ${surnames[Random.nextInt(surnames.size)]}",
-            role = listOf("P", "D", "C", "A")[i % 4],
-            age = Random.nextInt(21, 34),
-            overall = ovr,
-            morale = 60,
-            salary = 0L,
-            nationality = "Italia",
-            potential = ovr + Random.nextInt(0, 8),
-            contract = 1
-        )
+    private fun freeAgents(n: Int = 40): List<Player> {
+        // Seme fisso: gli svincolati di partenza sono sempre gli stessi, con ruoli e valori predefiniti
+        val rng = Random(20_260_101)
+        return List(n) { i ->
+            val ovr = rng.nextInt(55, 80)
+            Player(
+                teamId = Market.SVINCOLATO_ID,
+                name = "${initials[rng.nextInt(initials.length)]}. ${surnames[rng.nextInt(surnames.size)]}",
+                role = listOf("P", "D", "C", "A")[i % 4],
+                age = rng.nextInt(21, 34),
+                overall = ovr,
+                morale = 60,
+                salary = 0L,
+                nationality = "Italia",
+                potential = ovr + rng.nextInt(0, 8),
+                contract = 1
+            )
+        }
     }
 
     suspend fun insertInto(context: Context, dao: AndrocalcioDao) {
