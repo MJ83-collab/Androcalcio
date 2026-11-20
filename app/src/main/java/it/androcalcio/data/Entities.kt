@@ -175,3 +175,25 @@ data class ScoutMission(
     val giornate: Int
 )
 
+/** Convocazione di un giocatore in nazionale: data internazionale (giornata) o torneo (giornata 0). */
+@Entity(tableName = "convocazioni")
+data class Convocazione(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val season: String,
+    val competizione: String,   // "Amichevole internazionale", "Mondiali · Ottavi", "Europei · Finale"
+    val round: Int,             // giornata di campionato della data internazionale; 0 nei tornei
+    val playerId: Long,
+    val nazione: String,
+    val risultato: String       // es. "Italia 2-1 Spagna"
+)
+
+/** Presenze e gol in nazionale di un giocatore in una stagione. */
+@Entity(tableName = "nazionale_stats", primaryKeys = ["season", "playerId"])
+data class NazionaleStat(
+    val season: String,
+    val playerId: Long,
+    val nazione: String,
+    val presenze: Int = 0,
+    val gol: Int = 0
+)
+

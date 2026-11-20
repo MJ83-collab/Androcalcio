@@ -116,7 +116,7 @@ fun LineupTable(xi: List<Player>, onRole: ((Player) -> Unit)? = null, onOpen: ((
                 PaperRow(i, Modifier.clickable(enabled = onOpen != null) { onOpen?.invoke(p) }) {
                     Text(if (p.numero > 0) "${p.numero}" else "${i + 1}", Modifier.width(26.dp),
                         textAlign = TextAlign.Center, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = AC.PaperText)
-                    Text(p.name + if (p.condition < 60) " ↓" else "", Modifier.width(112.dp), maxLines = 1,
+                    Text(p.name + if (p.condition < 60) " ↓" else "", Modifier.width(112.dp).apriScheda(p), maxLines = 1,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp, color = AC.PaperText)
                     listOf(p.condition, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall).forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,

@@ -13,7 +13,7 @@ object DataIO {
 
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()
-        dao.clearStaff(); dao.clearGoals(); dao.clearStats(); dao.clearClausole(); dao.clearMissions(); dao.clearPlayers(); dao.clearTeams(); dao.clearMovimenti(); dao.clearStato()
+        dao.clearStaff(); dao.clearGoals(); dao.clearStats(); dao.clearClausole(); dao.clearMissions(); dao.clearConvocazioni(); dao.clearNazionaleStats(); dao.clearPlayers(); dao.clearTeams(); dao.clearMovimenti(); dao.clearStato()
     }
 
     suspend fun export(dao: AndrocalcioDao): String {
@@ -63,7 +63,17 @@ object DataIO {
         dao.missionsOnce().forEach { m ->
             miJ.put(JSONObject().put("teamId", m.teamId).put("staffId", m.staffId).put("area", m.area).put("giornate", m.giornate))
         }
-        return JSONObject().put("formato", FORMAT).put("versione", 2)
+        val nzJ = JSONArray()
+        dao.allNazionaleStats().forEach { n ->
+            nzJ.put(JSONObject().put("season", n.season).put("playerId", n.playerId).put("nazione", n.nazione)
+                .put("presenze", n.presenze).put("gol", n.gol))
+        }
+        val cvJ = JSONArray()
+        dao.allConvocazioni().forEach { c ->
+            cvJ.put(JSONObject().put("season", c.season).put("competizione", c.competizione).put("round", c.round)
+                .put("playerId", c.playerId).put("nazione", c.nazione).put("risultato", c.risultato))
+        }
+        return JSONObject().put("formato", FORMAT).put("versione", 3).put("convocazioni", cvJ).put("nazionaleStats", nzJ)
             .put("squadre", arr).put("statistiche", statJ).put("clausole", clJ).put("missioni", miJ).toString(1)
     }
 
@@ -158,6 +168,22 @@ object DataIO {
                 val pid = pMap[o.getLong("playerId")] ?: return@mapNotNull null
                 Clausola(pid, tMap[o.getLong("teamId")] ?: return@mapNotNull null,
                     o.getLong("bonusPresenze"), o.getLong("bonusGol"), o.getLong("bonusCampionato"), o.getLong("bonusCoppa"))
+            })
+        }
+        root.optJSONArray("convocazioni")?.let { a ->
+            dao.insertConvocazioni((0 until a.length()).mapNotNull { k ->
+                val o = a.getJSONObject(k)
+                val pid = pMap[o.getLong("playerId")] ?: return@mapNotNull null
+                Convocazione(season = o.getString("season"), competizione = o.getString("competizione"),
+                    round = o.getInt("round"), playerId = pid, nazione = o.getString("nazione"),
+                    risultato = o.getString("risultato"))
+            })
+        }
+        root.optJSONArray("nazionaleStats")?.let { a ->
+            dao.upsertNazionaleStats((0 until a.length()).mapNotNull { k ->
+                val o = a.getJSONObject(k)
+                val pid = pMap[o.getLong("playerId")] ?: return@mapNotNull null
+                NazionaleStat(o.getString("season"), pid, o.getString("nazione"), o.getInt("presenze"), o.getInt("gol"))
             })
         }
         root.optJSONArray("missioni")?.let { a ->

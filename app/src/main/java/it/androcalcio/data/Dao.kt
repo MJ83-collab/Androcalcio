@@ -216,4 +216,30 @@ interface AndrocalcioDao {
     @Delete suspend fun deleteMissions(list: List<ScoutMission>)
 
     @Query("DELETE FROM scout_missions") suspend fun clearMissions()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertConvocazioni(list: List<Convocazione>)
+
+    @Query("SELECT * FROM convocazioni WHERE season = :season AND round = :round")
+    suspend fun convocazioniData(season: String, round: Int): List<Convocazione>
+
+    @Query("SELECT * FROM convocazioni WHERE playerId = :playerId ORDER BY id DESC")
+    suspend fun convocazioniDi(playerId: Long): List<Convocazione>
+
+    @Query("SELECT * FROM convocazioni")
+    suspend fun allConvocazioni(): List<Convocazione>
+
+    @Query("DELETE FROM convocazioni") suspend fun clearConvocazioni()
+
+    @Query("SELECT * FROM nazionale_stats")
+    suspend fun allNazionaleStats(): List<NazionaleStat>
+
+    @Query("SELECT * FROM nazionale_stats WHERE season = :season")
+    suspend fun nazionaleStatsOf(season: String): List<NazionaleStat>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNazionaleStats(list: List<NazionaleStat>)
+
+    @Query("DELETE FROM nazionale_stats") suspend fun clearNazionaleStats()
 }
+

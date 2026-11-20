@@ -72,6 +72,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -132,7 +133,7 @@ private val bottomTabs = listOf(
 )
 
 @Composable
-fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
+private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     val teams by vm.teams.collectAsState()
     val team by vm.selectedTeam.collectAsState()
@@ -672,7 +673,7 @@ fun RosaScreen(
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
     var sheet by remember { mutableStateOf<Player?>(null) }
-    sheet?.let { p -> PlayerSheet(p, team, onClose = { sheet = null }, onRenew = { renew = p; sheet = null }) }
+    sheet?.let { p -> SchedaGiocatore(p, team, onClose = { sheet = null }, onRenew = { renew = p; sheet = null }) }
     renew?.let { p ->
         var years by remember(p) { mutableStateOf(3) }
         AlertDialog(
@@ -1003,5 +1004,18 @@ private fun FormazioneCard(
             Text("Tocca ● / ○ per mettere o togliere un titolare.",
                 color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+/** Root: rende disponibili da ovunque la scheda giocatore e il caricamento dei suoi dati. */
+@Composable
+fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
+    var schedaAperta by remember { mutableStateOf<Player?>(null) }
+    CompositionLocalProvider(
+        LocalApriGiocatore provides { schedaAperta = it },
+        LocalCaricaGiocatore provides { vm.dettaglioGiocatore(it) }
+    ) {
+        AndrocalcioContenuto(vm)
+        schedaAperta?.let { p -> SchedaGiocatore(p, null, onClose = { schedaAperta = null }) }
     }
 }

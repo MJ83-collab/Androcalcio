@@ -29,6 +29,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
+import it.androcalcio.data.DettaglioGiocatore
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.clickable
 import it.androcalcio.engine.Attr
 import it.androcalcio.ui.components.money
 import it.androcalcio.ui.theme.AC
@@ -42,9 +47,33 @@ fun flagOf(nazione: String): String = when (nazione) {
 /** Stelle 0..5 da un valore 1..99 (una stella ogni 20 punti). */
 private fun stars(v: Int): String { val n = (v / 20).coerceIn(0, 5); return "★".repeat(n) + "☆".repeat(5 - n) }
 
+/** Apre la scheda di un giocatore da qualunque schermo: il root dell'app la mostra. */
+val LocalApriGiocatore = compositionLocalOf<(Player) -> Unit> { {} }
+
+/** Carica i dati completi di un giocatore (squadra, nazionale, convocazioni, stagioni). */
+val LocalCaricaGiocatore = compositionLocalOf<(suspend (Player) -> DettaglioGiocatore)?> { null }
+
+/** Rende cliccabile un nome: al tocco si apre la scheda completa. */
+@Composable
+fun Modifier.apriScheda(p: Player): Modifier {
+    val apri = LocalApriGiocatore.current
+    return this.clickable { apri(p) }
+}
+
+/** Scheda con i dati caricati dal database (nazionale, convocazioni, stagioni, clausola). */
+@Composable
+fun SchedaGiocatore(p: Player, team: Team?, onClose: () -> Unit, onRenew: (() -> Unit)? = null) {
+    val carica = LocalCaricaGiocatore.current
+    val dettaglio by produceState<DettaglioGiocatore?>(null, p.id) { value = carica?.invoke(p) }
+    PlayerSheet(p, team, onClose, onRenew, dettaglio)
+}
+
 /** Scheda del giocatore come "Informazione del giocatore" del gioco originale: dati, parametri, abilità a stelle, contratto. */
 @Composable
-fun PlayerSheet(p: Player, team: Team?, onClose: () -> Unit, onRenew: (() -> Unit)? = null) {
+fun PlayerSheet(
+    p: Player, team: Team?, onClose: () -> Unit, onRenew: (() -> Unit)? = null,
+    dettaglio: DettaglioGiocatore? = null
+) {
     AlertDialog(
         onDismissRequest = onClose,
         containerColor = AC.Paper,
@@ -60,7 +89,8 @@ fun PlayerSheet(p: Player, team: Team?, onClose: () -> Unit, onRenew: (() -> Uni
                     Tag("${p.age} anni", AC.ColGreen); Tag(p.nationality, AC.ColBlue)
                     Tag(Attr.FOOT_NAMES[p.foot] ?: "Destro", AC.ColOrange)
                 }
-                if (team != null) Text(team.name, fontSize = 12.sp, color = AC.PaperText)
+                val squadra = dettaglio?.squadra ?: team?.name
+                if (squadra != null) Text(squadra, fontSize = 12.sp, color = AC.PaperText)
                 Text(if (p.injuredRounds > 0) "INFORTUNATO: ${p.injuredRounds} turni" else "NON INFORTUNATO",
                     fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
                     color = if (p.injuredRounds > 0) AC.ColEn else AC.ColGreen)
@@ -96,11 +126,40 @@ fun PlayerSheet(p: Player, team: Team?, onClose: () -> Unit, onRenew: (() -> Uni
                         Text("${p.contract}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
                     }
                 }
+                Titolo("NAZIONALE")
+                Text("Nazionale: ${p.nationality}", fontSize = 12.sp, color = AC.PaperText)
+                if (dettaglio == null) {
+                    Text("Caricamento…", fontSize = 11.sp, color = AC.PaperText)
+                } else {
+                    val presenzeNaz = dettaglio.nazionaleStagioni.sumOf { it.presenze }
+                    val golNaz = dettaglio.nazionaleStagioni.sumOf { it.gol }
+                    Text("Presenze in nazionale: $presenzeNaz · gol: $golNaz", fontSize = 12.sp, color = AC.PaperText)
+                    if (dettaglio.convocazioni.isEmpty()) Text("Mai convocato.", fontSize = 11.sp, color = AC.PaperText)
+                    dettaglio.convocazioni.take(8).forEach { c ->
+                        Text("${c.season} · ${c.competizione}: ${c.risultato}", fontSize = 11.sp, color = AC.PaperText)
+                    }
+                    Titolo("STAGIONI")
+                    if (dettaglio.stagioni.isEmpty()) Text("Nessuna partita registrata.", fontSize = 11.sp, color = AC.PaperText)
+                    dettaglio.stagioni.forEach { st ->
+                        Text("${st.season}: presenze ${st.presenze} · gol ${st.gol}", fontSize = 12.sp, color = AC.PaperText)
+                    }
+                    dettaglio.clausola?.let { c ->
+                        Titolo("CLAUSOLE")
+                        Text("30 presenze ${money(c.bonusPresenze)} · 20 gol ${money(c.bonusGol)} · " +
+                            "campionato ${money(c.bonusCampionato)} · coppa ${money(c.bonusCoppa)}",
+                            fontSize = 11.sp, color = AC.PaperText)
+                    }
+                }
             }
         },
         confirmButton = { if (onRenew != null) PcAction(onClick = onRenew) { Text("Rinnova") } },
         dismissButton = { PcAction(onClick = onClose) { Text("OK") } }
     )
+}
+
+@Composable
+private fun Titolo(testo: String) {
+    Text(testo, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
 }
 
 @Composable

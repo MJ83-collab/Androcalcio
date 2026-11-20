@@ -164,6 +164,7 @@ private fun ColumnScope.GiocatoriPane(
             Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(byPlayer[st.playerId]?.name ?: "Ex giocatore",
+                        modifier = byPlayer[st.playerId]?.let { Modifier.apriScheda(it) } ?: Modifier,
                         color = if (st.teamId == team.id) AC.Accent else AC.Text, maxLines = 1)
                     Text(byTeam[st.teamId]?.name ?: "", color = AC.TextDim,
                         style = MaterialTheme.typography.bodySmall, maxLines = 1)

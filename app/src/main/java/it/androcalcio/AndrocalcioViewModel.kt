@@ -69,6 +69,10 @@ import it.androcalcio.engine.Missioni
 import it.androcalcio.data.PlayerStat
 import it.androcalcio.data.Clausola
 import it.androcalcio.data.ScoutMission
+import it.androcalcio.data.Convocazione
+import it.androcalcio.data.NazionaleStat
+import it.androcalcio.data.DettaglioGiocatore
+import it.androcalcio.engine.Nazionali
 import it.androcalcio.engine.SquadraInfo
 import it.androcalcio.ui.components.money
 import it.androcalcio.engine.MatchReport
@@ -371,24 +375,33 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val statAcc = HashMap<Long, PlayerStat>()
             val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
                 .let { if (all) it else it.take(1) }
+            rounds.forEach { giocaDataNazionali(_season.value, it) }
+            val assentiPerTurno: Map<Int, Set<Long>> = rounds.associateWith { r ->
+                dao.convocazioniData(_season.value, r).map { it.playerId }.toSet()
+            }
             for (m in ms.filter { !it.played && it.round in rounds && it.id != skipId }) {
                 val h = teamsById[m.homeTeamId] ?: continue
                 val a = teamsById[m.awayTeamId] ?: continue
                 val hp = cache.getOrPut(h.id) { dao.playersOnce(h.id) }
                 val ap = cache.getOrPut(a.id) { dao.playersOnce(a.id) }
-                val hL = if (h.id == t.id) Lineup.resolve(hp, _formation.value) else null
-                val aL = if (a.id == t.id) Lineup.resolve(ap, _formation.value) else null
+                val assenti = if (Cup.isCup(m.round)) emptySet() else assentiPerTurno[m.round].orEmpty()
+                val hpD = hp.filter { it.id !in assenti }
+                val apD = ap.filter { it.id !in assenti }
+                if (h.id == t.id && hp.any { it.id in assenti }) lineupNotes += "${hp.count { it.id in assenti }} convocati in nazionale: oggi non giocano."
+                if (a.id == t.id && ap.any { it.id in assenti }) lineupNotes += "${ap.count { it.id in assenti }} convocati in nazionale: oggi non giocano."
+                val hL = if (h.id == t.id) Lineup.resolve(hpD, _formation.value) else null
+                val aL = if (a.id == t.id) Lineup.resolve(apD, _formation.value) else null
                 lineupNotes += hL?.notes.orEmpty() + aL?.notes.orEmpty()
                 val r = MatchEngine.simulate(
-                    h, hL?.xi ?: Medical.available(hp), a, aL?.xi ?: Medical.available(ap),
+                    h, hL?.xi ?: Medical.available(hpD), a, aL?.xi ?: Medical.available(apD),
                     if (hL != null) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
                     if (aL != null) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
                     Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
                     Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                     homeMent = if (h.id == t.id) _mentality.value else null,
                     awayMent = if (a.id == t.id) _mentality.value else null,
-                    homeBench = hL?.let { Medical.available(hp) - it.xi.toSet() },
-                    awayBench = aL?.let { Medical.available(ap) - it.xi.toSet() },
+                    homeBench = hL?.let { Medical.available(hpD) - it.xi.toSet() },
+                    awayBench = aL?.let { Medical.available(apD) - it.xi.toSet() },
                     homePress = if (h.id == t.id) _pressing.value else null,
                     awayPress = if (a.id == t.id) _pressing.value else null,
                     homeLine = if (h.id == t.id) _line.value else null,
@@ -897,6 +910,111 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Nazionali con una rosa sufficiente per convocare: i giocatori raggruppati per nazionalità. */
+    private suspend fun nazioniPool(): Map<String, List<Player>> =
+        dao.allPlayers().filter { it.teamId != Market.SVINCOLATO_ID }.groupBy { it.nationality }
+            .filter { (_, ps) -> Medical.available(ps).size >= Nazionali.MIN_ROSA }
+
+    /** Registra convocazioni, presenze e gol di una partita tra nazionali. */
+    private suspend fun registraNazionale(
+        season: String, competizione: String, round: Int, casa: String, trasf: String,
+        convCasa: List<Player>, convTrasf: List<Player>, r: MatchReport
+    ) {
+        val esito = "$casa ${r.homeGoals}-${r.awayGoals} $trasf"
+        dao.insertConvocazioni(
+            convCasa.map { Convocazione(season = season, competizione = competizione, round = round,
+                playerId = it.id, nazione = casa, risultato = esito) } +
+                convTrasf.map { Convocazione(season = season, competizione = competizione, round = round,
+                    playerId = it.id, nazione = trasf, risultato = esito) }
+        )
+        val acc = HashMap<Long, NazionaleStat>()
+        val gia = dao.nazionaleStatsOf(season).associateBy { it.playerId }
+        fun riga(pid: Long, naz: String): NazionaleStat = acc[pid] ?: gia[pid] ?: NazionaleStat(season, pid, naz)
+        r.homePlayed.forEach { pid -> riga(pid, casa).let { acc[pid] = it.copy(presenze = it.presenze + 1) } }
+        r.awayPlayed.forEach { pid -> riga(pid, trasf).let { acc[pid] = it.copy(presenze = it.presenze + 1) } }
+        r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.forEach { e ->
+            riga(e.playerId, if (e.home) casa else trasf).let { acc[e.playerId] = it.copy(gol = it.gol + 1) }
+        }
+        dao.upsertNazionaleStats(acc.values.toList())
+    }
+
+    /** Data internazionale (una giornata di campionato): le nazionali si affrontano; i convocati saltano il club. */
+    private suspend fun giocaDataNazionali(season: String, round: Int) {
+        if (round !in Nazionali.DATE) return
+        if (dao.convocazioniData(season, round).isNotEmpty()) return
+        val rng = kotlin.random.Random.Default
+        val pool = nazioniPool()
+        val base = dao.allTeams().firstOrNull() ?: return
+        pool.keys.shuffled(rng).chunked(2).filter { it.size == 2 }.forEachIndexed { i, coppia ->
+            val a = coppia[0]
+            val b = coppia[1]
+            val ca = Nazionali.convoca(pool.getValue(a))
+            val cb = Nazionali.convoca(pool.getValue(b))
+            val r = Nazionali.gioca(Nazionali.squadra(base, a, 2 * i), ca, Nazionali.squadra(base, b, 2 * i + 1), cb, rng)
+            registraNazionale(season, "Amichevole internazionale", round, a, b, ca, cb, r)
+        }
+    }
+
+    /** Eliminazione diretta: turni sorteggiati, il pareggio si decide a caso (come ai rigori). */
+    private suspend fun eliminazione(
+        season: String, nome: String, partecipanti: List<String>, pool: Map<String, List<Player>>,
+        base: Team, rng: kotlin.random.Random
+    ) {
+        if (partecipanti.size < 2) return
+        var turno = partecipanti.shuffled(rng)
+        while (turno.size > 1) {
+            val etichetta = when (turno.size) { 16 -> "Ottavi"; 8 -> "Quarti"; 4 -> "Semifinali"; 2 -> "Finale"; else -> "Turno" }
+            val prossimo = ArrayList<String>()
+            turno.chunked(2).filter { it.size == 2 }.forEachIndexed { i, coppia ->
+                val a = coppia[0]
+                val b = coppia[1]
+                val ca = Nazionali.convoca(pool.getValue(a))
+                val cb = Nazionali.convoca(pool.getValue(b))
+                val r = Nazionali.gioca(Nazionali.squadra(base, a, 2 * i), ca, Nazionali.squadra(base, b, 2 * i + 1), cb, rng)
+                registraNazionale(season, "$nome · $etichetta", 0, a, b, ca, cb, r)
+                prossimo += when {
+                    r.homeGoals > r.awayGoals -> a
+                    r.homeGoals < r.awayGoals -> b
+                    else -> if (rng.nextBoolean()) a else b
+                }
+            }
+            turno = prossimo
+        }
+        dao.insertAlbo(listOf(AlboEntry(season = season, nazione = if (nome == "Mondiali") "Mondo" else "Europa",
+            competizione = nome, vincitore = turno.first())))
+    }
+
+    /** Mondiali (16 squadre) ed Europei (8 europee) a fine stagione, nelle stagioni giuste. */
+    private suspend fun tornei(season: String, annoInizio: Int) {
+        val rng = kotlin.random.Random.Default
+        val pool = nazioniPool()
+        val base = dao.allTeams().firstOrNull() ?: return
+        if (Nazionali.mondiale(annoInizio)) {
+            val top = pool.keys.sortedByDescending { Nazionali.forza(pool.getValue(it)) }.take(16)
+            eliminazione(season, "Mondiali", top, pool, base, rng)
+        }
+        if (Nazionali.europei(annoInizio)) {
+            val top = pool.keys.filter { it in Nazionali.EUROPA }
+                .sortedByDescending { Nazionali.forza(pool.getValue(it)) }.take(8)
+            eliminazione(season, "Europei", top, pool, base, rng)
+        }
+    }
+
+    /** Scheda completa di un giocatore: squadra, clausola, stagioni, nazionale e convocazioni. */
+    suspend fun dettaglioGiocatore(p: Player): DettaglioGiocatore {
+        val fresco = dao.playerById(p.id) ?: p
+        val squadra = if (fresco.teamId == Market.SVINCOLATO_ID) "Svincolato"
+            else dao.allTeams().firstOrNull { it.id == fresco.teamId }?.name ?: "—"
+        return DettaglioGiocatore(
+            player = fresco,
+            squadra = squadra,
+            clausola = dao.clausoleOnce().firstOrNull { it.playerId == p.id },
+            stagioni = dao.allStats().filter { it.playerId == p.id }.sortedByDescending { it.season },
+            nazionaleStagioni = dao.allNazionaleStats().filter { it.playerId == p.id }.sortedByDescending { it.season },
+            convocazioni = dao.convocazioniDi(p.id)
+        )
+    }
+
     /** Dopo una gara: accumula il rimborso per gli infortuni nuovi della tua squadra (pagato a fine stagione). */
     private fun accrueInsurance(teamId: Long, before: List<Player>, after: List<Player>) {
         val lvl = _insurance.value
@@ -1227,15 +1345,21 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 val byId = ts.associateBy { it.id }
                 // In ordine di giornata: gli infortunati saltano davvero i turni successivi
+                val turniLega = dao.matchesOnce(key, s).filter { !it.played }.map { it.round }.distinct()
+                turniLega.forEach { giocaDataNazionali(s, it) }
+                val assentiLega: Map<Int, Set<Long>> = turniLega.associateWith { r ->
+                    if (Cup.isCup(r)) emptySet() else dao.convocazioniData(s, r).map { it.playerId }.toSet()
+                }
                 val sims = dao.matchesOnce(key, s).filter { !it.played }.sortedBy { it.round }.mapNotNull { m ->
                     val h = byId[m.homeTeamId]
                     val a = byId[m.awayTeamId]
                     if (h == null || a == null) null else {
-                        fun xi(id: Long) = cache[id].orEmpty().let {
+                        val assenti = assentiLega[m.round].orEmpty()
+                        fun xi(id: Long) = cache[id].orEmpty().filter { it.id !in assenti }.let {
                             if (id == me.id) Lineup.resolve(it, _formation.value).xi else Medical.available(it)
                         }
                         fun bench(id: Long, xi: List<Player>) =
-                            if (id == me.id) Medical.available(cache[id].orEmpty()) - xi.toSet() else null
+                            if (id == me.id) Medical.available(cache[id].orEmpty().filter { it.id !in assenti }) - xi.toSet() else null
                         val hx = xi(h.id); val ax = xi(a.id)
                         val r = MatchEngine.simulate(
                             h, hx, a, ax,
@@ -1363,6 +1487,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.deleteAlboSeason(s)
             dao.insertAlbo(alboRows)
+            Nazionali.DATE.forEach { giocaDataNazionali(s, it) }
+            tornei(s, prefs.getInt("season_year", 2026))
 
             // 1e) Fiducia della dirigenza, umore dei tifosi e reputazione dell'allenatore
             val myKey = leagues.entries.firstOrNull { e -> e.value.any { it.id == me.id } }?.key

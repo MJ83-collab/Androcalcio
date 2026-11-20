@@ -23,7 +23,9 @@ object SeedData {
     )
     val codes = mapOf(
         "Italia" to "ITA", "Spagna" to "ESP", "Inghilterra" to "ENG", "Germania" to "GER",
-        "Francia" to "FRA", "Brasile" to "BRA", "Argentina" to "ARG"
+        "Francia" to "FRA", "Brasile" to "BRA", "Argentina" to "ARG",
+        "Portogallo" to "POR", "Olanda" to "OLA", "Belgio" to "BEL", "Croazia" to "CRO",
+        "Polonia" to "POL", "Serbia" to "SRB", "Stati Uniti" to "USA", "Giappone" to "GIA", "Marocco" to "MAR"
     )
     private val roles = List(2) { "P" } + List(6) { "D" } + List(6) { "C" } + List(4) { "A" }
 
