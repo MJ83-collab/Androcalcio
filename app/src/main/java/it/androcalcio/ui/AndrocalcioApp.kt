@@ -115,7 +115,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     PARTITA("Partita", Icons.Filled.PlayArrow, "Simulazione 2D", Color(0xFFE08A12)),
     MERCATO("Mercato", Icons.Filled.ShoppingCart, "Acquisti e cessioni", Color(0xFFD4A017)),
     VIVAIO("Vivaio", Icons.Filled.Face, "Giovani e scouting", Color(0xFF4CAF50)),
-    SQUADRE("Squadre", Icons.Filled.Refresh, "Cambia squadra", Color(0xFF5B6BC8)),
+    SQUADRE("Squadre", Icons.Filled.Refresh, "Elenco squadre", Color(0xFF5B6BC8)),
     CALENDARIO("Calendario", Icons.Filled.DateRange, "Giornate e risultati", Color(0xFF2E86C1)),
     FINANZE("Finanze", Icons.Filled.AccountBox, "Bilancio e sponsor", Color(0xFF1E9E7A)),
     DIRIGENZA("Dirigenza", Icons.Filled.AccountBox, "Fiducia, tifosi, fondi", Color(0xFFB9770E)),
@@ -168,6 +168,15 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         )
     }
 
+    val clubNow by vm.club.collectAsState()
+    if (clubNow.esonero && screen != Screen.DIRIGENZA) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Esonerato") },
+            text = { Text("La dirigenza ti ha esonerato. Scegli una delle offerte di panchina.") },
+            confirmButton = { TextButton(onClick = { screen = Screen.DIRIGENZA }) { Text("Vedi offerte") } }
+        )
+    }
     val started by vm.started.collectAsState()
     if (!started && teams.isNotEmpty()) {
         val info by vm.teamInfo.collectAsState()
@@ -206,10 +215,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) },
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() })
                 }
-                Screen.SQUADRE -> TeamList(teams, team?.id) {
-                    vm.selectTeam(it)
-                    screen = Screen.HOME
-                }
+                Screen.SQUADRE -> TeamList(teams, team?.id) { }   // solo consultazione: la panchina cambia con le offerte
                 Screen.PARTITA -> {
                     val ment by vm.mentality.collectAsState()
                     val modulo by vm.formation.collectAsState()
@@ -265,7 +271,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 Screen.DIRIGENZA -> {
                     val c by vm.club.collectAsState()
-                    DirigenzaScreen(team, c) { tipo, importo -> vm.requestFunds(tipo, importo) }
+                    DirigenzaScreen(team, c, teams, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) })
                 }
                 Screen.STAFF -> {
                     val staffList by vm.staff.collectAsState()
@@ -567,7 +573,7 @@ fun TeamList(teams: List<Team>, selectedId: Long?, onSelect: (Team) -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         Text(
-            "Scegli la squadra",
+            "Squadre (consultazione)",
             modifier = Modifier.padding(start = 16.dp, top = 16.dp),
             style = MaterialTheme.typography.headlineSmall
         )

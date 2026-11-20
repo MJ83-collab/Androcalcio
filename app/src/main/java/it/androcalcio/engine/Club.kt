@@ -44,3 +44,46 @@ object ClubRequests {
     val TIPI = listOf("stadio", "allenamento", "vivaio")
     val IMPORTI = listOf(1_000_000L, 3_000_000L, 6_000_000L)
 }
+
+/** Offerta di panchina: club, garanzia di budget mercato e ingaggio annuo dell'allenatore. */
+data class ClubOffer(val teamId: Long, val garanzia: Long, val stipendio: Long) {
+    companion object {
+        fun encode(l: List<ClubOffer>) = l.joinToString(";") { "${it.teamId}|${it.garanzia}|${it.stipendio}" }
+        fun decode(s: String?): List<ClubOffer> = s.orEmpty().split(";").mapNotNull {
+            val p = it.split("|")
+            if (p.size == 3) ClubOffer(p[0].toLongOrNull() ?: return@mapNotNull null,
+                p[1].toLongOrNull() ?: 0L, p[2].toLongOrNull() ?: 0L) else null
+        }
+    }
+}
+
+object ClubOffers {
+    const val RICHIESTA_GARANZIE_REP_MIN = 50
+
+    /**
+     * Offerte di fine stagione. Esonerato: club più piccoli del tuo. Altrimenti: club di livello
+     * proporzionale alla reputazione (alta = squadre blasonate), da 0 a 3 offerte.
+     */
+    fun make(strengths: Map<Long, Double>, budgets: Map<Long, Long>, me: Long, reputazione: Int,
+             fired: Boolean, rng: kotlin.random.Random): List<ClubOffer> {
+        val others = strengths.filterKeys { it != me }.entries.sortedByDescending { it.value }
+        if (others.isEmpty()) return emptyList()
+        val mine = strengths[me] ?: 0.0
+        val picks: List<Long> = if (fired) {
+            val smaller = others.filter { it.value < mine }.ifEmpty { others.takeLast(10) }
+            smaller.shuffled(rng).take(3).map { it.key }
+        } else {
+            val n = (reputazione / 30).coerceIn(0, 3)
+            if (n == 0) emptyList() else {
+                val target = ((100 - reputazione) / 100.0 * (others.size - 1)).toInt()
+                val from = (target - 4).coerceAtLeast(0)
+                others.subList(from, (target + 5).coerceAtMost(others.size)).shuffled(rng).take(n).map { it.key }
+            }
+        }
+        return picks.map { id ->
+            val g = ((budgets[id] ?: 0L) / 4 * (50 + reputazione) / 100).coerceAtLeast(1_000_000L)
+            val st = 200_000L + reputazione * 20_000L
+            ClubOffer(id, g / 100_000L * 100_000L, st / 100_000L * 100_000L)
+        }
+    }
+}

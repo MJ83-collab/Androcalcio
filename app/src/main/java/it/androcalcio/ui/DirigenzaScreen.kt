@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.AndrocalcioViewModel.ClubState
 import it.androcalcio.data.Team
 import it.androcalcio.engine.Club
+import it.androcalcio.engine.ClubOffer
+import it.androcalcio.engine.ClubOffers
 import it.androcalcio.engine.ClubRequests
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.components.PaperPanel
@@ -28,7 +30,8 @@ import it.androcalcio.ui.components.money
 import it.androcalcio.ui.theme.AC
 
 @Composable
-fun DirigenzaScreen(team: Team?, c: ClubState, onRequest: (String, Long) -> Unit) {
+fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (String, Long) -> Unit,
+                    onOffer: (ClubOffer, Boolean) -> Unit) {
     if (team == null) return
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp),
@@ -71,6 +74,26 @@ fun DirigenzaScreen(team: Team?, c: ClubState, onRequest: (String, Long) -> Unit
                             PcButton(money(imp), { onRequest(tipo, imp) }, enabled = !done)
                         }
                     }
+                }
+            }
+        }
+    }
+        if (c.offerte.isNotEmpty()) {
+            GlassCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionTitle("Offerte di panchina")
+                    c.offerte.forEach { o ->
+                        val t = teams.firstOrNull { it.id == o.teamId } ?: return@forEach
+                        Text(t.name, color = AC.Text, style = MaterialTheme.typography.titleSmall)
+                        Text("Garanzia ${money(o.garanzia)} · ingaggio ${money(o.stipendio)} l'anno",
+                            color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            PcButton("Accetta", { onOffer(o, false) }, main = true)
+                            PcButton("Chiedi +50%", { onOffer(o, true) })
+                        }
+                    }
+                    Text("Chiedere più garanzie funziona solo con reputazione ${ClubOffers.RICHIESTA_GARANZIE_REP_MIN}+, altrimenti il club ritira l'offerta.",
+                        color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

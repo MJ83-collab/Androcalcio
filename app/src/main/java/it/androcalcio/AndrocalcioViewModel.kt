@@ -39,6 +39,8 @@ import it.androcalcio.data.setStatoInt
 import it.androcalcio.data.statoInt
 import it.androcalcio.engine.Club
 import it.androcalcio.engine.ClubRequests
+import it.androcalcio.engine.ClubOffer
+import it.androcalcio.engine.ClubOffers
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
@@ -1099,7 +1101,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + Club.tifosiDelta(myPos, exp, champion))
                 dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) +
                     Club.reputazioneDelta(myPos, exp, titles))
-                if (Club.shouldFire(fid)) dao.setStato(Stato("esonero", "1"))
+                val fired = Club.shouldFire(fid)
+                dao.setStato(Stato("esonero", if (fired) "1" else "0"))
+                val allStr = cache.mapValues { (_, ps) -> ps.map { it.overall }.sortedDescending().take(11).average() }
+                dao.setStato(Stato("offerte", ClubOffer.encode(ClubOffers.make(allStr,
+                    teamsNow.associate { it.id to it.budget }, me.id, dao.statoInt(StatoKeys.REPUTAZIONE), fired, rng))))
             }
 
             // 2) Premi, promozioni e retrocessioni (divisioni ordinate per comparsa nella lista)
@@ -1300,7 +1306,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Dirigenza: fiducia, tifosi, reputazione e richieste di fondi ----
     data class ClubState(val fiducia: Int, val tifosi: Int, val reputazione: Int, val clima: Int,
-                         val richieste: Set<String>, val esonero: Boolean)
+                         val richieste: Set<String>, val esonero: Boolean,
+                         val offerte: List<ClubOffer> = emptyList())
     private val _club = MutableStateFlow(ClubState(60, 60, 30, 60, emptySet(), false))
     val club: StateFlow<ClubState> = _club
 
@@ -1310,7 +1317,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.statoInt(StatoKeys.FIDUCIA), dao.statoInt(StatoKeys.TIFOSI),
             dao.statoInt(StatoKeys.REPUTAZIONE), dao.statoInt(StatoKeys.CLIMA),
             ClubRequests.TIPI.filter { dao.stato(StatoKeys.RICHIESTA + it) == year }.toSet(),
-            dao.stato("esonero") == "1")
+            dao.stato("esonero") == "1", ClubOffer.decode(dao.stato("offerte")))
     }
 
     init { viewModelScope.launch(Dispatchers.IO) { refreshClub() } }
@@ -1336,6 +1343,28 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     _notice.value = "Accettata: ${money(importo)} per $tipo."
                 }
             }
+            refreshClub()
+        }
+    }
+
+    /** Accetta un'offerta di panchina; con `chiediGaranzie` chiedi il 50% in più (serve reputazione ≥ 50, altrimenti salta). */
+    fun acceptOffer(o: ClubOffer, chiediGaranzie: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val c = _club.value
+            val rest = c.offerte.filter { it.teamId != o.teamId }
+            if (chiediGaranzie && c.reputazione < ClubOffers.RICHIESTA_GARANZIE_REP_MIN) {
+                dao.setStato(Stato("offerte", ClubOffer.encode(rest)))
+                _notice.value = "Il club ritira l'offerta: la tua reputazione non permette di chiedere garanzie."
+                refreshClub(); return@launch
+            }
+            val team = dao.team(o.teamId)
+            val garanzia = if (chiediGaranzie) o.garanzia * 3 / 2 else o.garanzia
+            dao.updateTeam(team.copy(budget = team.budget + garanzia))
+            dao.setStato(Stato("stipendio_allenatore", o.stipendio.toString()))
+            dao.setStato(Stato("esonero", "0")); dao.setStato(Stato("offerte", ""))
+            dao.setStatoInt(StatoKeys.FIDUCIA, 60); dao.setStatoInt(StatoKeys.TIFOSI, 60); dao.setStatoInt(StatoKeys.CLIMA, 60)
+            selectTeam(team)
+            _notice.value = "Nuova panchina: ${team.name}. Garanzia ${money(garanzia)}, ingaggio ${money(o.stipendio)} l'anno."
             refreshClub()
         }
     }
