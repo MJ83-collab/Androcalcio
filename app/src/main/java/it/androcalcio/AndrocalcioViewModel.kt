@@ -47,6 +47,7 @@ import it.androcalcio.engine.ClubOffers
 import it.androcalcio.engine.SponsorDeal
 import it.androcalcio.engine.Sponsors
 import it.androcalcio.engine.Strutture
+import it.androcalcio.engine.Economia
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
@@ -1158,7 +1159,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val size = st.size
                     val base = listOf(20_000_000L, 6_000_000L, 2_000_000L).getOrElse(tier) { 800_000L }
                     st.forEachIndexed { pos, row ->
-                        prizes[row.team.id] = base * (size - 1 - pos) / (size - 1).coerceAtLeast(1)
+                        val frac = (size - 1 - pos).toDouble() / (size - 1).coerceAtLeast(1)
+                        prizes[row.team.id] = (base * frac).toLong() +
+                            (Economia.DIRITTI_TV.getOrElse(tier) { 600_000L } * Economia.quotaTv(frac)).toLong()   // premio + diritti TV
                         posInfo[row.team.id] = "${pos + 1}º su $size in ${k.second}"
                     }
                     if (tier + 1 < ordered.size) {
@@ -1218,7 +1221,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     added += Progression.newYoung(t, rng, i == 0 && noKeeper)
                 }
                 val wages = keep.sumOf { it.salary } + (staffBy[t.id]?.sumOf { it.salary } ?: 0L)
-                val gate = t.stadiumCapacity.toLong() * t.ticketPrice * 7 / 10 * 19
+                val lg = teamsNow.filter { it.campionato == t.campionato }.map { x -> x.id to
+                    cache[x.id].orEmpty().map { it.overall }.sortedDescending().take(11).average() }
+                val lo = lg.minOf { it.second }; val hi = lg.maxOf { it.second }
+                val rel = if (hi > lo) ((lg.firstOrNull { it.first == t.id }?.second ?: lo) - lo) / (hi - lo) else 0.5
+                val gate = (t.stadiumCapacity.toLong() * t.ticketPrice * Economia.riempimento(rel) * 19).toLong()
                 val net = gate - wages   // monte ingaggi intero (scala reale)
                 val newLeague = moves[t.id]
                 if (t.id == me.id) {
