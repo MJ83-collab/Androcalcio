@@ -12,7 +12,7 @@ object TacticalRoles {
 
     val NAMES = mapOf(
         "POR" to "Portiere", "TD" to "Terzino destro", "TS" to "Terzino sinistro",
-        "DC" to "Centrale", "MED" to "Mediano", "REG" to "Regista", "INT" to "Interno",
+        "DC" to "Centrale", "CS" to "Centrale sinistro", "CD" to "Centrale destro", "MED" to "Mediano", "REG" to "Regista", "INT" to "Interno",
         "MP" to "Mezzapunta", "ES" to "Estremo", "CA" to "Centravanti"
     )
 
@@ -20,7 +20,10 @@ object TacticalRoles {
     val AFFINI: Map<String, List<Pair<String, Int>>> = mapOf(
         "TD" to listOf("TS" to 70, "DC" to 40),
         "TS" to listOf("TD" to 70, "DC" to 40),
-        "DC" to listOf("TD" to 40, "TS" to 30),
+        "DC" to listOf("CS" to 90, "CD" to 90),
+        "CS" to listOf("CD" to 90, "DC" to 80),
+        "CD" to listOf("CS" to 90, "DC" to 80),
+        "POR" to listOf("DC" to 100),
         "MED" to listOf("REG" to 70, "INT" to 50),
         "REG" to listOf("MED" to 70, "INT" to 40),
         "INT" to listOf("MP" to 70, "MED" to 40),
