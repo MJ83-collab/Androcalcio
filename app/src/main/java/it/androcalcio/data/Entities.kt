@@ -197,3 +197,9 @@ data class NazionaleStat(
     val gol: Int = 0
 )
 
+/** Giocatori convocabili dalla nazionale allenata dall'utente (massimo 23). */
+@Entity(tableName = "rosa_nazionale")
+data class RosaNazionale(
+    @PrimaryKey val playerId: Long,
+    val nazione: String
+)

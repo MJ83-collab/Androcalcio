@@ -71,6 +71,7 @@ import it.androcalcio.data.Clausola
 import it.androcalcio.data.ScoutMission
 import it.androcalcio.data.Convocazione
 import it.androcalcio.data.NazionaleStat
+import it.androcalcio.data.RosaNazionale
 import it.androcalcio.data.DettaglioGiocatore
 import it.androcalcio.engine.Nazionali
 import it.androcalcio.engine.SquadraInfo
@@ -652,6 +653,71 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _season.value)
     fun pickNazStagione(s: String) { _nazStagione.value = s }
 
+    /** Nazionale allenata dall'utente ("" = nessuna), offerta pendente e rosa convocabile. */
+    val nazioneAllenata: StateFlow<String> = flow {
+        while (true) { emit(dao.stato("nazione_allenata").orEmpty()); delay(1500) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    val offertaNazionale: StateFlow<String> = flow {
+        while (true) { emit(dao.stato("offerta_nazionale").orEmpty()); delay(1500) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    val rosaNazionale: StateFlow<List<Player>> = flow {
+        while (true) {
+            val ids = dao.rosaNazionale().map { it.playerId }.toSet()
+            emit(dao.allPlayers().filter { it.id in ids }); delay(1500)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** Tutti i giocatori con la nazionalità della nazionale allenata: candidati alla convocazione. */
+    val giocatoriNazionalita: StateFlow<List<Player>> = nazioneAllenata.flatMapLatest { n ->
+        flow {
+            while (true) {
+                emit(if (n.isEmpty()) emptyList() else dao.allPlayers().filter { it.nationality == n })
+                delay(3000)
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun aggiungiConvocato(p: Player) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val n = dao.stato("nazione_allenata").orEmpty()
+            if (n.isEmpty() || p.nationality != n) return@launch
+            if (dao.rosaNazionale().size >= Nazionali.CONVOCATI) {
+                _notice.value = "La rosa è piena: ${Nazionali.CONVOCATI} convocati al massimo."
+                return@launch
+            }
+            dao.insertRosaNazionale(RosaNazionale(p.id, n))
+        }
+    }
+
+    fun togliConvocato(p: Player) {
+        viewModelScope.launch(Dispatchers.IO) { dao.deleteRosaNazionale(p.id) }
+    }
+
+    /** Risposta all'offerta di una nazionale: accettando diventi ct (club e nazionale insieme). */
+    fun rispondiNazionale(accetta: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val n = dao.stato("offerta_nazionale").orEmpty()
+            if (n.isEmpty()) return@launch
+            dao.setStato(Stato("offerta_nazionale", ""))
+            if (accetta && dao.stato("nazione_allenata").isNullOrEmpty()) {
+                dao.setStato(Stato("nazione_allenata", n))
+                dao.clearRosaNazionale()
+                _notice.value = "Sei il ct della nazionale di $n. Costruisci la rosa dalla schermata Nazionali."
+            }
+        }
+    }
+
+    /** Dimissioni: penalità di 15 punti di reputazione e scelta di una nuova squadra. */
+    fun dimettiti() {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.setStatoInt(StatoKeys.REPUTAZIONE, (dao.statoInt(StatoKeys.REPUTAZIONE) - 15).coerceAtLeast(0))
+            dao.setStato(Stato("esonero", "0"))
+            dao.setStato(Stato("offerte", ClubOffer.encode(emptyList())))
+            prefs.edit().putBoolean("partita_iniziata", false).apply()
+            _started.value = false
+            _notice.value = "Ti sei dimesso (-15 di reputazione). Scegli la nuova squadra."
+        }
+    }
+
     /** Parere del vice allenatore sulla trattativa con il giocatore: monte ingaggi, durata e clausole richieste. */
     fun consiglioVice(p: Player, years: Int): String {
         val ask = wageAsk(p, years)
@@ -955,9 +1021,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (round !in Nazionali.DATE) return
         if (dao.convocazioniData(season, round).isNotEmpty()) return
         val rng = kotlin.random.Random.Default
-        val pool = nazioniPool()
+        val pool = nazioniPool().toMutableMap()
         val base = dao.allTeams().firstOrNull() ?: return
-        pool.keys.shuffled(rng).chunked(2).filter { it.size == 2 }.forEachIndexed { i, coppia ->
+        // La nazionale allenata dall'utente usa la sua rosa e gioca sempre
+        val mia = dao.stato("nazione_allenata").orEmpty()
+        if (mia.isNotEmpty()) {
+            val ids = dao.rosaNazionale().map { it.playerId }.toSet()
+            val rosa = dao.allPlayers().filter { it.id in ids }
+            if (Medical.available(rosa).size >= Nazionali.MIN_ROSA) pool[mia] = rosa else pool.remove(mia)
+        }
+        val ordine = (if (mia.isNotEmpty() && pool.containsKey(mia)) listOf(mia) else emptyList()) +
+            (pool.keys - listOf(mia)).shuffled(rng)
+        ordine.chunked(2).filter { it.size == 2 }.forEachIndexed { i, coppia ->
             val a = coppia[0]
             val b = coppia[1]
             val ca = Nazionali.convoca(pool.getValue(a))
@@ -1524,6 +1599,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val allStr = cache.mapValues { (_, ps) -> ps.map { it.overall }.sortedDescending().take(11).average() }
                 dao.setStato(Stato("offerte", ClubOffer.encode(ClubOffers.make(allStr,
                     teamsNow.associate { it.id to it.budget }, me.id, dao.statoInt(StatoKeys.REPUTAZIONE), fired, rng))))
+                // Offerta dalla nazionale: dopo un esonero, oppure a fine stagione con reputazione alta
+                if (dao.stato("nazione_allenata").isNullOrEmpty() &&
+                    (fired || (dao.statoInt(StatoKeys.REPUTAZIONE) >= 50 && rng.nextDouble() < 0.5))) {
+                    val nazioni = nazioniPool().keys.toList()
+                    if (nazioni.isNotEmpty()) {
+                        dao.setStato(Stato("offerta_nazionale", nazioni.random(rng)))
+                        _notice.value = "Una nazionale ti ha fatto un'offerta: vedi la schermata Nazionali."
+                    }
+                }
             }
 
             // 2) Premi, promozioni e retrocessioni (divisioni ordinate per comparsa nella lista)

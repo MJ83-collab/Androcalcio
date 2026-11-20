@@ -11,6 +11,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,12 +39,24 @@ import it.androcalcio.ui.theme.AC
 
 @Composable
 fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (String, Long) -> Unit,
-                    onOffer: (ClubOffer, Boolean) -> Unit, onSponsor: (SponsorDeal) -> Unit = {}, onRejectSponsors: () -> Unit = {}) {
+                    onOffer: (ClubOffer, Boolean) -> Unit, onSponsor: (SponsorDeal) -> Unit = {}, onRejectSponsors: () -> Unit = {},
+                    onDimettiti: () -> Unit = {}) {
+    var confermaDimissioni by remember { mutableStateOf(false) }
     if (team == null) return
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        PcButton("Dimettiti e cambia squadra", { confermaDimissioni = true }, Modifier.fillMaxWidth())
+        if (confermaDimissioni) {
+            AlertDialog(
+                onDismissRequest = { confermaDimissioni = false },
+                title = { Text("Dimissioni") },
+                text = { Text("Ti dimetti dalla panchina: la reputazione scende di 15 punti e potrai scegliere una nuova squadra.") },
+                confirmButton = { TextButton(onClick = { confermaDimissioni = false; onDimettiti() }) { Text("Dimettiti") } },
+                dismissButton = { TextButton(onClick = { confermaDimissioni = false }) { Text("Annulla") } }
+            )
+        }
         PaperPanel(Modifier.fillMaxWidth()) {
             listOf(
                 "Fiducia della dirigenza" to "${c.fiducia}/100 · ${Club.fiduciaLabel(c.fiducia)}",

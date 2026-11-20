@@ -241,5 +241,15 @@ interface AndrocalcioDao {
     suspend fun upsertNazionaleStats(list: List<NazionaleStat>)
 
     @Query("DELETE FROM nazionale_stats") suspend fun clearNazionaleStats()
+
+    @Query("SELECT * FROM rosa_nazionale")
+    suspend fun rosaNazionale(): List<RosaNazionale>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRosaNazionale(r: RosaNazionale)
+
+    @Query("DELETE FROM rosa_nazionale WHERE playerId = :playerId") suspend fun deleteRosaNazionale(playerId: Long)
+
+    @Query("DELETE FROM rosa_nazionale") suspend fun clearRosaNazionale()
 }
 

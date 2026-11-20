@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class, Stato::class, PlayerStat::class, Clausola::class, ScoutMission::class, Convocazione::class, NazionaleStat::class],
-    version = 21,
+    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class, Stato::class, PlayerStat::class, Clausola::class, ScoutMission::class, Convocazione::class, NazionaleStat::class, RosaNazionale::class],
+    version = 22,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -90,6 +90,13 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
             }
         }
         /** 20 -> 21: convocazioni in nazionale e statistiche di nazionale. */
+        /** 21 -> 22: rosa della nazionale allenata dall'utente. */
+        val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `rosa_nazionale` (`playerId` INTEGER NOT NULL, `nazione` TEXT NOT NULL, PRIMARY KEY(`playerId`))")
+            }
+        }
+
         val MIGRATION_20_21 = object : Migration(20, 21) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `convocazioni` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `season` TEXT NOT NULL, `competizione` TEXT NOT NULL, `round` INTEGER NOT NULL, `playerId` INTEGER NOT NULL, `nazione` TEXT NOT NULL, `risultato` TEXT NOT NULL)")
@@ -184,6 +191,6 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22).fallbackToDestructiveMigration().build()
     }
 }

@@ -295,8 +295,14 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val alboNaz by vm.albo.collectAsState()
                     val nazStagione by vm.nazStagione.collectAsState()
                     val stagioniNaz by vm.statSeasons.collectAsState()
+                    val mia by vm.nazioneAllenata.collectAsState()
+                    val offertaN by vm.offertaNazionale.collectAsState()
+                    val candidatiN by vm.giocatoriNazionalita.collectAsState()
+                    val rosaN by vm.rosaNazionale.collectAsState()
                     NazionaleScreen((stagioniNaz + season).distinct().sorted(), nazStagione,
-                        { vm.pickNazStagione(it) }, conv, nazStats, alboNaz)
+                        { vm.pickNazStagione(it) }, conv, nazStats, alboNaz,
+                        mia, offertaN, candidatiN, rosaN,
+                        { vm.aggiungiConvocato(it) }, { vm.togliConvocato(it) }, { vm.rispondiNazionale(it) })
                 }
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
@@ -311,7 +317,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 Screen.DIRIGENZA -> {
                     val c by vm.club.collectAsState()
                     DirigenzaScreen(team, c, teams, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) },
-                        { vm.acceptSponsor(it) }, { vm.rejectSponsors() })
+                        { vm.acceptSponsor(it) }, { vm.rejectSponsors() }, { vm.dimettiti() })
                 }
                 Screen.STAFF -> {
                     val staffList by vm.staff.collectAsState()
