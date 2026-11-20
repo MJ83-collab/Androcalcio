@@ -35,3 +35,10 @@ jobs:
           name: androcalcio-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Upload rose fisse generate
+        uses: actions/upload-artifact@v4
+        with:
+          name: rose-fisse
+          path: app/build/rose_fisse.csv
+          if-no-files-found: ignore
