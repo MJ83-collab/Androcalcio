@@ -47,7 +47,7 @@ object RoseFisse {
     private val WK_SLOTS = listOf(12, 13, 16, 17)
 
     /** Forza (scala FC) della prima e dell'ultima squadra di ogni campionato. */
-    private fun leagueRange(nazione: String, tier: Int): Pair<Int, Int> = when (nazione) {
+    internal fun leagueRange(nazione: String, tier: Int): Pair<Int, Int> = when (nazione) {
         "Inghilterra" -> if (tier == 0) 83 to 72 else 69 to 62
         "Spagna" -> if (tier == 0) 82 to 70 else 67 to 59
         "Italia" -> when (tier) { 0 -> 82 to 70; 1 -> 67 to 59; else -> 60 to 50 }   // Serie C (tier 2+) più debole
