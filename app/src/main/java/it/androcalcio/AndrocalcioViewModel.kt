@@ -1043,11 +1043,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Eliminazione diretta: turni sorteggiati, il pareggio si decide a caso (come ai rigori). */
+    /** Restituisce le nazionali uscite sotto le attese (ct esonerato): il posto in classifica di forza decide l'attesa. */
     private suspend fun eliminazione(
         season: String, nome: String, partecipanti: List<String>, pool: Map<String, List<Player>>,
         base: Team, rng: kotlin.random.Random
-    ) {
-        if (partecipanti.size < 2) return
+    ): List<String> {
+        if (partecipanti.size < 2) return emptyList()
+        val uscite = HashMap<String, Int>()   // nazione -> numero di squadre rimaste nel turno in cui è uscita
         var turno = partecipanti.shuffled(rng)
         while (turno.size > 1) {
             val etichetta = when (turno.size) { 16 -> "Ottavi"; 8 -> "Quarti"; 4 -> "Semifinali"; 2 -> "Finale"; else -> "Turno" }
@@ -1059,32 +1061,43 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val cb = Nazionali.convoca(pool.getValue(b))
                 val r = Nazionali.gioca(Nazionali.squadra(base, a, 2 * i), ca, Nazionali.squadra(base, b, 2 * i + 1), cb, rng)
                 registraNazionale(season, "$nome · $etichetta", 0, a, b, ca, cb, r)
-                prossimo += when {
+                val vince = when {
                     r.homeGoals > r.awayGoals -> a
                     r.homeGoals < r.awayGoals -> b
                     else -> if (rng.nextBoolean()) a else b
                 }
+                prossimo += vince
+                uscite[if (vince == a) b else a] = turno.size
             }
             turno = prossimo
         }
         dao.insertAlbo(listOf(AlboEntry(season = season, nazione = if (nome == "Mondiali") "Mondo" else "Europa",
             competizione = nome, vincitore = turno.first())))
+        // Attese: le prime 4 per forza devono arrivare in semifinale, le 5-8 ai quarti (o oltre)
+        return uscite.filter { (n, size) ->
+            val posto = partecipanti.indexOf(n) + 1
+            val attesa = when { posto <= 4 -> 4; posto <= 8 -> 8; else -> 16 }
+            size > attesa
+        }.keys.toList()
     }
 
     /** Mondiali (16 squadre) ed Europei (8 europee) a fine stagione, nelle stagioni giuste. */
-    private suspend fun tornei(season: String, annoInizio: Int) {
+    /** Restituisce le nazionali i cui ct sono stati esonerati per risultati sotto le attese. */
+    private suspend fun tornei(season: String, annoInizio: Int): List<String> {
         val rng = kotlin.random.Random.Default
         val pool = nazioniPool()
-        val base = dao.allTeams().firstOrNull() ?: return
+        val base = dao.allTeams().firstOrNull() ?: return emptyList()
+        val licenziati = ArrayList<String>()
         if (Nazionali.mondiale(annoInizio)) {
             val top = pool.keys.sortedByDescending { Nazionali.forza(pool.getValue(it)) }.take(16)
-            eliminazione(season, "Mondiali", top, pool, base, rng)
+            licenziati += eliminazione(season, "Mondiali", top, pool, base, rng)
         }
         if (Nazionali.europei(annoInizio)) {
             val top = pool.keys.filter { it in Nazionali.EUROPA }
                 .sortedByDescending { Nazionali.forza(pool.getValue(it)) }.take(8)
-            eliminazione(season, "Europei", top, pool, base, rng)
+            licenziati += eliminazione(season, "Europei", top, pool, base, rng)
         }
+        return licenziati.distinct()
     }
 
     /** Scheda completa di un giocatore: squadra, clausola, stagioni, nazionale e convocazioni. */
@@ -1575,7 +1588,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.deleteAlboSeason(s)
             dao.insertAlbo(alboRows)
             Nazionali.DATE.forEach { giocaDataNazionali(s, it) }
-            tornei(s, prefs.getInt("season_year", 2026))
+            // Ct vacanti: esonerati per risultati sotto le attese, oppure dimissioni (3% a stagione per nazione)
+            val vacanti = ArrayList<String>()
+            vacanti += tornei(s, prefs.getInt("season_year", 2026))
+            nazioniPool().keys.forEach { if (kotlin.random.Random.Default.nextDouble() < 0.03) vacanti += it }
 
             // 1e) Fiducia della dirigenza, umore dei tifosi e reputazione dell'allenatore
             val myKey = leagues.entries.firstOrNull { e -> e.value.any { it.id == me.id } }?.key
@@ -1599,10 +1615,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val allStr = cache.mapValues { (_, ps) -> ps.map { it.overall }.sortedDescending().take(11).average() }
                 dao.setStato(Stato("offerte", ClubOffer.encode(ClubOffers.make(allStr,
                     teamsNow.associate { it.id to it.budget }, me.id, dao.statoInt(StatoKeys.REPUTAZIONE), fired, rng))))
-                // Offerta dalla nazionale: dopo un esonero, oppure a fine stagione con reputazione alta
-                if (dao.stato("nazione_allenata").isNullOrEmpty() &&
-                    (fired || (dao.statoInt(StatoKeys.REPUTAZIONE) >= 50 && rng.nextDouble() < 0.5))) {
-                    val nazioni = nazioniPool().keys.toList()
+                // Offerta dalla nazionale: ct vacante (esonero o dimissioni), oppure a fine stagione con reputazione alta
+                val fineStagione = dao.statoInt(StatoKeys.REPUTAZIONE) >= 50 && rng.nextDouble() < 0.5
+                if (dao.stato("nazione_allenata").isNullOrEmpty() && (vacanti.isNotEmpty() || fineStagione)) {
+                    val nazioni = if (vacanti.isNotEmpty()) vacanti.distinct() else nazioniPool().keys.toList()
                     if (nazioni.isNotEmpty()) {
                         dao.setStato(Stato("offerta_nazionale", nazioni.random(rng)))
                         _notice.value = "Una nazionale ti ha fatto un'offerta: vedi la schermata Nazionali."
