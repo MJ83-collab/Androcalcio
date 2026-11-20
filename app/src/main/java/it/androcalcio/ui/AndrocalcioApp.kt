@@ -290,7 +290,12 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 Screen.STATISTICHE -> {
                     val goals by vm.goals.collectAsState()
                     val everyone by vm.allPlayers.collectAsState()
-                    StatsScreen(team, teams, matches, goals, everyone, season)
+                    val statStagioni by vm.statSeasons.collectAsState()
+                    val statAttiva by vm.statSeasonAttiva.collectAsState()
+                    val statGiocatori by vm.playerStats.collectAsState()
+                    val clausoleAll by vm.clausole.collectAsState()
+                    StatsScreen(team, teams, matches, goals, everyone, season, statGiocatori, statStagioni,
+                        statAttiva, { vm.pickStatSeason(it) }, clausoleAll)
                 }
                 Screen.DIRIGENZA -> {
                     val c by vm.club.collectAsState()
@@ -300,9 +305,11 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 Screen.STAFF -> {
                     val staffList by vm.staff.collectAsState()
                     val cands by vm.candidates.collectAsState()
+                    val missioni by vm.scoutMissions.collectAsState()
                     StaffScreen(
                         team, staffList, cands,
-                        { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() }
+                        { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() },
+                        missioni, { s, area -> vm.inviaOsservatore(s, area) }
                     )
                 }
                 Screen.TATTICA -> {

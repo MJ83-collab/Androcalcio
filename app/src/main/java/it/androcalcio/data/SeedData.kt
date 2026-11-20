@@ -199,7 +199,7 @@ object SeedData {
     }
 
     private val RICH_CLUBS = setOf(
-        "Como AZ2", "Parigi SG", "Manchester Citt SB", "Chelsfield BL", "Newcastel MG", "Royal Madril",
+        "Como", "Como AZ2", "Parigi SG", "Manchester Citt SB", "Chelsfield BL", "Newcastel MG", "Royal Madril",
         "Baviera MO", "Lipsia RB2", "Aston Villan VL", "Flamengo MG", "Botafogo FG"
     )
 }

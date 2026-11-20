@@ -66,3 +66,43 @@ object Youths {
         return (y.potential + noise).coerceIn(30, 99)
     }
 }
+
+/** Aree del mondo in cui gli osservatori possono essere mandati a cercare giocatori svincolati. */
+object Missioni {
+    data class Area(val nome: String, val nazioni: List<String>, val min: Int, val max: Int)
+
+    val AREE = listOf(
+        Area("Europa occidentale", listOf("Francia", "Spagna", "Inghilterra", "Germania"), 62, 80),
+        Area("Sud America", listOf("Brasile", "Argentina"), 60, 80),
+        Area("Europa orientale", listOf("Polonia", "Serbia", "Croazia"), 55, 74),
+        Area("Africa", listOf("Nigeria", "Senegal", "Marocco", "Egitto"), 52, 72),
+        Area("Nord America", listOf("Stati Uniti", "Messico", "Canada"), 55, 72),
+        Area("Asia e Oceania", listOf("Giappone", "Corea del Sud", "Australia"), 50, 70)
+    )
+
+    /** Giornate di missione: un osservatore bravo rientra prima. */
+    fun durata(skill: Int): Int = (3 - skill / 45).coerceIn(1, 3)
+
+    /** Giocatori svincolati trovati al rientro: più numerosi e migliori con uno scout bravo. */
+    fun trova(area: String, skill: Int, rng: Random): List<Player> {
+        val a = AREE.firstOrNull { it.nome == area } ?: return emptyList()
+        val n = skill / 40 + rng.nextInt(0, 3)
+        return List(n) {
+            val ovr = (rng.nextInt(a.min, a.max + 1) + (skill - 50) / 10).coerceIn(40, 90)
+            Player(
+                teamId = Market.SVINCOLATO_ID,
+                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
+                    SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                role = listOf("P", "D", "C", "A")[rng.nextInt(4)],
+                age = rng.nextInt(18, 32),
+                overall = ovr,
+                morale = 60,
+                salary = 0L,
+                nationality = a.nazioni[rng.nextInt(a.nazioni.size)],
+                potential = (ovr + rng.nextInt(0, 9)).coerceAtMost(95),
+                contract = 1
+            )
+        }
+    }
+}
+

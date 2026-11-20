@@ -5,6 +5,7 @@ import it.androcalcio.ui.components.PcChip
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,11 +29,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import it.androcalcio.data.Clausola
 import it.androcalcio.data.Goal
+import it.androcalcio.data.PlayerStat
 import it.androcalcio.data.MatchResult
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.ui.components.Crest
+import it.androcalcio.ui.components.money
 import it.androcalcio.ui.theme.AC
 
 /** Marcatori e portieri del tuo campionato, fino alla giornata scelta. */
@@ -44,7 +48,12 @@ fun StatsScreen(
     matches: List<MatchResult>,
     goals: List<Goal>,
     players: List<Player>,
-    season: String
+    season: String,
+    playerStats: List<PlayerStat>,
+    statSeasons: List<String>,
+    statSeasonAttiva: String,
+    onStatSeason: (String) -> Unit,
+    clausole: List<Clausola>
 ) {
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -60,6 +69,16 @@ fun StatsScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Marcatori") })
             PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Portieri") })
+            PcChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Giocatori") })
+            PcChip(selected = tab == 3, onClick = { tab = 3 }, label = { Text("Clausole") })
+        }
+        if (tab == 2) {
+            GiocatoriPane(team, teams, players, playerStats, statSeasons, statSeasonAttiva, onStatSeason)
+            return@Column
+        }
+        if (tab == 3) {
+            ClausolePane(team, players, clausole, playerStats, statSeasonAttiva)
+            return@Column
         }
         if (lastPlayed == 0) {
             Text("Nessuna giornata giocata: gioca dal Calendario.", color = AC.TextDim)
@@ -111,6 +130,71 @@ fun StatsScreen(
                         Text(r.first.name, Modifier.weight(1f).padding(start = 6.dp), color = AC.TextDim, maxLines = 1)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.GiocatoriPane(
+    team: Team, teams: List<Team>, players: List<Player>, stats: List<PlayerStat>,
+    stagioni: List<String>, attiva: String, onStagione: (String) -> Unit
+) {
+    var soloMia by rememberSaveable { mutableStateOf(true) }
+    val byTeam = teams.associateBy { it.id }
+    val byPlayer = players.associateBy { it.id }
+    val elenco = stats.filter { !soloMia || it.teamId == team.id }
+        .sortedWith(compareByDescending<PlayerStat> { it.gol }.thenByDescending { it.presenze })
+        .take(80)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        items((stagioni + attiva).distinct().sortedDescending()) { s ->
+            PcChip(selected = s == attiva, onClick = { onStagione(s) }, label = { Text(s) })
+        }
+    }
+    PcChip(selected = soloMia, onClick = { soloMia = !soloMia },
+        label = { Text(if (soloMia) "Solo la mia squadra" else "Tutti i club") })
+    if (elenco.isEmpty()) Text("Nessuna statistica per questa stagione: si registra giocando.", color = AC.TextDim)
+    Row(Modifier.fillMaxWidth()) {
+        Text("GIOCATORE", Modifier.weight(1f), color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
+        Text("PRESENZE", Modifier.width(72.dp), color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
+        Text("GOL", Modifier.width(44.dp), color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
+    }
+    LazyColumn(Modifier.weight(1f)) {
+        items(elenco, key = { it.playerId }) { st ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(byPlayer[st.playerId]?.name ?: "Ex giocatore",
+                        color = if (st.teamId == team.id) AC.Accent else AC.Text, maxLines = 1)
+                    Text(byTeam[st.teamId]?.name ?: "", color = AC.TextDim,
+                        style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+                Text("${st.presenze}", Modifier.width(72.dp), color = AC.Text)
+                Text("${st.gol}", Modifier.width(44.dp), fontWeight = FontWeight.Bold, color = AC.Accent)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.ClausolePane(
+    team: Team, players: List<Player>, clausole: List<Clausola>, stats: List<PlayerStat>, stagione: String
+) {
+    val byPlayer = players.associateBy { it.id }
+    val statBy = stats.associateBy { it.playerId }
+    val mie = clausole.filter { it.teamId == team.id }.sortedBy { byPlayer[it.playerId]?.name ?: "" }
+    Text("Stagione $stagione. Le clausole si pagano a fine stagione, se la condizione è raggiunta.",
+        style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+    if (mie.isEmpty()) Text("Nessuna clausola: nasce firmando un giocatore.", color = AC.TextDim)
+    LazyColumn(Modifier.weight(1f)) {
+        items(mie, key = { it.playerId }) { c ->
+            val pres = statBy[c.playerId]?.presenze ?: 0
+            val gol = statBy[c.playerId]?.gol ?: 0
+            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Text(byPlayer[c.playerId]?.name ?: "Ex giocatore", style = MaterialTheme.typography.titleSmall)
+                Text("Presenze $pres/30 · gol $gol/20", color = AC.Accent, style = MaterialTheme.typography.bodySmall)
+                Text("30 presenze ${money(c.bonusPresenze)} · 20 gol ${money(c.bonusGol)} · " +
+                    "campionato ${money(c.bonusCampionato)} · coppa ${money(c.bonusCoppa)}",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

@@ -182,4 +182,35 @@ interface AndrocalcioDao {
 
     @Query("SELECT * FROM movimenti WHERE teamId = :teamId AND season = :season ORDER BY id")
     fun movimentiStagione(teamId: Long, season: String): Flow<List<Movimento>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertStats(list: List<PlayerStat>)
+
+    @Query("SELECT * FROM player_stats WHERE season = :season")
+    suspend fun statsOf(season: String): List<PlayerStat>
+
+    @Query("SELECT DISTINCT season FROM player_stats ORDER BY season DESC")
+    suspend fun statsSeasons(): List<String>
+
+    @Query("DELETE FROM player_stats") suspend fun clearStats()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertClausole(list: List<Clausola>)
+
+    @Query("SELECT * FROM clausole")
+    suspend fun clausoleOnce(): List<Clausola>
+
+    @Delete suspend fun deleteClausole(list: List<Clausola>)
+
+    @Query("DELETE FROM clausole") suspend fun clearClausole()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveMissions(list: List<ScoutMission>)
+
+    @Query("SELECT * FROM scout_missions")
+    suspend fun missionsOnce(): List<ScoutMission>
+
+    @Delete suspend fun deleteMissions(list: List<ScoutMission>)
+
+    @Query("DELETE FROM scout_missions") suspend fun clearMissions()
 }

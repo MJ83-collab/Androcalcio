@@ -143,3 +143,35 @@ data class Movimento(
     val importo: Long,   // positivo = entrata, negativo = uscita
     val saldo: Long       // budget dopo questo movimento
 )
+
+/** Statistiche di un giocatore in una stagione: presenze e gol (campionato e coppe). */
+@Entity(tableName = "player_stats", primaryKeys = ["season", "playerId"])
+data class PlayerStat(
+    val season: String,
+    val playerId: Long,
+    val teamId: Long,
+    val presenze: Int = 0,
+    val gol: Int = 0
+)
+
+/** Clausole di rendimento firmate con un giocatore: pagate a fine stagione se la condizione è raggiunta. */
+@Entity(tableName = "clausole")
+data class Clausola(
+    @PrimaryKey val playerId: Long,
+    val teamId: Long,
+    val bonusPresenze: Long,     // 30 presenze in stagione
+    val bonusGol: Long,          // 20 gol in stagione
+    val bonusCampionato: Long,   // il club vince il campionato
+    val bonusCoppa: Long         // il club vince la coppa nazionale
+)
+
+/** Osservatore in missione in un'area del mondo: al rientro porta giocatori svincolati. */
+@Entity(tableName = "scout_missions")
+data class ScoutMission(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val teamId: Long,
+    val staffId: Long,
+    val area: String,
+    val giornate: Int
+)
+

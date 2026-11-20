@@ -24,8 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import it.androcalcio.data.ScoutMission
 import it.androcalcio.data.Staff
 import it.androcalcio.data.Team
+import it.androcalcio.engine.Missioni
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Stile
 import it.androcalcio.ui.components.GlassCard
@@ -51,7 +53,9 @@ fun StaffScreen(
     candidates: List<Staff>,
     onHire: (Staff) -> Unit,
     onFire: (Staff) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    missioni: List<ScoutMission>,
+    onInvia: (Staff, String) -> Unit
 ) {
     if (team == null) return
     var aperto by remember { mutableStateOf<Staff?>(null) }
@@ -60,7 +64,9 @@ fun StaffScreen(
             s, candidato = s.teamId == 0L,
             onHire = { onHire(s); aperto = null },
             onFire = { onFire(s); aperto = null },
-            onClose = { aperto = null }
+            onClose = { aperto = null },
+            missione = missioni.firstOrNull { it.staffId == s.id },
+            onInvia = { area -> onInvia(s, area); aperto = null }
         )
     }
 
@@ -103,6 +109,29 @@ fun StaffScreen(
             }
         }
 
+        val osservatori = staff.filter { it.role == Staffing.SCOUT }
+        item { SectionTitle("Osservatori (${osservatori.size}/${Staffing.MAX_OSSERVATORI})") }
+        item {
+            Text(
+                "Mandali in un'area del mondo: al rientro portano giocatori svincolati, disponibili nel Mercato.",
+                style = MaterialTheme.typography.bodySmall, color = AC.TextDim
+            )
+        }
+        if (osservatori.isEmpty()) item { Text("Nessun osservatore: assumine dai candidati.", color = AC.TextDim) }
+        items(osservatori) { s ->
+            val m = missioni.firstOrNull { it.staffId == s.id }
+            GlassCard(Modifier.fillMaxWidth().clickable { aperto = s }) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Osservatore · ${s.name}", style = MaterialTheme.typography.titleSmall)
+                    Text(stelleTesto(s.skill), color = AC.Accent)
+                    Text(
+                        if (m == null) "Disponibile" else "In missione in ${m.area}: rientro tra ${m.giornate} giornate",
+                        color = if (m == null) AC.Ok else AC.TextDim, style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+
         item { SectionTitle("Candidati") }
         item {
             PcAction(
@@ -127,7 +156,8 @@ fun StaffScreen(
 
 @Composable
 private fun DettaglioStaff(
-    s: Staff, candidato: Boolean, onHire: () -> Unit, onFire: () -> Unit, onClose: () -> Unit
+    s: Staff, candidato: Boolean, onHire: () -> Unit, onFire: () -> Unit, onClose: () -> Unit,
+    missione: ScoutMission?, onInvia: (String) -> Unit
 ) {
     val (bonus, malus) = Staffing.effetti(s)
     val stile = Stile.values().firstOrNull { it.name == s.stile } ?: Stile.DIFESA
@@ -145,6 +175,17 @@ private fun DettaglioStaff(
                 Text("Malus", style = MaterialTheme.typography.titleSmall)
                 if (malus.isEmpty()) Text("Nessun malus", color = AC.TextDim)
                 malus.forEach { Text("− $it", color = AC.Danger) }
+                if (s.role == Staffing.SCOUT && !candidato) {
+                    Text("Missione", style = MaterialTheme.typography.titleSmall)
+                    if (missione != null) {
+                        Text("In missione in ${missione.area}: rientro tra ${missione.giornate} giornate", color = AC.Accent)
+                    } else {
+                        Text("Scegli un'area del mondo:", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                        Missioni.AREE.forEach { area ->
+                            PcAction(onClick = { onInvia(area.nome) }, modifier = Modifier.fillMaxWidth()) { Text(area.nome) }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {

@@ -65,6 +65,10 @@ import it.androcalcio.engine.Market
 import it.androcalcio.engine.OfferResult
 import it.androcalcio.engine.InfoSquadra
 import it.androcalcio.engine.Rivalita
+import it.androcalcio.engine.Missioni
+import it.androcalcio.data.PlayerStat
+import it.androcalcio.data.Clausola
+import it.androcalcio.data.ScoutMission
 import it.androcalcio.engine.SquadraInfo
 import it.androcalcio.ui.components.money
 import it.androcalcio.engine.MatchReport
@@ -364,6 +368,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val formations = Formation.values()
             val rng = kotlin.random.Random.Default
             val goalsAcc = ArrayList<Goal>()
+            val statAcc = HashMap<Long, PlayerStat>()
             val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
                 .let { if (all) it else it.take(1) }
             for (m in ms.filter { !it.played && it.round in rounds && it.id != skipId }) {
@@ -393,6 +398,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
                 playedNow++
+                accumulaStat(statAcc, _season.value, h.id, a.id, r)
                 goalsAcc += r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
                     Goal(season = _season.value, league = m.league, round = m.round,
                         teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
@@ -404,6 +410,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
+            salvaStatistiche(_season.value, statAcc)
             ms.filter { it.round in rounds && it.id != skipId && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
                 .forEach { m0 -> dao.match(m0.id)?.let { dopoMiaPartita(t.id, it, evento = !all) } }
             if (lineupNotes.isNotEmpty()) _notice.value = lineupNotes.distinct().joinToString("\n")
@@ -515,6 +522,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val t = selectedTeam.value
             val lg = mr.league
             dao.updateMatch(mr.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
+            salvaStatistiche(_season.value, HashMap<Long, PlayerStat>().also { accumulaStat(it, _season.value, mr.homeTeamId, mr.awayTeamId, r) })
             dao.insertGoals(r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
                 Goal(season = _season.value, league = lg, round = mr.round,
                     teamId = if (it.home) mr.homeTeamId else mr.awayTeamId, playerId = it.playerId)
@@ -599,6 +607,25 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             delay(1500)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** Stagione mostrata nella scheda statistiche (null = stagione in corso). */
+    private val _statSeason = MutableStateFlow<String?>(null)
+    val statSeasonAttiva: StateFlow<String> = combine(_statSeason, _season) { a, b -> a ?: b }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _season.value)
+    val playerStats: StateFlow<List<PlayerStat>> = statSeasonAttiva.flatMapLatest { s ->
+        flow { while (true) { emit(dao.statsOf(s)); delay(1500) } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val statSeasons: StateFlow<List<String>> = flow {
+        while (true) { emit(dao.statsSeasons()); delay(3000) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val clausole: StateFlow<List<Clausola>> = flow {
+        while (true) { emit(dao.clausoleOnce()); delay(1500) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val scoutMissions: StateFlow<List<ScoutMission>> = flow {
+        while (true) { emit(dao.missionsOnce()); delay(1500) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun pickStatSeason(s: String) { _statSeason.value = s }
 
     /** Parere del vice allenatore sulla trattativa con il giocatore: monte ingaggi, durata e clausole richieste. */
     fun consiglioVice(p: Player, years: Int): String {
@@ -687,6 +714,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
         dao.updateTeam(buyer.copy(budget = buyer.budget - fee))
         dao.updatePlayer(p.copy(teamId = buyer.id, salary = wage, contract = years))
+        dao.upsertClausole(listOf(Clausola(playerId = p.id, teamId = buyer.id,
+            bonusPresenze = wage / 2, bonusGol = wage / 2, bonusCampionato = wage, bonusCoppa = wage / 2)))
         registra(buyer.id, "Acquisto ${p.name}", -fee, buyer.budget - fee)
         dao.setStatoInt(MK.pend(p.id), 0)
         dao.setStatoInt(MK.clubOk(p.id), 0)
@@ -699,6 +728,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     /** A ogni giornata il club risponde alle proposte della giornata prima (positiva o negativa). */
     private suspend fun risolviMercato() {
         dao.setStatoInt(MK.GIORNATA, dao.statoInt(MK.GIORNATA) + 1, 0, Int.MAX_VALUE)
+        processaMissioni(kotlin.random.Random.Default)
         val rng = kotlin.random.Random.Default
         for (s in dao.pendingClubOffers()) {
             val pid = s.chiave.removePrefix("pend_").toLongOrNull() ?: continue
@@ -807,6 +837,64 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun setInsurance(level: Int) {
         _insurance.value = level
         prefs.edit().putInt("assicurazione", level).apply()
+    }
+
+    /** Presenze e gol di una partita, accumulati in memoria e salvati a fine giornata. */
+    private fun accumulaStat(acc: MutableMap<Long, PlayerStat>, season: String, homeId: Long, awayId: Long, r: MatchReport) {
+        fun riga(pid: Long, tid: Long): PlayerStat = acc[pid] ?: PlayerStat(season, pid, tid)
+        r.homePlayed.forEach { pid -> riga(pid, homeId).let { acc[pid] = it.copy(presenze = it.presenze + 1) } }
+        r.awayPlayed.forEach { pid -> riga(pid, awayId).let { acc[pid] = it.copy(presenze = it.presenze + 1) } }
+        r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.forEach { e ->
+            val pid = e.playerId
+            riga(pid, if (e.home) homeId else awayId).let { acc[pid] = it.copy(gol = it.gol + 1) }
+        }
+    }
+
+    /** Somma le statistiche accumulate a quelle già salvate della stagione. */
+    private suspend fun salvaStatistiche(season: String, acc: MutableMap<Long, PlayerStat>) {
+        if (acc.isEmpty()) return
+        val gia = dao.statsOf(season).associateBy { it.playerId }
+        dao.upsertStats(acc.values.map { n ->
+            val vecchia = gia[n.playerId]
+            if (vecchia == null) n else n.copy(presenze = vecchia.presenze + n.presenze, gol = vecchia.gol + n.gol)
+        })
+        acc.clear()
+    }
+
+    /** Il club ha più osservatori: la loro abilità migliore è quella usata per la scheda squadra e le scoperte. */
+    private suspend fun syncScoutSkill(teamId: Long) {
+        val t = dao.team(teamId)
+        val migliore = dao.staffOnce(teamId).filter { it.role == Staffing.SCOUT }.maxOfOrNull { it.skill }
+        dao.updateTeam(t.copy(scoutSkill = migliore ?: Staffing.VUOTO))
+    }
+
+    /** Manda un osservatore a cercare in un'area del mondo: rientra dopo alcune giornate. */
+    fun inviaOsservatore(s: Staff, area: String) {
+        viewModelScope.launch {
+            val me = selectedTeam.value ?: return@launch
+            if (dao.missionsOnce().any { it.staffId == s.id }) {
+                _notice.value = "${s.name} è già in missione."
+                return@launch
+            }
+            val giornate = Missioni.durata(s.skill)
+            dao.saveMissions(listOf(ScoutMission(teamId = me.id, staffId = s.id, area = area, giornate = giornate)))
+            _notice.value = "${s.name} parte per $area: rientro tra $giornate ${if (giornate == 1) "giornata" else "giornate"}."
+        }
+    }
+
+    /** Ogni giornata le missioni avanzano; al rientro gli osservatori portano giocatori svincolati. */
+    private suspend fun processaMissioni(rng: kotlin.random.Random) {
+        val staff = dao.allStaff().associateBy { it.id }
+        for (m in dao.missionsOnce()) {
+            val restanti = m.giornate - 1
+            if (restanti > 0) { dao.saveMissions(listOf(m.copy(giornate = restanti))); continue }
+            dao.deleteMissions(listOf(m))
+            val sc = staff[m.staffId] ?: continue
+            val trovati = Missioni.trova(m.area, sc.skill, rng)
+            if (trovati.isNotEmpty()) dao.insertPlayers(trovati)
+            _notice.value = if (trovati.isEmpty()) "${sc.name} rientra da ${m.area} senza giocatori interessanti."
+                else "${sc.name} rientra da ${m.area}: ${trovati.size} svincolati disponibili nel mercato."
+        }
     }
 
     /** Dopo una gara: accumula il rimborso per gli infortuni nuovi della tua squadra (pagato a fine stagione). */
@@ -997,13 +1085,24 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val candidates: StateFlow<List<Staff>> = _candidates
 
     fun refreshCandidates() {
-        _candidates.value = Staffing.candidates(kotlin.random.Random.Default)
+        _candidates.value = Staffing.candidates(kotlin.random.Random.Default) + Staffing.candidatiOsservatori(kotlin.random.Random.Default)
     }
 
     /** Assume un candidato: sostituisce chi occupava già quel ruolo. Lo stipendio si paga a fine stagione. */
     fun hire(c: Staff) {
         viewModelScope.launch {
             val me = selectedTeam.value ?: return@launch
+            if (c.role == Staffing.SCOUT) {
+                if (dao.staffOnce(me.id).count { it.role == Staffing.SCOUT } >= Staffing.MAX_OSSERVATORI) {
+                    _notice.value = "Hai già ${Staffing.MAX_OSSERVATORI} osservatori: licenziane uno per assumerne un altro."
+                    return@launch
+                }
+                dao.addStaff(c.copy(id = 0, teamId = me.id))
+                syncScoutSkill(me.id)
+                _candidates.value = _candidates.value - c
+                _notice.value = "${c.name} ingaggiato come osservatore. Stipendio ${money(c.salary)} l'anno, pagato a fine stagione."
+                return@launch
+            }
             val old = dao.staffOnce(me.id).filter { it.role == c.role && it.specialita == c.specialita }
             if (old.isNotEmpty()) dao.deleteStaffs(old)
             dao.addStaff(c.copy(id = 0, teamId = me.id))
@@ -1018,6 +1117,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun fire(s: Staff) {
         viewModelScope.launch {
             dao.deleteStaffs(listOf(s))
+            dao.deleteMissions(dao.missionsOnce().filter { it.staffId == s.id })
             syncTeamSkill(s.teamId, s.role, Staffing.VUOTO)
             _notice.value = "${s.name} è stato licenziato."
         }
@@ -1028,7 +1128,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val t = dao.team(teamId)
         when (role) {
             Staffing.GIOVANILI -> dao.updateTeam(t.copy(youthCoachSkill = skill))
-            Staffing.SCOUT -> dao.updateTeam(t.copy(scoutSkill = skill))
+            Staffing.SCOUT -> syncScoutSkill(teamId)
         }
     }
 
@@ -1118,6 +1218,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
             // 1) Tutti i campionati: genera il calendario se manca e gioca le partite rimaste
             val finals = HashMap<Pair<String, String>, List<it.androcalcio.engine.StandingRow>>()
+            val statAcc = HashMap<Long, PlayerStat>()
+            val goalsSeason = ArrayList<Goal>()
             for ((nc, ts) in leagues) {
                 val key = "${nc.first}|${nc.second}"
                 if (dao.fixtureCount(key, s) == 0) {
@@ -1159,10 +1261,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             Staffing.cura(staffBy, a.id), rng,
                             planFor(a.id, me.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
                             .also { accrueInsurance(a.id, cache[a.id] ?: emptyList(), it) }
+                        accumulaStat(statAcc, s, h.id, a.id, r)
+                        goalsSeason += r.events.filter { it.type == EventType.GOAL && it.playerId != 0L }.map {
+                            Goal(season = s, league = m.league, round = m.round,
+                                teamId = if (it.home) h.id else a.id, playerId = it.playerId)
+                        }
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
                 }
                 dao.updateMatches(sims)
+                dao.insertGoals(goalsSeason)
+                goalsSeason.clear()
                 finals[nc] = standings(ts, dao.matchesOnce(key, s))
             }
 
@@ -1182,6 +1291,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         val h = byId[m.homeTeamId] ?: return@mapNotNull null
                         val a = byId[m.awayTeamId] ?: return@mapNotNull null
                         val r = simCupMatch(h, a, me, cache, staffBy, rng)
+                        accumulaStat(statAcc, s, h.id, a.id, r)
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
                     if (done.isEmpty()) break
@@ -1222,6 +1332,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         val h = byId[m.homeTeamId] ?: return@mapNotNull null
                         val a = byId[m.awayTeamId] ?: return@mapNotNull null
                         val r = simCupMatch(h, a, me, cache, staffBy, rng)
+                        accumulaStat(statAcc, s, h.id, a.id, r)
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
                     }
                     if (done.isEmpty()) break
@@ -1229,6 +1340,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     finalizeKey(sk, s, rng)
                 }
             }
+
+            salvaStatistiche(s, statAcc)
 
             // 1d) Albo d'oro: campioni di ogni divisione, coppa e supercoppa della stagione
             val teamById = teamsNow.associateBy { it.id }
@@ -1279,11 +1392,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val posInfo = HashMap<Long, String>()
             val promoted = HashSet<Long>()
             val relegated = HashSet<Long>()
+            val serieC = { k: Pair<String, String> -> k.second.startsWith("Serie C") }
             leagues.keys.groupBy { it.first }.forEach { (_, keys) ->
-                val ordered = keys.sortedBy { k -> leagues.getValue(k).minOf { it.id } }
-                ordered.forEachIndexed { tier, k ->
+                // Catena A → B (Serie C esclusa: ha i suoi gironi)
+                val catena = keys.filter { !serieC(it) }.sortedBy { k -> leagues.getValue(k).minOf { it.id } }
+                keys.forEach { k ->
                     val st = finals.getValue(k)
                     val size = st.size
+                    val tier = if (serieC(k)) 3 else catena.indexOf(k)
                     val base = listOf(20_000_000L, 6_000_000L, 2_000_000L).getOrElse(tier) { 800_000L }
                     st.forEachIndexed { pos, row ->
                         val frac = (size - 1 - pos).toDouble() / (size - 1).coerceAtLeast(1)
@@ -1291,12 +1407,33 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             (Economia.DIRITTI_TV.getOrElse(tier) { 600_000L } * Economia.quotaTv(frac)).toLong()   // premio + diritti TV
                         posInfo[row.team.id] = "${pos + 1}º su $size in ${k.second}"
                     }
-                    if (tier + 1 < ordered.size) {
-                        val lk = ordered[tier + 1]
+                }
+                catena.forEachIndexed { tier, k ->
+                    if (tier + 1 < catena.size) {
+                        val lk = catena[tier + 1]
+                        val st = finals.getValue(k)
                         val low = finals.getValue(lk)
-                        val kk = minOf(3, size / 4, low.size / 4)
+                        val kk = minOf(3, st.size / 4, low.size / 4)
                         st.takeLast(kk).forEach { moves[it.team.id] = lk.second; relegated += it.team.id }
                         low.take(kk).forEach { moves[it.team.id] = k.second; promoted += it.team.id }
+                    }
+                }
+                // Serie B ↔ gironi di Serie C: le ultime della B scendono (una per girone),
+                // la prima di ogni girone sale in B
+                val b = catena.getOrNull(1)
+                val gironi = keys.filter { serieC(it) }.sortedBy { it.second }
+                if (b != null && gironi.isNotEmpty()) {
+                    val stB = finals.getValue(b)
+                    val giu = stB.takeLast(minOf(gironi.size, stB.size / 4))
+                    giu.forEachIndexed { i, row ->
+                        moves[row.team.id] = gironi[i % gironi.size].second
+                        relegated += row.team.id
+                    }
+                    gironi.forEach { g ->
+                        finals.getValue(g).firstOrNull()?.let { w ->
+                            moves[w.team.id] = b.second
+                            promoted += w.team.id
+                        }
                     }
                 }
             }
@@ -1322,6 +1459,20 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val meMc = Sponsorship.merch(me.stadiumCapacity)
             val livAll = dao.statoInt(Strutture.ALLENAMENTO)
             val upkeep = Strutture.manutenzione(livAll) + Strutture.manutenzione(dao.statoInt(Strutture.VIVAIO))
+            // Clausole di rendimento: a fine stagione paga i bonus raggiunti dai giocatori ancora in rosa
+            val vinceCampionato = myKey?.let { finals[it]?.firstOrNull()?.team?.id } == me.id
+            val vinceCoppa = alboRows.any { it.competizione == "Coppa" && it.vincitore == me.name }
+            val statMe = dao.statsOf(s).associateBy { it.playerId }
+            val inRosa = byTeam[me.id].orEmpty().map { it.id }.toSet()
+            val clauseMie = dao.clausoleOnce().filter { it.teamId == me.id && it.playerId in inRosa }
+            var clausePay = 0L
+            clauseMie.forEach { c ->
+                val st = statMe[c.playerId]
+                if ((st?.presenze ?: 0) >= 30) clausePay += c.bonusPresenze
+                if ((st?.gol ?: 0) >= 20) clausePay += c.bonusGol
+                if (vinceCampionato) clausePay += c.bonusCampionato
+                if (vinceCoppa) clausePay += c.bonusCoppa
+            }
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
@@ -1367,12 +1518,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 t.copy(
                     budget = (t.budget + net + (prizes[t.id] ?: 0L) +
-                        (if (t.id == me.id) meSp + meMc - insPremium + insPending - coach - upkeep else 0L)).coerceAtLeast(0),
+                        (if (t.id == me.id) meSp + meMc - insPremium + insPending - coach - upkeep - clausePay else 0L)).coerceAtLeast(0),
                     campionato = newLeague ?: t.campionato
                 )
             }
             dao.updatePlayers(updated)
             dao.deletePlayers(removed)
+            dao.deleteClausole(clauseMie.filter { c -> updated.none { it.id == c.playerId } })
             dao.insertPlayers(added)
             dao.updateTeams(newTeams)
             newTeams.find { it.id == me.id }?.let { nt ->
@@ -1382,6 +1534,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     if (pr != 0L) add("Premio piazzamento" to pr)
                     if (meSp > 0) add("Sponsor (${deals.size} contratti)" to meSp)
                     add("Ingaggio allenatore" to -coach)
+                    if (clausePay > 0) add("Clausole giocatori" to -clausePay)
                     if (upkeep > 0) add("Manutenzione strutture" to -upkeep)
                     add("Merchandising" to meMc)
                     if (insPremium > 0) add("Premio assicurazione" to -insPremium)
@@ -1398,6 +1551,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val staffNext = staffAll.map { it.copy(contract = it.contract - 1) }
             dao.updateStaffs(staffNext.filter { it.contract > 0 })
             dao.deleteStaffs(staffNext.filter { it.contract <= 0 })
+            dao.deleteMissions(dao.missionsOnce().filter { m -> staffNext.none { it.id == m.staffId && it.contract > 0 } })
             staffNext.filter { it.contract <= 0 && it.teamId == me.id }.forEach {
                 leavers += "${it.name} (${Staffing.roleName(it.role).lowercase()}, contratto scaduto)"
             }

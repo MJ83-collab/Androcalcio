@@ -16,7 +16,8 @@ object Staffing {
     const val GIOVANILI = "GIO"
     const val PREPARATORE = "PRE"
     const val FISIOTERAPISTA = "FIS"
-    const val SCOUT = "SCO"          // solo salvataggi precedenti: non compare più nello staff
+    const val SCOUT = "SCO"          // osservatori: più di uno, fino a MAX_OSSERVATORI, fuori dai POSTI
+    const val MAX_OSSERVATORI = 5
     const val NEUTRAL = 50          // squadre AI e posti vuoti: effetto nullo
     const val VUOTO = 40            // abilità del club quando il ruolo resta scoperto
 
@@ -47,7 +48,8 @@ object Staffing {
         GIOVANILI -> "Allenatore delle giovanili"
         PREPARATORE -> "Preparatore atletico · ${specialitaNome(specialita)}"
         FISIOTERAPISTA -> "Fisioterapista · ${specialitaNome(specialita)}"
-        else -> "Scout"
+        SCOUT -> "Osservatore"
+        else -> ""
     }
 
     fun specialitaNome(s: String): String = when (s) {
@@ -136,6 +138,18 @@ object Staffing {
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
         }
+    }
+
+    /** Osservatori candidati: non sono in POSTI, il club ne può assumere fino a MAX_OSSERVATORI. */
+    fun candidatiOsservatori(rng: Random, n: Int = 3): List<Staff> = List(n) {
+        val sk = rng.nextInt(35, 91)
+        Staff(
+            teamId = 0, role = SCOUT, specialita = "",
+            name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
+                SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+            skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+            stile = Stile.values()[rng.nextInt(Stile.values().size)].name
+        )
     }
 
     /** Stelle da 0 a 5 per un'abilità 1-99 (scala 0-10, mezze stelle). */

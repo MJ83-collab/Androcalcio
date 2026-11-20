@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class, Stato::class],
-    version = 19,
+    entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class, Stato::class, PlayerStat::class, Clausola::class, ScoutMission::class],
+    version = 20,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -81,6 +81,14 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
             }
         }
         /** 17 -> 18: tabella dello stato dell'utente (fiducia, tifosi, reputazione, clima). */
+        /** 19 -> 20: statistiche per stagione, clausole di rendimento e missioni degli osservatori. */
+        val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `player_stats` (`season` TEXT NOT NULL, `playerId` INTEGER NOT NULL, `teamId` INTEGER NOT NULL, `presenze` INTEGER NOT NULL, `gol` INTEGER NOT NULL, PRIMARY KEY(`season`, `playerId`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `clausole` (`playerId` INTEGER NOT NULL, `teamId` INTEGER NOT NULL, `bonusPresenze` INTEGER NOT NULL, `bonusGol` INTEGER NOT NULL, `bonusCampionato` INTEGER NOT NULL, `bonusCoppa` INTEGER NOT NULL, PRIMARY KEY(`playerId`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `scout_missions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `teamId` INTEGER NOT NULL, `staffId` INTEGER NOT NULL, `area` TEXT NOT NULL, `giornate` INTEGER NOT NULL)")
+            }
+        }
         val MIGRATION_18_19 = object : Migration(18, 19) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `staff` ADD COLUMN `specialita` TEXT NOT NULL DEFAULT ''")
@@ -169,6 +177,6 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20).fallbackToDestructiveMigration().build()
     }
 }
