@@ -101,7 +101,7 @@ fun CalendarioScreen(
     Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PcButton("Calendario", { tab = 0 }, Modifier.weight(1f), main = tab == 0)
-            PcButton("Classifica", { tab = 1 }, Modifier.weight(1f), main = tab == 1)
+            PcButton("Campionato", { tab = 1 }, Modifier.weight(1f), main = tab == 1)
             PcButton("Coppa", { tab = 2 }, Modifier.weight(1f), main = tab == 2)
             PcButton("Tutte", { tab = 3 }, Modifier.weight(1f), main = tab == 3)
         }

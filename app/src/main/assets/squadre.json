@@ -335,15 +335,6 @@
   {
     "nazione": "Italia",
     "campionato": "Serie B",
-    "squadra": "Como AZ2",
-    "sigla": "CA",
-    "colore1": "#2E6FB5",
-    "colore2": "#FFFFFF",
-    "sponsor": "Castoro"
-  },
-  {
-    "nazione": "Italia",
-    "campionato": "Serie B",
     "squadra": "Salo FS",
     "sigla": "SF",
     "colore1": "#2E8B57",
@@ -358,6 +349,15 @@
     "colore1": "#1C3B6E",
     "colore2": "#2E6FB5",
     "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie B",
+    "squadra": "Vigevano",
+    "sigla": "VG",
+    "colore1": "#2E6FB5",
+    "colore2": "#FFFFFF",
+    "sponsor": "Castoro"
   },
   {
     "nazione": "Spagna",
