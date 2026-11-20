@@ -271,7 +271,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                 }
                 Screen.DIRIGENZA -> {
                     val c by vm.club.collectAsState()
-                    DirigenzaScreen(team, c, teams, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) })
+                    DirigenzaScreen(team, c, teams, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) },
+                        { vm.acceptSponsor(it) }, { vm.rejectSponsors() })
                 }
                 Screen.STAFF -> {
                     val staffList by vm.staff.collectAsState()
@@ -810,11 +811,8 @@ fun FinanzeScreen(
                     "Incassati a fine stagione. Merchandising: ${money(Sponsorship.merch(team.stadiumCapacity))} l'anno.",
                     color = AC.TextDim, style = MaterialTheme.typography.bodySmall
                 )
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Sponsorship.offers.forEach { o ->
-                        PcButton("${o.name} · ${money(o.annual)}", { onSponsor(o.name) }, main = o.name == team.sponsor)
-                    }
-                }
+                Text("Gli sponsor si gestiscono in Dirigenza (fino a 5 contratti pluriennali).",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
 
                 SectionTitle("Assicurazione infortuni")
                 Text(

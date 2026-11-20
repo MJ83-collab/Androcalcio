@@ -41,6 +41,8 @@ import it.androcalcio.engine.Club
 import it.androcalcio.engine.ClubRequests
 import it.androcalcio.engine.ClubOffer
 import it.androcalcio.engine.ClubOffers
+import it.androcalcio.engine.SponsorDeal
+import it.androcalcio.engine.Sponsors
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
@@ -1146,7 +1148,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val insPending = prefs.getLong("ins_pending", 0L)
             prefs.edit().putLong("ins_pending", 0L).apply()
             val insPremium = Insurance.premium(_insurance.value)
-            val meSp = Sponsorship.annual(me.sponsor)
+            val deals = SponsorDeal.decode(dao.stato("sponsor"))
+            val meSp = deals.sumOf { it.annual }
+            val coach = coachSalary()
+            val dealsNext = deals.map { it.copy(years = it.years - 1) }
+            dao.setStato(Stato("sponsor", SponsorDeal.encode(dealsNext.filter { it.years > 0 })))
+            val expired = dealsNext.filter { it.years <= 0 }.map { it.name }
             val meMc = Sponsorship.merch(me.stadiumCapacity)
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
@@ -1188,7 +1195,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 t.copy(
                     budget = (t.budget + net + (prizes[t.id] ?: 0L) +
-                        (if (t.id == me.id) meSp + meMc - insPremium + insPending else 0L)).coerceAtLeast(0),
+                        (if (t.id == me.id) meSp + meMc - insPremium + insPending - coach else 0L)).coerceAtLeast(0),
                     campionato = newLeague ?: t.campionato
                 )
             }
@@ -1201,7 +1208,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val lines = buildList {
                     add("Bilancio di fine stagione (incassi, ingaggi)" to meNet)
                     if (pr != 0L) add("Premio piazzamento" to pr)
-                    add("Sponsor ${me.sponsor}" to meSp)
+                    if (meSp > 0) add("Sponsor (${deals.size} contratti)" to meSp)
+                    add("Ingaggio allenatore" to -coach)
                     add("Merchandising" to meMc)
                     if (insPremium > 0) add("Premio assicurazione" to -insPremium)
                     if (insPending > 0) add("Rimborso infortuni" to insPending)
@@ -1229,7 +1237,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             _season.value = seasonName(y)
             val numeri = assegnaNumeri(me.id)
 
+            refreshSponsorOffers(selectedTeam.value?.id ?: me.id)
+            refreshClub()
             _notice.value = "Nuova stagione ${seasonName(y)}. $report $numeri" +
+                (if (expired.isNotEmpty()) " Sponsor scaduti: ${expired.joinToString(", ")}." else "") +
                 (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
         }
     }
@@ -1307,7 +1318,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Dirigenza: fiducia, tifosi, reputazione e richieste di fondi ----
     data class ClubState(val fiducia: Int, val tifosi: Int, val reputazione: Int, val clima: Int,
                          val richieste: Set<String>, val esonero: Boolean,
-                         val offerte: List<ClubOffer> = emptyList())
+                         val offerte: List<ClubOffer> = emptyList(),
+                         val sponsor: List<SponsorDeal> = emptyList(), val sponsorOfferte: List<SponsorDeal> = emptyList(),
+                         val stipendioAllenatore: Long = 0L)
     private val _club = MutableStateFlow(ClubState(60, 60, 30, 60, emptySet(), false))
     val club: StateFlow<ClubState> = _club
 
@@ -1317,10 +1330,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.statoInt(StatoKeys.FIDUCIA), dao.statoInt(StatoKeys.TIFOSI),
             dao.statoInt(StatoKeys.REPUTAZIONE), dao.statoInt(StatoKeys.CLIMA),
             ClubRequests.TIPI.filter { dao.stato(StatoKeys.RICHIESTA + it) == year }.toSet(),
-            dao.stato("esonero") == "1", ClubOffer.decode(dao.stato("offerte")))
+            dao.stato("esonero") == "1", ClubOffer.decode(dao.stato("offerte")),
+            SponsorDeal.decode(dao.stato("sponsor")), SponsorDeal.decode(dao.stato("sponsor_offerte")),
+            coachSalary())
     }
 
-    init { viewModelScope.launch(Dispatchers.IO) { refreshClub() } }
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Partite già in corso: prime offerte sponsor se non ne sono mai arrivate
+            val tid = prefs.getLong("team_id", -1L)
+            if (tid > 0 && dao.stato("sponsor_offerte") == null && dao.stato("sponsor") == null) refreshSponsorOffers(tid)
+            refreshClub()
+        }
+    }
 
     /** Richiesta di fondi alla dirigenza: una per tipo e per stagione; accettata in base a fiducia e tifosi. */
     fun requestFunds(tipo: String, importo: Long) {
@@ -1369,11 +1391,48 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Ingaggio annuo dell'allenatore: dal contratto firmato, altrimenti in base alla reputazione. */
+    private suspend fun coachSalary(): Long =
+        dao.stato("stipendio_allenatore")?.toLongOrNull() ?: (200_000L + dao.statoInt(StatoKeys.REPUTAZIONE) * 20_000L)
+
+    private suspend fun myStrength(teamId: Long): Int =
+        dao.playersOnce(teamId).map { it.overall }.sortedDescending().take(11).average().takeIf { !it.isNaN() }?.toInt() ?: 60
+
+    /** Nuove offerte sponsor per lo slot libero (se ce n'è uno). */
+    private suspend fun refreshSponsorOffers(teamId: Long) {
+        val active = SponsorDeal.decode(dao.stato("sponsor"))
+        val fama = Sponsors.fama(dao.statoInt(StatoKeys.TIFOSI), dao.statoInt(StatoKeys.REPUTAZIONE))
+        dao.setStato(Stato("sponsor_offerte", SponsorDeal.encode(
+            Sponsors.offers(active, myStrength(teamId), fama, kotlin.random.Random.Default))))
+    }
+
+    fun acceptSponsor(d: SponsorDeal) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val active = SponsorDeal.decode(dao.stato("sponsor"))
+            if (active.size >= Sponsors.MAX_ATTIVI) { _notice.value = "Hai già ${Sponsors.MAX_ATTIVI} sponsor attivi."; return@launch }
+            val list = active + d
+            dao.setStato(Stato("sponsor", SponsorDeal.encode(list)))
+            if (active.isEmpty()) dao.updateTeam(me.copy(sponsor = d.name))   // il primo è lo sponsor di maglia
+            refreshSponsorOffers(me.id)
+            _notice.value = "Firmato con ${d.name}: ${money(d.annual)} l'anno per ${d.years} ${if (d.years == 1) "anno" else "anni"}."
+            refreshClub()
+        }
+    }
+
+    fun rejectSponsors() {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.setStato(Stato("sponsor_offerte", ""))
+            _notice.value = "Offerte rifiutate: ne arriveranno altre a fine stagione."
+            refreshClub()
+        }
+    }
+
     fun startGame(team: Team) {
         selectTeam(team)
         prefs.edit().putBoolean("partita_iniziata", true).apply()
         _started.value = true
-        viewModelScope.launch(Dispatchers.IO) { refreshClub() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSponsorOffers(team.id); refreshClub() }
     }
 
     fun selectTeam(team: Team) {

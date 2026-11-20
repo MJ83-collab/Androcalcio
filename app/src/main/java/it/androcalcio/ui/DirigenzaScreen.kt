@@ -21,6 +21,8 @@ import it.androcalcio.engine.Club
 import it.androcalcio.engine.ClubOffer
 import it.androcalcio.engine.ClubOffers
 import it.androcalcio.engine.ClubRequests
+import it.androcalcio.engine.SponsorDeal
+import it.androcalcio.engine.Sponsors
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.PaperRow
@@ -31,7 +33,7 @@ import it.androcalcio.ui.theme.AC
 
 @Composable
 fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (String, Long) -> Unit,
-                    onOffer: (ClubOffer, Boolean) -> Unit) {
+                    onOffer: (ClubOffer, Boolean) -> Unit, onSponsor: (SponsorDeal) -> Unit = {}, onRejectSponsors: () -> Unit = {}) {
     if (team == null) return
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp),
@@ -42,7 +44,8 @@ fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (St
                 "Fiducia della dirigenza" to "${c.fiducia}/100 · ${Club.fiduciaLabel(c.fiducia)}",
                 "Umore dei tifosi" to "${c.tifosi}/100",
                 "Reputazione allenatore" to "${c.reputazione}/100",
-                "Clima di squadra" to "${c.clima}/100"
+                "Clima di squadra" to "${c.clima}/100",
+                "Tuo ingaggio (annuo)" to money(c.stipendioAllenatore)
             ).forEachIndexed { i, (k, v) ->
                 PaperRow(i) {
                     Text(k, Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -74,6 +77,28 @@ fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (St
                             PcButton(money(imp), { onRequest(tipo, imp) }, enabled = !done)
                         }
                     }
+                }
+            }
+        }
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionTitle("Sponsor (${c.sponsor.size}/${Sponsors.MAX_ATTIVI})")
+                if (c.sponsor.isEmpty()) Text("Nessun contratto attivo.", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                c.sponsor.forEachIndexed { i, d ->
+                    Text("${if (i == 0) "Maglia · " else ""}${d.name}: ${money(d.annual)} l'anno, ${d.years} ${if (d.years == 1) "anno" else "anni"} rimasti",
+                        color = AC.Text, style = MaterialTheme.typography.bodySmall)
+                }
+                if (c.sponsorOfferte.isNotEmpty()) {
+                    Text("Offerte per il prossimo contratto (più anni = un po' meno all'anno; vittorie e tifosi alzano le offerte):",
+                        color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                    c.sponsorOfferte.forEach { d ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("${d.name}\n${money(d.annual)} × ${d.years}", Modifier.weight(1f),
+                                color = AC.Text, style = MaterialTheme.typography.bodySmall)
+                            PcButton("Firma", { onSponsor(d) }, main = true)
+                        }
+                    }
+                    PcButton("Rifiuta tutte", onRejectSponsors)
                 }
             }
         }
