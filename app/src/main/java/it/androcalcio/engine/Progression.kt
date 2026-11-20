@@ -48,7 +48,7 @@ object Progression {
                 SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
             role = if (forceGoalkeeper) "P" else listOf("D", "C", "A", "D", "C").random(rng),
             age = rng.nextInt(17, 20), overall = ov, morale = 70, salary = 30_000,
-            nationality = SeedData.codes[t.nazione] ?: "ITA",
+            nationality = t.nazione.ifEmpty { "Italia" },
             potential = (ov + rng.nextInt(5, 26)).coerceAtMost(95),
             contract = rng.nextInt(2, 5)
         ), rng)

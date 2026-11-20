@@ -34,7 +34,7 @@ object Scouting {
 object Youths {
     fun generate(team: Team, season: String, rng: Random = Random.Default, bonusVivaio: Int = 0): List<Youth> {
         val q = (team.budget / 1_000_000).toInt().coerceIn(1, 45)
-        val nat = SeedData.codes[team.nazione] ?: "ITA"
+        val nat = team.nazione.ifEmpty { "Italia" }
         val roles = listOf("P", "D", "D", "D", "C", "C", "C", "A", "A", "D")
         return roles.map { role ->
             // Allenatore delle giovanili: abilità alta = potenziale più alto (da -4 a +4 circa)
@@ -46,7 +46,7 @@ object Youths {
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
                 role = role, age = rng.nextInt(15, 19), overall = ov, potential = pot,
-                nationality = if (rng.nextInt(100) < 85) nat else SeedData.codes.values.random(rng)
+                nationality = if (rng.nextInt(100) < 85) nat else SeedData.codes.keys.random(rng)
             )
         }
     }
