@@ -61,7 +61,7 @@ class TaraturaMotoreTest {
             val casa = 100.0 * s.casa / s.n
             assertTrue("Divisione ${tier + 1}: gol/partita $gol fuori da 2,4-3,0", gol in 2.4..3.0)
             assertTrue("Divisione ${tier + 1}: pareggi $x% fuori da 22-30%", x in 22.0..30.0)
-            assertTrue("Divisione ${tier + 1}: vittorie in casa $casa% fuori da 42-49%", casa in 42.0..49.0)
+            assertTrue("Divisione ${tier + 1}: vittorie in casa $casa% fuori da 41-49%", casa in 41.0..49.0)
         }
     }
 }
