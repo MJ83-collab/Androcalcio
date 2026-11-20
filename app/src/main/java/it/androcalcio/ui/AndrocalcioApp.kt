@@ -251,7 +251,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     val offer by vm.offerResult.collectAsState()
                     MercatoScreen(
                         team, teams, players, market, role, offer,
-                        { vm.setMarketRole(it) }, { p, price -> vm.offer(p, price) },
+                        { vm.setMarketRole(it) }, { p, price, w, y -> vm.offer(p, price, w, y) },
+                        { p, y -> vm.wageAsk(p, y) }, vm.wageRoom(),
                         { vm.sell(it) }, { vm.clearOffer() }
                     )
                 }

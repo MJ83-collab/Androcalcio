@@ -7,10 +7,7 @@ import kotlin.random.Random
 
 object Progression {
     /** Ingaggio annuo richiesto in base a livello ed età. */
-    fun wage(p: Player): Long {
-        val f = if (p.age < 24 || p.age > 32) 0.8 else 1.0
-        return (((p.overall - 30).coerceAtLeast(5) * 9_000L * f).toLong() / 1_000L) * 1_000L
-    }
+    fun wage(p: Player): Long = Market.wageAt(p.overall, p.age)
 
     /**
      * Un anno dopo: età, crescita o declino, potenziale e contratto.

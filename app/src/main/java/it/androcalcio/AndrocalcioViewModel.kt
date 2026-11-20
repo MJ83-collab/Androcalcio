@@ -560,24 +560,52 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val offerResult: StateFlow<OfferResult?> = _offer
     fun clearOffer() { _offer.value = null }
 
-    fun offer(p: Player, price: Long) {
+    private fun myStrengthNow(): Int =
+        players.value.map { it.overall }.sortedDescending().take(11).average().takeIf { !it.isNaN() }?.toInt() ?: 60
+
+    private fun appealFor(p: Player): Double {
+        val c = _club.value
+        return Market.appeal(p, myStrengthNow(), c.reputazione, c.fiducia, c.tifosi, c.clima)
+    }
+
+    /** Ingaggio annuo che il giocatore chiederebbe alla tua squadra, per la durata indicata. */
+    fun wageAsk(p: Player, years: Int = 3): Long = Market.askedWage(p, appealFor(p), years)
+
+    /** Margine del budget ingaggi: budget ingaggi meno monte ingaggi attuale della rosa. */
+    fun wageRoom(): Long = (selectedTeam.value?.wageBudget ?: 0L) - players.value.sumOf { it.salary }
+
+    fun offer(p: Player, price: Long, wage: Long = wageAsk(p), years: Int = 3) {
         viewModelScope.launch {
             val buyer = selectedTeam.value ?: return@launch
             val d = Market.demand(p)
+            val sellerSquad = dao.playersOnce(p.teamId)
+            val key = sellerSquad.sortedByDescending { it.overall }.take(3).any { it.id == p.id }
+            val appeal = appealFor(p)
             _offer.value = when {
                 players.value.size >= Market.MAX_SQUAD ->
                     OfferResult.Rejected("Rosa piena (massimo ${Market.MAX_SQUAD} giocatori).")
                 price > buyer.budget -> OfferResult.Rejected("Budget insufficiente.")
-                price >= d -> {
+                wage > wageRoom() ->
+                    OfferResult.Rejected("Oltre il budget ingaggi: restano ${money(wageRoom().coerceAtLeast(0))} l'anno.")
+                key && price < (d * 1.4).toLong() ->
+                    OfferResult.Rejected("${p.name} è un titolare chiave: il club non lo cede sotto ${money((d * 1.4).toLong())}.")
+                price < (d * 0.85).toLong() -> OfferResult.Rejected("Offerta troppo bassa: il club non tratta.")
+                price < d -> OfferResult.Counter(p, d, wage, years)
+                Market.refuses(p, myStrengthNow(), appeal) ->
+                    OfferResult.Rejected("${p.name} rifiuta: preferisce una squadra più forte e vincente.")
+                wage < Market.askedWage(p, appeal, years) -> {
+                    val ask = Market.askedWage(p, appeal, years)
+                    if (wage >= (ask * 0.9).toLong()) OfferResult.WageCounter(p, price, ask, years)
+                    else OfferResult.Rejected("${p.name} chiede almeno ${money(ask)} l'anno: trattativa chiusa.")
+                }
+                else -> {
                     val seller = dao.team(p.teamId)
                     dao.updateTeam(buyer.copy(budget = buyer.budget - price))
                     dao.updateTeam(seller.copy(budget = seller.budget + price))
-                    dao.updatePlayer(p.copy(teamId = buyer.id))
+                    dao.updatePlayer(p.copy(teamId = buyer.id, salary = wage, contract = years))
                     registra(buyer.id, "Acquisto ${p.name}", -price, buyer.budget - price)
-                    OfferResult.Accepted("${p.name} è tuo per ${money(price)}.")
+                    OfferResult.Accepted("${p.name} è tuo per ${money(price)}: ${money(wage)} l'anno per $years ${if (years == 1) "anno" else "anni"}.")
                 }
-                price >= (d * 0.85).toLong() -> OfferResult.Counter(p, d)
-                else -> OfferResult.Rejected("Offerta troppo bassa: il club non tratta.")
             }
         }
     }
@@ -1191,7 +1219,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 val wages = keep.sumOf { it.salary } + (staffBy[t.id]?.sumOf { it.salary } ?: 0L)
                 val gate = t.stadiumCapacity.toLong() * t.ticketPrice * 7 / 10 * 19
-                val net = gate - wages * 4 / 10
+                val net = gate - wages   // monte ingaggi intero (scala reale)
                 val newLeague = moves[t.id]
                 if (t.id == me.id) {
                     meNet = net

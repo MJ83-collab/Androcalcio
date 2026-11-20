@@ -75,7 +75,9 @@ fun MercatoScreen(
     role: String,
     result: OfferResult?,
     onRole: (String) -> Unit,
-    onOffer: (Player, Long) -> Unit,
+    onOffer: (Player, Long, Long, Int) -> Unit,
+    wageAsk: (Player, Int) -> Long = { _, _ -> 0L },
+    wageRoom: Long = 0L,
     onSell: (Player) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -85,6 +87,8 @@ fun MercatoScreen(
     var affordable by rememberSaveable { mutableStateOf(true) }
     var target by remember { mutableStateOf<Player?>(null) }
     var amount by remember { mutableStateOf(0L) }
+    var wageOffer by remember { mutableStateOf(0L) }
+    var years by remember { mutableStateOf(3) }
     var sellTarget by remember { mutableStateOf<Player?>(null) }
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -112,7 +116,7 @@ fun MercatoScreen(
             }
             val shown = if (affordable) market.filter { Market.value(it) <= team.budget } else market
             MarketTable(shown, { byId[it.teamId]?.name ?: "" }, { Market.value(it) }, Modifier.weight(1f)) {
-                target = it; amount = Market.value(it)
+                target = it; amount = Market.value(it); years = 3; wageOffer = wageAsk(it, 3)
             }
         } else {
             MarketTable(mySquad, { team.name }, { (Market.value(it) * 0.9).toLong() }, Modifier.weight(1f)) { sellTarget = it }
@@ -128,17 +132,33 @@ fun MercatoScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("${byId[p.teamId]?.name ?: ""} · ${p.age} anni · valore ${p.overall}")
                     Text("Valore di mercato ${money(Market.value(p))}", color = AC.TextDim)
+                    Text("Prezzo al club", color = AC.TextDim, fontSize = 11.sp)
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         PcAction(onClick = { amount = (amount - step).coerceAtLeast(step) }) { Text("−") }
                         Text(money(amount), fontWeight = FontWeight.Bold, color = AC.Accent)
                         PcAction(onClick = { amount += step }) { Text("+") }
                     }
+                    val wStep = maxOf(10_000L, wageAsk(p, years) / 20)
+                    Text("Ingaggio annuo (richiesta ~${money(wageAsk(p, years))}, margine ${money(wageRoom.coerceAtLeast(0))})",
+                        color = AC.TextDim, fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        PcAction(onClick = { wageOffer = (wageOffer - wStep).coerceAtLeast(wStep) }) { Text("−") }
+                        Text(money(wageOffer), fontWeight = FontWeight.Bold, color = AC.Accent)
+                        PcAction(onClick = { wageOffer += wStep }) { Text("+") }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        PcAction(onClick = { years = (years - 1).coerceAtLeast(1) }) { Text("−") }
+                        Text("$years ${if (years == 1) "anno" else "anni"}", fontWeight = FontWeight.Bold, color = AC.Accent)
+                        PcAction(onClick = { years = (years + 1).coerceAtMost(5) }) { Text("+") }
+                    }
                 }
             },
             confirmButton = {
                 PcAction(
-                    onClick = { onOffer(p, amount); target = null },
+                    onClick = { onOffer(p, amount, wageOffer, years); target = null },
                     colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
                 ) { Text("Offri") }
             },
@@ -163,7 +183,14 @@ fun MercatoScreen(
                 onDismissRequest = onDismiss,
                 title = { Text("Controfferta") },
                 text = { Text("Il club chiede ${money(r.price)} per ${r.player.name}.") },
-                confirmButton = { PcAction(onClick = { onOffer(r.player, r.price) }) { Text("Accetta") } },
+                confirmButton = { PcAction(onClick = { onOffer(r.player, r.price, r.wage, r.years) }) { Text("Accetta") } },
+                dismissButton = { TextButton(onClick = onDismiss) { Text("Rifiuta") } }
+            )
+            is OfferResult.WageCounter -> AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text("Il giocatore chiede di più") },
+                text = { Text("${r.player.name} accetta per ${money(r.wage)} l'anno (${r.years} anni).") },
+                confirmButton = { PcAction(onClick = { onOffer(r.player, r.price, r.wage, r.years) }) { Text("Accetta") } },
                 dismissButton = { TextButton(onClick = onDismiss) { Text("Rifiuta") } }
             )
             is OfferResult.Accepted -> AlertDialog(

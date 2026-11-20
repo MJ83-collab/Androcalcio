@@ -162,7 +162,7 @@ object SeedData {
                     age = age,
                     overall = ov,
                     morale = rng.nextInt(50, 91),
-                    salary = (ov - 30).coerceAtLeast(5) * 9_000L,
+                    salary = it.androcalcio.engine.Market.wageAt(ov, age),
                     nationality = if (rng.nextInt(100) < 75) nat else codes.values.random(rng),
                     potential = pot.coerceIn(ov, 99),
                     contract = rng.nextInt(1, 5)
