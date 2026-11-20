@@ -26,7 +26,7 @@ class LiveMatch(
     homePress: Pressing? = null, awayPress: Pressing? = null,   // null = sceglie l'AI
     homeLine: DefLine? = null, awayLine: DefLine? = null,
     homeStile: Stile? = null, awayStile: Stile? = null,
-    homeTiri: SetPieces = SetPieces.NONE, awayTiri: SetPieces = SetPieces.NONE
+    private val homeTiri: SetPieces = SetPieces.NONE, private val awayTiri: SetPieces = SetPieces.NONE
 ) {
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
         if (bench != null) ps.toMutableList() to bench.toMutableList()
