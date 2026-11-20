@@ -132,7 +132,7 @@ object SeedData {
             val n = leagueSize.getValue(leagueKey[idx])
             // forza della squadra (scala FC): prima del campionato = top, ultima = bottom
             val strength = top - (top - bottom) * rank[idx] / (n - 1).coerceAtLeast(1) + rng.nextInt(-1, 2)
-            val nat = codes[team.nazione] ?: "ITA"
+            val nat = team.nazione.ifEmpty { "Italia" }
 
             // stelle 86-91: poche, solo nelle europee di vertice
             val starSlots = mutableSetOf<Int>()
@@ -183,7 +183,7 @@ object SeedData {
                     overall = ov,
                     morale = rng.nextInt(50, 91),
                     salary = it.androcalcio.engine.Market.wageAt(ov, age),
-                    nationality = if (rng.nextInt(100) < 75) nat else codes.values.random(rng),
+                    nationality = if (rng.nextInt(100) < 75) nat else codes.keys.random(rng),
                     potential = pot.coerceIn(ov, 99),
                     contract = rng.nextInt(1, 5)
                 ), rng)
