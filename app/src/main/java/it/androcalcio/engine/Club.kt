@@ -38,3 +38,9 @@ object Club {
         v >= 80 -> "Ottima"; v >= 60 -> "Buona"; v >= 40 -> "Discreta"; v >= ESONERO_SOGLIA -> "A rischio"; else -> "Critica"
     }
 }
+
+object ClubRequests {
+    /** Tipi di richiesta fondi alla dirigenza. */
+    val TIPI = listOf("stadio", "allenamento", "vivaio")
+    val IMPORTI = listOf(1_000_000L, 3_000_000L, 6_000_000L)
+}

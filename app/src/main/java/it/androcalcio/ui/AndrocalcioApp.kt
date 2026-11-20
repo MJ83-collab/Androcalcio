@@ -118,6 +118,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     SQUADRE("Squadre", Icons.Filled.Refresh, "Cambia squadra", Color(0xFF5B6BC8)),
     CALENDARIO("Calendario", Icons.Filled.DateRange, "Giornate e risultati", Color(0xFF2E86C1)),
     FINANZE("Finanze", Icons.Filled.AccountBox, "Bilancio e sponsor", Color(0xFF1E9E7A)),
+    DIRIGENZA("Dirigenza", Icons.Filled.AccountBox, "Fiducia, tifosi, fondi", Color(0xFFB9770E)),
     STAFF("Staff", Icons.Filled.AccountCircle, "Allenatori e preparatori", Color(0xFF8E5BC8)),
     STATISTICHE("Statistiche", Icons.Filled.List, "Marcatori e portieri", Color(0xFF2874A6)),
     EDITOR("Editor", Icons.Filled.Edit, "Modifica i dati", Color(0xFF7F8C8D)),
@@ -261,6 +262,10 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     val goals by vm.goals.collectAsState()
                     val everyone by vm.allPlayers.collectAsState()
                     StatsScreen(team, teams, matches, goals, everyone, season)
+                }
+                Screen.DIRIGENZA -> {
+                    val c by vm.club.collectAsState()
+                    DirigenzaScreen(team, c) { tipo, importo -> vm.requestFunds(tipo, importo) }
                 }
                 Screen.STAFF -> {
                     val staffList by vm.staff.collectAsState()
@@ -495,7 +500,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         SectionTitle("Menu")
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
-            Screen.CALENDARIO, Screen.FINANZE, Screen.STAFF, Screen.STATISTICHE, Screen.EDITOR,
+            Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.EDITOR,
             Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO
         )
         tiles.chunked(2).forEach { row ->

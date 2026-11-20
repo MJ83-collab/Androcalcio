@@ -1297,10 +1297,53 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    // ---- Dirigenza: fiducia, tifosi, reputazione e richieste di fondi ----
+    data class ClubState(val fiducia: Int, val tifosi: Int, val reputazione: Int, val clima: Int,
+                         val richieste: Set<String>, val esonero: Boolean)
+    private val _club = MutableStateFlow(ClubState(60, 60, 30, 60, emptySet(), false))
+    val club: StateFlow<ClubState> = _club
+
+    private suspend fun refreshClub() {
+        val year = prefs.getInt("season_year", 2026).toString()
+        _club.value = ClubState(
+            dao.statoInt(StatoKeys.FIDUCIA), dao.statoInt(StatoKeys.TIFOSI),
+            dao.statoInt(StatoKeys.REPUTAZIONE), dao.statoInt(StatoKeys.CLIMA),
+            ClubRequests.TIPI.filter { dao.stato(StatoKeys.RICHIESTA + it) == year }.toSet(),
+            dao.stato("esonero") == "1")
+    }
+
+    init { viewModelScope.launch(Dispatchers.IO) { refreshClub() } }
+
+    /** Richiesta di fondi alla dirigenza: una per tipo e per stagione; accettata in base a fiducia e tifosi. */
+    fun requestFunds(tipo: String, importo: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val c = _club.value
+            val year = prefs.getInt("season_year", 2026).toString()
+            when {
+                dao.stato(StatoKeys.RICHIESTA + tipo) == year ->
+                    _notice.value = "Per $tipo hai già chiesto fondi in questa stagione."
+                !Club.canRequestFunds(c.fiducia, c.tifosi) ->
+                    _notice.value = "La dirigenza rifiuta: fiducia o appoggio dei tifosi troppo bassi."
+                importo > Club.maxFunds(c.fiducia) ->
+                    _notice.value = "La dirigenza rifiuta: massimo ${money(Club.maxFunds(c.fiducia))} con questa fiducia."
+                else -> {
+                    dao.setStato(Stato(StatoKeys.RICHIESTA + tipo, year))
+                    val nuovo = me.budget + importo
+                    dao.updateTeam(me.copy(budget = nuovo))
+                    registra(me.id, "Fondi dirigenza ($tipo)", importo, nuovo)
+                    _notice.value = "Accettata: ${money(importo)} per $tipo."
+                }
+            }
+            refreshClub()
+        }
+    }
+
     fun startGame(team: Team) {
         selectTeam(team)
         prefs.edit().putBoolean("partita_iniziata", true).apply()
         _started.value = true
+        viewModelScope.launch(Dispatchers.IO) { refreshClub() }
     }
 
     fun selectTeam(team: Team) {
