@@ -90,6 +90,7 @@ import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Movimento
 import it.androcalcio.engine.Stadium
 import it.androcalcio.engine.Sponsorship
+import it.androcalcio.engine.Strutture
 import it.androcalcio.engine.Insurance
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
@@ -274,7 +275,9 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     val movStagione by vm.movimentiStagione.collectAsState()
                     val stagione by vm.season.collectAsState()
                     val assicurazione by vm.insurance.collectAsState()
+                    val cl by vm.club.collectAsState()
                     FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) },
+                        cl.livAllenamento, cl.livVivaio, { vm.upgrade(it) },
                         assicurazione, { vm.setInsurance(it) }, movStagione, stagione)
                 }
                 Screen.STATISTICHE -> {
@@ -781,6 +784,7 @@ private fun RosaTable(
 fun FinanzeScreen(
     team: Team?, players: List<Player>, movimenti: List<Movimento> = emptyList(),
     onExpand: () -> Unit = {}, onSponsor: (String) -> Unit = {},
+    livAllenamento: Int = 1, livVivaio: Int = 1, onUpgrade: (String) -> Unit = {},
     insurance: Int = 0, onInsurance: (Int) -> Unit = {},
     bilancioStagione: List<Movimento> = emptyList(), stagione: String = ""
 ) {
@@ -818,6 +822,16 @@ fun FinanzeScreen(
                 )
                 PcButton("Amplia stadio", onExpand, main = true,
                     enabled = Stadium.canExpand(team.stadiumCapacity) && team.budget >= Stadium.blockCost)
+
+                SectionTitle("Strutture")
+                listOf(Strutture.ALLENAMENTO to livAllenamento, Strutture.VIVAIO to livVivaio).forEach { (tipo, liv) ->
+                    Text("${if (tipo == Strutture.ALLENAMENTO) "Centro di allenamento" else "Vivaio"} · livello $liv/${Strutture.MAX}",
+                        color = AC.Text, style = MaterialTheme.typography.titleSmall)
+                    Text(Strutture.descrizione(tipo, liv) + " · manutenzione " + money(Strutture.manutenzione(liv)) + " l'anno",
+                        color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                    PcButton(if (liv >= Strutture.MAX) "Livello massimo" else "Migliora · ${money(Strutture.costo(liv))}",
+                        { onUpgrade(tipo) }, main = true, enabled = liv < Strutture.MAX && team.budget >= Strutture.costo(liv))
+                }
 
                 SectionTitle("Sponsor e merchandising")
                 Text(

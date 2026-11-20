@@ -32,14 +32,14 @@ object Scouting {
 }
 
 object Youths {
-    fun generate(team: Team, season: String, rng: Random = Random.Default): List<Youth> {
+    fun generate(team: Team, season: String, rng: Random = Random.Default, bonusVivaio: Int = 0): List<Youth> {
         val q = (team.budget / 1_000_000).toInt().coerceIn(1, 45)
         val nat = SeedData.codes[team.nazione] ?: "ITA"
         val roles = listOf("P", "D", "D", "D", "C", "C", "C", "A", "A", "D")
         return roles.map { role ->
             // Allenatore delle giovanili: abilità alta = potenziale più alto (da -4 a +4 circa)
             val vivaio = (team.youthCoachSkill - Staffing.NEUTRAL) / 10
-            val pot = (52 + q / 2 + vivaio + rng.nextInt(-8, 25)).coerceIn(45, 95)
+            val pot = (52 + q / 2 + vivaio + bonusVivaio + rng.nextInt(-8, 25)).coerceIn(45, 95)
             val ov = (pot - rng.nextInt(15, 36)).coerceIn(30, 80)
             Youth(
                 teamId = team.id, season = season,

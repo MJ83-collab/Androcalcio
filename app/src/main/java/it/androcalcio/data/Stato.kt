@@ -14,7 +14,8 @@ object StatoKeys {
     const val CLIMA = "clima"                // spogliatoio 0..100
     const val RICHIESTA = "richiesta_"       // + tipo (stadio, allenamento, vivaio) = anno dell'ultima richiesta
 
-    val DEFAULTS = mapOf(FIDUCIA to 60, TIFOSI to 60, REPUTAZIONE to 30, CLIMA to 60)
+    val DEFAULTS = mapOf(FIDUCIA to 60, TIFOSI to 60, REPUTAZIONE to 30, CLIMA to 60,
+        "liv_allenamento" to 1, "liv_vivaio" to 1)
 }
 
 suspend fun AndrocalcioDao.statoInt(chiave: String): Int =

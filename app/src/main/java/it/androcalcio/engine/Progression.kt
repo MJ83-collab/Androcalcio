@@ -17,7 +17,7 @@ object Progression {
      * Fino a 28 anni l'allenatore aggiunge o toglie fino a 2 punti (skill 1..99).
      * Gli infortuni si esauriscono in bassa stagione.
      */
-    fun advance(p: Player, rng: Random, coach: Int = Staffing.NEUTRAL): Player {
+    fun advance(p: Player, rng: Random, coach: Int = Staffing.NEUTRAL, struttura: Int = 0): Player {
         val age = p.age + 1
         val delta = when {
             age < 20 -> rng.nextInt(2, 7)          // giovani: crescita decisa
@@ -26,7 +26,8 @@ object Progression {
             else -> -(1 + (age - 32) / 2 + rng.nextInt(0, 3)) // dopo i 31: declino crescente
         }
         val coachBonus = if (age <= 28) (coach - Staffing.NEUTRAL) / 20 else 0
-        var ov = p.overall + delta + coachBonus
+        val extra = if (age <= 28 && rng.nextInt(100) < struttura) 1 else 0   // centro di allenamento
+        var ov = p.overall + delta + coachBonus + extra
         if (age <= 28) ov = ov.coerceAtMost(maxOf(p.potential, p.overall))
         ov = ov.coerceIn(30, 99)
         val pot = if (age > 28) ov else maxOf(p.potential, ov)
