@@ -129,7 +129,7 @@ interface AndrocalcioDao {
     suspend fun insertTeams(teams: List<Team>): List<Long>
 
     @Insert
-    suspend fun insertPlayers(players: List<Player>)
+    suspend fun insertPlayers(players: List<Player>): List<Long>
 
     @Query("SELECT * FROM staff WHERE teamId = :teamId ORDER BY role")
     fun staffOf(teamId: Long): Flow<List<Staff>>
@@ -144,7 +144,7 @@ interface AndrocalcioDao {
     suspend fun addStaff(s: Staff)
 
     @Insert
-    suspend fun insertStaffs(list: List<Staff>)
+    suspend fun insertStaffs(list: List<Staff>): List<Long>
 
     @Update
     suspend fun updateStaffs(list: List<Staff>)
@@ -185,6 +185,9 @@ interface AndrocalcioDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertStats(list: List<PlayerStat>)
+
+    @Query("SELECT * FROM player_stats")
+    suspend fun allStats(): List<PlayerStat>
 
     @Query("SELECT * FROM player_stats WHERE season = :season")
     suspend fun statsOf(season: String): List<PlayerStat>

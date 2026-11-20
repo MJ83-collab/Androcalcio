@@ -1346,6 +1346,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             // 1d) Albo d'oro: campioni di ogni divisione, coppa e supercoppa della stagione
             val teamById = teamsNow.associateBy { it.id }
             val alboRows = ArrayList<AlboEntry>()
+            val coppeVinte = HashSet<Long>()
             leagues.keys.forEach { k ->
                 finals[k]?.firstOrNull()?.let {
                     alboRows += AlboEntry(season = s, nazione = k.first, competizione = "Campionato ${k.second}",
@@ -1357,6 +1358,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val fin = Cup.finalMatch(dao.matchesOnce(key, s)) ?: continue
                     val w = Cup.winnerOfTie(listOf(fin), strength)
                     teamById[w]?.let { alboRows += AlboEntry(season = s, nazione = nazione, competizione = label, vincitore = it.name) }
+                    if (label == "Coppa") coppeVinte += w
                 }
             }
             dao.deleteAlboSeason(s)
@@ -1459,20 +1461,28 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val meMc = Sponsorship.merch(me.stadiumCapacity)
             val livAll = dao.statoInt(Strutture.ALLENAMENTO)
             val upkeep = Strutture.manutenzione(livAll) + Strutture.manutenzione(dao.statoInt(Strutture.VIVAIO))
-            // Clausole di rendimento: a fine stagione paga i bonus raggiunti dai giocatori ancora in rosa
-            val vinceCampionato = myKey?.let { finals[it]?.firstOrNull()?.team?.id } == me.id
-            val vinceCoppa = alboRows.any { it.competizione == "Coppa" && it.vincitore == me.name }
-            val statMe = dao.statsOf(s).associateBy { it.playerId }
-            val inRosa = byTeam[me.id].orEmpty().map { it.id }.toSet()
-            val clauseMie = dao.clausoleOnce().filter { it.teamId == me.id && it.playerId in inRosa }
-            var clausePay = 0L
-            clauseMie.forEach { c ->
-                val st = statMe[c.playerId]
-                if ((st?.presenze ?: 0) >= 30) clausePay += c.bonusPresenze
-                if ((st?.gol ?: 0) >= 20) clausePay += c.bonusGol
-                if (vinceCampionato) clausePay += c.bonusCampionato
-                if (vinceCoppa) clausePay += c.bonusCoppa
+            // Clausole di rendimento per tutti i giocatori (anche IA): a fine stagione il club paga i bonus raggiunti
+            val campioni = finals.values.mapNotNull { it.firstOrNull()?.team?.id }.toSet()
+            val statAll = dao.statsOf(s).associateBy { it.playerId }
+            val clausoleGia = dao.clausoleOnce().associateBy { it.playerId }
+            val clauseNuove = ArrayList<Clausola>()
+            val pagaSquadra = HashMap<Long, Long>()
+            for (t in teamsNow) {
+                for (p in byTeam[t.id].orEmpty()) {
+                    val base = maxOf(p.salary, 100_000L)
+                    val c = (clausoleGia[p.id] ?: Clausola(p.id, t.id, base / 2, base / 2, base, base / 2)).copy(teamId = t.id)
+                    clauseNuove += c
+                    val st = statAll[p.id]
+                    var pay = 0L
+                    if ((st?.presenze ?: 0) >= 30) pay += c.bonusPresenze
+                    if ((st?.gol ?: 0) >= 20) pay += c.bonusGol
+                    if (t.id in campioni) pay += c.bonusCampionato
+                    if (t.id in coppeVinte) pay += c.bonusCoppa
+                    if (pay > 0) pagaSquadra[t.id] = (pagaSquadra[t.id] ?: 0L) + pay
+                }
             }
+            dao.upsertClausole(clauseNuove)
+            val clausePay = pagaSquadra[me.id] ?: 0L
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
@@ -1518,14 +1528,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 t.copy(
                     budget = (t.budget + net + (prizes[t.id] ?: 0L) +
-                        (if (t.id == me.id) meSp + meMc - insPremium + insPending - coach - upkeep - clausePay else 0L)).coerceAtLeast(0),
+                        (if (t.id == me.id) meSp + meMc - insPremium + insPending - coach - upkeep else 0L) - (pagaSquadra[t.id] ?: 0L)).coerceAtLeast(0),
                     campionato = newLeague ?: t.campionato
                 )
             }
             dao.updatePlayers(updated)
             dao.deletePlayers(removed)
-            dao.deleteClausole(clauseMie.filter { c -> updated.none { it.id == c.playerId } })
+            dao.deleteClausole(dao.clausoleOnce().filter { c -> updated.none { it.id == c.playerId } })
             dao.insertPlayers(added)
+            // Talenti precoci: tre a stagione, in club a caso; i nomi restano da scoprire
+            val talenti = it.androcalcio.engine.Talenti.genera(teamsNow, rng, 3)
+            dao.insertPlayers(talenti)
             dao.updateTeams(newTeams)
             newTeams.find { it.id == me.id }?.let { nt ->
                 val pr = prizes[me.id] ?: 0L
@@ -1566,7 +1579,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
             refreshSponsorOffers(selectedTeam.value?.id ?: me.id)
             refreshClub()
-            _notice.value = "Nuova stagione ${seasonName(y)}. $report $numeri" +
+            _notice.value = "Nuova stagione ${seasonName(y)}. $report $numeri Sono emersi ${talenti.size} talenti precoci nei club." +
                 (if (expired.isNotEmpty()) " Sponsor scaduti: ${expired.joinToString(", ")}." else "") +
                 (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
         }

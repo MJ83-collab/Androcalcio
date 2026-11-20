@@ -24,7 +24,7 @@ object DataIO {
             val ga = JSONArray()
             (players[t.id] ?: emptyList()).forEach { p ->
                 ga.put(JSONObject()
-                    .put("name", p.name).put("role", p.role).put("age", p.age)
+                    .put("id", p.id).put("name", p.name).put("role", p.role).put("age", p.age)
                     .put("overall", p.overall).put("morale", p.morale)
                     .put("salary", p.salary).put("nationality", p.nationality)
                     .put("potential", p.potential).put("contract", p.contract)
@@ -37,11 +37,11 @@ object DataIO {
             val sa = JSONArray()
             (staff[t.id] ?: emptyList()).forEach { s ->
                 sa.put(JSONObject()
-                    .put("role", s.role).put("specialita", s.specialita).put("name", s.name).put("skill", s.skill).put("stile", s.stile)
+                    .put("id", s.id).put("role", s.role).put("specialita", s.specialita).put("name", s.name).put("skill", s.skill).put("stile", s.stile)
                     .put("salary", s.salary).put("contract", s.contract))
             }
             arr.put(JSONObject()
-                .put("name", t.name).put("shortName", t.shortName)
+                .put("id", t.id).put("name", t.name).put("shortName", t.shortName)
                 .put("colorPrimary", t.colorPrimary).put("colorSecondary", t.colorSecondary)
                 .put("budget", t.budget).put("stadiumCapacity", t.stadiumCapacity)
                 .put("ticketPrice", t.ticketPrice).put("sponsor", t.sponsor)
@@ -49,8 +49,22 @@ object DataIO {
                 .put("youthCoachSkill", t.youthCoachSkill).put("scoutSkill", t.scoutSkill)
                 .put("youthClaimed", t.youthClaimed).put("wageBudget", t.wageBudget).put("giocatori", ga).put("staff", sa))
         }
-        return JSONObject().put("formato", FORMAT).put("versione", 1)
-            .put("squadre", arr).toString(1)
+        val statJ = JSONArray()
+        dao.allStats().forEach { st ->
+            statJ.put(JSONObject().put("season", st.season).put("playerId", st.playerId).put("teamId", st.teamId)
+                .put("presenze", st.presenze).put("gol", st.gol))
+        }
+        val clJ = JSONArray()
+        dao.clausoleOnce().forEach { c ->
+            clJ.put(JSONObject().put("playerId", c.playerId).put("teamId", c.teamId).put("bonusPresenze", c.bonusPresenze)
+                .put("bonusGol", c.bonusGol).put("bonusCampionato", c.bonusCampionato).put("bonusCoppa", c.bonusCoppa))
+        }
+        val miJ = JSONArray()
+        dao.missionsOnce().forEach { m ->
+            miJ.put(JSONObject().put("teamId", m.teamId).put("staffId", m.staffId).put("area", m.area).put("giornate", m.giornate))
+        }
+        return JSONObject().put("formato", FORMAT).put("versione", 2)
+            .put("squadre", arr).put("statistiche", statJ).put("clausole", clJ).put("missioni", miJ).toString(1)
     }
 
     /** Valida tutto prima di toccare il database; in caso di errore non cambia nulla. */
@@ -61,8 +75,12 @@ object DataIO {
         val teams = ArrayList<Team>()
         val squads = ArrayList<List<Player>>()
         val staffs = ArrayList<List<Staff>>()
+        val oldTeamIds = ArrayList<Long>()
+        val oldPlayerIds = ArrayList<List<Long>>()
+        val oldStaffIds = ArrayList<List<Long>>()
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
+            oldTeamIds += o.optLong("id", 0L)
             teams += Team(
                 name = o.getString("name"), shortName = o.getString("shortName"),
                 colorPrimary = o.getLong("colorPrimary"), colorSecondary = o.getLong("colorSecondary"),
@@ -75,6 +93,7 @@ object DataIO {
                 wageBudget = o.optLong("wageBudget", 0)
             )
             val ga = o.getJSONArray("giocatori")
+            oldPlayerIds += (0 until ga.length()).map { ga.getJSONObject(it).optLong("id", 0L) }
             squads += (0 until ga.length()).map { j ->
                 val g = ga.getJSONObject(j)
                 val base = Player(
@@ -102,6 +121,7 @@ object DataIO {
             }
             // "staff" manca nei file precedenti: in quel caso la squadra parte senza staff
             val sa = o.optJSONArray("staff")
+            oldStaffIds += (0 until (sa?.length() ?: 0)).map { sa!!.getJSONObject(it).optLong("id", 0L) }
             staffs += if (sa == null) emptyList() else (0 until sa.length()).map { k ->
                 val s = sa.getJSONObject(k)
                 Staff(
@@ -118,8 +138,36 @@ object DataIO {
         require(teams.isNotEmpty()) { "nessuna squadra" }
         wipe(dao)
         val ids = dao.insertTeams(teams)
-        dao.insertPlayers(squads.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
-        dao.insertStaffs(staffs.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
+        val tMap = oldTeamIds.zip(ids).toMap()
+        val pIds = dao.insertPlayers(squads.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
+        val pMap = oldPlayerIds.flatten().zip(pIds).toMap()
+        val sIds = dao.insertStaffs(staffs.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
+        val sMap = oldStaffIds.flatten().zip(sIds).toMap()
+        // Statistiche, clausole e missioni: i riferimenti vecchi vengono rimappati sui nuovi id
+        root.optJSONArray("statistiche")?.let { a ->
+            dao.upsertStats((0 until a.length()).mapNotNull { k ->
+                val o = a.getJSONObject(k)
+                val pid = pMap[o.getLong("playerId")] ?: return@mapNotNull null
+                PlayerStat(o.getString("season"), pid, tMap[o.getLong("teamId")] ?: 0L,
+                    o.getInt("presenze"), o.getInt("gol"))
+            })
+        }
+        root.optJSONArray("clausole")?.let { a ->
+            dao.upsertClausole((0 until a.length()).mapNotNull { k ->
+                val o = a.getJSONObject(k)
+                val pid = pMap[o.getLong("playerId")] ?: return@mapNotNull null
+                Clausola(pid, tMap[o.getLong("teamId")] ?: return@mapNotNull null,
+                    o.getLong("bonusPresenze"), o.getLong("bonusGol"), o.getLong("bonusCampionato"), o.getLong("bonusCoppa"))
+            })
+        }
+        root.optJSONArray("missioni")?.let { a ->
+            dao.saveMissions((0 until a.length()).mapNotNull { k ->
+                val o = a.getJSONObject(k)
+                val sid = sMap[o.getLong("staffId")] ?: return@mapNotNull null
+                ScoutMission(teamId = tMap[o.getLong("teamId")] ?: return@mapNotNull null, staffId = sid,
+                    area = o.getString("area"), giornate = o.getInt("giornate"))
+            })
+        }
         return teams.size
     }
 }

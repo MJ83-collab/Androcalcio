@@ -188,6 +188,10 @@ object SeedData {
             }
         }
         dao.insertPlayers(players)
+        // Talento precoce di partenza: nella Valceresio
+        teams.indexOfFirst { it.name == "Valceresio" }.takeIf { it >= 0 }?.let { idx ->
+            dao.insertPlayers(listOf(it.androcalcio.engine.Talenti.nuovo(ids[idx], "Gabriele Jannino", Random)))
+        }
         dao.insertPlayers(freeAgents())
 
         // Budget ingaggi: 1,2 x stipendi della rosa (x1,5 per i club ricchi)

@@ -106,3 +106,25 @@ object Missioni {
     }
 }
 
+/** Talenti precoci: bambini di 10 anni già nei professionisti, con potenziale altissimo e abilità ancora bassa. */
+object Talenti {
+    const val ETA = 10
+
+    fun nuovo(teamId: Long, name: String, rng: Random): Player = Attr.fill(
+        Player(
+            teamId = teamId, name = name,
+            role = listOf("P", "D", "C", "A")[rng.nextInt(4)],
+            age = ETA, overall = rng.nextInt(38, 50), morale = 70,
+            salary = 150_000L, nationality = "Italia",
+            potential = rng.nextInt(85, 100), contract = 5
+        ), rng
+    )
+
+    /** Ogni stagione: n talenti in club a caso, di cui il nome resta da scoprire. */
+    fun genera(squadre: List<Team>, rng: Random, n: Int = 3): List<Player> =
+        squadre.shuffled(rng).take(n).map { t ->
+            nuovo(t.id, "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
+                SeedData.surnames[rng.nextInt(SeedData.surnames.size)], rng)
+        }
+}
+
