@@ -38,6 +38,7 @@ import it.androcalcio.data.StatoKeys
 import it.androcalcio.data.setStatoInt
 import it.androcalcio.data.statoInt
 import it.androcalcio.engine.Club
+import it.androcalcio.engine.ClubRequests
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
