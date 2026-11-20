@@ -5,7 +5,10 @@ import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.ShirtNumbers
 import it.androcalcio.engine.Stadium
 import it.androcalcio.engine.Insurance
-import it.androcalcio.engine.Sponsorship
+import it.androcalcio.engine.Sponsors
+import it.androcalcio.engine.Evento
+import it.androcalcio.engine.Scelta
+import it.androcalcio.engine.Spogliatoiohip
 import it.androcalcio.engine.TrainFocus
 import it.androcalcio.engine.TrainIntensity
 import it.androcalcio.engine.TrainingPlan
@@ -393,6 +396,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
+            ms.filter { it.round in rounds && it.id != skipId && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
+                .forEach { m0 -> dao.match(m0.id)?.let { dopoMiaPartita(t.id, it, evento = !all) } }
             if (lineupNotes.isNotEmpty()) _notice.value = lineupNotes.distinct().joinToString("\n")
             // Coppa: supplementari e rigori nelle parità, poi il turno successivo se è finito
             finalizeCup(t.nazione, _season.value, rng)
@@ -506,6 +511,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 Goal(season = _season.value, league = lg, round = mr.round,
                     teamId = if (it.home) mr.homeTeamId else mr.awayTeamId, playerId = it.playerId)
             })
+            t?.let { dopoMiaPartita(it.id, mr.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals), evento = true) }
             val staffBy = dao.allStaff().groupBy { it.teamId }
             val rng = kotlin.random.Random.Default
             for (id in listOf(mr.homeTeamId, mr.awayTeamId)) {
@@ -1424,6 +1430,45 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.setStato(Stato("sponsor_offerte", ""))
             _notice.value = "Offerte rifiutate: ne arriveranno altre a fine stagione."
+            refreshClub()
+        }
+    }
+
+    // ---- Spogliatoio: clima, tifosi a ogni giornata ed eventi con scelte ----
+    private val _evento = MutableStateFlow<Evento?>(null)
+    val evento: StateFlow<Evento?> = _evento
+
+    private suspend fun dopoMiaPartita(me: Long, m: MatchResult, evento: Boolean) {
+        val gf = if (m.homeTeamId == me) m.homeGoals else m.awayGoals
+        val gs = if (m.homeTeamId == me) m.awayGoals else m.homeGoals
+        val (dc, dt) = Spogliatoio.dopoPartita(gf, gs)
+        val clima = (dao.statoInt(StatoKeys.CLIMA) + dc).coerceIn(0, 100)
+        dao.setStatoInt(StatoKeys.CLIMA, clima)
+        dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + dt)
+        val spinta = Spogliatoio.spintaMorale(clima)
+        val rosa = dao.playersOnce(me)
+        if (spinta != 0) dao.updatePlayers(rosa.map { it.copy(morale = (it.morale + spinta).coerceIn(0, 100)) })
+        if (evento && _evento.value == null) {
+            val prep = dao.allStaff().any { it.teamId == me && it.role == Staffing.PREPARATORE }
+            _evento.value = Spogliatoio.evento(rosa, clima, dao.statoInt(StatoKeys.FIDUCIA),
+                dao.statoInt(StatoKeys.TIFOSI), gf < gs, prep, kotlin.random.Random.Default)
+        }
+        refreshClub()
+    }
+
+    fun scegli(e: Evento, c: Scelta) {
+        _evento.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val rosa = dao.playersOnce(me.id)
+            dao.updatePlayers(rosa.map { p ->
+                val dm = if (p.id in e.giocatori) c.morale else if (e.giocatori.isEmpty()) c.morale else 0
+                p.copy(morale = (p.morale + dm).coerceIn(0, 100), condition = (p.condition + c.condizione).coerceIn(0, 100))
+            })
+            dao.setStatoInt(StatoKeys.CLIMA, dao.statoInt(StatoKeys.CLIMA) + c.clima)
+            dao.setStatoInt(StatoKeys.FIDUCIA, dao.statoInt(StatoKeys.FIDUCIA) + c.fiducia)
+            dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + c.tifosi)
+            _notice.value = c.esito
             refreshClub()
         }
     }

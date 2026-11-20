@@ -89,6 +89,9 @@ interface AndrocalcioDao {
     @Delete
     suspend fun deletePlayer(p: Player)
 
+    @Query("SELECT * FROM matches WHERE id = :id")
+    suspend fun match(id: Long): MatchResult?
+
     @Query("SELECT valore FROM stato WHERE chiave = :chiave")
     suspend fun stato(chiave: String): String?
 

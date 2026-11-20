@@ -177,6 +177,19 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
             confirmButton = { TextButton(onClick = { screen = Screen.DIRIGENZA }) { Text("Vedi offerte") } }
         )
     }
+    val ev by vm.evento.collectAsState()
+    ev?.let { e ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(e.titolo) },
+            text = { Text(e.testo) },
+            confirmButton = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    e.scelte.forEach { c -> PcAction(onClick = { vm.scegli(e, c) }, modifier = Modifier.fillMaxWidth()) { Text(c.label) } }
+                }
+            }
+        )
+    }
     val started by vm.started.collectAsState()
     if (!started && teams.isNotEmpty()) {
         val info by vm.teamInfo.collectAsState()
