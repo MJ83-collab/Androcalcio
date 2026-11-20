@@ -77,6 +77,7 @@ object SaveSlots {
         ctx.getSharedPreferences("androcalcio", 0).edit()
             .putInt("season_year", j.getInt("year"))
             .putLong("team_id", j.getLong("teamId"))
+            .putBoolean("partita_iniziata", true)
             .commit()
         return true
     }

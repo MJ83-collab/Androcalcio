@@ -167,6 +167,13 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         )
     }
 
+    val started by vm.started.collectAsState()
+    if (!started && teams.isNotEmpty()) {
+        val info by vm.teamInfo.collectAsState()
+        NuovaPartitaScreen(teams, info) { vm.startGame(it); screen = Screen.HOME }
+        return
+    }
+
     BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
 
     Scaffold(

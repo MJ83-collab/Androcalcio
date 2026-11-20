@@ -732,6 +732,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun resetDefaultsNow() {
         DataIO.wipe(dao)
+        prefs.edit().remove("team_id").putBoolean("partita_iniziata", false).apply()
+        selectedId.value = null
+        _started.value = false
         prefs.edit().putInt("season_year", 2026).apply()
         _season.value = seasonName(2026)
         SeedData.insertInto(ctx, dao)
@@ -1250,6 +1253,26 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             _notice.value = "Amichevoli giocate."
         }
+    }
+
+    // ---- Nuova partita: scelta di nazione, campionato e squadra ----
+    // Le installazioni già in uso (con una squadra salvata) risultano come partita già iniziata.
+    private val _started = MutableStateFlow(
+        app.getSharedPreferences("androcalcio", 0).let { it.getBoolean("partita_iniziata", it.contains("team_id")) })
+    val started: StateFlow<Boolean> = _started
+
+    /** Forza (media dei migliori 11) e monte ingaggi attuale di ogni squadra, per la schermata di scelta. */
+    data class TeamInfo(val strength: Int, val wages: Long)
+    val teamInfo: StateFlow<Map<Long, TeamInfo>> = dao.allPlayersFlow().map { all ->
+        all.groupBy { it.teamId }.mapValues { (_, ps) ->
+            TeamInfo(ps.map { it.overall }.sortedDescending().take(11).average().toInt(), ps.sumOf { it.salary })
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    fun startGame(team: Team) {
+        selectTeam(team)
+        prefs.edit().putBoolean("partita_iniziata", true).apply()
+        _started.value = true
     }
 
     fun selectTeam(team: Team) {
