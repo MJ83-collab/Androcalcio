@@ -33,6 +33,11 @@ import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Cup
 import it.androcalcio.engine.Friendlies
 import it.androcalcio.data.AlboEntry
+import it.androcalcio.data.Stato
+import it.androcalcio.data.StatoKeys
+import it.androcalcio.data.setStatoInt
+import it.androcalcio.data.statoInt
+import it.androcalcio.engine.Club
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
@@ -1076,6 +1081,26 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.deleteAlboSeason(s)
             dao.insertAlbo(alboRows)
 
+            // 1e) Fiducia della dirigenza, umore dei tifosi e reputazione dell'allenatore
+            val myKey = leagues.entries.firstOrNull { e -> e.value.any { it.id == me.id } }?.key
+            val myTable = myKey?.let { finals[it] }.orEmpty()
+            val myPos = myTable.indexOfFirst { it.team.id == me.id } + 1
+            if (myPos > 0) {
+                val strs = myTable.associate { r ->
+                    r.team.id to cache[r.team.id].orEmpty().map { it.overall }.sortedDescending().take(11).average()
+                }
+                val exp = Club.expectedRank(strs, me.id)
+                val cupWon = alboRows.any { it.competizione == "Coppa" && it.vincitore == me.name }
+                val champion = myPos == 1
+                val titles = alboRows.count { it.vincitore == me.name }
+                val fid = dao.statoInt(StatoKeys.FIDUCIA) + Club.fiduciaDelta(myPos, exp, cupWon, champion)
+                dao.setStatoInt(StatoKeys.FIDUCIA, fid)
+                dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + Club.tifosiDelta(myPos, exp, champion))
+                dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) +
+                    Club.reputazioneDelta(myPos, exp, titles))
+                if (Club.shouldFire(fid)) dao.setStato(Stato("esonero", "1"))
+            }
+
             // 2) Premi, promozioni e retrocessioni (divisioni ordinate per comparsa nella lista)
             val moves = HashMap<Long, String>()
             val prizes = HashMap<Long, Long>()
@@ -1101,6 +1126,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
+            // Promozione o retrocessione incidono sulla reputazione dell'allenatore
+            if (me.id in promoted) dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) + 4)
+            if (me.id in relegated) dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) - 8)
             val updated = ArrayList<Player>()
             val removed = ArrayList<Player>()
             val added = ArrayList<Player>()
