@@ -19,7 +19,8 @@ data class Team(
     val campionato: String = "",
     val youthCoachSkill: Int = 55,
     val scoutSkill: Int = 55,
-    val youthClaimed: String = ""
+    val youthClaimed: String = "",
+    @ColumnInfo(defaultValue = "0") val wageBudget: Long = 0   // monte ingaggi annuo (separato dal budget mercato)
 )
 
 @Entity(tableName = "players")

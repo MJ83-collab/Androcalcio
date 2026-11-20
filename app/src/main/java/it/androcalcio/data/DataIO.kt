@@ -47,7 +47,7 @@ object DataIO {
                 .put("ticketPrice", t.ticketPrice).put("sponsor", t.sponsor)
                 .put("nazione", t.nazione).put("campionato", t.campionato)
                 .put("youthCoachSkill", t.youthCoachSkill).put("scoutSkill", t.scoutSkill)
-                .put("youthClaimed", t.youthClaimed).put("giocatori", ga).put("staff", sa))
+                .put("youthClaimed", t.youthClaimed).put("wageBudget", t.wageBudget).put("giocatori", ga).put("staff", sa))
         }
         return JSONObject().put("formato", FORMAT).put("versione", 1)
             .put("squadre", arr).toString(1)
@@ -71,7 +71,8 @@ object DataIO {
                 nazione = o.getString("nazione"), campionato = o.getString("campionato"),
                 youthCoachSkill = o.optInt("youthCoachSkill", 55),
                 scoutSkill = o.optInt("scoutSkill", 55),
-                youthClaimed = o.optString("youthClaimed", "")
+                youthClaimed = o.optString("youthClaimed", ""),
+                wageBudget = o.optLong("wageBudget", 0)
             )
             val ga = o.getJSONArray("giocatori")
             squads += (0 until ga.length()).map { j ->

@@ -77,7 +77,8 @@ object SeedData {
             val pos = posSeen.getOrDefault(key, 0).also { posSeen[key] = it + 1 }
             val (top, bottom) = leagueRange(n, tier)
             val baseStrength = top - (top - bottom) * pos / (sizes.getValue(key) - 1).coerceAtLeast(1)
-            val budget = (3.0 * Market.valueAt(baseStrength)).toLong()
+            val rich = if (name in RICH_CLUBS) 1.5 else 1.0   // club ricchi: moltiplicatore su mercato e ingaggi
+            val budget = (3.0 * rich * Market.valueAt(baseStrength)).toLong()
             teams += Team(
                 name = name,
                 shortName = o.getString("sigla"),
@@ -169,5 +170,17 @@ object SeedData {
             }
         }
         dao.insertPlayers(players)
+
+        // Budget ingaggi: 1,2 x stipendi della rosa (x1,5 per i club ricchi)
+        val wages = players.groupBy { it.teamId }.mapValues { e -> e.value.sumOf { it.salary } }
+        dao.updateTeams(teams.mapIndexed { i, t ->
+            val rich = if (t.name in RICH_CLUBS) 1.5 else 1.0
+            t.copy(id = ids[i], wageBudget = (1.2 * rich * (wages[ids[i]] ?: 0L)).toLong())
+        })
     }
+
+    private val RICH_CLUBS = setOf(
+        "Como AZ2", "Parigi SG", "Manchester Citt SB", "Chelsfield BL", "Newcastel MG", "Royal Madril",
+        "Baviera MO", "Lipsia RB2", "Aston Villan VL", "Flamengo MG", "Botafogo FG"
+    )
 }

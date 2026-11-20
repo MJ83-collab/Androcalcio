@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Team::class, Player::class, MatchResult::class, Youth::class, ScoutReport::class, Staff::class, Goal::class, Movimento::class, AlboEntry::class],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class AndrocalcioDatabase : RoomDatabase() {
@@ -71,6 +71,13 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
         val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `staff` ADD COLUMN `stile` TEXT NOT NULL DEFAULT 'DIFESA'")
+            }
+        }
+        /** 16 -> 17: budget ingaggi separato dal budget mercato (1,2 x stipendi attuali della rosa). */
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `teams` ADD COLUMN `wageBudget` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE `teams` SET `wageBudget` = CAST((SELECT COALESCE(SUM(salary), 0) FROM `Player` WHERE teamId = teams.id) * 1.2 AS INTEGER)")
             }
         }
         val MIGRATION_14_15 = object : Migration(14, 15) {
@@ -151,6 +158,6 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
                 context.applicationContext,
                 AndrocalcioDatabase::class.java,
                 "androcalcio.db"
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16).fallbackToDestructiveMigration().build()
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17).fallbackToDestructiveMigration().build()
     }
 }
