@@ -177,7 +177,7 @@ fun EditorScreen(
                     NumF("Potenziale (1-99, non sotto il valore)", pot) { pot = it }
                     NumF("Morale (0-100)", mo) { mo = it }
                     NumF("Ingaggio annuo (€)", sal) { sal = it }
-                    TextF("Nazionalità (sigla)", nat) { nat = it.take(3).uppercase() }
+                    TextF("Nazionalità", nat) { nat = it }
                 }
             },
             confirmButton = {
