@@ -68,7 +68,6 @@ fun CalendarioScreen(
     teams: List<Team>,
     matches: List<MatchResult>,
     onNext: () -> Unit,
-    onSeason: () -> Unit,
     season: String,
     onClose: () -> Unit,
     mentality: Mentality = Mentality.EQUILIBRATA,
@@ -83,10 +82,10 @@ fun CalendarioScreen(
     var friendFilter by remember { mutableStateOf("") }
     if (askNext) AlertDialog(
         onDismissRequest = { askNext = false },
-        title = { Text("Prossima giornata") },
-        text = { Text("Vuoi guardare la tua partita dal vivo (pausa, cambi, mentalità) o avere solo il risultato?") },
-        confirmButton = { PcAction(onClick = { askNext = false; onNextLive() }) { Text("Guarda la partita") } },
-        dismissButton = { TextButton(onClick = { askNext = false; onNext() }) { Text("Solo risultato") } }
+        title = { Text("La tua partita") },
+        text = { Text("Vuoi giocare la tua partita in 2D (pausa, cambi, mentalità) o simularla?") },
+        confirmButton = { PcAction(onClick = { askNext = false; onNextLive() }) { Text("Gioca in 2D") } },
+        dismissButton = { TextButton(onClick = { askNext = false; onNext() }) { Text("Simula") } }
     )
     if (team == null) return
     val byId = teams.associateBy { it.id }
@@ -97,6 +96,11 @@ fun CalendarioScreen(
     val pending = nextRound != null || cupPending
     val lastRound = matches.maxOfOrNull { it.round } ?: 1
     val shown = if (round == 0) (nextRound ?: lastRound) else round
+    val tutte = matches + cupMatches
+    val prossimaGiornata = tutte.filter { !it.played }.minOfOrNull { it.round }
+    val miaProssima = prossimaGiornata != null && tutte.any {
+        !it.played && it.round == prossimaGiornata && (it.homeTeamId == team.id || it.awayTeamId == team.id)
+    }
 
     Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -106,8 +110,11 @@ fun CalendarioScreen(
             PcButton("Tutte", { tab = 3 }, Modifier.weight(1f), main = tab == 3)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PcButton("Prossima giornata", { round = 0; askNext = true }, Modifier.weight(1f), main = true, enabled = pending)
-            PcButton("Fine stagione", { round = 0; onSeason() }, Modifier.weight(1f), enabled = pending)
+            // Chiede 2D o simulazione solo se la tua squadra gioca nella prossima giornata
+            PcButton("Prossima giornata", {
+                round = 0
+                if (miaProssima) { askNext = true } else { onNext() }
+            }, Modifier.fillMaxWidth(), main = true, enabled = pending)
         }
 
         if (pending) MentalityPicker(mentality, onMentality)

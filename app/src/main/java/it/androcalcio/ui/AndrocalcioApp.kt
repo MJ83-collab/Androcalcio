@@ -181,7 +181,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
             title = { Text("Il presidente") },
             text = { Text(msg) },
             confirmButton = {
-                TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.CALENDARIO }) { Text("Al calendario") }
+                TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.CALENDARIO }) { Text("Inizia la stagione") }
             },
             dismissButton = { TextButton(onClick = { vm.chiudiPresidente() }) { Text("Più tardi") } }
         )
@@ -267,7 +267,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 }
                 Screen.CALENDARIO -> {
                     val ment by vm.mentality.collectAsState()
-                    CalendarioScreen(team, teams, matches, { vm.playNextRound() }, { vm.playSeason() }, season,
+                    CalendarioScreen(team, teams, matches, { vm.playNextRound() }, season,
                         { vm.closeSeason() }, ment, { vm.setMentality(it) }, { vm.playNextRoundLive() },
                         cupMatches = cupMatches,
                         friendlyMatches = friendlyMatches,

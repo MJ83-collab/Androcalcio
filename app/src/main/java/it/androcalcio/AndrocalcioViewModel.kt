@@ -451,7 +451,6 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun playNextRound() = playRounds(false)
-    fun playSeason() = playRounds(true)
 
     // ---- Partita dal vivo: pausa, velocità, cambi e mentalità decisi da te ----
     data class LiveInfo(

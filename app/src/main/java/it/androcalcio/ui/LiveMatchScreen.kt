@@ -65,7 +65,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                         enabled = mySubs < MatchEngine.MAX_SUBS) {
                         Text("Cambi ($mySubs/${MatchEngine.MAX_SUBS})")
                     }
-                    PcAction(onClick = { vm.liveSkip() }) { Text("Fine") }
+                    PcAction(onClick = { vm.liveSkip() }) { Text("Termina partita") }
                 }
             }
             item {
