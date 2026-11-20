@@ -372,7 +372,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 }
                 Screen.ALBO -> {
                     val albo by vm.albo.collectAsState()
-                    AlboScreen(albo)
+                    val classifica by vm.classificaAllenatori.collectAsState()
+                    AlboScreen(albo, classifica)
                 }
                 Screen.SALVATAGGI -> {
                     val slots by vm.slots.collectAsState()

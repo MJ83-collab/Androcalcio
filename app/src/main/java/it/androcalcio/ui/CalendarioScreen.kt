@@ -105,6 +105,9 @@ fun CalendarioScreen(
     val miaProssima = prossimaGiornata != null && tutte.any {
         !it.played && it.round == prossimaGiornata && (it.homeTeamId == team.id || it.awayTeamId == team.id)
     }
+    // Prima del campionato servono almeno cinque amichevoli fissate e giocate
+    val amichevoliPronte = friendlyMatches.size >= Friendlies.MIN && friendlyMatches.all { it.played }
+    val bloccoAmichevoli = matches.none { it.played } && !amichevoliPronte
 
     Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -118,9 +121,13 @@ fun CalendarioScreen(
             PcButton("Prossima giornata", {
                 round = 0
                 if (miaProssima) { askNext = true } else { onNext() }
-            }, Modifier.fillMaxWidth(), main = true, enabled = pending)
+            }, Modifier.fillMaxWidth(), main = true, enabled = pending && !bloccoAmichevoli)
         }
 
+        if (bloccoAmichevoli) {
+            Text("Prima del campionato servono almeno ${Friendlies.MIN} amichevoli fissate e giocate.",
+                color = AC.Text, style = MaterialTheme.typography.bodySmall)
+        }
         if (pending) MentalityPicker(mentality, onMentality)
 
         if (!pending && matches.isNotEmpty()) {

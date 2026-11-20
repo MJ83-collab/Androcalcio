@@ -12,6 +12,8 @@ import kotlin.random.Random
 object Friendlies {
     /** Amichevoli di precampionato prenotabili: servono almeno cinque per entrare in forma. */
     const val COUNT = 5
+    /** Minimo di amichevoli fissate e giocate prima della prima giornata di campionato. */
+    const val MIN = 5
 
     fun key(teamId: Long) = "AMICHEVOLE|$teamId"
 

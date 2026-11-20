@@ -2,6 +2,7 @@ package it.androcalcio
 
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.DivisioneFine
+import it.androcalcio.engine.Allenatori
 import it.androcalcio.engine.Europa
 import it.androcalcio.engine.FineStagione
 import it.androcalcio.engine.Presidente
@@ -803,7 +804,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Trattativa col club: la risposta non è immediata se l'offerta è valida (arriva alla prossima giornata). */
     private suspend fun clubTalk(p: Player, buyer: Team, price: Long, years: Int): OfferResult {
-        val d = Market.demand(p)
+        // Con reputazione alta il club chiede un po' meno
+        val d = (Market.demand(p) * Allenatori.scontoClub(dao.statoInt(StatoKeys.REPUTAZIONE))).toLong()
         val squadraVenditrice = dao.playersOnce(p.teamId)
         val titolareChiave = squadraVenditrice.sortedByDescending { it.overall }.take(3).any { it.id == p.id }
         return when {
@@ -829,7 +831,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             Market.refuses(p, myStrengthNow(), appeal) ->
                 negativa(p, "${p.name} rifiuta: preferisce una squadra più forte e vincente.")
             wage >= ask -> firma(p, buyer, wage, years)
-            wage >= (ask * Market.tolleranza(p)).toLong() -> OfferResult.WageCounter(p, 0L, ask, years)
+            wage >= (ask * Allenatori.tolleranzaConReputazione(Market.tolleranza(p), dao.statoInt(StatoKeys.REPUTAZIONE))).toLong() ->
+                OfferResult.WageCounter(p, 0L, ask, years)
             else -> negativa(p, "${p.name} chiede almeno ${money(ask)} l'anno.")
         }
     }
@@ -1772,6 +1775,21 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         })
                     }
             )
+            // Fama degli allenatori delle altre squadre: il piazzamento li fa salire o scendere
+            run {
+                val voci = Allenatori.decode(dao.stato(Allenatori.KEY)).toMutableMap()
+                for ((_, st) in finals) {
+                    st.forEachIndexed { pos, row ->
+                        val id = row.team.id
+                        if (id == me.id) return@forEachIndexed
+                        val nome = staffBy[id]?.firstOrNull { it.role == Staffing.ALLENATORE }?.name ?: return@forEachIndexed
+                        val fama = voci[id]?.fama ?: Allenatori.FAMA_INIZIALE
+                        val d = Allenatori.variazioneStagione(pos + 1, st.size, id in promoted, id in relegated)
+                        voci[id] = Allenatori.Voce(id, nome, Allenatori.clamp(fama + d))
+                    }
+                }
+                dao.setStato(Stato(Allenatori.KEY, Allenatori.encode(voci.values)))
+            }
             // Promozione o retrocessione incidono sulla reputazione dell'allenatore
             if (me.id in promoted) dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) + 4)
             if (me.id in relegated) dao.setStatoInt(StatoKeys.REPUTAZIONE, dao.statoInt(StatoKeys.REPUTAZIONE) - 8)
@@ -1912,6 +1930,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
             refreshSponsorOffers(selectedTeam.value?.id ?: me.id)
             refreshClub()
+            aggiornaClassifica()
             _notice.value = "Nuova stagione ${seasonName(y)}. $report $numeri Sono emersi ${talenti.size} talenti precoci nei club." +
                 (if (expired.isNotEmpty()) " Sponsor scaduti: ${expired.joinToString(", ")}." else "") +
                 (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
@@ -1986,6 +2005,29 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             "$n ${prefs.getString("coach_cognome", "").orEmpty()}".trim()
         })
     val allenatore: StateFlow<String?> = _allenatore
+
+    /** Classifica degli allenatori: tu (fama = reputazione) e gli allenatori delle altre squadre. */
+    private val _classificaAllenatori = MutableStateFlow<List<Allenatori.Riga>>(emptyList())
+    val classificaAllenatori: StateFlow<List<Allenatori.Riga>> = _classificaAllenatori
+
+    init { viewModelScope.launch(Dispatchers.IO) { aggiornaClassifica() } }
+
+    private suspend fun aggiornaClassifica() {
+        val squadre = dao.allTeams().associateBy { it.id }
+        val me = selectedTeam.value?.id
+        val voci = Allenatori.decode(dao.stato(Allenatori.KEY))
+        val righe = ArrayList<Allenatori.Riga>()
+        for (staff in dao.allStaff()) {
+            if (staff.role != Staffing.ALLENATORE || staff.teamId == 0L || staff.teamId == me) continue
+            val squadra = squadre[staff.teamId]?.name ?: continue
+            righe += Allenatori.Riga(staff.name, squadra, voci[staff.teamId]?.fama ?: Allenatori.FAMA_INIZIALE, false)
+        }
+        val nome = _allenatore.value
+        if (nome != null && me != null) {
+            righe += Allenatori.Riga(nome, squadre[me]?.name.orEmpty(), dao.statoInt(StatoKeys.REPUTAZIONE), true)
+        }
+        _classificaAllenatori.value = righe.sortedByDescending { it.fama }
+    }
 
     /** Messaggio di benvenuto del presidente, mostrato una volta all'inizio della carriera. */
     private val _presidente = MutableStateFlow<String?>(null)
@@ -2125,6 +2167,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun dopoMiaPartita(me: Long, m: MatchResult, evento: Boolean) {
         val gf = if (m.homeTeamId == me) m.homeGoals else m.awayGoals
         val gs = if (m.homeTeamId == me) m.awayGoals else m.homeGoals
+        // La fama dell'allenatore cresce con i risultati
+        dao.setStatoInt(StatoKeys.REPUTAZIONE, Allenatori.clamp(dao.statoInt(StatoKeys.REPUTAZIONE) + Allenatori.dallaPartita(gf, gs)))
+        // La fiducia della dirigenza segue ogni risultato
+        dao.setStatoInt(StatoKeys.FIDUCIA, Allenatori.clamp(dao.statoInt(StatoKeys.FIDUCIA) + Allenatori.fiduciaPartita(gf, gs)))
+        aggiornaClassifica()
         val (dc, dt0) = Spogliatoio.dopoPartita(gf, gs)
         // Derby: la piazza si accende. Vittoria/sconfitta pesano di più su tifosi e dirigenza.
         val rivale = dao.team(if (m.homeTeamId == me) m.awayTeamId else m.homeTeamId).name
@@ -2195,7 +2242,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         _presidente.value = Presidente.benvenuto(team.name, nome, cognome)
         _allenatore.value = "$nome $cognome"
         _started.value = true
-        viewModelScope.launch(Dispatchers.IO) { refreshSponsorOffers(team.id); refreshClub() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSponsorOffers(team.id); refreshClub(); aggiornaClassifica() }
     }
 
     fun selectTeam(team: Team) {
