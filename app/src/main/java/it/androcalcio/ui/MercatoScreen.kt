@@ -78,6 +78,8 @@ fun MercatoScreen(
     onOffer: (Player, Long, Long, Int) -> Unit,
     wageAsk: (Player, Int) -> Long = { _, _ -> 0L },
     wageRoom: Long = 0L,
+    clubAccepted: Set<Long> = emptySet(),
+    advice: (Player, Int) -> String = { _, _ -> "" },
     onSell: (Player) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -85,6 +87,10 @@ fun MercatoScreen(
     val byId = teams.associateBy { it.id }
     var tab by rememberSaveable { mutableStateOf(0) }
     var affordable by rememberSaveable { mutableStateOf(true) }
+    var showFilters by rememberSaveable { mutableStateOf(false) }
+    var ageFilter by rememberSaveable { mutableStateOf(0) }     // 0 tutti · 1 fino a 23 · 2 24-29 · 3 dai 30
+    var minOvr by rememberSaveable { mutableStateOf(0) }        // 0 tutte · 70 · 80 (media minima)
+    var onlyFree by rememberSaveable { mutableStateOf(false) }  // solo svincolati
     var target by remember { mutableStateOf<Player?>(null) }
     var amount by remember { mutableStateOf(0L) }
     var wageOffer by remember { mutableStateOf(0L) }
@@ -113,9 +119,28 @@ fun MercatoScreen(
                         label = { Text("Alla mia portata") }
                     )
                 }
+                item {
+                    PcChip(selected = showFilters, onClick = { showFilters = !showFilters },
+                        label = { Text(if (showFilters) "Filtri ▲" else "Filtri ▼") })
+                }
             }
-            val shown = if (affordable) market.filter { Market.value(it) <= team.budget } else market
-            MarketTable(shown, { byId[it.teamId]?.name ?: "" }, { Market.value(it) }, Modifier.weight(1f)) {
+            if (showFilters) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    item { PcChip(selected = ageFilter == 1, onClick = { ageFilter = if (ageFilter == 1) 0 else 1 }, label = { Text("Under 23") }) }
+                    item { PcChip(selected = ageFilter == 2, onClick = { ageFilter = if (ageFilter == 2) 0 else 2 }, label = { Text("24-29") }) }
+                    item { PcChip(selected = ageFilter == 3, onClick = { ageFilter = if (ageFilter == 3) 0 else 3 }, label = { Text("30+") }) }
+                    item { PcChip(selected = minOvr == 70, onClick = { minOvr = if (minOvr == 70) 0 else 70 }, label = { Text("Media 70+") }) }
+                    item { PcChip(selected = minOvr == 80, onClick = { minOvr = if (minOvr == 80) 0 else 80 }, label = { Text("Media 80+") }) }
+                    item { PcChip(selected = onlyFree, onClick = { onlyFree = !onlyFree }, label = { Text("Svincolati") }) }
+                }
+            }
+            val filtrati = market.filter { p ->
+                (ageFilter == 0 || when (ageFilter) { 1 -> p.age <= 23; 2 -> p.age in 24..29; else -> p.age >= 30 }) &&
+                    p.overall >= minOvr && (!onlyFree || p.teamId == Market.SVINCOLATO_ID)
+            }
+            val shown = (if (affordable) filtrati.filter { Market.value(it) <= team.budget } else filtrati)
+            MarketTable(shown, { byId[it.teamId]?.name ?: if (it.teamId == Market.SVINCOLATO_ID) "SVINCOLATO" else "" },
+                { Market.value(it) }, Modifier.weight(1f)) {
                 target = it; amount = Market.value(it); years = 3; wageOffer = wageAsk(it, 3)
             }
         } else {
@@ -125,20 +150,29 @@ fun MercatoScreen(
 
     target?.let { p ->
         val step = maxOf(10_000L, Market.value(p) / 20)
+        val libero = p.teamId == Market.SVINCOLATO_ID
+        val clubOk = p.id in clubAccepted
         AlertDialog(
             onDismissRequest = { target = null },
             title = { Text(p.name) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${byId[p.teamId]?.name ?: ""} · ${p.age} anni · valore ${p.overall}")
+                    Text("${byId[p.teamId]?.name ?: if (libero) "Svincolato" else ""} · ${p.age} anni · valore ${p.overall}")
                     Text("Valore di mercato ${money(Market.value(p))}", color = AC.TextDim)
-                    Text("Prezzo al club", color = AC.TextDim, fontSize = 11.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PcAction(onClick = { amount = (amount - step).coerceAtLeast(step) }) { Text("−") }
-                        Text(money(amount), fontWeight = FontWeight.Bold, color = AC.Accent)
-                        PcAction(onClick = { amount += step }) { Text("+") }
+                    if (!libero && !clubOk) {
+                        Text("Prezzo al club (risposta alla prossima giornata)", color = AC.TextDim, fontSize = 11.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PcAction(onClick = { amount = (amount - step).coerceAtLeast(step) }) { Text("−") }
+                            Text(money(amount), fontWeight = FontWeight.Bold, color = AC.Accent)
+                            PcAction(onClick = { amount += step }) { Text("+") }
+                        }
+                    } else {
+                        Text(if (libero) "Svincolato: trattativa diretta col giocatore."
+                             else "Il club ha accettato: ora trattate con il giocatore.",
+                            color = AC.Accent, fontSize = 12.sp)
                     }
+                    Text("Consiglio del vice: ${advice(p, years)}", color = AC.TextDim, fontSize = 11.sp)
                     val wStep = maxOf(10_000L, wageAsk(p, years) / 20)
                     Text("Ingaggio annuo (richiesta ~${money(wageAsk(p, years))}, margine ${money(wageRoom.coerceAtLeast(0))})",
                         color = AC.TextDim, fontSize = 11.sp)
@@ -192,6 +226,10 @@ fun MercatoScreen(
                 text = { Text("${r.player.name} accetta per ${money(r.wage)} l'anno (${r.years} anni).") },
                 confirmButton = { PcAction(onClick = { onOffer(r.player, r.price, r.wage, r.years) }) { Text("Accetta") } },
                 dismissButton = { TextButton(onClick = onDismiss) { Text("Rifiuta") } }
+            )
+            is OfferResult.Pending -> AlertDialog(
+                onDismissRequest = onDismiss, title = { Text("In attesa del club") }, text = { Text(r.msg) },
+                confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } }
             )
             is OfferResult.Accepted -> AlertDialog(
                 onDismissRequest = onDismiss, title = { Text("Fatto") }, text = { Text(r.msg) },

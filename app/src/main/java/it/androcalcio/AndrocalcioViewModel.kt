@@ -72,8 +72,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
 import it.androcalcio.engine.AssistantCoach
 import it.androcalcio.engine.schemaAbituale
 import it.androcalcio.engine.schemaInPartita
@@ -346,6 +348,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Gioca la prossima giornata (o tutte); skipId = la tua partita, giocata a parte dal vivo. */
     private suspend fun runRounds(all: Boolean, skipId: Long?) {
+        risolviMercato()
         run {
             val t = selectedTeam.value ?: return
             ensureAiStaff(t.id)
@@ -575,38 +578,136 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     /** Margine del budget ingaggi: budget ingaggi meno monte ingaggi attuale della rosa. */
     fun wageRoom(): Long = (selectedTeam.value?.wageBudget ?: 0L) - players.value.sumOf { it.salary }
 
+    /** Chiavi dello stato di mercato, per giocatore. */
+    private object MK {
+        const val GIORNATA = "giornata_mercato"     // contatore delle giornate giocate
+        fun no(id: Long) = "no_$id"                 // risposte negative consecutive del giocatore (su 3)
+        fun cool(id: Long) = "cool_$id"             // giornata da cui il giocatore torna a trattare
+        fun pend(id: Long) = "pend_$id"             // prezzo proposto al club (0 = nessuna); dopo l'ok, prezzo concordato
+        fun clubOk(id: Long) = "clubok_$id"         // 1 = il club ha accettato: si tratta con il giocatore
+    }
+
+    /** Giocatori per cui il club ha già accettato (si tratta con il giocatore). Aggiornato ogni 1,5 s. */
+    val clubAccepted: StateFlow<Set<Long>> = flow {
+        while (true) {
+            emit(dao.pendingClubOffers().mapNotNull { s ->
+                s.chiave.removePrefix("pend_").toLongOrNull()?.takeIf { dao.statoInt(MK.clubOk(it)) == 1 }
+            }.toSet())
+            delay(1500)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** Parere del vice allenatore sulla trattativa con il giocatore: monte ingaggi, durata e clausole richieste. */
+    fun consiglioVice(p: Player, years: Int): String {
+        val ask = wageAsk(p, years)
+        return buildString {
+            append(if (ask <= wageRoom()) "L'ingaggio chiesto rientra nel monte ingaggi. "
+                   else "Il monte ingaggi non regge: serve spazio per ${money(ask)}. ")
+            if (p.age >= 31 && years > 2) append("Oltre 2 anni chiede il 10% in più: una durata più corta costa meno. ")
+            if (p.age < 24 && years < 3) append("Giovane: con 3 anni o più chiede il 10% in meno. ")
+            append("Clausole richieste: bonus se 30 presenze, 20 gol, vittoria di campionato o coppa.")
+        }
+    }
+
+    /** Offerta del tuo club: per un giocatore sotto contratto passa prima dal club, poi dal giocatore. */
     fun offer(p: Player, price: Long, wage: Long = wageAsk(p), years: Int = 3) {
         viewModelScope.launch {
             val buyer = selectedTeam.value ?: return@launch
-            val d = Market.demand(p)
-            val sellerSquad = dao.playersOnce(p.teamId)
-            val key = sellerSquad.sortedByDescending { it.overall }.take(3).any { it.id == p.id }
-            val appeal = appealFor(p)
-            _offer.value = when {
+            val giornata = dao.statoInt(MK.GIORNATA)
+            val cool = dao.statoInt(MK.cool(p.id))
+            when {
                 players.value.size >= Market.MAX_SQUAD ->
-                    OfferResult.Rejected("Rosa piena (massimo ${Market.MAX_SQUAD} giocatori).")
-                price > buyer.budget -> OfferResult.Rejected("Budget insufficiente.")
-                wage > wageRoom() ->
-                    OfferResult.Rejected("Oltre il budget ingaggi: restano ${money(wageRoom().coerceAtLeast(0))} l'anno.")
-                key && price < (d * 1.4).toLong() ->
-                    OfferResult.Rejected("${p.name} è un titolare chiave: il club non lo cede sotto ${money((d * 1.4).toLong())}.")
-                price < (d * 0.85).toLong() -> OfferResult.Rejected("Offerta troppo bassa: il club non tratta.")
-                price < d -> OfferResult.Counter(p, d, wage, years)
-                Market.refuses(p, myStrengthNow(), appeal) ->
-                    OfferResult.Rejected("${p.name} rifiuta: preferisce una squadra più forte e vincente.")
-                wage < Market.askedWage(p, appeal, years) -> {
-                    val ask = Market.askedWage(p, appeal, years)
-                    if (wage >= (ask * 0.9).toLong()) OfferResult.WageCounter(p, price, ask, years)
-                    else OfferResult.Rejected("${p.name} chiede almeno ${money(ask)} l'anno: trattativa chiusa.")
-                }
-                else -> {
-                    val seller = dao.team(p.teamId)
-                    dao.updateTeam(buyer.copy(budget = buyer.budget - price))
-                    dao.updateTeam(seller.copy(budget = seller.budget + price))
-                    dao.updatePlayer(p.copy(teamId = buyer.id, salary = wage, contract = years))
-                    registra(buyer.id, "Acquisto ${p.name}", -price, buyer.budget - price)
-                    OfferResult.Accepted("${p.name} è tuo per ${money(price)}: ${money(wage)} l'anno per $years ${if (years == 1) "anno" else "anni"}.")
-                }
+                    _offer.value = OfferResult.Rejected("Rosa piena (massimo ${Market.MAX_SQUAD} giocatori).")
+                cool > giornata ->
+                    _offer.value = OfferResult.Rejected("${p.name} è deluso e non tratta: torna disponibile tra ${cool - giornata} giornate.")
+                p.teamId == Market.SVINCOLATO_ID || dao.statoInt(MK.clubOk(p.id)) == 1 ->
+                    _offer.value = playerTalk(p, buyer, wage, years)
+                else -> _offer.value = clubTalk(p, buyer, price, years)
+            }
+        }
+    }
+
+    /** Trattativa col club: la risposta non è immediata se l'offerta è valida (arriva alla prossima giornata). */
+    private suspend fun clubTalk(p: Player, buyer: Team, price: Long, years: Int): OfferResult {
+        val d = Market.demand(p)
+        val squadraVenditrice = dao.playersOnce(p.teamId)
+        val titolareChiave = squadraVenditrice.sortedByDescending { it.overall }.take(3).any { it.id == p.id }
+        return when {
+            price > buyer.budget -> OfferResult.Rejected("Budget insufficiente.")
+            titolareChiave && price < (d * 1.4).toLong() ->
+                OfferResult.Rejected("${p.name} è un titolare chiave: il club non lo cede sotto ${money((d * 1.4).toLong())}.")
+            price < (d * 0.85).toLong() -> OfferResult.Rejected("Offerta troppo bassa: il club non tratta.")
+            price < d -> OfferResult.Counter(p, d, 0L, years)
+            else -> {
+                dao.setStatoInt(MK.pend(p.id), price.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), 0, Int.MAX_VALUE)
+                OfferResult.Pending("Il club valuta la proposta: la risposta arriva alla prossima giornata.")
+            }
+        }
+    }
+
+    /** Trattativa col giocatore: ingaggio e durata. Dopo tre risposte negative l'affare salta. */
+    private suspend fun playerTalk(p: Player, buyer: Team, wage: Long, years: Int): OfferResult {
+        val appeal = appealFor(p)
+        val ask = Market.askedWage(p, appeal, years)
+        return when {
+            wage > wageRoom() ->
+                OfferResult.Rejected("Oltre il budget ingaggi: restano ${money(wageRoom().coerceAtLeast(0))} l'anno.")
+            Market.refuses(p, myStrengthNow(), appeal) ->
+                negativa(p, "${p.name} rifiuta: preferisce una squadra più forte e vincente.")
+            wage >= ask -> firma(p, buyer, wage, years)
+            wage >= (ask * Market.tolleranza(p)).toLong() -> OfferResult.WageCounter(p, 0L, ask, years)
+            else -> negativa(p, "${p.name} chiede almeno ${money(ask)} l'anno.")
+        }
+    }
+
+    /** Risposta negativa del giocatore: alla terza l'affare salta e il giocatore resta indisponibile per un periodo. */
+    private suspend fun negativa(p: Player, msg: String): OfferResult {
+        val n = dao.statoInt(MK.no(p.id)) + 1
+        if (n < 3) {
+            dao.setStatoInt(MK.no(p.id), n)
+            return OfferResult.Rejected("$msg Risposta negativa $n di 3.")
+        }
+        val giorni = Market.cooldown(p)
+        dao.setStatoInt(MK.no(p.id), 0)
+        dao.setStatoInt(MK.cool(p.id), dao.statoInt(MK.GIORNATA) + giorni, 0, Int.MAX_VALUE)
+        return OfferResult.Rejected("$msg Terza risposta negativa: l'affare salta. ${p.name} è deluso e non tratta per $giorni giornate.")
+    }
+
+    /** Firma: il prezzo concordato col club (zero per gli svincolati) va al club venditore. */
+    private suspend fun firma(p: Player, buyer: Team, wage: Long, years: Int): OfferResult {
+        val svincolato = p.teamId == Market.SVINCOLATO_ID
+        val fee = if (svincolato) 0L else dao.statoInt(MK.pend(p.id)).toLong()
+        if (fee > buyer.budget) return OfferResult.Rejected("Budget insufficiente per il prezzo concordato (${money(fee)}).")
+        if (!svincolato) {
+            val seller = dao.team(p.teamId)
+            dao.updateTeam(seller.copy(budget = seller.budget + fee))
+        }
+        dao.updateTeam(buyer.copy(budget = buyer.budget - fee))
+        dao.updatePlayer(p.copy(teamId = buyer.id, salary = wage, contract = years))
+        registra(buyer.id, "Acquisto ${p.name}", -fee, buyer.budget - fee)
+        dao.setStatoInt(MK.pend(p.id), 0)
+        dao.setStatoInt(MK.clubOk(p.id), 0)
+        dao.setStatoInt(MK.no(p.id), 0)
+        val durata = "$years ${if (years == 1) "anno" else "anni"}"
+        val costo = if (fee > 0) " e ${money(fee)} al club" else ""
+        return OfferResult.Accepted("${p.name} firma: ${money(wage)} l'anno per $durata$costo.")
+    }
+
+    /** A ogni giornata il club risponde alle proposte della giornata prima (positiva o negativa). */
+    private suspend fun risolviMercato() {
+        dao.setStatoInt(MK.GIORNATA, dao.statoInt(MK.GIORNATA) + 1, 0, Int.MAX_VALUE)
+        val rng = kotlin.random.Random.Default
+        for (s in dao.pendingClubOffers()) {
+            val pid = s.chiave.removePrefix("pend_").toLongOrNull() ?: continue
+            val prezzo = s.valore.toLongOrNull() ?: 0L
+            if (prezzo <= 0L || dao.statoInt(MK.clubOk(pid)) == 1) continue
+            val p = dao.playerById(pid) ?: continue
+            if (rng.nextInt(100) < 85 && prezzo >= Market.demand(p)) {
+                dao.setStatoInt(MK.clubOk(pid), 1)
+                _notice.value = "${p.name}: il club accetta. Ora puoi trattare con il giocatore."
+            } else {
+                dao.setStatoInt(MK.pend(pid), 0)
+                _notice.value = "${p.name}: il club respinge la proposta."
             }
         }
     }

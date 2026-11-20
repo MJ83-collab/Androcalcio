@@ -100,6 +100,13 @@ interface AndrocalcioDao {
 
     @Query("DELETE FROM stato") suspend fun clearStato()
 
+    /** Trattative in attesa di risposta del club (chiave "pend_<id giocatore>", valore = prezzo proposto). */
+    @Query("SELECT * FROM stato WHERE chiave LIKE 'pend\\_%' ESCAPE '\\'")
+    suspend fun pendingClubOffers(): List<Stato>
+
+    @Query("SELECT * FROM players WHERE id = :id")
+    suspend fun playerById(id: Long): Player?
+
     @Query("DELETE FROM matches") suspend fun clearMatches()
     @Query("DELETE FROM youths") suspend fun clearYouths()
     @Query("DELETE FROM scout_reports") suspend fun clearReports()

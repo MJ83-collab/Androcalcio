@@ -42,6 +42,23 @@ object SeedData {
         else -> if (tier == 0) 72 to 62 else 62 to 54
     }
 
+    /** Svincolati di partenza (nessun club, teamId = SVINCOLATO_ID): ruoli e livelli vari, stipendio da firmare. */
+    private fun freeAgents(n: Int = 40): List<Player> = List(n) { i ->
+        val ovr = Random.nextInt(55, 80)
+        Player(
+            teamId = Market.SVINCOLATO_ID,
+            name = "${initials[Random.nextInt(initials.length)]}. ${surnames[Random.nextInt(surnames.size)]}",
+            role = listOf("P", "D", "C", "A")[i % 4],
+            age = Random.nextInt(21, 34),
+            overall = ovr,
+            morale = 60,
+            salary = 0L,
+            nationality = "Italia",
+            potential = ovr + Random.nextInt(0, 8),
+            contract = 1
+        )
+    }
+
     suspend fun insertInto(context: Context, dao: AndrocalcioDao) {
         val text = context.assets.open("squadre.json").bufferedReader().use { it.readText() }
         val arr = JSONArray(text)
@@ -170,6 +187,7 @@ object SeedData {
             }
         }
         dao.insertPlayers(players)
+        dao.insertPlayers(freeAgents())
 
         // Budget ingaggi: 1,2 x stipendi della rosa (x1,5 per i club ricchi)
         val wages = players.groupBy { it.teamId }.mapValues { e -> e.value.sumOf { it.salary } }

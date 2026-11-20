@@ -249,10 +249,12 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                     val market by vm.market.collectAsState()
                     val role by vm.marketRole.collectAsState()
                     val offer by vm.offerResult.collectAsState()
+                    val clubOk by vm.clubAccepted.collectAsState()
                     MercatoScreen(
                         team, teams, players, market, role, offer,
                         { vm.setMarketRole(it) }, { p, price, w, y -> vm.offer(p, price, w, y) },
                         { p, y -> vm.wageAsk(p, y) }, vm.wageRoom(),
+                        clubOk, { p, y -> vm.consiglioVice(p, y) },
                         { vm.sell(it) }, { vm.clearOffer() }
                     )
                 }
