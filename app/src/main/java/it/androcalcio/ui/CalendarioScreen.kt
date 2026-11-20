@@ -56,6 +56,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -268,6 +272,7 @@ private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: In
     val c = if (mine) AC.ColBlue else AC.PaperText
     val w = if (mine) FontWeight.ExtraBold else FontWeight.Medium
     PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
+        IconaCompetizione(m, byId[teamId]?.nazione ?: "")
         Text(h?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w,
             textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)
         Box(
@@ -279,5 +284,36 @@ private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: In
                 fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
         }
         Text(a?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
+/** Icona a sinistra della partita: bandiera della nazione per il campionato, icona diversa per coppa, supercoppa e amichevole. */
+@Composable
+private fun IconaCompetizione(m: MatchResult, nazione: String) {
+    Box(Modifier.width(26.dp), contentAlignment = Alignment.Center) {
+        when {
+            m.league.startsWith("AMICHEVOLE") -> Text("🤝", fontSize = 13.sp)
+            m.league.startsWith("COPPA") ->
+                Text(if (m.round >= Cup.SUPER_ROUND) "🥇" else "🏆", fontSize = 13.sp)
+            else -> Bandiera(nazione)
+        }
+    }
+}
+
+/** Gagliardetto con i colori della nazione (tricolore per l'Italia). */
+@Composable
+private fun Bandiera(nazione: String) {
+    val colori = when (nazione) {
+        "Italia" -> listOf(Color(0xFF009246), Color.White, Color(0xFFCE2B37))
+        "Spagna" -> listOf(Color(0xFFAA151B), Color(0xFFF1BF00), Color(0xFFAA151B))
+        "Inghilterra" -> listOf(Color.White, Color(0xFFCF142B), Color.White)
+        "Germania" -> listOf(Color.Black, Color(0xFFDD0000), Color(0xFFFFCE00))
+        "Francia" -> listOf(Color(0xFF002395), Color.White, Color(0xFFED2939))
+        "Brasile" -> listOf(Color(0xFF009C3B), Color(0xFFFFDF00), Color(0xFF009C3B))
+        "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF))
+        else -> listOf(Color.Gray, Color.LightGray, Color.Gray)
+    }
+    Row(Modifier.width(18.dp).height(12.dp).clip(RoundedCornerShape(2.dp))) {
+        colori.forEach { c -> Box(Modifier.weight(1f).fillMaxHeight().background(c)) }
     }
 }

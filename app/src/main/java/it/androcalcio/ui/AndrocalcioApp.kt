@@ -229,7 +229,11 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
                         allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) },
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() })
                 }
-                Screen.SQUADRE -> TeamList(teams, team?.id) { }   // solo consultazione: la panchina cambia con le offerte
+                Screen.SQUADRE -> {   // solo consultazione: la panchina cambia con le offerte
+                    var scheda by remember { mutableStateOf<Team?>(null) }
+                    TeamList(teams, team?.id) { scheda = it }
+                    scheda?.let { t -> SquadraSchedaDialog(t, { x -> vm.infoSquadra(x) }, { scheda = null }) }
+                }
                 Screen.PARTITA -> {
                     val ment by vm.mentality.collectAsState()
                     val modulo by vm.formation.collectAsState()
@@ -696,6 +700,12 @@ fun RosaScreen(
 
 private fun roleName(r: String) = when (r) { "P" -> "POR"; "D" -> "DIF"; "C" -> "MED"; else -> "ATT" }
 
+/** Ordine dei gruppi di ruolo in rosa: portieri, difensori, centrocampisti, attaccanti. */
+private fun ordineRuolo(r: String) = when (r) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
+private fun ruoloTitolo(r: String) = when (r) { "P" -> "PORTIERI"; "D" -> "DIFENSORI"; "C" -> "CENTROCAMPISTI"; else -> "ATTACCANTI" }
+/** Sigla di ruolo accanto al nome: P, D, C, A. */
+private fun ruoloTag(r: String) = "[$r]"
+
 /** Rosa a tabella su carta bianca (stile PC Calcio 7). Scorre in orizzontale per mostrare tutte le colonne. */
 @Composable
 private fun RosaTable(
@@ -745,7 +755,13 @@ private fun RosaTable(
             sezioni.forEach { (titolo, lista) -> if (lista.isNotEmpty()) {
                 Text("⚽  $titolo", Modifier.fillMaxWidth().background(AC.PaperAlt).padding(vertical = 4.dp),
                     textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
-            lista.forEach { p ->
+            var ruoloCorrente = ""
+            lista.sortedBy { ordineRuolo(it.role) }.forEach { p ->
+                if (p.role != ruoloCorrente) {   // intestazione per ogni gruppo di ruolo
+                    ruoloCorrente = p.role
+                    Text("— ${ruoloTitolo(p.role)} —", Modifier.fillMaxWidth().background(AC.PaperLine).padding(vertical = 2.dp),
+                        textAlign = TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
+                }
                 val i = idx++
                 PaperRow(i, Modifier.clickable { onOpen(p) }) {
                     Text(if (p.starter) "●" else "○",
@@ -754,7 +770,7 @@ private fun RosaTable(
                         textAlign = TextAlign.Center, fontSize = 14.sp)
                     Text(if (p.numero > 0) "${p.numero}" else "-", Modifier.width(26.dp), textAlign = TextAlign.Center,
                         fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
-                    Text(p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
+                    Text(ruoloTag(p.role) + "  " + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     val st = (p.overall / 20).coerceIn(0, 5)

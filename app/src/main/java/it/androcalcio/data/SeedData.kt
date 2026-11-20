@@ -35,7 +35,8 @@ object SeedData {
     /** Forza (scala FC) della prima e dell'ultima squadra di ogni campionato. */
     private fun leagueRange(nazione: String, tier: Int): Pair<Int, Int> = when (nazione) {
         "Inghilterra" -> if (tier == 0) 83 to 72 else 69 to 62
-        "Spagna", "Italia" -> if (tier == 0) 82 to 70 else 67 to 59
+        "Spagna" -> if (tier == 0) 82 to 70 else 67 to 59
+        "Italia" -> when (tier) { 0 -> 82 to 70; 1 -> 67 to 59; else -> 60 to 50 }   // Serie C (tier 2+) più debole
         "Germania" -> if (tier == 0) 82 to 69 else 67 to 59
         "Francia" -> if (tier == 0) 80 to 67 else 66 to 58
         "Brasile", "Argentina" -> if (tier == 0) 74 to 63 else 64 to 55

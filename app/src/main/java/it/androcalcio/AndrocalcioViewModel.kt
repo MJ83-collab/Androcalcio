@@ -63,6 +63,9 @@ import it.androcalcio.engine.Scouting
 import it.androcalcio.engine.Youths
 import it.androcalcio.engine.Market
 import it.androcalcio.engine.OfferResult
+import it.androcalcio.engine.InfoSquadra
+import it.androcalcio.engine.Rivalita
+import it.androcalcio.engine.SquadraInfo
 import it.androcalcio.ui.components.money
 import it.androcalcio.engine.MatchReport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -710,6 +713,29 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 _notice.value = "${p.name}: il club respinge la proposta."
             }
         }
+    }
+
+    /** Scheda di una squadra qualunque (consultazione): posizione attesa dalla forza, finanze, rosa, rivalità. */
+    suspend fun infoSquadra(t: Team): InfoSquadra {
+        val tutti = dao.allPlayers().groupBy { it.teamId }
+        val lega = dao.allTeams().filter { it.nazione == t.nazione && it.campionato == t.campionato }
+        val classifica = lega.sortedByDescending { SquadraInfo.media(tutti[it.id].orEmpty()) }
+        val posizione = classifica.indexOfFirst { it.id == t.id } + 1
+        val ps = tutti[t.id].orEmpty()
+        return InfoSquadra(
+            campionato = t.campionato,
+            sponsor = t.sponsor,
+            stadio = t.stadiumCapacity,
+            posizioneAttesa = SquadraInfo.aspettativa(posizione, lega.size),
+            media = SquadraInfo.media(ps),
+            rosa = ps.size,
+            budget = t.budget,
+            budgetIngaggi = t.wageBudget,
+            monteIngaggi = ps.sumOf { it.salary },
+            ruoliCarenti = SquadraInfo.ruoliCarenti(ps),
+            capitano = SquadraInfo.capitano(ps),
+            rivale = Rivalita.rivaleDi(t.name)
+        )
     }
 
     fun sell(p: Player) {
@@ -1582,7 +1608,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun dopoMiaPartita(me: Long, m: MatchResult, evento: Boolean) {
         val gf = if (m.homeTeamId == me) m.homeGoals else m.awayGoals
         val gs = if (m.homeTeamId == me) m.awayGoals else m.homeGoals
-        val (dc, dt) = Spogliatoio.dopoPartita(gf, gs)
+        val (dc, dt0) = Spogliatoio.dopoPartita(gf, gs)
+        // Derby: la piazza si accende. Vittoria/sconfitta pesano di più su tifosi e dirigenza.
+        val rivale = dao.team(if (m.homeTeamId == me) m.awayTeamId else m.homeTeamId).name
+        val derby = Rivalita.isDerby(dao.team(me).name, rivale)
+        val dt = if (derby) dt0 * 2 else dt0
+        if (derby) {
+            val dFid = when { gf > gs -> 2; gf < gs -> -2; else -> 0 }
+            dao.setStatoInt(StatoKeys.FIDUCIA, dao.statoInt(StatoKeys.FIDUCIA) + dFid)
+            _notice.value = when { gf > gs -> "Derby vinto contro $rivale: tifosi in festa."
+                gf < gs -> "Derby perso contro $rivale: la piazza è furiosa."
+                else -> "Derby contro $rivale finito in parità." }
+        }
         val clima = (dao.statoInt(StatoKeys.CLIMA) + dc).coerceIn(0, 100)
         dao.setStatoInt(StatoKeys.CLIMA, clima)
         dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + dt)

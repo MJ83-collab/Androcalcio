@@ -173,11 +173,11 @@
   {
     "nazione": "Italia",
     "campionato": "Serie A",
-    "squadra": "Frosinone CI",
-    "sigla": "FC",
-    "colore1": "#F2C230",
-    "colore2": "#1C3B6E",
-    "sponsor": "AXON"
+    "squadra": "Como",
+    "sigla": "CO",
+    "colore1": "#1E4D9C",
+    "colore2": "#FFFFFF",
+    "sponsor": "Quick Eat"
   },
   {
     "nazione": "Italia",
@@ -2446,5 +2446,545 @@
     "colore1": "#87CEEB",
     "colore2": "#FFFFFF",
     "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Varese",
+    "sigla": "VA",
+    "colore1": "#1E4D9C",
+    "colore2": "#000000",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Valceresio",
+    "sigla": "VA",
+    "colore1": "#AC1E22",
+    "colore2": "#E65100",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Lecco",
+    "sigla": "LE",
+    "colore1": "#2E7D32",
+    "colore2": "#1E4D9C",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Ravenna",
+    "sigla": "RA",
+    "colore1": "#F2C230",
+    "colore2": "#FFFFFF",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Pavia",
+    "sigla": "PA",
+    "colore1": "#000000",
+    "colore2": "#6A1B9A",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Cremona",
+    "sigla": "CR",
+    "colore1": "#FFFFFF",
+    "colore2": "#795548",
+    "sponsor": "Expedio"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Lodi",
+    "sigla": "LO",
+    "colore1": "#6A1B9A",
+    "colore2": "#2E7D32",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Sondrio",
+    "sigla": "SO",
+    "colore1": "#E65100",
+    "colore2": "#FFFFFF",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Biella",
+    "sigla": "BI",
+    "colore1": "#00838F",
+    "colore2": "#FFFFFF",
+    "sponsor": "Puna"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Vercelli",
+    "sigla": "VE",
+    "colore1": "#795548",
+    "colore2": "#AC1E22",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Novara",
+    "sigla": "NO",
+    "colore1": "#1E4D9C",
+    "colore2": "#000000",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Alessandria",
+    "sigla": "AL",
+    "colore1": "#AC1E22",
+    "colore2": "#E65100",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Asti",
+    "sigla": "AS",
+    "colore1": "#2E7D32",
+    "colore2": "#1E4D9C",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Cuneo",
+    "sigla": "CU",
+    "colore1": "#F2C230",
+    "colore2": "#FFFFFF",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Savona",
+    "sigla": "SA",
+    "colore1": "#000000",
+    "colore2": "#6A1B9A",
+    "sponsor": "Fanzio.com"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Imperia",
+    "sigla": "IM",
+    "colore1": "#FFFFFF",
+    "colore2": "#795548",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Trento",
+    "sigla": "TR",
+    "colore1": "#6A1B9A",
+    "colore2": "#2E7D32",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Bolzano",
+    "sigla": "BO",
+    "colore1": "#E65100",
+    "colore2": "#FFFFFF",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Rovereto",
+    "sigla": "RO",
+    "colore1": "#00838F",
+    "colore2": "#FFFFFF",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone A",
+    "squadra": "Padova",
+    "sigla": "PA",
+    "colore1": "#795548",
+    "colore2": "#AC1E22",
+    "sponsor": "Carabau"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Vicenza",
+    "sigla": "VI",
+    "colore1": "#1E4D9C",
+    "colore2": "#000000",
+    "sponsor": "Rakumo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Treviso",
+    "sigla": "TR",
+    "colore1": "#AC1E22",
+    "colore2": "#E65100",
+    "sponsor": "777 Casino"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Rovigo",
+    "sigla": "RO",
+    "colore1": "#2E7D32",
+    "colore2": "#1E4D9C",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Pordenone",
+    "sigla": "PO",
+    "colore1": "#F2C230",
+    "colore2": "#FFFFFF",
+    "sponsor": "Lenoveo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Trieste",
+    "sigla": "TR",
+    "colore1": "#000000",
+    "colore2": "#6A1B9A",
+    "sponsor": "Emirstan"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Gorizia",
+    "sigla": "GO",
+    "colore1": "#FFFFFF",
+    "colore2": "#795548",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Piacenza",
+    "sigla": "PI",
+    "colore1": "#6A1B9A",
+    "colore2": "#2E7D32",
+    "sponsor": "GameStation"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Reggio",
+    "sigla": "RE",
+    "colore1": "#E65100",
+    "colore2": "#FFFFFF",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Modena",
+    "sigla": "MO",
+    "colore1": "#00838F",
+    "colore2": "#FFFFFF",
+    "sponsor": "Mastercharge"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Forli",
+    "sigla": "FO",
+    "colore1": "#795548",
+    "colore2": "#AC1E22",
+    "sponsor": "OPVO"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Cesena",
+    "sigla": "CE",
+    "colore1": "#1E4D9C",
+    "colore2": "#000000",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Rimini",
+    "sigla": "RI",
+    "colore1": "#AC1E22",
+    "colore2": "#E65100",
+    "sponsor": "Betwin"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Pesaro",
+    "sigla": "PE",
+    "colore1": "#2E7D32",
+    "colore2": "#1E4D9C",
+    "sponsor": "Lufthansia"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Ancona",
+    "sigla": "AN",
+    "colore1": "#F2C230",
+    "colore2": "#FFFFFF",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Fermo",
+    "sigla": "FE",
+    "colore1": "#000000",
+    "colore2": "#6A1B9A",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Macerata",
+    "sigla": "MA",
+    "colore1": "#FFFFFF",
+    "colore2": "#795548",
+    "sponsor": "Unibest"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Perugia",
+    "sigla": "PE",
+    "colore1": "#6A1B9A",
+    "colore2": "#2E7D32",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Terni",
+    "sigla": "TE",
+    "colore1": "#E65100",
+    "colore2": "#FFFFFF",
+    "sponsor": "Hyundo"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Siena",
+    "sigla": "SI",
+    "colore1": "#00838F",
+    "colore2": "#FFFFFF",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone B",
+    "squadra": "Arezzo",
+    "sigla": "AR",
+    "colore1": "#795548",
+    "colore2": "#AC1E22",
+    "sponsor": "DHS Express"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Pisa",
+    "sigla": "PI",
+    "colore1": "#1E4D9C",
+    "colore2": "#000000",
+    "sponsor": "VA Sports"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Livorno",
+    "sigla": "LI",
+    "colore1": "#AC1E22",
+    "colore2": "#E65100",
+    "sponsor": "Konama"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Lucca",
+    "sigla": "LU",
+    "colore1": "#2E7D32",
+    "colore2": "#1E4D9C",
+    "sponsor": "Adidos"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Prato",
+    "sigla": "PR",
+    "colore1": "#F2C230",
+    "colore2": "#FFFFFF",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Pistoia",
+    "sigla": "PI",
+    "colore1": "#000000",
+    "colore2": "#6A1B9A",
+    "sponsor": "Nyke"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Grosseto",
+    "sigla": "GR",
+    "colore1": "#FFFFFF",
+    "colore2": "#795548",
+    "sponsor": "Sky Wager"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Viterbo",
+    "sigla": "VI",
+    "colore1": "#6A1B9A",
+    "colore2": "#2E7D32",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Latina",
+    "sigla": "LA",
+    "colore1": "#E65100",
+    "colore2": "#FFFFFF",
+    "sponsor": "Bowin"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Pescara",
+    "sigla": "PE",
+    "colore1": "#00838F",
+    "colore2": "#FFFFFF",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Teramo",
+    "sigla": "TE",
+    "colore1": "#795548",
+    "colore2": "#AC1E22",
+    "sponsor": "Visit Kivara"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Chieti",
+    "sigla": "CH",
+    "colore1": "#1E4D9C",
+    "colore2": "#000000",
+    "sponsor": "Union Chartered"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Campobasso",
+    "sigla": "CA",
+    "colore1": "#AC1E22",
+    "colore2": "#E65100",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Benevento",
+    "sigla": "BE",
+    "colore1": "#2E7D32",
+    "colore2": "#1E4D9C",
+    "sponsor": "Castoro"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Avellino",
+    "sigla": "AV",
+    "colore1": "#F2C230",
+    "colore2": "#FFFFFF",
+    "sponsor": "Quick Eat"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Salerno",
+    "sigla": "SA",
+    "colore1": "#000000",
+    "colore2": "#6A1B9A",
+    "sponsor": "TeleView"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Potenza",
+    "sigla": "PO",
+    "colore1": "#FFFFFF",
+    "colore2": "#795548",
+    "sponsor": "Volkswagon"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Matera",
+    "sigla": "MA",
+    "colore1": "#6A1B9A",
+    "colore2": "#2E7D32",
+    "sponsor": "Stakz.com"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Taranto",
+    "sigla": "TA",
+    "colore1": "#E65100",
+    "colore2": "#FFFFFF",
+    "sponsor": "Panasonix"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Brindisi",
+    "sigla": "BR",
+    "colore1": "#00838F",
+    "colore2": "#FFFFFF",
+    "sponsor": "Trivoyage"
+  },
+  {
+    "nazione": "Italia",
+    "campionato": "Serie C Girone C",
+    "squadra": "Foggia",
+    "sigla": "FO",
+    "colore1": "#795548",
+    "colore2": "#AC1E22",
+    "sponsor": "GameStation"
   }
 ]
