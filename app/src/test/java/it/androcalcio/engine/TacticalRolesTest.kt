@@ -46,7 +46,7 @@ class TacticalRolesTest {
     @Test
     fun affiniDiTuttiISeiRuoliStannoNellaStessaLinea() {
         TacticalRoles.AFFINI.forEach { (pos, affini) ->
-            val lineaDi = { r: String -> when (r) { "TD", "TS", "DC" -> "D"; "MED", "REG", "INT", "MP" -> "C"; else -> "A" } }
+            val lineaDi = { r: String -> when (r) { "POR" -> "P"; "TD", "TS", "DC", "CS", "CD" -> "D"; "MED", "REG", "INT", "MP" -> "C"; else -> "A" } }
             affini.forEach { (r, _) -> assertEquals("$pos -> $r", lineaDi(pos), lineaDi(r)) }
         }
     }
