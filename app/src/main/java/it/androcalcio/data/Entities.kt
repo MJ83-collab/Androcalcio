@@ -75,7 +75,9 @@ data class Staff(
     val salary: Long,
     val contract: Int,
     // Tattica predefinita (v16): ATTACCO o DIFESA, vedi engine/Tattica.kt
-    @ColumnInfo(defaultValue = "DIFESA") val stile: String = "DIFESA"
+    @ColumnInfo(defaultValue = "DIFESA") val stile: String = "DIFESA",
+    // Specialità: preparatori (GEN, FOR, POR, ATT, CEN, DIF) e fisioterapisti (REC, PRV); vuota per gli altri ruoli
+    @ColumnInfo(defaultValue = "") val specialita: String = ""
 )
 
 @Entity(tableName = "matches")

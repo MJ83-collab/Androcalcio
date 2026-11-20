@@ -336,8 +336,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val players = dao.allPlayers().groupBy { it.teamId }
         val rng = kotlin.random.Random.Default
         val add = dao.allTeams().filter { it.id != meId }.flatMap { t ->
-            val roles = have[t.id].orEmpty().map { it.role }
-            val missing = listOf(Staffing.ALLENATORE, Staffing.PREPARATORE).filter { it !in roles }
+            val attuale = have[t.id].orEmpty()
+            val missing = Staffing.POSTI.filter { p -> attuale.none { Staffing.stessoPosto(it, p) } }
             val ps = players[t.id].orEmpty()
             if (missing.isEmpty() || ps.isEmpty()) emptyList()
             else Staffing.aiStaff(t.id, ps.map { it.overall }.average(), missing, rng)
@@ -397,9 +397,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     Goal(season = _season.value, league = m.league, round = m.round,
                         teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
                 }
-                cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
+                cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.cura(staffBy, h.id), rng,
                     planFor(h.id, t.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE)).also { accrueInsurance(h.id, hp, it) }
-                cache[a.id] = Medical.afterMatch(ap, r.awayPlayed, Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
+                cache[a.id] = Medical.afterMatch(ap, r.awayPlayed, Staffing.cura(staffBy, a.id), rng,
                     planFor(a.id, t.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)).also { accrueInsurance(a.id, ap, it) }
             }
             dao.updatePlayers(cache.values.flatten())
@@ -525,7 +525,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             for (id in listOf(mr.homeTeamId, mr.awayTeamId)) {
                 val played = if (id == mr.homeTeamId) r.homePlayed else r.awayPlayed
                 val beforeP = dao.playersOnce(id)
-                dao.updatePlayers(Medical.afterMatch(beforeP, played, Staffing.skill(staffBy, id, Staffing.PREPARATORE), rng,
+                dao.updatePlayers(Medical.afterMatch(beforeP, played, Staffing.cura(staffBy, id), rng,
                     planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)).also { accrueInsurance(id, beforeP, it) })
             }
         }
@@ -1004,13 +1004,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun hire(c: Staff) {
         viewModelScope.launch {
             val me = selectedTeam.value ?: return@launch
-            val old = dao.staffOnce(me.id).filter { it.role == c.role }
+            val old = dao.staffOnce(me.id).filter { it.role == c.role && it.specialita == c.specialita }
             if (old.isNotEmpty()) dao.deleteStaffs(old)
             dao.addStaff(c.copy(id = 0, teamId = me.id))
             syncTeamSkill(me.id, c.role, c.skill)
             _candidates.value = _candidates.value - c
             val sost = old.firstOrNull()?.let { " Sostituisce ${it.name}." } ?: ""
-            _notice.value = "${c.name} ingaggiato come ${Staffing.roleName(c.role).lowercase()}.$sost " +
+            _notice.value = "${c.name} ingaggiato come ${Staffing.roleName(c.role, c.specialita).lowercase()}.$sost " +
                 "Stipendio ${money(c.salary)} l'anno, pagato a fine stagione."
         }
     }
@@ -1077,11 +1077,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             rng = rng
         )
         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
-            Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
+            Staffing.cura(staffBy, h.id), rng,
             planFor(h.id, me.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
             .also { accrueInsurance(h.id, cache[h.id] ?: emptyList(), it) }
         cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(), r.awayPlayed,
-            Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
+            Staffing.cura(staffBy, a.id), rng,
             planFor(a.id, me.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
             .also { accrueInsurance(a.id, cache[a.id] ?: emptyList(), it) }
         return r
@@ -1152,11 +1152,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id)
                         )
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
-                            Staffing.skill(staffBy, h.id, Staffing.PREPARATORE), rng,
+                            Staffing.cura(staffBy, h.id), rng,
                             planFor(h.id, me.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
                             .also { accrueInsurance(h.id, cache[h.id] ?: emptyList(), it) }
                         cache[a.id] = Medical.afterMatch(cache[a.id] ?: emptyList(), r.awayPlayed,
-                            Staffing.skill(staffBy, a.id, Staffing.PREPARATORE), rng,
+                            Staffing.cura(staffBy, a.id), rng,
                             planFor(a.id, me.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
                             .also { accrueInsurance(a.id, cache[a.id] ?: emptyList(), it) }
                         m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)

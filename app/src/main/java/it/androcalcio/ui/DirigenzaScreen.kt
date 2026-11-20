@@ -73,7 +73,7 @@ fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (St
                     Text(tipo.replaceFirstChar { it.uppercase() } + if (done) " (già richiesto)" else "",
                         color = AC.Text, style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ClubRequests.IMPORTI.forEach { imp ->
+                        ClubRequests.importi(tipo, c.reputazione, c.tifosi).forEach { imp ->
                             PcButton(money(imp), { onRequest(tipo, imp) }, enabled = !done)
                         }
                     }
