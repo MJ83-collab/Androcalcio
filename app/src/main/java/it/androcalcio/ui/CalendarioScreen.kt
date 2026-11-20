@@ -79,7 +79,7 @@ fun CalendarioScreen(
     onPlayFriendlies: () -> Unit = {}
 ) {
     var askNext by remember { mutableStateOf(false) }
-    var friendFilter by remember { mutableStateOf("") }
+    var amichevoliAperte by rememberSaveable { mutableStateOf(false) }
     if (askNext) AlertDialog(
         onDismissRequest = { askNext = false },
         title = { Text("La tua partita") },
@@ -88,6 +88,10 @@ fun CalendarioScreen(
         dismissButton = { TextButton(onClick = { askNext = false; onNext() }) { Text("Simula") } }
     )
     if (team == null) return
+    if (amichevoliAperte) {
+        AmichevoliScreen(team, teams, friendlyMatches, { onRequestFriendly(it) }, onPlayFriendlies) { amichevoliAperte = false }
+        return
+    }
     val byId = teams.associateBy { it.id }
     var tab by rememberSaveable { mutableStateOf(0) }
     var round by rememberSaveable { mutableStateOf(0) } // 0 = automatica
@@ -128,34 +132,8 @@ fun CalendarioScreen(
                 style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 SectionTitle("Amichevoli di precampionato")
-                if (friendlyMatches.isNotEmpty()) {
-                    PaperPanel(Modifier.fillMaxWidth()) {
-                        friendlyMatches.sortedBy { it.round }.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
-                    }
-                }
-                if (friendlyMatches.any { !it.played }) {
-                    PcButton("Gioca amichevoli", onPlayFriendlies, Modifier.fillMaxWidth())
-                }
-                val freeSlots = Friendlies.COUNT - friendlyMatches.size
-                if (freeSlots > 0) {
-                    Text("Chiedi un'amichevole ($freeSlots posto/i libero/i)", color = AC.Text,
-                        style = MaterialTheme.typography.bodySmall)
-                    OutlinedTextField(value = friendFilter, onValueChange = { friendFilter = it },
-                        label = { Text("Cerca squadra") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    val bookedIds = friendlyMatches.flatMap { listOf(it.homeTeamId, it.awayTeamId) }.toSet()
-                    PaperPanel(Modifier.fillMaxWidth()) {
-                        teams.filter { it.id != team.id && it.name.contains(friendFilter, ignoreCase = true) }
-                            .sortedBy { it.name }.forEach { t ->
-                                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("${t.name} (${t.nazione})", color = AC.PaperText)
-                                    if (t.id in bookedIds) Text("impegnata", color = AC.PaperText)
-                                    else PcButton("Chiedi", { onRequestFriendly(t.id) })
-                                }
-                            }
-                    }
-                }
+                PcButton("Amichevoli: ${friendlyMatches.size}/${Friendlies.COUNT} fissate", { amichevoliAperte = true },
+                    Modifier.fillMaxWidth())
                 if (cupMatches.isEmpty()) {
                     Text("Coppa non ancora sorteggiata.", color = AC.Text)
                 }

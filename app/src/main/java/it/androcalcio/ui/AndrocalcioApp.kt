@@ -346,10 +346,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val staffList by vm.staff.collectAsState()
                     val cands by vm.candidates.collectAsState()
                     val missioni by vm.scoutMissions.collectAsState()
+                    val allenatoreNome by vm.allenatore.collectAsState()
                     StaffScreen(
                         team, staffList, cands,
                         { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() },
-                        missioni, { s, area -> vm.inviaOsservatore(s, area) }
+                        missioni, { s, area -> vm.inviaOsservatore(s, area) },
+                        allenatore = allenatoreNome
                     )
                 }
                 Screen.TATTICA -> {

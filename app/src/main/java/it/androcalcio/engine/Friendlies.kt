@@ -10,7 +10,8 @@ import kotlin.random.Random
  * Non entrano in campionato né in coppa.
  */
 object Friendlies {
-    const val COUNT = 2
+    /** Amichevoli di precampionato prenotabili: servono almeno cinque per entrare in forma. */
+    const val COUNT = 5
 
     fun key(teamId: Long) = "AMICHEVOLE|$teamId"
 

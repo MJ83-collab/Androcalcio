@@ -55,7 +55,8 @@ fun StaffScreen(
     onFire: (Staff) -> Unit,
     onRefresh: () -> Unit,
     missioni: List<ScoutMission>,
-    onInvia: (Staff, String) -> Unit
+    onInvia: (Staff, String) -> Unit,
+    allenatore: String? = null
 ) {
     if (team == null) return
     var aperto by remember { mutableStateOf<Staff?>(null) }
@@ -96,7 +97,11 @@ fun StaffScreen(
                 GlassCard(Modifier.fillMaxWidth().then(if (s != null) Modifier.clickable { aperto = s } else Modifier)) {
                     Column(Modifier.padding(12.dp)) {
                         Text(Staffing.roleName(posto.role, posto.specialita), style = MaterialTheme.typography.titleSmall)
-                        if (s == null) {
+                        if (posto.role == Staffing.ALLENATORE && allenatore != null) {
+                            // Tu: la squadra che scegli la alleni tu
+                            Text(allenatore, style = MaterialTheme.typography.bodyMedium, color = AC.Text)
+                            Text("Tu · allenatore della squadra", color = AC.Accent, style = MaterialTheme.typography.bodySmall)
+                        } else if (s == null) {
                             Text("vacante", color = AC.Accent, style = MaterialTheme.typography.bodySmall)
                         } else {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

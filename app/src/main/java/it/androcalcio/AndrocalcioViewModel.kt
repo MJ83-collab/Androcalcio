@@ -1928,7 +1928,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val me = selectedTeam.value ?: return@launch
             val s = _season.value
             val booked = dao.matchesOnce(Friendlies.key(me.id), s)
-            if (booked.size >= Friendlies.COUNT) { _notice.value = "Hai già due amichevoli."; return@launch }
+            if (booked.size >= Friendlies.COUNT) { _notice.value = "Hai già fissato tutte le amichevoli."; return@launch }
             if (booked.any { it.homeTeamId == opponentId || it.awayTeamId == opponentId }) {
                 _notice.value = "Squadra già impegnata in un'amichevole."; return@launch
             }
@@ -1979,6 +1979,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private val _started = MutableStateFlow(
         app.getSharedPreferences("androcalcio", 0).let { it.getBoolean("partita_iniziata", it.contains("team_id")) })
     val started: StateFlow<Boolean> = _started
+
+    /** Nome e cognome dell'allenatore (tu), scelti all'avvio della carriera. */
+    private val _allenatore = MutableStateFlow(
+        prefs.getString("coach_nome", null)?.takeIf { it.isNotBlank() }?.let { n ->
+            "$n ${prefs.getString("coach_cognome", "").orEmpty()}".trim()
+        })
+    val allenatore: StateFlow<String?> = _allenatore
 
     /** Messaggio di benvenuto del presidente, mostrato una volta all'inizio della carriera. */
     private val _presidente = MutableStateFlow<String?>(null)
@@ -2186,6 +2193,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putBoolean("partita_iniziata", true)
             .putString("coach_nome", nome).putString("coach_cognome", cognome).apply()
         _presidente.value = Presidente.benvenuto(team.name, nome, cognome)
+        _allenatore.value = "$nome $cognome"
         _started.value = true
         viewModelScope.launch(Dispatchers.IO) { refreshSponsorOffers(team.id); refreshClub() }
     }
