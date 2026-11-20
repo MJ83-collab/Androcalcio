@@ -77,7 +77,6 @@ fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (St
                 }
             }
         }
-    }
         if (c.offerte.isNotEmpty()) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
