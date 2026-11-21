@@ -1,0 +1,271 @@
+name: "Modern UI 2026"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_root:
+        description: "Kotlin main source root"
+        required: true
+        default: "app/src/main/java/com/androcalcio"
+      force_overwrite:
+        description: "Sovrascrivi file esistenti (Consigliato: true)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: "Genera UI Next-Gen 2026"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crea branch
+        run: git checkout -B feat/modern-ui-2026
+
+      # --- 1. TEMA MODERNO (GLASSMORPHISM & DARK MODE) ---
+      - name: "ui/theme/Theme2026.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/theme/Theme2026.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.theme
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.material3.*
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          // Palette Moderna 2026
+          val BgDark = Color(0xFF0B0F19) // Sfondo scurissimo (quasi nero)
+          val SurfaceGlass = Color(0x33FFFFFF) // Vetro smerigliato
+          val NeonCyan = Color(0xFF00E5FF) // Accento primario
+          val NeonGreen = Color(0xFF00FF88) // Accento successo
+          val NeonRed = Color(0xFFFF3366) // Accento errore
+          val TextPrimary = Color(0xFFFFFFFF)
+          val TextSecondary = Color(0xFFB0B0B0)
+
+          @Composable
+          fun ModernButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+              Button(
+                  onClick = onClick,
+                  modifier = modifier,
+                  colors = ButtonDefaults.buttonColors(
+                      containerColor = SurfaceGlass,
+                      contentColor = TextPrimary
+                  ),
+                  shape = RoundedCornerShape(12.dp),
+                  border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x55FFFFFF))
+              ) {
+                  Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+              }
+          }
+          KOTLIN_EOF
+
+      # --- 2. CAMPO 2D MODERNO ---
+      - name: "ui/match/ModernPitch.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/ModernPitch.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import android.graphics.Paint
+          import android.graphics.Typeface
+          import androidx.compose.foundation.Canvas
+          import androidx.compose.foundation.layout.aspectRatio
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.geometry.Offset
+          import androidx.compose.ui.geometry.Size
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.graphics.drawscope.Stroke
+          import androidx.compose.ui.graphics.nativeCanvas
+          import androidx.compose.ui.unit.dp
+
+          data class ModernPitchPlayer(val number: Int, val x: Float, val y: Float, val isHome: Boolean)
+
+          @Composable
+          fun ModernPitch(players: List<ModernPitchPlayer>, modifier: Modifier = Modifier) {
+              Canvas(modifier = modifier.aspectRatio(0.68f)) {
+                  val w = size.width
+                  val h = size.height
+                  
+                  // Sfondo campo con gradiente moderno
+                  drawRect(
+                      brush = Brush.verticalGradient(listOf(Color(0xFF1E3A1E), Color(0xFF0F1F0F)))
+                  )
+
+                  val line = Color(0x55FFFFFF)
+                  val sw = 2.dp.toPx()
+                  
+                  // Linee campo
+                  drawRect(line, style = Stroke(sw))
+                  drawLine(line, Offset(0f, h / 2), Offset(w, h / 2), sw)
+                  drawCircle(line, radius = w * 0.15f, center = Offset(w / 2, h / 2), style = Stroke(sw))
+
+                  val r = 14.dp.toPx()
+                  val paint = Paint().apply {
+                      color = android.graphics.Color.WHITE
+                      textSize = r * 1.1f
+                      textAlign = Paint.Align.CENTER
+                      typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                      isAntiAlias = true
+                  }
+
+                  players.forEach { p ->
+                      val c = Offset(p.x * w, p.y * h)
+                      // Giocatori con effetto bagliore (Neon)
+                      val playerColor = if (p.isHome) Color(0xFF00E5FF) else Color(0xFFFF3366)
+                      drawCircle(playerColor.copy(alpha = 0.3f), radius = r + 4.dp.toPx(), center = c)
+                      drawCircle(playerColor, radius = r, center = c)
+                      
+                      drawContext.canvas.nativeCanvas.drawText(p.number.toString(), c.x, c.y + r * 0.4f, paint)
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      # --- 3. SCHERMATA PARTITA 2026 (GLASSMORPHISM) ---
+      - name: "ui/match/MatchScreen2026.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/MatchScreen2026.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import com.androcalcio.engine.MatchEvent
+          import com.androcalcio.engine.PlayerRating
+          import com.androcalcio.ui.theme.*
+          import com.androcalcio.ui.match.ModernPitchPlayer
+
+          @Composable
+          fun MatchScreen2026(
+              homeTeam: String,
+              awayTeam: String,
+              homeScore: Int,
+              awayScore: Int,
+              minute: Int,
+              players: List<ModernPitchPlayer>,
+              events: List<MatchEvent>,
+              ratings: List<PlayerRating>
+          ) {
+              // Sfondo scuro generale
+              Box(modifier = Modifier.fillMaxSize().background(
+                  Brush.verticalGradient(listOf(Color(0xFF141824), BgDark))
+              )) {
+                  Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                      
+                      // HEADER MODERNO (Punteggio fluttuante)
+                      Row(
+                          modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                          horizontalArrangement = Arrangement.SpaceBetween,
+                          verticalAlignment = Alignment.CenterVertically
+                      ) {
+                          Text(homeTeam, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                          
+                          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                              Text("$homeScore - $awayScore", color = NeonCyan, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                              Text("$minute'", color = TextSecondary, fontSize = 14.sp)
+                          }
+                          
+                          Text(awayTeam, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                      }
+
+                      // AREA CENTRALE (Campo e Telecronaca)
+                      Row(modifier = Modifier.weight(1f)) {
+                          // Campo
+                          Box(modifier = Modifier.weight(0.6f).padding(end = 12.dp).border(1.dp, SurfaceGlass, RoundedCornerShape(16.dp))) {
+                              ModernPitch(players = players, modifier = Modifier.fillMaxWidth())
+                          }
+
+                          // Telecronaca Moderna (Card in vetro)
+                          Box(
+                              modifier = Modifier
+                                  .weight(0.4f)
+                                  .background(SurfaceGlass, RoundedCornerShape(16.dp))
+                                  .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(16.dp))
+                                  .padding(12.dp)
+                          ) {
+                              // Usa il componente esistente ma adattato allo stile
+                              MatchCommentary(events = events, modifier = Modifier.fillMaxSize())
+                          }
+                      }
+
+                      Spacer(modifier = Modifier.height(16.dp))
+
+                      // AREA INFERIORE (Voti e Pulsanti)
+                      Row(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                          Box(
+                              modifier = Modifier
+                                  .weight(0.7f)
+                                  .padding(end = 12.dp)
+                                  .background(SurfaceGlass, RoundedCornerShape(16.dp))
+                                  .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(16.dp))
+                                  .padding(8.dp)
+                          ) {
+                              FmRatings(ratings = ratings, modifier = Modifier.fillMaxSize())
+                          }
+                          
+                          Column(
+                              modifier = Modifier.weight(0.3f),
+                              verticalArrangement = Arrangement.spacedBy(8.dp)
+                          ) {
+                              ModernButton("TATTICHE", onClick = {}, modifier = Modifier.fillMaxWidth())
+                              ModernButton("CAMBI", onClick = {}, modifier = Modifier.fillMaxWidth())
+                              ModernButton("TERMINA", onClick = {}, modifier = Modifier.fillMaxWidth())
+                          }
+                      }
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      - name: Apri PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feat/modern-ui-2026
+          base: feat/pc7-meccaniche
+          title: "Restyling UI 2026: Dark Mode, Glassmorphism e Neon"
+          body: |
+            ## Addio Windows 95, benvenuto 2026!
+            Abbiamo sovrascritto l'interfaccia retrò con un design moderno e premium:
+            - **Tema (`Theme2026.kt`)**: Colori scuri profondi, accenti neon (Ciano e Rosso), pulsanti con angoli arrotondati ed effetto vetro.
+            - **Campo (`ModernPitch.kt`)**: Rimosse le strisce orizzontali anni '90. Ora c'è un gradiente verde premium con giocatori rappresentati da cerchi luminosi (glow effect).
+            - **Schermata Partita (`MatchScreen2026.kt`)**: Layout a schede fluttuanti. Il punteggio è in grande al centro, il campo e la telecronaca sono incorniciati in pannelli di vetro smerigliato (Glassmorphism).
+
+            Questo stile si sposa perfettamente con le schede giocatore stile Valorant che abbiamo creato in precedenza.
+          labels: |
+            ui
+            modern
+          delete-branch: false
