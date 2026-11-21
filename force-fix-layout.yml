@@ -1,0 +1,195 @@
+name: "Force Fix Layout (Scan & Overwrite)"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  force_fix:
+    name: "Scansiona e Sovrascrive i File di Layout"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Incrementa Versione
+        run: |
+          GRADLE_FILE=$(find app -name "build.gradle*" | head -n 1)
+          if [ -n "$GRADLE_FILE" ]; then
+            CURRENT_VERSION_CODE=$(grep -oP 'versionCode \K\d+' "$GRADLE_FILE" || echo "1")
+            NEW_VERSION_CODE=$((CURRENT_VERSION_CODE + 1))
+            NEW_VERSION_NAME="2026.11.21.${NEW_VERSION_CODE}"
+            sed -i "s/versionCode $CURRENT_VERSION_CODE/versionCode $NEW_VERSION_CODE/" "$GRADLE_FILE"
+            sed -i "s/versionName \".*\"/versionName \"$NEW_VERSION_NAME\"/" "$GRADLE_FILE"
+            echo "Versione aggiornata a: $NEW_VERSION_NAME (Code: $NEW_VERSION_CODE)"
+          fi
+
+      - name: Trova e Sovrascrivi HomeScreen
+        run: |
+          FILES=$(grep -rl "fun HomeScreen" app/src/main/java --include="*.kt" || true)
+          for FILE in $FILES; do
+            echo "Sovrascrivo $FILE"
+            PKG=$(grep "^package " "$FILE" | head -n 1 | sed 's/package //')
+            cat > "$FILE" << EOF
+          package $PKG
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.rememberScrollState
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.foundation.verticalScroll
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          @Composable
+          fun HomeScreen() {
+              val scrollState = rememberScrollState()
+              Column(
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .background(Brush.verticalGradient(listOf(Color(0xFF141824), Color(0xFF0F111A))))
+                      .verticalScroll(scrollState)
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
+                  Text("v2026.11.21 - NUOVA UI", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                      Box(modifier = Modifier.size(64.dp).background(Color(0xFF990000), RoundedCornerShape(32.dp)))
+                      Spacer(Modifier.width(16.dp))
+                      Column {
+                          Text("Milano RN", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                          Text("Serie A · 2026/27", color = Color(0xFF00E5FF), fontSize = 14.sp)
+                      }
+                  }
+                  Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      MenuCard("ROSA", "Gestisci i giocatori", Modifier.weight(1f))
+                      MenuCard("PARTITA", "Simulazione 2D", Modifier.weight(1f))
+                  }
+                  Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      MenuCard("MERCATO", "Trattative", Modifier.weight(1f))
+                      MenuCard("TATTICHE", "Moduli e ruoli", Modifier.weight(1f))
+                  }
+              }
+          }
+
+          @Composable
+          fun MenuCard(title: String, subtitle: String, modifier: Modifier = Modifier) {
+              Column(
+                  modifier = modifier
+                      .background(Color(0xFF1E2233), RoundedCornerShape(16.dp))
+                      .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(16.dp))
+                      .padding(16.dp)
+              ) {
+                  Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                  Text(subtitle, color = Color(0xFFA0A5B5), fontSize = 12.sp)
+              }
+          }
+          EOF
+          done
+
+      - name: Trova e Sovrascrivi MatchScreen
+        run: |
+          FILES=$(grep -rl "fun MatchScreen" app/src/main/java --include="*.kt" || true)
+          for FILE in $FILES; do
+            echo "Sovrascrivo $FILE"
+            PKG=$(grep "^package " "$FILE" | head -n 1 | sed 's/package //')
+            cat > "$FILE" << EOF
+          package $PKG
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.rememberScrollState
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.foundation.verticalScroll
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontFamily
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          @Composable
+          fun MatchScreen() {
+              val scrollState = rememberScrollState()
+              Column(
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .background(Brush.verticalGradient(listOf(Color(0xFF141824), Color(0xFF0F111A))))
+                      .verticalScroll(scrollState)
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
+                  Text("v2026.11.21 - NUOVA UI", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                  ) {
+                      Text("MILANO RN", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                          Text("0 - 0", color = Color(0xFF00E5FF), fontSize = 32.sp, fontWeight = FontWeight.Black)
+                          Text("12'", color = Color(0xFFA0A5B5), fontSize = 14.sp)
+                      }
+                      Text("INTER NA", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                  }
+                  Box(
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .height(220.dp)
+                          .background(Brush.verticalGradient(listOf(Color(0xFF1B3B24), Color(0xFF0E1F14))), RoundedCornerShape(16.dp))
+                          .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(16.dp)),
+                      contentAlignment = Alignment.Center
+                  ) {
+                      Text("CAMPO 2D - NUOVO LAYOUT", color = Color.White)
+                  }
+                  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      Box(modifier = Modifier.weight(1f).background(Color(0xFF1E2233), RoundedCornerShape(12.dp)).border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(12.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
+                          Text("PAUSA", color = Color.White, fontWeight = FontWeight.Bold)
+                      }
+                      Box(modifier = Modifier.weight(1f).background(Color(0xFF1E2233), RoundedCornerShape(12.dp)).border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(12.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
+                          Text("CAMBI (0/5)", color = Color.White, fontWeight = FontWeight.Bold)
+                      }
+                  }
+                  Column(
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .background(Color(0xFF1E2233), RoundedCornerShape(16.dp))
+                          .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(16.dp))
+                          .padding(16.dp)
+                  ) {
+                      Text("TELECRONACA", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      Text("12' Tiro di Rossi, para il portiere.", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                      Text("45' GOL! Varese in vantaggio!", color = Color(0xFF00FF88), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                  }
+              }
+          }
+          EOF
+          done
+
+      - name: Commit e Push Forzato
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add .
+          git commit -m "Force Fix Layout: Scansione e sovrascrittura file corretti" || echo "Nessuna modifica"
+          git push origin main
