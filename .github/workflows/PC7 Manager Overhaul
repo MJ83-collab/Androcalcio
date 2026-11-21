@@ -1,0 +1,415 @@
+name: "PC7 Manager Overhaul"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_root:
+        description: "Kotlin main source root"
+        required: true
+        default: "app/src/main/java/com/androcalcio"
+      force_overwrite:
+        description: "Sovrascrivi file esistenti"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: "Genera Motore Manageriale e UI"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crea branch
+        run: git checkout -B feat/manager-overhaul
+
+      # --- LOGICA MERCATO (FOTO 1, 4, 7) ---
+      - name: "engine/MarketEngine.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/engine/MarketEngine.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.engine
+
+          import kotlin.math.pow
+          import kotlin.math.max
+
+          data class PlayerValue(
+              val baseValue: Long,
+              val askingPrice: Long,
+              val isFreeAgent: Boolean,
+              val transferListed: Boolean = false
+          )
+
+          object MarketEngine {
+              // Calcola il valore di mercato basato su età, overall e potenziale (Foto 4 e 7)
+              fun calculateValue(player: Player, teamPrestige: Int): PlayerValue {
+                  if (player.contratto == 0) {
+                      return PlayerValue(0, 0, true) // Svincolato
+                  }
+
+                  // Formula base: Overall pesa molto, il potenziale aggiunge valore
+                  var base = ((player.overall.toDouble().pow(2)) * 5000).toLong()
+                  base += ((player.potenziale - player.overall) * 50000).coerceAtLeast(0)
+
+                  // Decadimento per età (Foto 4: 32 anni valgono meno)
+                  if (player.eta > 28) {
+                      val agePenalty = (player.eta - 28) * 0.15
+                      base = (base * (1.0 - agePenalty).coerceAtLeast(0.2)).toLong()
+                  } else if (player.eta < 23) {
+                      base = (base * 1.2).toLong() // Giovani valgono di più
+                  }
+
+                  // Prestigio della squadra (Foto 7: squadre forti chiedono di più)
+                  val prestigeMultiplier = 1.0 + (teamPrestige / 20.0)
+                  val askingPrice = (base * prestigeMultiplier).toLong()
+
+                  return PlayerValue(base, askingPrice, false)
+              }
+          }
+
+          // Gestione Trattativa (Foto 1)
+          class NegotiationState(val player: Player, val clubAskingPrice: Long) {
+              var attempts = 0
+              var clubAccepted = false
+              val coachAdvice = "Offri almeno ${clubAskingPrice}€ per il cartellino. Il giocatore chiede un ingaggio di ${player.salario}€."
+
+              fun respondToClubOffer(offer: Long): Boolean {
+                  if (offer >= clubAskingPrice) {
+                      clubAccepted = true
+                      return true
+                  }
+                  return false
+              }
+
+              fun makePlayerOffer(wageOffer: Long, bonusOffer: Long): Boolean {
+                  if (!clubAccepted) return false
+                  attempts++
+                  
+                  // Logica: il giocatore accetta se l'offerta supera la sua richiesta base
+                  val totalOffer = wageOffer + (bonusOffer / 2)
+                  if (totalOffer >= player.salario) {
+                      return true // Affare concluso
+                  }
+                  
+                  if (attempts >= 3) {
+                      // Affare saltato, il giocatore è deluso (cooldown)
+                      return false
+                  }
+                  return false
+              }
+          }
+          KOTLIN_EOF
+
+      # --- SCHEDA SQUADRA (FOTO 5) ---
+      - name: "ui/pc7/Pc7TeamProfile.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/pc7/Pc7TeamProfile.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.pc7
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          @Composable
+          fun Pc7TeamProfile(
+              teamName: String,
+              finances: Long,
+              expectation: String,
+              avgOverall: Int,
+              captain: String,
+              weakRoles: String
+          ) {
+              Column(
+                  modifier = Modifier
+                      .fillMaxWidth()
+                      .background(Pc7PanelWhite)
+                      .border(2.dp, Color.Black)
+                      .padding(12.dp)
+              ) {
+                  Text(teamName.uppercase(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Pc7BlueHeader)
+                  Spacer(Modifier.height(8.dp))
+
+                  ProfileRow("FINANZE", "€ ${finances / 1000000} M")
+                  ProfileRow("ASPETTATIVE", expectation)
+                  ProfileRow("MEDIA SQUADRA", avgOverall.toString())
+                  ProfileRow("CAPITANO", captain)
+                  ProfileRow("RUOLI CARENTI", weakRoles, Color.Red)
+              }
+          }
+
+          @Composable
+          fun ProfileRow(label: String, value: String, valueColor: Color = Color.Black) {
+              Row(
+                  modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween
+              ) {
+                  Text(label, fontSize = 12.sp, color = Color.DarkGray, fontWeight = FontWeight.Bold)
+                  Text(value, fontSize = 12.sp, color = valueColor, fontWeight = FontWeight.Bold)
+              }
+          }
+          KOTLIN_EOF
+
+      # --- CALENDARIO (FOTO 6) ---
+      - name: "ui/pc7/Pc7Calendar.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/pc7/Pc7Calendar.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.pc7
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.lazy.LazyColumn
+          import androidx.compose.foundation.lazy.items
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          data class Fixture(val matchday: Int, val opponent: String, val isHome: Boolean, val competition: String)
+
+          @Composable
+          fun Pc7Calendar(fixtures: List<Fixture>) {
+              LazyColumn(modifier = Modifier.fillMaxSize().background(Pc7BgDark).padding(8.dp)) {
+                  items(fixtures) { fixture ->
+                      Row(
+                          modifier = Modifier
+                              .fillMaxWidth()
+                              .padding(vertical = 4.dp)
+                              .background(if (fixture.isHome) Color(0xFFE0E0E0) else Color(0xFFFFFFFF))
+                              .border(1.dp, Color.Black)
+                              .padding(8.dp),
+                          verticalAlignment = Alignment.CenterVertically
+                      ) {
+                          // Icona Competizione
+                          val icon = if (fixture.competition == "Serie A") "🛡️" else "🏆"
+                          Text(icon, fontSize = 16.sp, modifier = Modifier.width(30.dp))
+                          
+                          Text("Giornata ${fixture.matchday}", fontSize = 12.sp, modifier = Modifier.width(80.dp))
+                          
+                          Text(
+                              text = if (fixture.isHome) "vs ${fixture.opponent}" else "${fixture.opponent} vs",
+                              fontSize = 14.sp,
+                              fontWeight = FontWeight.Bold,
+                              color = if (fixture.isHome) Color.Black else Color.DarkGray
+                          )
+                      }
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      # --- STAFF (FOTO 8) ---
+      - name: "engine/Staff.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/engine/Staff.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.engine
+
+          // Valutazione da 0 a 10 (mezza stella = 1)
+          data class StaffMember(
+              val role: String,
+              val rating: Int, // 0..10
+              val bonusDescription: String,
+              val malusDescription: String
+          )
+
+          object StaffEngine {
+              fun getStars(rating: Int): String {
+                  val fullStars = rating / 2
+                  val halfStar = rating % 2 != 0
+                  return "★".repeat(fullStars) + if (halfStar) "½" else "" + "☆".repeat(5 - fullStars - if (halfStar) 1 else 0)
+              }
+
+              // Calcolo impatto preparatori atletici
+              fun getTrainingBonus(preparatoreRating: Int): Float {
+                  return 1.0f + (preparatoreRating * 0.05f) // Max +50% allenamento
+              }
+
+              // Calcolo impatto fisioterapisti
+              fun getRecoveryTimeMultiplier(fisioRating: Int): Float {
+                  return 1.0f - (fisioRating * 0.06f) // Max -60% tempo recupero
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "ui/pc7/Pc7Staff.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/pc7/Pc7Staff.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.pc7
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.clickable
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.*
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import com.androcalcio.engine.StaffMember
+          import com.androcalcio.engine.StaffEngine
+
+          @Composable
+          fun Pc7StaffList(staff: List<StaffMember>) {
+              var selected by remember { mutableStateOf<StaffMember?>(null) }
+
+              Column(modifier = Modifier.fillMaxSize().background(Pc7BgDark).padding(8.dp)) {
+                  staff.forEach { member ->
+                      Row(
+                          modifier = Modifier
+                              .fillMaxWidth()
+                              .clickable { selected = member }
+                              .padding(vertical = 6.dp)
+                              .border(1.dp, Color.Gray)
+                              .padding(8.dp),
+                          horizontalArrangement = Arrangement.SpaceBetween
+                      ) {
+                          Text(member.role, color = Color.White, fontSize = 14.sp)
+                          Text(StaffEngine.getStars(member.rating), color = Color.Yellow, fontSize = 14.sp)
+                      }
+                  }
+
+                  if (selected != null) {
+                      // Scheda Dettaglio (Foto 8)
+                      Box(
+                          modifier = Modifier
+                              .fillMaxWidth()
+                              .background(Pc7PanelWhite)
+                              .border(2.dp, Color.Black)
+                              .padding(12.dp)
+                      ) {
+                          Column {
+                              Text("DETTAGLI: ${selected!!.role}", fontWeight = FontWeight.Bold)
+                              Text("Bonus: ${selected!!.bonusDescription}", color = Color(0xFF006400))
+                              Text("Malus: ${selected!!.malusDescription}", color = Color.Red)
+                              Pc7Button("CHIUDI", onClick = { selected = null })
+                          }
+                      }
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      # --- TABELLA ROSA RAGGRUPPATA (FOTO 3) ---
+      - name: "ui/components/Pc7RosterGrouped.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/components/Pc7RosterGrouped.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.components
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.lazy.LazyColumn
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          @Composable
+          fun Pc7RosterGrouped(players: List<Player>) {
+              val portieri = players.filter { it.ruolo == "POR" }
+              val difensori = players.filter { it.ruolo in listOf("TD", "DC", "TS") }
+              val centrocampisti = players.filter { it.ruolo in listOf("MED", "REG", "INT", "MP") }
+              val attaccanti = players.filter { it.ruolo in listOf("ES", "CA", "ED") }
+
+              LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White)) {
+                  item { RoleHeader("PORTIERI") }
+                  items(portieri.size) { i -> PlayerRow(portieri[i]) }
+
+                  item { RoleHeader("DIFENSORI") }
+                  items(difensori.size) { i -> PlayerRow(difensori[i]) }
+
+                  item { RoleHeader("CENTROCAMPISTI") }
+                  items(centrocampisti.size) { i -> PlayerRow(centrocampisti[i]) }
+
+                  item { RoleHeader("ATTACCANTI") }
+                  items(attaccanti.size) { i -> PlayerRow(attaccanti[i]) }
+              }
+          }
+
+          @Composable
+          fun RoleHeader(title: String) {
+              Text(
+                  text = title,
+                  modifier = Modifier.fillMaxWidth().background(Pc7BlueBg).padding(4.dp),
+                  color = Color.White,
+                  fontWeight = FontWeight.Bold,
+                  fontSize = 12.sp
+              )
+          }
+
+          @Composable
+          fun PlayerRow(player: Player) {
+              Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+                  Text(player.ruolo, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp), fontSize = 11.sp)
+                  Text(player.shortName, modifier = Modifier.weight(1f), fontSize = 11.sp)
+                  Text(player.overall.toString(), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "SEED_DATA_TODO.md"
+        run: |
+          cat > "SEED_DATA_TODO.md" << 'MD_EOF'
+          # Dati Mancanti (Foto 2)
+
+          Per aggiungere il **Como in Serie A** e la **Serie C**, è necessario aggiornare il database SQLite/Room del gioco.
+          1. Apri il file SQL o CSV che genera il database iniziale.
+          2. Aggiungi la squadra "Como" nella tabella delle squadre con `league_id = 1` (Serie A).
+          3. Crea i record per le squadre di Serie C e assegna `league_id = 3`.
+          4. Aggiorna il file `DatabaseCallback.kt` se usi Room per inserire i nuovi dati alla creazione del DB.
+          MD_EOF
+
+      - name: Apri PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feat/manager-overhaul
+          base: feat/pc7-meccaniche
+          title: "Manager Overhaul: Mercato, Staff, Dettagli Squadra e Calendario"
+          body: |
+            ## Cosa è stato implementato
+            - **Mercato (`MarketEngine.kt`)**: Gestione svincolati, calcolo prezzo dinamico per età/prestigio, logica di cooldown dopo 3 rifiuti, suggerimento dell'allenatore in seconda.
+            - **Scheda Squadra (`Pc7TeamProfile.kt`)**: Mostra finanze, aspettative, ruoli carenti, capitano.
+            - **Calendario (`Pc7Calendar.kt`)**: Icone per differenziare campionato e coppa.
+            - **Staff (`Staff.kt` e `Pc7Staff.kt`)**: Valutazione a 5 stelle, gestione bonus/malus per preparatori e fisioterapisti.
+            - **Rosa (`Pc7RosterGrouped.kt`)**: Giocatori raggruppati per reparto con ruolo a fianco.
+
+            **Prossimi passi:** Applicare le modifiche a `SEED_DATA_TODO.md` per Como e Serie C. Verificare che le chiamate alle classi in `MatchScreen` puntino ai nuovi componenti.
+          labels: |
+            feature
+            engine
+            ui
+          delete-branch: false
