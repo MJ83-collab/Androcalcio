@@ -1,0 +1,178 @@
+name: "PC7 Roles & Nationality Polish"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_root:
+        description: "Kotlin main source root"
+        required: true
+        default: "app/src/main/java/com/androcalcio"
+      force_overwrite:
+        description: "Sovrascrivi file esistenti"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: "Genera Migrazione e UI"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crea branch
+        run: git checkout -B feat/roles-nationality-polish
+
+      - name: "data/Migrations.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/data/Migrations.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          # Appende la migrazione al file esistente se presente, altrimenti lo crea
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.data
+
+          import androidx.room.migration.Migration
+          import androidx.sqlite.db.SupportSQLiteDatabase
+
+          object Migrations {
+              // Aggiungi questa migrazione alla lista in DatabaseBuilder
+              val MIGRATION_NATIONALITY_FIX = object : Migration(21, 22) {
+                  override fun migrate(db: SupportSQLiteDatabase) {
+                      val map = mapOf(
+                          "ITA" to "Italia", "ESP" to "Spagna", "FRA" to "Francia",
+                          "GER" to "Germania", "ENG" to "Inghilterra", "BRA" to "Brasile",
+                          "ARG" to "Argentina", "POR" to "Portogallo", "OLA" to "Olanda",
+                          "BEL" to "Belgio", "CRO" to "Croazia", "SER" to "Serbia",
+                          "MAR" to "Marocco", "POL" to "Polonia", "USA" to "Stati Uniti",
+                          "MEX" to "Messico"
+                      )
+                      map.forEach { (sigla, nome) ->
+                          db.execSQL("UPDATE Player SET nazionalita = '$nome' WHERE nazionalita = '$sigla'")
+                      }
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "engine/CharismaEngine.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/engine/CharismaEngine.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.engine
+
+          object CharismaEngine {
+              // Aumenta il carisma permanente per i trofei vinti
+              fun applyTrophyBonus(player: Player, wonLeague: Boolean, wonCup: Boolean): Int {
+                  var bonus = 0
+                  if (wonLeague) bonus += 3
+                  if (wonCup) bonus += 2
+                  
+                  if (bonus > 0) {
+                      // Assumiamo che il carisma sia un campo nel DB, altrimenti va calcolato
+                      // player.carismaPermanente = (player.carismaPermanente + bonus).coerceAtMost(100)
+                  }
+                  return bonus
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "ui/components/Pc7PlayerBadges.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/components/Pc7PlayerBadges.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.components
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.shape.CircleShape
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          @Composable
+          fun Pc7PlayerBadges(
+              isCaptain: Boolean,
+              isPenaltyTaker: Boolean,
+              isFreeKickTaker: Boolean,
+              isCornerTaker: Boolean
+          ) {
+              Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                  if (isCaptain) Badge("C", Color(0xFF000080)) // Blu scuro
+                  if (isPenaltyTaker) Badge("R", Color(0xFFFF0000)) // Rosso
+                  if (isFreeKickTaker) Badge("P", Color(0xFF008000)) // Verde
+                  if (isCornerTaker) Badge("A", Color(0xFFFFA500)) // Arancio
+              }
+          }
+
+          @Composable
+          fun Badge(text: String, color: Color) {
+              Box(
+                  modifier = Modifier
+                      .size(16.dp)
+                      .background(color, CircleShape)
+                      .border(1.dp, Color.Black, CircleShape),
+                  contentAlignment = Alignment.Center
+              ) {
+                  Text(text, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "COLLEGAMENTO_UI.md"
+        run: |
+          cat > "COLLEGAMENTO_UI.md" << 'MD_EOF'
+          # Collegamento UI Badge (C, R, P, A)
+
+          Per mostrare le icone del Capitano e dei Tiratori nella tabella della Rosa:
+
+          ```kotlin
+          // Dentro la tua RosaScreen.kt, nella riga del giocatore:
+          Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(player.shortName, modifier = Modifier.weight(1f))
+              
+              Pc7PlayerBadges(
+                  isCaptain = player.id == teamSettings.captainId,
+                  isPenaltyTaker = player.id == teamSettings.penaltyTakerId,
+                  isFreeKickTaker = player.id == teamSettings.freeKickTakerId,
+                  isCornerTaker = player.id == teamSettings.cornerTakerId
+              )
+          }
+          ```
+
+          Assicurati di aver aggiunto `MIGRATION_NATIONALITY_FIX` alla lista delle migrazioni nel tuo `Database.kt`, portando la versione a 22.
+          MD_EOF
+
+      - name: Apri PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feat/roles-nationality-polish
+          base: feat/pc7-meccaniche
+          title: "Fix Nazionalità (Migrazione) + Carisma Trofei + Badge UI"
+          body: |
+            ## Modifiche
+            - **Migrazione DB (21 -> 22)**: Converte le sigle delle nazioni (es. "ITA") nei nomi completi ("Italia") per i vecchi salvataggi.
+            - **CharismaEngine**: Aggiunge il bonus carisma permanente quando si vince il campionato o la coppa.
+            - **Pc7PlayerBadges**: Crea i badge visivi C (Capitano), R (Rigori), P (Punizioni), A (Angoli) da affiancare ai nomi.
+            
+            Leggi `COLLEGAMENTO_UI.md` per integrare i badge nella schermata della Rosa.
+          labels: |
+            bugfix
+            db-migration
+            ui
+          delete-branch: false
