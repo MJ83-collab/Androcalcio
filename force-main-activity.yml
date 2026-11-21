@@ -1,0 +1,131 @@
+name: "Force Main Activity Fix"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  force_fix:
+    name: "Elimina il menu laterale e forza la nuova UI"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Incrementa Versione Forzatamente
+        run: |
+          # Forza un incremento di versione per rompere la cache di Android
+          GRADLE_FILE=$(find app -name "build.gradle*" | head -n 1)
+          if [ -n "$GRADLE_FILE" ]; then
+            # Pulisce le vecchie stringhe e ne mette di nuove
+            sed -i 's/versionCode [0-9]*/versionCode 99/' "$GRADLE_FILE"
+            sed -i 's/versionName "[^"]*"/versionName "99.0.0-NUCLEAR"/' "$GRADLE_FILE"
+          fi
+
+      - name: Sovrascrivi MainActivity (Elimina il menu laterale)
+        run: |
+          # Cerca MainActivity.kt o qualsiasi file che contenga setContent
+          FILES=$(find app/src/main/java -name "MainActivity.kt" -o -name "App.kt" | head -n 1)
+          
+          if [ -n "$FILES" ]; then
+            echo "Trovato file principale: $FILES"
+            PKG=$(grep "^package " "$FILES" | head -n 1 | sed 's/package //')
+            
+            # Scriviamo un MainActivity completamente nuovo, senza Drawer laterale
+            cat > "$FILES" << EOF
+          package $PKG
+
+          import android.os.Bundle
+          import androidx.activity.ComponentActivity
+          import androidx.activity.compose.setContent
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.rememberScrollState
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.foundation.verticalScroll
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          class MainActivity : ComponentActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContent {
+                      NuclearHomeScreen()
+                  }
+              }
+          }
+
+          @Composable
+          fun NuclearHomeScreen() {
+              val scrollState = rememberScrollState()
+              Column(
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .background(Brush.verticalGradient(listOf(Color(0xFF0F111A), Color(0xFF000000))))
+                      .verticalScroll(scrollState)
+                      .padding(24.dp),
+                  verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
+                  Text("VERSIONE NUCLEAR 99.0", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                  
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                      Box(modifier = Modifier.size(64.dp).background(Color(0xFF990000), RoundedCornerShape(32.dp)))
+                      Spacer(Modifier.width(16.dp))
+                      Column {
+                          Text("Milano RN", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                          Text("Serie A · 2026/27", color = Color(0xFF00E5FF), fontSize = 16.sp)
+                      }
+                  }
+
+                  Spacer(Modifier.height(24.dp))
+                  Text("MENU PRINCIPALE", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+                  Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      MenuCardNuclear("PARTITA", "Simulazione 2D", Modifier.weight(1f))
+                      MenuCardNuclear("ROSA", "Gestisci i giocatori", Modifier.weight(1f))
+                  }
+                  Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      MenuCardNuclear("MERCATO", "Trattative", Modifier.weight(1f))
+                      MenuCardNuclear("TATTICHE", "Moduli", Modifier.weight(1f))
+                  }
+              }
+          }
+
+          @Composable
+          fun MenuCardNuclear(title: String, subtitle: String, modifier: Modifier = Modifier) {
+              Column(
+                  modifier = modifier
+                      .background(Color(0xFF1E2233), RoundedCornerShape(16.dp))
+                      .border(2.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                      .padding(16.dp)
+              ) {
+                  Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                  Text(subtitle, color = Color(0xFFA0A5B5), fontSize = 12.sp)
+              }
+          }
+          EOF
+          else
+            echo "ERRORE CRITICO: MainActivity.kt non trovato!"
+          fi
+
+      - name: Commit e Push Forzato
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add .
+          git commit -m "NUCLEAR OPTION: Forced MainActivity overwrite & version bump" || echo "Nessuna modifica"
+          git push origin main --force
