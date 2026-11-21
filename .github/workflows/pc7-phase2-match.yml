@@ -1,0 +1,234 @@
+name: "PC7 Phase 2 - FM Match Engine & UI"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_root:
+        description: "Kotlin main source root"
+        required: true
+        default: "app/src/main/java/com/androcalcio"
+      force_overwrite:
+        description: "Sovrascrivi file esistenti"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: "Genera Motore e UI Partita"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crea branch
+        run: git checkout -B feat/fm-match-engine
+
+      # --- 1. MOTORE DI GIOCO (EVENTI E TELECRONACA) ---
+      - name: "engine/MatchSimulator.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/engine/MatchSimulator.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.engine
+
+          import kotlin.random.Random
+
+          data class MatchEvent(
+              val minute: Int,
+              val type: EventType,
+              val team: String,
+              val playerName: String,
+              val description: String,
+              val isGoal: Boolean = false
+          )
+
+          enum class EventType { KICKOFF, GOAL, SHOT, SAVE, FOUL, YELLOW_CARD, RED_CARD, HALF_TIME, FULL_TIME }
+
+          data class PlayerRating(val playerId: Long, val name: String, var vote: Float)
+
+          class MatchSimulator(val homeTeam: String, val awayTeam: String, val rng: Random = Random.Default) {
+              
+              fun simulateFullMatch(): List<MatchEvent> {
+                  val events = mutableListOf<MatchEvent>()
+                  events.add(MatchEvent(0, EventType.KICKOFF, homeTeam, "", "Fischio d'inizio! Inizia la partita."))
+
+                  for (minute in 1..90) {
+                      if (minute == 45) {
+                          events.add(MatchEvent(45, EventType.HALF_TIME, "", "", "Finisce il primo tempo."))
+                      }
+                      
+                      // Probabilità di un evento ogni minuto (circa 15-20 eventi a partita)
+                      if (rng.nextInt(100) < 18) {
+                          val isHomeAction = rng.nextBoolean()
+                          val actionTeam = if (isHomeAction) homeTeam else awayTeam
+                          val player = generateRandomPlayerName() // Da collegare al DB reale
+                          
+                          val eventRoll = rng.nextInt(100)
+                          if (eventRoll < 5) { // 5% di probabilità di gol
+                              events.add(MatchEvent(minute, EventType.GOAL, actionTeam, player, "GOL! $player insacca la palla in rete!", true))
+                          } else if (eventRoll < 40) {
+                              events.add(MatchEvent(minute, EventType.SHOT, actionTeam, player, "Tiro di $player, palla fuori di poco.", false))
+                          } else if (eventRoll < 60) {
+                              events.add(MatchEvent(minute, EventType.SAVE, actionTeam, player, "Conclusione di $player, il portiere para.", false))
+                          } else if (eventRoll < 80) {
+                              events.add(MatchEvent(minute, EventType.FOUL, actionTeam, player, "Fallo di $player a centrocampo.", false))
+                          } else {
+                              events.add(MatchEvent(minute, EventType.YELLOW_CARD, actionTeam, player, "Ammonito $player per gioco falloso.", false))
+                          }
+                      }
+                  }
+                  
+                  events.add(MatchEvent(90, EventType.FULL_TIME, "", "", "Finisce la partita!"))
+                  return events
+              }
+
+              private fun generateRandomPlayerName(): String {
+                  val names = listOf("Rossi", "Bianchi", "Verdi", "Ferrari", "Russo", "Romano")
+                  return names.random(rng)
+              }
+          }
+          KOTLIN_EOF
+
+      # --- 2. UI: TELECRONACA IN TEMPO REALE ---
+      - name: "ui/match/MatchCommentary.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/MatchCommentary.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.lazy.LazyColumn
+          import androidx.compose.foundation.lazy.items
+          import androidx.compose.foundation.lazy.rememberLazyListState
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.runtime.LaunchedEffect
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontFamily
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import com.androcalcio.engine.MatchEvent
+          import com.androcalcio.engine.EventType
+
+          @Composable
+          fun MatchCommentary(events: List<MatchEvent>, modifier: Modifier = Modifier) {
+              val listState = rememberLazyListState()
+
+              LaunchedEffect(events.size) {
+                  if (events.isNotEmpty()) {
+                      listState.animateScrollToItem(events.size - 1)
+                  }
+              }
+
+              Column(modifier = modifier.background(Color(0xFF1E1E1E)).border(1.dp, Color.Gray)) {
+                  Text("TELECRONACA", color = Color.Yellow, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(4.dp))
+                  
+                  LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                      items(events) { event ->
+                          val color = when (event.type) {
+                              EventType.GOAL -> Color.Green
+                              EventType.YELLOW_CARD -> Color.Yellow
+                              EventType.RED_CARD -> Color.Red
+                              EventType.HALF_TIME, EventType.FULL_TIME -> Color.Cyan
+                              else -> Color.White
+                          }
+                          Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                              if (event.minute > 0) {
+                                  Text("${event.minute}'", color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(30.dp))
+                              } else {
+                                  Spacer(Modifier.width(30.dp))
+                              }
+                              Text(event.description, color = color, fontSize = 11.sp, fontFamily = FontFamily.SansSerif)
+                          }
+                      }
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      # --- 3. UI: VOTI IN STILE FOOTBALL MANAGER ---
+      - name: "ui/match/FmRatings.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/FmRatings.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.lazy.grid.GridCells
+          import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+          import androidx.compose.foundation.lazy.grid.items
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import com.androcalcio.engine.PlayerRating
+
+          @Composable
+          fun FmRatings(ratings: List<PlayerRating>, modifier: Modifier = Modifier) {
+              Column(modifier = modifier.background(Color.White).border(1.dp, Color.Black)) {
+                  Text("VOTI IN CAMPO", color = Color.White, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().background(Color(0xFF000080)).padding(4.dp))
+                  
+                  LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.padding(4.dp)) {
+                      items(ratings) { r ->
+                          Row(modifier = Modifier.fillMaxWidth().padding(2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                              Text(r.name, fontSize = 11.sp, maxLines = 1)
+                              Box(
+                                  modifier = Modifier.size(24.dp).background(getVoteColor(r.vote)).border(1.dp, Color.Black),
+                                  contentAlignment = Alignment.Center
+                              ) {
+                                  Text(String.format("%.1f", r.vote), color = if(r.vote < 6.0f) Color.White else Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+
+          private fun getVoteColor(vote: Float): Color {
+              return when {
+                  vote >= 8.0f -> Color(0xFF00008B) // Blu scuro
+                  vote >= 7.0f -> Color(0xFF008000) // Verde
+                  vote >= 6.0f -> Color(0xFFFFD700) // Giallo
+                  vote >= 5.0f -> Color(0xFFFFA500) // Arancio
+                  else -> Color(0xFFFF0000)         // Rosso
+              }
+          }
+          KOTLIN_EOF
+
+      - name: Apri PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feat/fm-match-engine
+          base: feat/pc7-meccaniche
+          title: "Motore Partita FM, Telecronaca e Voti"
+          body: |
+            ## Fase 2: Il Cuore del Gioco
+            - **MatchSimulator.kt**: Genera gli eventi della partita minuto per minuto (gol, tiri, falli, cartellini) pronti per essere collegati alle tue vere statistiche dei giocatori.
+            - **MatchCommentary.kt**: Mostra la telecronaca testuale in tempo reale con scorrimento automatico, in stile Football Manager.
+            - **FmRatings.kt**: Griglia dei voti in campo con i classici colori di FM (blu, verde, giallo, rosso).
+
+            **Come collegarlo**: Nella tua `MatchScreen`, inserisci a sinistra il campo 2D e a destra la `MatchCommentary`. Sotto, metti la `FmRatings`.
+          labels: |
+            engine
+            ui
+          delete-branch: false
