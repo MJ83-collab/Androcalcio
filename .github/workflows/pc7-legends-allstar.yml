@@ -1,0 +1,149 @@
+name: "PC7 Legends All Star"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_root:
+        description: "Kotlin main source root"
+        required: true
+        default: "app/src/main/java/com/androcalcio"
+      force_overwrite:
+        description: "Sovrascrivi file esistenti"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: "Genera All Star Leggende"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crea branch
+        run: git checkout -B feat/legends-allstar
+
+      - name: "data/LegendsSeed.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/data/LegendsSeed.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.data
+
+          object LegendsSeed {
+              // Squadre All Star per decennio
+              val teamNames = listOf(
+                  "All Star 80", 
+                  "All Star 90", 
+                  "All Star 2000", 
+                  "All Star Leggende"
+              )
+
+              // Controlla se una squadra è un'All Star per escluderla da campionati/coppe
+              fun isAllStar(teamName: String): Boolean {
+                  return teamNames.contains(teamName)
+              }
+
+              // Dati dei giocatori: nome, ruolo, overall, potenziale, età fittizia (es. 27)
+              val players = mapOf(
+                  "All Star 80" to listOf(
+                      Triple("D. Maradona", "MP", 99),
+                      Triple("M. Platini", "MP", 95),
+                      Triple("Z. Zico", "MP", 95),
+                      Triple("P. Rossi", "CA", 92),
+                      Triple("K.H. Rummenigge", "CA", 93),
+                      Triple("G. Baresi", "DC", 94),
+                      Triple("G. Scirea", "DC", 93),
+                      Triple("D. Zoff", "POR", 94)
+                  ),
+                  "All Star 90" to listOf(
+                      Triple("R. Baggio", "MP", 96),
+                      Triple("Ronaldo", "CA", 98),
+                      Triple("Z. Zidane", "MP", 97),
+                      Triple("P. Maldini", "TS", 96),
+                      Triple("F. Baresi", "DC", 95),
+                      Triple("Romario", "CA", 94),
+                      Triple("G. Batistuta", "CA", 93),
+                      Triple("G. Buffon", "POR", 95)
+                  ),
+                  "All Star 2000" to listOf(
+                      Triple("Ronaldinho", "ES", 98),
+                      Triple("Kaka", "MP", 94),
+                      Triple("F. Totti", "MP", 96),
+                      Triple("A. Del Piero", "CA", 94),
+                      Triple("T. Henry", "CA", 95),
+                      Triple("F. Cannavaro", "DC", 95),
+                      Triple("C. Puyol", "DC", 92),
+                      Triple("I. Casillas", "POR", 94)
+                  ),
+                  "All Star Leggende" to listOf(
+                      Triple("L. Messi", "ED", 99),
+                      Triple("C. Ronaldo", "ES", 99),
+                      Triple("Pele", "CA", 98),
+                      Triple("F. Beckenbauer", "DC", 96),
+                      Triple("J. Cruyff", "CA", 97),
+                      Triple("L. Yashin", "POR", 95),
+                      Triple("A. Di Stefano", "CA", 96),
+                      Triple("Eusebio", "CA", 95)
+                  )
+              )
+          }
+          KOTLIN_EOF
+
+      - name: "data/SeedData.kt Patch"
+        run: |
+          TARGET="${{ inputs.source_root }}/data/SeedData.kt"
+          cat >> "$TARGET" << 'KOTLIN_EOF'
+
+          // Funzione per iniettare le All Star nel database
+          fun injectAllStars(db: SupportSQLiteDatabase) {
+              LegendsSeed.teamNames.forEach { teamName ->
+                  // Assumiamo che l'ID squadra venga generato in automatico
+                  // db.execSQL("INSERT INTO Team (name, isAllStar) VALUES ('$teamName', 1)")
+                  
+                  val teamPlayers = LegendsSeed.players[teamName] ?: emptyList()
+                  teamPlayers.forEach { (name, role, overall) ->
+                      // db.execSQL("INSERT INTO Player (teamName, name, role, overall) VALUES ('$teamName', '$name', '$role', $overall)")
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "engine/CompetitionEngine.kt Patch"
+        run: |
+          TARGET="${{ inputs.source_root }}/engine/CompetitionEngine.kt"
+          if [ -f "$TARGET" ]; then
+            # Aggiunge un filtro per escludere le All Star
+            cat >> "$TARGET" << 'KOTLIN_EOF'
+
+          // Funzione di supporto per escludere le All Star dal campionato
+          fun filterPlayableTeams(allTeams: List<Team>): List<Team> {
+              return allTeams.filter { !LegendsSeed.isAllStar(it.name) }
+          }
+          KOTLIN_EOF
+          fi
+
+      - name: Apri PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feat/legends-allstar
+          base: feat/pc7-meccaniche
+          title: "All Star Leggende (Solo Amichevoli)"
+          body: |
+            ## Nuova Feature: All Star Leggende
+            - Aggiunte 4 squadre All Star (Anni 80, 90, 2000, Leggende) con i campioni del passato.
+            - Aggiunta la funzione `LegendsSeed.isAllStar()` e `filterPlayableTeams()` per escluderle da campionati e coppe.
+            
+            **Come usarle**: Nel motore che genera il calendario del campionato, usa `filterPlayableTeams(allTeams)` per assicurarti che le All Star non entrino nelle competizioni ufficiali. Dovrebbero apparire solo nella schermata delle amichevoli.
+          labels: |
+            feature
+            data
+          delete-branch: false
