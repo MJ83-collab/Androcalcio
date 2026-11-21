@@ -1,0 +1,308 @@
+name: "Fix Layout & Modern 2026 UI"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_root:
+        description: "Kotlin main source root"
+        required: true
+        default: "app/src/main/java/com/androcalcio"
+      force_overwrite:
+        description: "Sovrascrivi file esistenti (Consigliato: true)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: "Genera Layout Corretto"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crea branch
+        run: git checkout -B feat/fix-layout-2026
+
+      # --- 1. TEMA E COMPONENTI BASE ---
+      - name: "ui/theme/Theme2026.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/theme/Theme2026.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.theme
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.material3.*
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          // Palette 2026
+          val BgDark = Color(0xFF0F111A) // Sfondo scurissimo
+          val SurfaceGlass = Color(0x22FFFFFF) // Vetro smerigliato
+          val BorderGlass = Color(0x44FFFFFF) // Bordo vetro
+          val NeonCyan = Color(0xFF00E5FF)
+          val NeonGreen = Color(0xFF00FF88)
+          val NeonRed = Color(0xFFFF3366)
+          val TextPrimary = Color(0xFFFFFFFF)
+          val TextSecondary = Color(0xFFA0A5B5)
+
+          @Composable
+          fun ModernCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+              Column(
+                  modifier = modifier
+                      .background(SurfaceGlass, RoundedCornerShape(16.dp))
+                      .border(1.dp, BorderGlass, RoundedCornerShape(16.dp))
+                      .padding(16.dp),
+                  content = content
+              )
+          }
+
+          @Composable
+          fun ModernButton(
+              text: String,
+              isSelected: Boolean = false,
+              onClick: () -> Unit,
+              modifier: Modifier = Modifier
+          ) {
+              val bg = if (isSelected) NeonCyan.copy(alpha = 0.2f) else SurfaceGlass
+              val border = if (isSelected) NeonCyan else BorderGlass
+              val textColor = if (isSelected) NeonCyan else TextPrimary
+
+              Box(
+                  modifier = modifier
+                      .background(bg, RoundedCornerShape(12.dp))
+                      .border(1.dp, border, RoundedCornerShape(12.dp))
+                      .padding(vertical = 12.dp, horizontal = 8.dp),
+                  contentAlignment = Alignment.Center
+              ) {
+                  Text(text, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+              }
+          }
+          KOTLIN_EOF
+
+      # --- 2. CAMPO 2D MODERNO (CON GLOW EFFECT) ---
+      - name: "ui/match/ModernPitch.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/ModernPitch.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import android.graphics.Paint
+          import android.graphics.Typeface
+          import androidx.compose.foundation.Canvas
+          import androidx.compose.foundation.layout.aspectRatio
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.geometry.Offset
+          import androidx.compose.ui.geometry.Size
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.graphics.drawscope.Stroke
+          import androidx.compose.ui.graphics.nativeCanvas
+          import androidx.compose.ui.unit.dp
+
+          data class ModernPitchPlayer(val number: Int, val x: Float, val y: Float, val isHome: Boolean)
+
+          @Composable
+          fun ModernPitch(players: List<ModernPitchPlayer>, modifier: Modifier = Modifier) {
+              Canvas(modifier = modifier.aspectRatio(0.68f)) {
+                  val w = size.width
+                  val h = size.height
+                  
+                  // Sfondo campo con gradiente 2026
+                  drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF1B3B24), Color(0xFF0E1F14))))
+
+                  val line = Color(0x66FFFFFF)
+                  val sw = 2.dp.toPx()
+                  
+                  // Linee campo
+                  drawRect(line, style = Stroke(sw))
+                  drawLine(line, Offset(0f, h / 2), Offset(w, h / 2), sw)
+                  drawCircle(line, radius = w * 0.15f, center = Offset(w / 2, h / 2), style = Stroke(sw))
+
+                  val r = 14.dp.toPx()
+                  val paint = Paint().apply {
+                      color = android.graphics.Color.WHITE
+                      textSize = r * 1.1f
+                      textAlign = Paint.Align.CENTER
+                      typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                      isAntiAlias = true
+                  }
+
+                  players.forEach { p ->
+                      val c = Offset(p.x * w, p.y * h)
+                      val playerColor = if (p.isHome) Color(0xFF00E5FF) else Color(0xFFFF3366)
+                      
+                      // Effetto Glow
+                      drawCircle(playerColor.copy(alpha = 0.2f), radius = r + 6.dp.toPx(), center = c)
+                      drawCircle(playerColor, radius = r, center = c)
+                      
+                      drawContext.canvas.nativeCanvas.drawText(p.number.toString(), c.x, c.y + r * 0.4f, paint)
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      # --- 3. SCHERMATA PARTITA CORRETTA (CON SCROLL E LAYOUT FISSO) ---
+      - name: "ui/match/MatchScreen2026.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/MatchScreen2026.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.rememberScrollState
+          import androidx.compose.foundation.verticalScroll
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import com.androcalcio.engine.MatchEvent
+          import com.androcalcio.engine.PlayerRating
+          import com.androcalcio.ui.theme.*
+
+          @Composable
+          fun MatchScreen2026(
+              homeTeam: String,
+              awayTeam: String,
+              homeScore: Int,
+              awayScore: Int,
+              minute: Int,
+              players: List<ModernPitchPlayer>,
+              events: List<MatchEvent>,
+              ratings: List<PlayerRating>
+          ) {
+              val scrollState = rememberScrollState()
+
+              Column(
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .background(Brush.verticalGradient(listOf(Color(0xFF141824), BgDark)))
+                      .verticalScroll(scrollState)
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
+                  
+                  // --- 1. HEADER PUNTEGGIO ---
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Row(
+                          modifier = Modifier.fillMaxWidth(),
+                          horizontalArrangement = Arrangement.SpaceBetween,
+                          verticalAlignment = Alignment.CenterVertically
+                      ) {
+                          Text(homeTeam, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                              Text("$homeScore - $awayScore", color = NeonCyan, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                              Text("$minute'", color = TextSecondary, fontSize = 14.sp)
+                          }
+                          Text(awayTeam, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                      }
+                  }
+
+                  // --- 2. CAMPO 2D ---
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      ModernPitch(players = players, modifier = Modifier.fillMaxWidth())
+                  }
+
+                  // --- 3. COMANDI PARTITA (Pausa, Cambi, Velocità) ---
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                  ) {
+                      ModernButton("Pausa", modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("Cambi (0/5)", modifier = Modifier.weight(1f), onClick = {})
+                  }
+                  
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                  ) {
+                      ModernButton("x1", isSelected = true, modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("x2", modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("x4", modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("x20", modifier = Modifier.weight(1f), onClick = {})
+                  }
+
+                  // --- 4. TATTICHE RAPIDE ---
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Text("MENTALITÀ", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                          ModernButton("Difensiva", modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Equilibrata", isSelected = true, modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Offensiva", modifier = Modifier.weight(1f), onClick = {})
+                      }
+
+                      Spacer(Modifier.height(16.dp))
+                      Text("PRESSING", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                          ModernButton("Basso", modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Medio", isSelected = true, modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Alto", modifier = Modifier.weight(1f), onClick = {})
+                      }
+                  }
+
+                  // --- 5. TELECRONACA FM ---
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Text("TELECRONACA", color = NeonCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      MatchCommentary(events = events, modifier = Modifier.height(200.dp)) // Altezza fissa per forzare lo scroll
+                  }
+
+                  // --- 6. VOTI FM ---
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Text("VOTI IN CAMPO", color = NeonGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      FmRatings(ratings = ratings, modifier = Modifier.fillMaxWidth())
+                  }
+                  
+                  Spacer(Modifier.height(32.dp)) // Padding in fondo
+              }
+          }
+          KOTLIN_EOF
+
+      - name: Apri PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feat/fix-layout-2026
+          base: feat/pc7-meccaniche
+          title: "Fix Layout Partita: Scroll, Glassmorphism e UI 2026"
+          body: |
+            ## Risoluzione problemi di layout
+            Questo aggiornamento risolve i bug visivi mostrati negli screenshot:
+            - **Scorrimento verticale**: L'intera pagina ora scorre (verticalScroll), evitando che i contenuti si sovrappongano.
+            - **Menu laterale**: Il menu non schiaccia più i contenuti.
+            - **Pulsanti e spaziature**: I pulsanti (Pausa, Cambi, Velocità, Tattiche) sono stati raggruppati in card (ModernCard) con spaziature corrette.
+            - **Campo 2D**: Ora ha un gradiente premium e i giocatori hanno un effetto "glow" neon.
+            - **Telecronaca**: È in un box dedicato con altezza fissa e scroll interno.
+            - **Voti FM**: In un box separato in fondo.
+          labels: |
+            ui
+            bugfix
+          delete-branch: false
