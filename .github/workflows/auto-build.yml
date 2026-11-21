@@ -1,63 +1,262 @@
-name: 🚀 Build & Auto-Version APK
+name: 🚀 Build & Auto-Version + UI 2026
 
 on:
-  push:
-    branches: [ "main", "master" ]
   workflow_dispatch:
+    inputs:
+      commit_to_repo:
+        description: "Salva i file UI 2026 nel repo (push su main)?"
+        type: boolean
+        default: false
+      package_root:
+        description: "Package radice del progetto"
+        required: true
+        default: "com/androcalcio"
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: 📥 Checkout del codice
-      uses: actions/checkout@v4
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
 
-    - name: ☕ Imposta Java JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: ☕ Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: ⚙️ Installa Gradle (versione del progetto)
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        gradle-version: '8.14.3'
-        cache: true
+      - name: ⚙️ Gradle 8.14.3
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+          cache: true
 
-    - name: 🔧 Auto-Incrementa versionCode e versionName
-      run: |
-        if [ -f "app/build.gradle.kts" ]; then
-          FILE_GRADLE="app/build.gradle.kts"
-        else
-          FILE_GRADLE="app/build.gradle"
-        fi
-        echo "Aggiorno $FILE_GRADLE con run number ${{ github.run_number }}"
-        python3 -c "
-        run_number = '${{ github.run_number }}'
-        file_path = '$FILE_GRADLE'
-        with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-        with open(file_path, 'w', encoding='utf-8') as f:
-            for line in lines:
-                if 'versionCode' in line and '=' in line:
-                    p = line.split('=')
-                    f.write(p[0] + '= ' + run_number + '\n')
-                elif 'versionName' in line and '=' in line:
-                    p = line.split('=')
-                    f.write(p[0] + '= \"1.0.' + run_number + '\"\n')
-                else:
-                    f.write(line)
-        "
-        echo "✅ Ora il file contiene:"
-        grep -E "versionCode|versionName" "$FILE_GRADLE" || true
+      # ---------- 1. BUMP VERSIONE (risolve "non si aggiorna") ----------
+      - name: 🔧 Auto-Incrementa versionCode/versionName
+        run: |
+          if [ -f app/build.gradle.kts ]; then G=app/build.gradle.kts; else G=app/build.gradle; fi
+          echo "Modifico $G (run #${{ github.run_number }})"
+          python3 - "$G" "${{ github.run_number }}" << 'PY'
+          import sys, re
+          path, num = sys.argv[1], sys.argv[2]
+          s = open(path, encoding='utf-8').read()
+          s2 = re.sub(r'(versionCode\s*=\s*)\d+', r'\g<1>'+num, s)
+          s2 = re.sub(r'(versionName\s*=\s*)"[^"]*"', r'\g<1>"1.0.'+num+'"', s2)
+          open(path,'w',encoding='utf-8').write(s2)
+          print("versionCode/versionName aggiornati" if s2!=s else "ATTENZIONE: pattern non trovato, file invariato")
+          PY
+          grep -E "versionCode|versionName" "$G" || true
 
-    - name: 🏗️ Compila l'APK (Debug)
-      run: gradle assembleDebug
+      # ---------- 2. COMPONENTI UI 2026 (package isolato) ----------
+      - name: 🎨 Genera UI 2026 (package isolato)
+        run: |
+          DIR="app/src/main/java/${{ inputs.package_root }}/ui/modern2026"
+          PKG="$(echo '${{ inputs.package_root }}' | tr '/' '.').ui.modern2026"
+          mkdir -p "$DIR"
 
-    - name: 📦 Carica l'APK come Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Androcalcio-v1.0-${{ github.run_number }}
-        path: app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 30
+          cat > "$DIR/Theme2026.kt" << 'KOTLIN_EOF'
+          package PKG_PLACEHOLDER
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          val BgDark2026 = Color(0xFF0F111A)
+          val SurfaceGlass2026 = Color(0x22FFFFFF)
+          val BorderGlass2026 = Color(0x44FFFFFF)
+          val NeonCyan2026 = Color(0xFF00E5FF)
+          val NeonGreen2026 = Color(0xFF00FF88)
+          val NeonRed2026 = Color(0xFFFF3366)
+          val TextPrimary2026 = Color(0xFFFFFFFF)
+          val TextSecondary2026 = Color(0xFFA0A5B5)
+
+          @Composable
+          fun ModernCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+              Column(modifier = modifier.background(SurfaceGlass2026, RoundedCornerShape(16.dp))
+                  .border(1.dp, BorderGlass2026, RoundedCornerShape(16.dp)).padding(16.dp), content = content)
+          }
+
+          @Composable
+          fun ModernButton(text: String, isSelected: Boolean = false, onClick: () -> Unit, modifier: Modifier = Modifier) {
+              val bg = if (isSelected) NeonCyan2026.copy(alpha = 0.2f) else SurfaceGlass2026
+              val br = if (isSelected) NeonCyan2026 else BorderGlass2026
+              val tc = if (isSelected) NeonCyan2026 else TextPrimary2026
+              Box(modifier = modifier.background(bg, RoundedCornerShape(12.dp)).border(1.dp, br, RoundedCornerShape(12.dp))
+                  .padding(vertical = 12.dp, horizontal = 8.dp), contentAlignment = Alignment.Center) {
+                  Text(text, color = tc, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+              }
+          }
+          KOTLIN_EOF
+
+          cat > "$DIR/ModernPitch.kt" << 'KOTLIN_EOF'
+          package PKG_PLACEHOLDER
+          import android.graphics.Paint
+          import android.graphics.Typeface
+          import androidx.compose.foundation.Canvas
+          import androidx.compose.foundation.layout.aspectRatio
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.geometry.Offset
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.graphics.drawscope.Stroke
+          import androidx.compose.ui.graphics.nativeCanvas
+          import androidx.compose.ui.unit.dp
+
+          data class PitchPlayer2026(val number: Int, val x: Float, val y: Float, val isHome: Boolean)
+
+          @Composable
+          fun ModernPitch(players: List<PitchPlayer2026>, modifier: Modifier = Modifier) {
+              Canvas(modifier = modifier.aspectRatio(0.68f)) {
+                  val w = size.width; val h = size.height
+                  drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF1B3B24), Color(0xFF0E1F14))))
+                  val line = Color(0x66FFFFFF); val sw = 2.dp.toPx()
+                  drawRect(line, style = Stroke(sw))
+                  drawLine(line, Offset(0f, h / 2), Offset(w, h / 2), sw)
+                  drawCircle(line, radius = w * 0.15f, center = Offset(w / 2, h / 2), style = Stroke(sw))
+                  val r = 14.dp.toPx()
+                  val paint = Paint().apply { color = android.graphics.Color.WHITE; textSize = r * 1.1f
+                      textAlign = Paint.Align.CENTER; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true }
+                  players.forEach { p ->
+                      val c = Offset(p.x * w, p.y * h)
+                      val pc = if (p.isHome) Color(0xFF00E5FF) else Color(0xFFFF3366)
+                      drawCircle(pc.copy(alpha = 0.2f), radius = r + 6.dp.toPx(), center = c)
+                      drawCircle(pc, radius = r, center = c)
+                      drawContext.canvas.nativeCanvas.drawText(p.number.toString(), c.x, c.y + r * 0.4f, paint)
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+          cat > "$DIR/MatchScreen2026.kt" << 'KOTLIN_EOF'
+          package PKG_PLACEHOLDER
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.rememberScrollState
+          import androidx.compose.foundation.verticalScroll
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          data class MatchEvent2026(val minute: Int, val text: String)
+          data class PlayerRating2026(val name: String, val rating: Float)
+
+          @Composable
+          fun MatchCommentary2026(events: List<MatchEvent2026>, modifier: Modifier = Modifier) {
+              Column(modifier = modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                  events.forEach { e -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      Text("${e.minute}'", color = NeonCyan2026, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                      Text(e.text, color = TextPrimary2026, fontSize = 12.sp) } }
+              }
+          }
+
+          @Composable
+          fun FmRatings2026(ratings: List<PlayerRating2026>, modifier: Modifier = Modifier) {
+              Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                  ratings.forEach { r -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                      Text(r.name, color = TextPrimary2026, fontSize = 13.sp)
+                      Text(String.format("%.1f", r.rating), color = if (r.rating >= 7f) NeonGreen2026 else if (r.rating >= 6f) TextSecondary2026 else NeonRed2026, fontSize = 13.sp, fontWeight = FontWeight.Bold) } }
+              }
+          }
+
+          @Composable
+          fun MatchScreen2026(homeTeam: String, awayTeam: String, homeScore: Int, awayScore: Int,
+              minute: Int, players: List<PitchPlayer2026>, events: List<MatchEvent2026>, ratings: List<PlayerRating2026>) {
+              Column(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF141824), BgDark2026)))
+                  .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                          Text(homeTeam, color = TextPrimary2026, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                              Text("$homeScore - $awayScore", color = NeonCyan2026, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                              Text("$minute'", color = TextSecondary2026, fontSize = 14.sp) }
+                          Text(awayTeam, color = TextPrimary2026, fontSize = 16.sp, fontWeight = FontWeight.Bold) } }
+                  ModernCard(modifier = Modifier.fillMaxWidth()) { ModernPitch(players = players, modifier = Modifier.fillMaxWidth()) }
+                  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      ModernButton("Pausa", modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("Cambi (0/5)", modifier = Modifier.weight(1f), onClick = {}) }
+                  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      ModernButton("x1", isSelected = true, modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("x2", modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("x4", modifier = Modifier.weight(1f), onClick = {})
+                      ModernButton("x20", modifier = Modifier.weight(1f), onClick = {}) }
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Text("MENTALITÀ", color = TextSecondary2026, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                          ModernButton("Difensiva", modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Equilibrata", isSelected = true, modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Offensiva", modifier = Modifier.weight(1f), onClick = {}) }
+                      Spacer(Modifier.height(16.dp))
+                      Text("PRESSING", color = TextSecondary2026, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                          ModernButton("Basso", modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Medio", isSelected = true, modifier = Modifier.weight(1f), onClick = {})
+                          ModernButton("Alto", modifier = Modifier.weight(1f), onClick = {}) } }
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Text("TELECRONACA", color = NeonCyan2026, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      MatchCommentary2026(events = events, modifier = Modifier.height(200.dp)) }
+                  ModernCard(modifier = Modifier.fillMaxWidth()) {
+                      Text("VOTI IN CAMPO", color = NeonGreen2026, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      FmRatings2026(ratings = ratings, modifier = Modifier.fillMaxWidth()) }
+                  Spacer(Modifier.height(32.dp)) }
+          }
+          KOTLIN_EOF
+
+          # sostituisco il placeholder del package con quello reale
+          find "$DIR" -name '*.kt' -exec sed -i "s/PKG_PLACEHOLDER/$PKG/g" {} \;
+          echo "✅ File UI generati in $DIR (package $PKG)"
+          ls -la "$DIR"
+
+      # ---------- 3. BUILD ----------
+      - name: 🏗️ Compila APK Debug
+        run: gradle assembleDebug
+
+      # ---------- 4. ARTIFACT ----------
+      - name: 📦 Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Androcalcio-v1.0-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # ---------- 5. RELEASE (link fisso "latest") ----------
+      - name: 🏷️ Pubblica Release con APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Androcalcio v1.0.${{ github.run_number }}
+          body: "Build automatica #${{ github.run_number }} — APK pronto da installare."
+          files: app/build/outputs/apk/debug/app-debug.apk
+          make_latest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---------- 6. (OPZIONALE) SALVA UI NEL REPO ----------
+      - name: 💾 Commit file UI 2026 su main
+        if: ${{ inputs.commit_to_repo }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/${{ inputs.package_root }}/ui/modern2026
+          git commit -m "feat(ui): componenti Modern 2026" || echo "niente da committare"
+          git push origin HEAD:main
