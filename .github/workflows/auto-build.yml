@@ -3,7 +3,7 @@ name: 🚀 Build & Auto-Version APK
 on:
   push:
     branches: [ "main", "master" ]
-  workflow_dispatch: # Permette di avviarlo manualmente con un clic
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,48 +19,43 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    - name: ⚙️ Installa Gradle (versione del progetto)
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: '8.14.3'
+        cache: true
+
     - name: 🔧 Auto-Incrementa versionCode e versionName
       run: |
-        # Cerca se esiste build.gradle.kts (Kotlin) o build.gradle (Groovy)
         if [ -f "app/build.gradle.kts" ]; then
           FILE_GRADLE="app/build.gradle.kts"
         else
           FILE_GRADLE="app/build.gradle"
         fi
-        
-        echo "Aggiornamento di $FILE_GRADLE con la run number: ${{ github.run_number }}"
-        
-        # Script Python sicuro per sostituire solo le righe di versionCode e versionName
+        echo "Aggiorno $FILE_GRADLE con run number ${{ github.run_number }}"
         python3 -c "
-        import os
         run_number = '${{ github.run_number }}'
         file_path = '$FILE_GRADLE'
-        
         with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
-            
         with open(file_path, 'w', encoding='utf-8') as f:
             for line in lines:
                 if 'versionCode' in line and '=' in line:
-                    parts = line.split('=')
-                    f.write(parts[0] + '= ' + run_number + '\n')
+                    p = line.split('=')
+                    f.write(p[0] + '= ' + run_number + '\n')
                 elif 'versionName' in line and '=' in line:
-                    parts = line.split('=')
-                    f.write(parts[0] + '= \"1.0.' + run_number + '\"\n')
+                    p = line.split('=')
+                    f.write(p[0] + '= \"1.0.' + run_number + '\"\n')
                 else:
                     f.write(line)
         "
-        
-        echo "✅ File aggiornato. Anteprima delle righe modificate:"
+        echo "✅ Ora il file contiene:"
         grep -E "versionCode|versionName" "$FILE_GRADLE" || true
 
-    - name: 🛠️ Concedi permessi di esecuzione a Gradle
-      run: chmod +x ./gradlew
-
     - name: 🏗️ Compila l'APK (Debug)
-      run: ./gradlew assembleDebug
+      run: gradle assembleDebug
 
-    - name: 📦 Carica l'APK come Artifact scaricabile
+    - name: 📦 Carica l'APK come Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Androcalcio-v1.0-${{ github.run_number }}
