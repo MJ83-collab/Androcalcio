@@ -1,0 +1,212 @@
+name: "Force Apply ALL UI Updates"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  force_ui:
+    name: "Sovrascrive tutta la UI su main"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Trova e Sovrascrivi File UI
+        run: |
+          # 1. SOVRASCRIVE IL TEMA (Colori 2026)
+          THEME_DIR=$(find app/src/main/java -type d -name "theme" | head -n 1)
+          if [ -n "$THEME_DIR" ]; then
+            cat > "$THEME_DIR/Color.kt" << 'EOF'
+          package com.androcalcio.ui.theme
+          import androidx.compose.ui.graphics.Color
+          val BgDark = Color(0xFF0F111A)
+          val SurfaceGlass = Color(0xFF1E2233)
+          val NeonCyan = Color(0xFF00E5FF)
+          val NeonGreen = Color(0xFF00FF88)
+          val NeonRed = Color(0xFFFF3366)
+          val TextPrimary = Color(0xFFFFFFFF)
+          val TextSecondary = Color(0xFFA0A5B5)
+          EOF
+          fi
+
+          # 2. SOVRASCRIVE LA MATCH SCREEN (Layout 2026 + FM + 2D)
+          MATCH_FILE=$(find app/src/main/java -name "MatchScreen.kt" | head -n 1)
+          if [ -n "$MATCH_FILE" ]; then
+            # Estraiamo il nome del package per non rompere gli import
+            PKG=$(grep "^package " "$MATCH_FILE" | head -n 1 | sed 's/package //')
+            
+            cat > "$MATCH_FILE" << EOF
+          package $PKG
+
+          import androidx.compose.foundation.Canvas
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.lazy.LazyColumn
+          import androidx.compose.foundation.rememberScrollState
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.foundation.verticalScroll
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.geometry.Offset
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontFamily
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          @Composable
+          fun MatchScreen() {
+              val scrollState = rememberScrollState()
+
+              Column(
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .background(Brush.verticalGradient(listOf(Color(0xFF141824), Color(0xFF0F111A))))
+                      .verticalScroll(scrollState)
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
+                  // HEADER
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                  ) {
+                      Text("MILANO RN", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                          Text("0 - 0", color = Color(0xFF00E5FF), fontSize = 32.sp, fontWeight = FontWeight.Black)
+                          Text("12'", color = Color(0xFFA0A5B5), fontSize = 14.sp)
+                      }
+                      Text("INTER NA", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                  }
+
+                  // CAMPO 2D
+                  Box(
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .height(220.dp)
+                          .background(Brush.verticalGradient(listOf(Color(0xFF1B3B24), Color(0xFF0E1F14))), RoundedCornerShape(16.dp))
+                          .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(16.dp)),
+                      contentAlignment = Alignment.Center
+                  ) {
+                      Text("CAMPO 2D (Glow Effect Attivo)", color = Color.White)
+                  }
+
+                  // PULSANTI
+                  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      Box(modifier = Modifier.weight(1f).background(Color(0xFF1E2233), RoundedCornerShape(12.dp)).border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(12.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
+                          Text("PAUSA", color = Color.White, fontWeight = FontWeight.Bold)
+                      }
+                      Box(modifier = Modifier.weight(1f).background(Color(0xFF1E2233), RoundedCornerShape(12.dp)).border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(12.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
+                          Text("CAMBI (0/5)", color = Color.White, fontWeight = FontWeight.Bold)
+                      }
+                  }
+
+                  // TELECRONACA
+                  Column(
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .background(Color(0xFF1E2233), RoundedCornerShape(16.dp))
+                          .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(16.dp))
+                          .padding(16.dp)
+                  ) {
+                      Text("TELECRONACA", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(8.dp))
+                      Text("12' Tiro di Rossi, para il portiere.", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                      Text("45' GOL! Varese in vantaggio!", color = Color(0xFF00FF88), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                  }
+              }
+          }
+          EOF
+          fi
+
+          # 3. SOVRASCRIVE LA HOME SCREEN (Layout Card Moderno)
+          HOME_FILE=$(find app/src/main/java -name "HomeScreen.kt" | head -n 1)
+          if [ -n "$HOME_FILE" ]; then
+            PKG=$(grep "^package " "$HOME_FILE" | head -n 1 | sed 's/package //')
+            cat > "$HOME_FILE" << EOF
+          package $PKG
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.rememberScrollState
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.foundation.verticalScroll
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          @Composable
+          fun HomeScreen() {
+              val scrollState = rememberScrollState()
+
+              Column(
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .background(Brush.verticalGradient(listOf(Color(0xFF141824), Color(0xFF0F111A))))
+                      .verticalScroll(scrollState)
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
+                  // HEADER SQUADRA
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                      Box(modifier = Modifier.size(64.dp).background(Color(0xFF990000), RoundedCornerShape(32.dp)))
+                      Spacer(Modifier.width(16.dp))
+                      Column {
+                          Text("Milano RN", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                          Text("Serie A · 2026/27", color = Color(0xFF00E5FF), fontSize = 14.sp)
+                      }
+                  }
+
+                  // GRIGLIA MENU
+                  Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      MenuCard("ROSA", "Gestisci i giocatori", Modifier.weight(1f))
+                      MenuCard("PARTITA", "Simulazione 2D", Modifier.weight(1f))
+                  }
+                  Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      MenuCard("MERCATO", "Trattative", Modifier.weight(1f))
+                      MenuCard("TATTICHE", "Moduli e ruoli", Modifier.weight(1f))
+                  }
+              }
+          }
+
+          @Composable
+          fun MenuCard(title: String, subtitle: String, modifier: Modifier = Modifier) {
+              Column(
+                  modifier = modifier
+                      .background(Color(0xFF1E2233), RoundedCornerShape(16.dp))
+                      .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(16.dp))
+                      .padding(16.dp)
+              ) {
+                  Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                  Text(subtitle, color = Color(0xFFA0A5B5), fontSize = 12.sp)
+              }
+          }
+          EOF
+          fi
+
+      - name: Commit e Push Forzato
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add .
+          git commit -m "Force UI Overhaul 2026: Sovrascritti tutti i file UI su main" || echo "Nessuna modifica"
+          git push origin main
