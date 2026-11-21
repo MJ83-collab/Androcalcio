@@ -1,0 +1,235 @@
+name: "PC7 Full Match UI"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_root:
+        description: "Kotlin main source root"
+        required: true
+        default: "app/src/main/java/com/androcalcio"
+      force_overwrite:
+        description: "Sovrascrivi file esistenti"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: "Genera Schermata Partita Completa"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crea branch
+        run: git checkout -B feat/full-match-ui
+
+      - name: "ui/match/Pc7Pitch.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/Pc7Pitch.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import android.graphics.Paint
+          import android.graphics.Typeface
+          import androidx.compose.foundation.Canvas
+          import androidx.compose.foundation.layout.aspectRatio
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.geometry.Offset
+          import androidx.compose.ui.geometry.Size
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.graphics.drawscope.Stroke
+          import androidx.compose.ui.graphics.nativeCanvas
+          import androidx.compose.ui.unit.dp
+
+          data class PitchPlayer(val number: Int, val x: Float, val y: Float, val isHome: Boolean)
+
+          @Composable
+          fun Pc7Pitch(players: List<PitchPlayer>, modifier: Modifier = Modifier) {
+              Canvas(modifier = modifier.aspectRatio(0.65f)) {
+                  val w = size.width
+                  val h = size.height
+                  
+                  // Strisce orizzontali
+                  val stripes = 10
+                  val stripeHeight = h / stripes
+                  for (i in 0 until stripes) {
+                      drawRect(
+                          color = if (i % 2 == 0) Color(0xFF3E9F43) else Color(0xFF2E7D32),
+                          topLeft = Offset(0f, i * stripeHeight),
+                          size = Size(w, stripeHeight)
+                      )
+                  }
+
+                  val line = Color.White
+                  val sw = 2.dp.toPx()
+                  drawRect(line, style = Stroke(sw))
+                  drawLine(line, Offset(0f, h / 2), Offset(w, h / 2), sw)
+                  drawCircle(line, radius = w * 0.15f, center = Offset(w / 2, h / 2), style = Stroke(sw))
+
+                  val r = 12.dp.toPx()
+                  val paint = Paint().apply {
+                      color = android.graphics.Color.WHITE
+                      textSize = r * 1.2f
+                      textAlign = Paint.Align.CENTER
+                      typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                      isAntiAlias = true
+                  }
+
+                  players.forEach { p ->
+                      val c = Offset(p.x * w, p.y * h)
+                      drawCircle(if (p.isHome) Color(0xFF000080) else Color(0xFFAA2222), radius = r, center = c)
+                      drawCircle(line, radius = r, center = c, style = Stroke(2.dp.toPx()))
+                      drawContext.canvas.nativeCanvas.drawText(p.number.toString(), c.x, c.y + r * 0.4f, paint)
+                  }
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "ui/match/Pc7MatchScreen.kt"
+        run: |
+          TARGET="${{ inputs.source_root }}/ui/match/Pc7MatchScreen.kt"
+          mkdir -p "$(dirname "$TARGET")"
+          cat > "$TARGET" << 'KOTLIN_EOF'
+          package com.androcalcio.ui.match
+
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.material3.Button
+          import androidx.compose.material3.ButtonDefaults
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import com.androcalcio.engine.MatchEvent
+          import com.androcalcio.engine.PlayerRating
+
+          @Composable
+          fun Pc7MatchScreen(
+              homeTeam: String,
+              awayTeam: String,
+              homeScore: Int,
+              awayScore: Int,
+              minute: Int,
+              players: List<PitchPlayer>,
+              events: List<MatchEvent>,
+              ratings: List<PlayerRating>
+          ) {
+              Column(modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E3C)).padding(8.dp)) {
+                  
+                  // --- HEADER (Punteggio e Minuto) ---
+                  Row(
+                      modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                  ) {
+                      Text(homeTeam, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                          Text("$homeScore - $awayScore", color = Color.Yellow, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                          Spacer(Modifier.width(8.dp))
+                          Text("$minute'", color = Color.Cyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                      }
+                      Text(awayTeam, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                  }
+
+                  // --- MAIN AREA ---
+                  Row(modifier = Modifier.weight(1f)) {
+                      // Campo 2D a Sinistra
+                      Box(modifier = Modifier.weight(0.6f).padding(end = 8.dp)) {
+                          Pc7Pitch(players = players, modifier = Modifier.fillMaxWidth())
+                      }
+
+                      // Telecronaca a Destra
+                      Box(modifier = Modifier.weight(0.4f)) {
+                          MatchCommentary(events = events, modifier = Modifier.fillMaxSize())
+                      }
+                  }
+
+                  Spacer(modifier = Modifier.height(8.dp))
+
+                  // --- BOTTOM AREA (Voti e Comandi) ---
+                  Row(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                      FmRatings(ratings = ratings, modifier = Modifier.weight(0.7f).padding(end = 8.dp))
+                      
+                      Column(modifier = Modifier.weight(0.3f), verticalArrangement = Arrangement.SpaceEvenly) {
+                          Pc7Button("TATTICHE")
+                          Pc7Button("CAMBI")
+                          Pc7Button("TERMINA PARTITA")
+                      }
+                  }
+              }
+          }
+
+          @Composable
+          fun Pc7Button(text: String) {
+              Button(
+                  onClick = { /* TODO */ },
+                  modifier = Modifier.fillMaxWidth().height(36.dp),
+                  colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC0C0C0), contentColor = Color.Black),
+                  shape = androidx.compose.foundation.shape.RoundedCornerShape(0.dp),
+                  border = androidx.compose.foundation.BorderStroke(2.dp, Color.White)
+              ) {
+                  Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+              }
+          }
+          KOTLIN_EOF
+
+      - name: "COLLEGAMENTO_MATCH_SCREEN.md"
+        run: |
+          cat > "COLLEGAMENTO_MATCH_SCREEN.md" << 'MD_EOF'
+          # Collegamento Schermata Partita
+
+          Per sostituire la vecchia schermata della partita con quella nuova:
+
+          ```kotlin
+          // Nel tuo ViewModel (o dove gestisci lo stato della partita):
+          val events = simulator.simulateFullMatch()
+          val ratings = mutableListOf<PlayerRating>() // Popola con i giocatori in campo
+
+          // Nella tua UI:
+          Pc7MatchScreen(
+              homeTeam = "Milano RN",
+              awayTeam = "Inter NA",
+              homeScore = 2,
+              awayScore = 1,
+              minute = 67,
+              players = pitchLayout.positions(startingXI, isHome = true) + pitchLayout.positions(awayXI, isHome = false),
+              events = events,
+              ratings = ratings
+          )
+          ```
+          MD_EOF
+
+      - name: Apri PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feat/full-match-ui
+          base: feat/pc7-meccaniche
+          title: "Schermata Partita Completa: Campo 2D + Telecronaca + Voti"
+          body: |
+            ## Interfaccia Partita Definitiva
+            Questo aggiornamento unisce tutti i componenti in un'unica schermata:
+            - **Campo 2D** a sinistra con giocatori numerati.
+            - **Telecronaca** in tempo reale a destra (stile FM).
+            - **Voti** in basso con i colori classici.
+            - **Pulsanti** in basso a destra (Tattiche, Cambi, Termina Partita).
+
+            Segui le istruzioni in `COLLEGAMENTO_MATCH_SCREEN.md` per agganciare la schermata ai tuoi dati reali.
+          labels: |
+            ui
+            feature
+          delete-branch: false
