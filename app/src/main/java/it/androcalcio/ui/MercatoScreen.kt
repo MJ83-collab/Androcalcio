@@ -292,6 +292,7 @@ private fun MarketTable(
                         .clickable { onClick(p) }.padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        it.androcalcio.ui.components.Avatar(p.name, 26.dp, Modifier.padding(end = 6.dp))
                         Text(p.name, Modifier.weight(1f).apriScheda(p), maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                         Text("★".repeat(n) + "☆".repeat(5 - n), color = Color(0xFFE0A800), fontSize = 12.sp)
                         Text("${p.overall}", Modifier.width(30.dp), textAlign = TextAlign.End, fontSize = 13.sp,

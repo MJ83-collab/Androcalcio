@@ -350,6 +350,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 Screen.VIVAIO -> {
                     val youths by vm.youths.collectAsState()
                     val scouted by vm.scouted.collectAsState()
+                    val scoutedGio by vm.scoutedGiovani.collectAsState()
                     val reports by vm.reports.collectAsState()
                     val notice by vm.notice.collectAsState()
                     val exViv by vm.extra.collectAsState()
@@ -359,7 +360,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         team, teams, players, youths, scouted, reports, notice, season,
                         { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
                         { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() },
-                        exViv.inPrima, schedaViv, { vm.richiediScheda(it) }, { vm.apparizione(it) }, { vm.chiudiScheda() }
+                        exViv.inPrima, schedaViv, { vm.richiediScheda(it) }, { vm.apparizione(it) }, { vm.chiudiScheda() },
+                        scoutedGio, { n, c -> vm.sendScoutGiovani(n, c) }, { vm.followGiovane(it) }, { vm.ingaggiaGiovane(it) }
                     )
                 }
                 Screen.EDITOR -> {
@@ -900,6 +902,7 @@ private fun RosaTable(
             Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 HeadCell("T", AC.PaperText, Modifier.width(24.dp))
                 HeadCell("N°", AC.PaperText, Modifier.width(26.dp))
+                HeadCell("", AC.PaperText, Modifier.width(25.dp))
                 HeadCell("GIOCATORE", AC.PaperText, Modifier.width(118.dp), TextAlign.Start)
                 HeadCell("", AC.PaperText, Modifier.width(62.dp))
                 stats.forEachIndexed { i, h -> HeadCell(h, statColor[i], Modifier.width(30.dp)) }
@@ -929,6 +932,7 @@ private fun RosaTable(
                         textAlign = TextAlign.Center, fontSize = 14.sp)
                     Text(if (p.numero > 0) "${p.numero}" else "-", Modifier.width(26.dp), textAlign = TextAlign.Center,
                         fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
+                    it.androcalcio.ui.components.Avatar(p.name, 22.dp, Modifier.padding(end = 3.dp))
                     Text(ruoloTag(p.role) + "  " + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)

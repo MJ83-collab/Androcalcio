@@ -11,6 +11,7 @@ import it.androcalcio.engine.AllStar
 import it.androcalcio.engine.Avanzate
 import it.androcalcio.engine.Finestre
 import it.androcalcio.engine.Giovanili
+import it.androcalcio.engine.ScoutingGiovani
 import it.androcalcio.engine.Giornale
 import it.androcalcio.engine.Meteo
 import it.androcalcio.engine.Obiettivi
@@ -1348,6 +1349,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             if (t == null) flowOf(emptyList()) else dao.scouted(t.id)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Ragazzi dei vivai degli altri club osservati dai tuoi scout. */
+    val scoutedGiovani: StateFlow<List<Youth>> =
+        selectedTeam.flatMapLatest { t ->
+            if (t == null) flowOf(emptyList()) else dao.scoutedYouths(t.id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val reports: StateFlow<List<ScoutReport>> =
         selectedTeam.flatMapLatest { t ->
             if (t == null) flowOf(emptyList()) else dao.reports(t.id)
@@ -1438,6 +1445,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
         dao.updateYouths(restano)
         via.forEach { dao.deleteYouth(it) }
+        dao.cleanReportsGiovani()
         val top = progressi.sortedByDescending { it.second }.take(3).joinToString { "${it.first.name} +${it.second}" }
         return "Vivaio: tutti crescono di un anno (migliori: $top)." +
             (if (via.isNotEmpty()) " Lasciano per limiti d'età: ${via.joinToString { it.name }}." else "") +
@@ -1749,6 +1757,64 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updateTeam(me.copy(budget = me.budget - cost))
             registra(me.id, "Scouting (${picks.size} giocatori)", -cost, me.budget - cost)
             _notice.value = "Lo scout ha osservato ${picks.size} giocatori (${money(cost)})."
+        }
+    }
+
+    /** Missione negli altri vivai di un campionato: osserva 2 ragazzi in ciascuno di 4 club. */
+    fun sendScoutGiovani(nazione: String, campionato: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val cost = Scouting.cost(me.scoutSkill)
+            if (cost > me.budget) { _notice.value = "Budget insufficiente (servono ${money(cost)})."; return@launch }
+            val rng = kotlin.random.Random.Default
+            val club = dao.clubsOfLeague(nazione, campionato, me.id)
+            if (club.isEmpty()) { _notice.value = "Nessun vivaio da osservare in questo campionato."; return@launch }
+            val s = _season.value
+            val vivai = HashMap<Long, List<Youth>>()
+            club.shuffled(rng).take(ScoutingGiovani.CLUB_PER_MISSIONE + 2).forEach { c ->
+                var l = dao.youthsOnce(c.id)
+                if (l.size < ScoutingGiovani.MIN_VIVAIO_AI) {
+                    dao.insertYouths(if (l.isEmpty()) Giovanili.iniziale(c, s, rng) else Giovanili.nuovaLeva(c, s, rng))
+                    l = dao.youthsOnce(c.id)
+                }
+                vivai[c.id] = l
+            }
+            val picks = ScoutingGiovani.scegli(vivai, rng)
+            if (picks.isEmpty()) { _notice.value = "Gli scout non hanno trovato nessuno."; return@launch }
+            dao.upsertReports(picks.map {
+                ScoutReport(me.id, ScoutingGiovani.chiave(it), (dao.report(me.id, ScoutingGiovani.chiave(it))?.observations ?: 0) + 1)
+            })
+            dao.updateTeam(me.copy(budget = me.budget - cost))
+            registra(me.id, "Scouting vivai (${picks.size} ragazzi)", -cost, me.budget - cost)
+            _notice.value = "Lo scout ha visto ${picks.size} ragazzi nei vivai di $campionato (${money(cost)})."
+        }
+    }
+
+    fun followGiovane(y: Youth) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            if (Scouting.FOLLOW_COST > me.budget) { _notice.value = "Budget insufficiente."; return@launch }
+            val k = ScoutingGiovani.chiave(y)
+            dao.upsertReports(listOf(ScoutReport(me.id, k, (dao.report(me.id, k)?.observations ?: 0) + 1)))
+            dao.updateTeam(me.copy(budget = me.budget - Scouting.FOLLOW_COST))
+            registra(me.id, "Osservazione ${y.name} (vivaio)", -Scouting.FOLLOW_COST, me.budget - Scouting.FOLLOW_COST)
+        }
+    }
+
+    /** Porta nel tuo vivaio un ragazzo di un altro club, pagando il cartellino. */
+    fun ingaggiaGiovane(y: Youth) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val prezzo = ScoutingGiovani.prezzo(y)
+            if (dao.youthsOnce(me.id).size >= ScoutingGiovani.MAX_MIO_VIVAIO) {
+                _notice.value = "Il tuo vivaio è pieno (massimo ${ScoutingGiovani.MAX_MIO_VIVAIO} ragazzi)."; return@launch
+            }
+            if (prezzo > me.budget) { _notice.value = "Budget insufficiente (servono ${money(prezzo)})."; return@launch }
+            dao.updateYouths(listOf(y.copy(teamId = me.id, season = _season.value)))
+            dao.deleteReport(me.id, ScoutingGiovani.chiave(y))
+            dao.updateTeam(me.copy(budget = me.budget - prezzo))
+            registra(me.id, "Cartellino ${y.name} (vivaio)", -prezzo, me.budget - prezzo)
+            _notice.value = "${y.name} entra nel tuo vivaio (${money(prezzo)})."
         }
     }
 

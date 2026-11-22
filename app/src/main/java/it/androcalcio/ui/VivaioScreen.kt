@@ -43,6 +43,8 @@ import it.androcalcio.data.Team
 import it.androcalcio.data.Youth
 import it.androcalcio.engine.Market
 import it.androcalcio.engine.Scouting
+import it.androcalcio.engine.ScoutingGiovani
+import it.androcalcio.ui.components.Avatar
 import it.androcalcio.engine.Youths
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.components.StatChip
@@ -62,6 +64,16 @@ private fun RoleBadge(role: String) {
         Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(rc(role).copy(alpha = 0.2f)),
         contentAlignment = Alignment.Center
     ) { Text(role, color = rc(role), fontWeight = FontWeight.Bold) }
+}
+
+/** Filtro per ruolo usato negli elenchi di scouting. */
+@Composable
+private fun FiltroRuolo(scelto: String, onScelto: (String) -> Unit) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        items(listOf("" to "Tutti", "P" to "POR", "D" to "DIF", "C" to "MED", "A" to "ATT")) { (cod, nome) ->
+            PcChip(selected = scelto == cod, onClick = { onScelto(cod) }, label = { Text(nome) })
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,13 +97,18 @@ fun VivaioScreen(
     scheda: it.androcalcio.engine.Giovanili.Scheda? = null,
     onScheda: (Youth) -> Unit = {},
     onApparizione: (Youth) -> Unit = {},
-    onChiudiScheda: () -> Unit = {}
+    onChiudiScheda: () -> Unit = {},
+    scoutedGiovani: List<Youth> = emptyList(),
+    onScoutGiovani: (String, String) -> Unit = { _, _ -> },
+    onFollowGiovane: (Youth) -> Unit = {},
+    onIngaggia: (Youth) -> Unit = {}
 ) {
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
     val byId = teams.associateBy { it.id }
     val leagues = teams.map { "${it.nazione}|${it.campionato}" }.distinct()
     var league by rememberSaveable { mutableStateOf("") }
+    var ruolo by rememberSaveable { mutableStateOf("") }
     val active = if (league in leagues) league else "${team.nazione}|${team.campionato}"
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -104,6 +121,7 @@ fun VivaioScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Giovani") })
             PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Scouting") })
+            PcChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Vivai") })
         }
 
         if (tab == 0) {
@@ -124,7 +142,8 @@ fun VivaioScreen(
                     GlassCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                RoleBadge(y.role)
+                                Avatar(y.name, 44.dp)
+                                Box(Modifier.padding(start = 8.dp)) { RoleBadge(y.role) }
                                 Column(Modifier.padding(start = 12.dp)) {
                                     Text(y.name, style = MaterialTheme.typography.titleSmall)
                                     Text("${y.age} anni · ${y.nationality}" + if (y.id in inPrima) " · con la prima squadra" else "",
@@ -136,12 +155,68 @@ fun VivaioScreen(
                                     Youths.judge(Youths.perceived(y, team.youthCoachSkill)),
                                 modifier = Modifier.padding(top = 8.dp), color = AC.Accent
                             )
+                            Text(
+                                "Liv. ${ScoutingGiovani.stelleTesto(y.overall)}   Pot. " +
+                                    ScoutingGiovani.stelleTesto(Youths.perceived(y, team.youthCoachSkill)),
+                                color = Color(0xFFFFC24B), fontSize = 13.sp
+                            )
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 PcAction(onClick = { onScheda(y) }) { Text("Scheda", fontSize = 12.sp) }
                                 if (y.age >= it.androcalcio.engine.Giovanili.ETA_APPARIZIONE && y.id !in inPrima)
                                     PcAction(onClick = { onApparizione(y) }) { Text("Prova", fontSize = 12.sp) }
                                 PcAction(onClick = { onPromote(y) }) { Text("Promuovi", fontSize = 12.sp) }
                                 TextButton(onClick = { onDiscard(y) }) { Text("Libera", fontSize = 12.sp) }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (tab == 2) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(leagues) { l ->
+                    PcChip(selected = l == active, onClick = { league = l }, label = { Text(l.replace("|", " · ")) })
+                }
+            }
+            PcAction(
+                onClick = { val (n, c) = active.split("|"); onScoutGiovani(n, c) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
+            ) { Text("Missione nei vivai (${money(Scouting.cost(team.scoutSkill))})") }
+            FiltroRuolo(ruolo) { ruolo = it }
+            val obsG = reports.associate { it.playerId to it.observations }
+            if (scoutedGiovani.isEmpty()) Text("Nessun ragazzo osservato: manda gli scout nei vivai di un campionato.", color = AC.TextDim)
+            LazyColumn(
+                Modifier.weight(1f), contentPadding = PaddingValues(bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(scoutedGiovani.filter { ruolo.isEmpty() || it.role == ruolo }, key = { it.id }) { y ->
+                    val n = obsG[ScoutingGiovani.chiave(y)] ?: 1
+                    val r = ScoutingGiovani.rangeLivello(y, team.scoutSkill, n)
+                    val pot = ScoutingGiovani.potenzialeStimato(y, team.scoutSkill, n)
+                    GlassCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Avatar(y.name, 44.dp)
+                                Box(Modifier.padding(start = 8.dp)) { RoleBadge(y.role) }
+                                Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                                    Text(y.name, style = MaterialTheme.typography.titleSmall)
+                                    Text("${byId[y.teamId]?.name ?: ""} · ${y.age} anni · ${y.nationality}",
+                                        style = MaterialTheme.typography.bodySmall, color = AC.TextDim, maxLines = 1)
+                                }
+                                Text("${r.first}–${r.last}", style = MaterialTheme.typography.titleMedium, color = AC.Accent)
+                            }
+                            Text(
+                                "Liv. ${ScoutingGiovani.stelleTesto((r.first + r.last) / 2)}   Pot. ${ScoutingGiovani.stelleTesto(pot)} " +
+                                    "(${Youths.judge(pot)}) · osservazioni: $n",
+                                modifier = Modifier.padding(top = 6.dp), color = Color(0xFFFFC24B), fontSize = 13.sp
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { onFollowGiovane(y) }) {
+                                    Text("Osserva ancora (${money(Scouting.FOLLOW_COST)})", fontSize = 12.sp)
+                                }
+                                PcAction(onClick = { onIngaggia(y) }) {
+                                    Text("Ingaggia (${money(ScoutingGiovani.prezzo(y))})", fontSize = 12.sp)
+                                }
                             }
                         }
                     }
@@ -161,19 +236,21 @@ fun VivaioScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
             ) { Text("Invia scout (${money(Scouting.cost(team.scoutSkill))})") }
+            FiltroRuolo(ruolo) { ruolo = it }
             val obs = reports.associate { it.playerId to it.observations }
             LazyColumn(
                 Modifier.weight(1f), contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(scouted, key = { it.id }) { p ->
+                items(scouted.filter { ruolo.isEmpty() || it.role == ruolo }, key = { it.id }) { p ->
                     val n = obs[p.id] ?: 1
                     val r = Scouting.range(p, team.scoutSkill, n)
                     val mid = (r.first + r.last) / 2
                     GlassCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                RoleBadge(p.role)
+                                Avatar(p.name, 44.dp)
+                                Box(Modifier.padding(start = 8.dp)) { RoleBadge(p.role) }
                                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                                     Text(p.name, style = MaterialTheme.typography.titleSmall)
                                     Text("${byId[p.teamId]?.name ?: ""} · ${p.age} anni · ${p.nationality}",
@@ -200,7 +277,11 @@ fun VivaioScreen(
 
     scheda?.let { sc ->
         AlertDialog(
-            onDismissRequest = onChiudiScheda, title = { Text(sc.titolo) },
+            onDismissRequest = onChiudiScheda,
+            title = { Row(verticalAlignment = Alignment.CenterVertically) {
+                Avatar(sc.titolo.substringBefore(" ·"), 48.dp)
+                Text(sc.titolo, Modifier.padding(start = 10.dp))
+            } },
             text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sc.righe.forEach { Text(it) }
                 Text(sc.consiglio, color = AC.Accent, fontWeight = FontWeight.Bold)
