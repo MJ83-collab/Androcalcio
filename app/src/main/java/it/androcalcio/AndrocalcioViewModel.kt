@@ -1,6 +1,8 @@
 package it.androcalcio
 
 import it.androcalcio.engine.Difficolta
+import it.androcalcio.engine.EffettiMiglioria
+import it.androcalcio.engine.Migliorie
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.DivisioneFine
 import it.androcalcio.engine.Allenatori
@@ -388,6 +390,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val rng = kotlin.random.Random.Default
             val goalsAcc = ArrayList<Goal>()
             val statAcc = HashMap<Long, PlayerStat>()
+            val fatteMie = Migliorie.decodeFatte(dao.stato("migliorie_fatte"))
             val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
                 .let { if (all) it else it.take(1) }
             rounds.forEach { giocaDataNazionali(_season.value, it) }
@@ -431,14 +434,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     Goal(season = _season.value, league = m.league, round = m.round,
                         teamId = if (it.home) m.homeTeamId else m.awayTeamId, playerId = it.playerId)
                 }
+                val prevenzione = Migliorie.effetti(fatteMie).infortuniPct
                 cache[h.id] = Medical.afterMatch(hp, r.homePlayed, Staffing.cura(staffBy, h.id), rng,
-                    planFor(h.id, t.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE)).also { accrueInsurance(h.id, hp, it) }
+                    planFor(h.id, t.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
+                    .let { if (h.id == t.id) Migliorie.prevenzione(hp, it, prevenzione, rng) else it }.also { accrueInsurance(h.id, hp, it) }
                 cache[a.id] = Medical.afterMatch(ap, r.awayPlayed, Staffing.cura(staffBy, a.id), rng,
-                    planFor(a.id, t.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE)).also { accrueInsurance(a.id, ap, it) }
+                    planFor(a.id, t.id), Staffing.skill(staffBy, a.id, Staffing.ALLENATORE))
+                    .let { if (a.id == t.id) Migliorie.prevenzione(ap, it, prevenzione, rng) else it }.also { accrueInsurance(a.id, ap, it) }
             }
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
             salvaStatistiche(_season.value, statAcc)
+            avanzaCantieri(rounds.size, t.id)
             ms.filter { it.round in rounds && it.id != skipId && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
                 .forEach { m0 -> dao.match(m0.id)?.let { dopoMiaPartita(t.id, it, evento = !all) } }
             if (lineupNotes.isNotEmpty()) _notice.value = lineupNotes.distinct().joinToString("\n")
@@ -453,6 +460,58 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun playNextRound() = playRounds(false)
+
+    // ---- Migliorie di stadio e centro sportivo ----
+    data class MigliorieStato(val fatte: Set<String> = emptySet(), val cantieri: Map<String, Int> = emptyMap(),
+                              val incassoStagione: Long = 0L, val incassoPerPosto: Double = 0.0)
+    private val _migliorie = MutableStateFlow(MigliorieStato())
+    val migliorie: StateFlow<MigliorieStato> = _migliorie
+
+    private suspend fun caricaMigliorie() {
+        val t = selectedTeam.value
+        val stagione = if (t == null) 0L else Economia.incassoStadio(t.stadiumCapacity, t.ticketPrice, 0.5, 20)
+        val perPosto = if (t == null || t.stadiumCapacity <= 0) 0.0 else stagione.toDouble() / t.stadiumCapacity
+        _migliorie.value = MigliorieStato(Migliorie.decodeFatte(dao.stato("migliorie_fatte")),
+            Migliorie.decodeCantieri(dao.stato("migliorie_cantieri")), stagione, perPosto)
+    }
+
+    fun aggiornaMigliorie() { viewModelScope.launch(Dispatchers.IO) { caricaMigliorie() } }
+
+    /** Avvia i lavori: paga subito dal budget mercato, finiscono dopo le giornate indicate. */
+    fun avviaMiglioria(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val m = Migliorie.trova(id) ?: return@launch
+            val t = dao.team(me.id)
+            val fatte = Migliorie.decodeFatte(dao.stato("migliorie_fatte"))
+            val cantieri = Migliorie.decodeCantieri(dao.stato("migliorie_cantieri"))
+            val no = Migliorie.avviabile(m, fatte, cantieri, t.budget)
+            if (no != null) { _notice.value = "${m.nome}: $no."; return@launch }
+            dao.updateTeam(t.copy(budget = t.budget - m.costo))
+            registra(t.id, "Lavori: ${m.nome}", -m.costo, t.budget - m.costo)
+            dao.setStato(Stato("migliorie_cantieri", Migliorie.encodeCantieri(cantieri + (id to m.giornate))))
+            _notice.value = "Lavori avviati: ${m.nome}. Pronti tra ${m.giornate} giornate."
+            caricaMigliorie(); refreshClub()
+        }
+    }
+
+    /** Fa avanzare i cantieri dopo le giornate giocate e applica le migliorie finite. */
+    private suspend fun avanzaCantieri(giornate: Int, teamId: Long) {
+        if (giornate <= 0) return
+        val cantieri = Migliorie.decodeCantieri(dao.stato("migliorie_cantieri"))
+        if (cantieri.isEmpty()) return
+        val (rimasti, finite) = Migliorie.avanza(cantieri, giornate)
+        dao.setStato(Stato("migliorie_cantieri", Migliorie.encodeCantieri(rimasti)))
+        if (finite.isEmpty()) { caricaMigliorie(); return }
+        val fatte = Migliorie.decodeFatte(dao.stato("migliorie_fatte")) + finite.map { it.id }
+        dao.setStato(Stato("migliorie_fatte", Migliorie.encodeFatte(fatte)))
+        val e = finite.fold(EffettiMiglioria()) { a, m -> a + m.effetti }
+        if (e.posti > 0) dao.team(teamId).let { dao.updateTeam(it.copy(stadiumCapacity = it.stadiumCapacity + e.posti)) }
+        if (e.tifosi != 0) dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + e.tifosi)
+        if (e.morale != 0) dao.updatePlayers(dao.playersOnce(teamId).map { it.copy(morale = (it.morale + e.morale).coerceIn(0, 100)) })
+        _notice.value = "Lavori finiti: " + finite.joinToString { it.nome } + "."
+        caricaMigliorie()
+    }
 
     // ---- Opzioni (schermata Opzioni): salvate nelle preferenze ----
     data class Opzioni(val difficolta: Int = Difficolta.NORMALE, val velocita: Int = 1)
@@ -977,7 +1036,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val t = selectedTeam.value ?: return@launch
             val s = _season.value
             if (t.youthClaimed == s) return@launch
-            dao.insertYouths(Youths.generate(t, s, bonusVivaio = Strutture.bonusVivaio(dao.statoInt(Strutture.VIVAIO))))
+            dao.insertYouths(Youths.generate(t, s, bonusVivaio = Strutture.bonusVivaio(dao.statoInt(Strutture.VIVAIO)) +
+                Migliorie.effetti(Migliorie.decodeFatte(dao.stato("migliorie_fatte"))).vivaio))
             dao.updateTeam(t.copy(youthClaimed = s))
         }
     }
@@ -1829,7 +1889,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val expired = dealsNext.filter { it.years <= 0 }.map { it.name }
             val meMc = Sponsorship.merch(me.stadiumCapacity)
             val livAll = dao.statoInt(Strutture.ALLENAMENTO)
+            val effMig = Migliorie.effetti(Migliorie.decodeFatte(dao.stato("migliorie_fatte")))
             val upkeep = Strutture.manutenzione(livAll) + Strutture.manutenzione(dao.statoInt(Strutture.VIVAIO))
+            var extraIncasso = 0L
             // Clausole di rendimento per tutti i giocatori (anche IA): a fine stagione il club paga i bonus raggiunti
             val campioni = finals.values.mapNotNull { it.firstOrNull()?.team?.id }.toSet()
             val statAll = dao.statsOf(s).associateBy { it.playerId }
@@ -1856,7 +1918,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
                     val a = Progression.advance(p, rng, Staffing.skill(staffBy, t.id, Staffing.ALLENATORE),
-                        if (t.id == me.id) Strutture.bonusAllenamento(livAll) else 0)
+                        if (t.id == me.id) Strutture.bonusAllenamento(livAll) + effMig.crescitaPct else 0)
                     when {
                         a.age >= Progression.retireAge(a) -> {
                             removed += p
@@ -1887,6 +1949,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val newLeague = moves[t.id]
                 if (t.id == me.id) {
                     meNet = net
+                    extraIncasso = gate * effMig.incassoPct / 100
                     val fate = when {
                         t.id in promoted -> "Promossa in $newLeague!"
                         t.id in relegated -> "Retrocessa in $newLeague."
@@ -1920,6 +1983,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     if (clausePay > 0) add("Clausole giocatori" to -clausePay)
                     if (upkeep > 0) add("Manutenzione strutture" to -upkeep)
                     add("Merchandising" to meMc)
+                    if (extraIncasso > 0) add("Migliorie stadio: incassi extra" to extraIncasso)
+                    if (effMig.merchAnno > 0) add("Migliorie: store, museo e servizi" to effMig.merchAnno)
+                    if (effMig.manutenzione != 0L) add("Manutenzione migliorie" to -effMig.manutenzione)
                     if (insPremium > 0) add("Premio assicurazione" to -insPremium)
                     if (insPending > 0) add("Rimborso infortuni" to insPending)
                 }

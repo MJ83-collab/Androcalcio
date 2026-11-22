@@ -78,6 +78,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -130,6 +131,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     EDITOR("Editor", Icons.Filled.Edit, "Modifica i dati", Color(0xFF7F8C8D)),
     SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita", Color(0xFF16A085)),
     ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227)),
+    STRUTTURE("Stadio e centro", Icons.Filled.Build, "Migliorie, cantieri, ritorni", Color(0xFF00897B)),
     OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B))
 }
 
@@ -249,6 +251,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         .filter { !it.played && (it.homeTeamId == tm.id || it.awayTeamId == tm.id) }.minByOrNull { it.round }
                     val oppId = next?.let { if (it.homeTeamId == tm?.id) it.awayTeamId else it.homeTeamId }
                     HomeScreen(team, players, season, next, teams.firstOrNull { it.id == oppId }) { screen = it }
+                }
+                Screen.STRUTTURE -> {
+                    val mig by vm.migliorie.collectAsState()
+                    LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }
+                    MigliorieScreen(team, mig) { vm.avviaMiglioria(it) }
                 }
                 Screen.OPZIONI -> {
                     val op by vm.opzioni.collectAsState()
@@ -615,7 +622,7 @@ fun HomeScreen(
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
-            Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
+            Screen.STRUTTURE, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {
