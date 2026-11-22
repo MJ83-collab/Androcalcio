@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -92,8 +94,8 @@ fun Crest(team: Team, size: Dp = 44.dp, modifier: Modifier = Modifier) {
                 quadraticBezierTo(w * 0.12f, hh * 0.80f, w * 0.10f, hh * 0.50f)
                 close()
             }
-            androidx.compose.ui.graphics.drawscope.rotate(storto) {
-                androidx.compose.ui.graphics.drawscope.clipPath(scudo) {
+            rotate(storto) {
+                clipPath(scudo) {
                     drawRect(c1)
                     when (motivo) {
                         0 -> for (i in 0 until 5 step 2) drawRect(c2, Offset(w * (0.1f + i * 0.16f), 0f), Size(w * 0.16f, hh))
