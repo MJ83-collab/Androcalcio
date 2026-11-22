@@ -13,7 +13,11 @@ object DataIO {
 
     /** Chiavi di stato semplici (senza id di giocatori/squadre) che fanno parte della carriera. */
     val CHIAVI_STATO = listOf("fiducia", "tifosi", "reputazione", "clima", "liv_allenamento", "liv_vivaio",
-        "stipendio_allenatore", "esonero", "sponsor")
+        "stipendio_allenatore", "esonero", "sponsor",
+        "migliorie_fatte", "migliorie_cantieri", "psicologo", "marketing", "prezzi", "obiettivo", "obiettivo_s", "obiettivo_pos",
+        "prestiti", "achievement", "avanzate", "giornale", "premi", "conf_g", "giornata_mercato",
+        "c_stagioni", "c_titoli", "c_coppe", "c_prom", "c_vittorie", "c_gol", "c_derby", "c_obiettivi", "c_giovani",
+        "c_colloqui", "c_conferenze", "c_prestiti", "c_partite")
 
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()

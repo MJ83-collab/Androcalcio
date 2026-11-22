@@ -13,9 +13,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,7 +106,8 @@ fun ProssimaPartitaCard(me: Team, avversario: Team, m: MatchResult, onGioca: () 
 
 /** Opzioni come in PC Calcio 7: difficoltà (vale per la prossima carriera) e velocità della partita dal vivo. */
 @Composable
-fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit, onVelocita: (Int) -> Unit) {
+fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit, onVelocita: (Int) -> Unit,
+                  profilo: Difficolta.Profilo = Difficolta.PROFILI[Difficolta.NORMALE], onProfilo: (Difficolta.Profilo) -> Unit = {}) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -114,6 +119,14 @@ fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit,
             }
         }
         DifficoltaBarra(op.difficolta)
+        Text(Difficolta.descrizione(op.difficolta, profilo), color = AC.TextDim, fontSize = 12.sp)
+        if (op.difficolta == Difficolta.PERSONALIZZATA) {
+            SectionTitle("Profilo personalizzato")
+            ProfiloSlider("Budget iniziale", profilo.budget, 30, 250) { onProfilo(profilo.copy(budget = it)) }
+            ProfiloSlider("Incassi", profilo.incassi, 50, 200) { onProfilo(profilo.copy(incassi = it)) }
+            ProfiloSlider("Infortuni", profilo.infortuni, 30, 250) { onProfilo(profilo.copy(infortuni = it)) }
+            ProfiloSlider("Severità dirigenza", profilo.dirigenza, 30, 250) { onProfilo(profilo.copy(dirigenza = it)) }
+        }
         SectionTitle("Velocità partita dal vivo")
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(1, 2, 4, 20).forEach { x -> PcChip(selected = op.velocita == x, onClick = { onVelocita(x) }, label = { Text("×$x") }) }
@@ -145,5 +158,15 @@ private fun DifficoltaBarra(livello: Int) {
             val col = if (i < tacche / 2) AC.Ok else if (i < tacche * 5 / 6) AC.Warn else AC.Danger
             Text("█", color = if (i < accese) col else col.copy(alpha = 0.2f), fontSize = 12.sp)
         }
+    }
+}
+
+@Composable
+private fun ProfiloSlider(nome: String, valore: Int, min: Int, max: Int, onFine: (Int) -> Unit) {
+    var v by remember(valore) { mutableStateOf(valore.toFloat()) }
+    Column(Modifier.fillMaxWidth()) {
+        Text("$nome: ${v.toInt()}%", color = AC.Text, fontSize = 12.sp)
+        Slider(value = v, onValueChange = { v = (Math.round(it / 5f) * 5).toFloat() }, valueRange = min.toFloat()..max.toFloat(),
+            onValueChangeFinished = { onFine(v.toInt()) })
     }
 }

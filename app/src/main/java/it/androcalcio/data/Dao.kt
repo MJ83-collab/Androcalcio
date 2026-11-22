@@ -41,7 +41,7 @@ interface AndrocalcioDao {
     @Query("SELECT COUNT(*) FROM teams")
     suspend fun teamCount(): Int
 
-    @Query("SELECT * FROM players WHERE teamId != :teamId AND role LIKE :role ORDER BY overall DESC")
+    @Query("SELECT * FROM players WHERE teamId != :teamId AND role LIKE :role AND teamId NOT IN (SELECT id FROM teams WHERE nazione = 'All Star') ORDER BY overall DESC")
     fun market(teamId: Long, role: String): Flow<List<Player>>
 
     @Update

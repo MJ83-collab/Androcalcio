@@ -132,6 +132,11 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita", Color(0xFF16A085)),
     ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227)),
     STRUTTURE("Stadio e centro", Icons.Filled.Build, "Migliorie, cantieri, ritorni", Color(0xFF00897B)),
+    RELAZIONI("Stampa", Icons.Filled.Person, "Conferenze, colloqui, psicologo", Color(0xFFAD1457)),
+    COMMERCIALE("Marketing", Icons.Filled.ShoppingCart, "Sponsor e prezzi", Color(0xFFEF6C00)),
+    OBIETTIVI("Obiettivi", Icons.Filled.Done, "Dirigenza, premi, trofei", Color(0xFF6A1B9A)),
+    GIORNALE("Giornale", Icons.Filled.List, "Pagelle, meteo, xG", Color(0xFF455A64)),
+    PRESTITI("Prestiti", Icons.Filled.Refresh, "Finestre e prestiti", Color(0xFF1565C0)),
     OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B))
 }
 
@@ -259,7 +264,41 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 }
                 Screen.OPZIONI -> {
                     val op by vm.opzioni.collectAsState()
-                    OpzioniScreen(op, { vm.setDifficolta(it) }, { vm.setVelocita(it) })
+                    val prof by vm.profilo.collectAsState()
+                    OpzioniScreen(op, { vm.setDifficolta(it) }, { vm.setVelocita(it) }, prof) { vm.setProfilo(it) }
+                }
+                Screen.RELAZIONI -> {
+                    val ex by vm.extra.collectAsState()
+                    LaunchedEffect(team?.id, players.size) { vm.aggiornaExtra() }
+                    RelazioniScreen(ex, players, { vm.rispondiConferenza(it) }, { id, t -> vm.colloquio(id, t) }, { vm.setPsicologo(it) })
+                }
+                Screen.COMMERCIALE -> {
+                    val ex by vm.extra.collectAsState()
+                    val cl by vm.club.collectAsState()
+                    LaunchedEffect(team?.id) { vm.aggiornaExtra() }
+                    CommercialeScreen(ex, cl, { vm.setMarketing(it) }, { vm.cercaSponsor() }, { vm.acceptSponsor(it) }, { s, p -> vm.setPrezzo(s, p) })
+                }
+                Screen.OBIETTIVI -> {
+                    val ex by vm.extra.collectAsState()
+                    val cl by vm.club.collectAsState()
+                    LaunchedEffect(team?.id) { vm.aggiornaExtra() }
+                    ObiettiviScreen(ex, cl)
+                }
+                Screen.GIORNALE -> {
+                    val ex by vm.extra.collectAsState()
+                    LaunchedEffect(team?.id) { vm.aggiornaExtra() }
+                    GiornaleScreen(ex)
+                }
+                Screen.PRESTITI -> {
+                    val ex by vm.extra.collectAsState()
+                    val tutti by vm.allPlayers.collectAsState()
+                    LaunchedEffect(team?.id) { vm.aggiornaExtra() }
+                    if (team != null) {
+                        val nomi = teams.associate { it.id to it.name }
+                        val altri = tutti.filter { p -> p.teamId != team.id && teams.any { t -> t.id == p.teamId && t.nazione == team.nazione } }
+                            .sortedByDescending { it.overall }.filter { it.overall <= 80 }
+                        PrestitiScreen(ex, team, players, altri, nomi, { vm.prestaGiocatore(it) }, { vm.prendiInPrestito(it) }, { vm.riscatta(it) })
+                    }
                 }
                 Screen.ROSA -> {
                     val modulo by vm.formation.collectAsState()
@@ -622,7 +661,8 @@ fun HomeScreen(
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
-            Screen.STRUTTURE, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
+            Screen.STRUTTURE, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
+            Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {

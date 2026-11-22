@@ -26,7 +26,8 @@ class LiveMatch(
     homePress: Pressing? = null, awayPress: Pressing? = null,   // null = sceglie l'AI
     homeLine: DefLine? = null, awayLine: DefLine? = null,
     homeStile: Stile? = null, awayStile: Stile? = null,
-    private val homeTiri: SetPieces = SetPieces.NONE, private val awayTiri: SetPieces = SetPieces.NONE
+    private val homeTiri: SetPieces = SetPieces.NONE, private val awayTiri: SetPieces = SetPieces.NONE,
+    private val meteoGol: Double = 1.0   // meteo e campo: moltiplicano le azioni pericolose (Meteo.Condizioni.fattoreGol)
 ) {
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
         if (bench != null) ps.toMutableList() to bench.toMutableList()
@@ -187,7 +188,7 @@ class LiveMatch(
         if (nA != mA && minute > 70) events += MatchEvent(minute, EventType.TACTIC, false,
             "${away.shortName} passa a mentalità ${nA.label.lowercase()}", 0.5f, 0.5f)
         mH = nH; mA = nA
-        if (rng.nextDouble() < MatchEngine.ATTACK_PER_MINUTE * (mH.tempo + mA.tempo) / 2) {
+        if (rng.nextDouble() < MatchEngine.ATTACK_PER_MINUTE * meteoGol * (mH.tempo + mA.tempo) / 2) {
             val ph = h.mid * MatchEngine.HOME_BONUS * pressH.poss * lineH.poss
             val pNow = ph / (ph + a.mid * pressA.poss * lineA.poss)
             val homeAtt = rng.nextDouble() < pNow
