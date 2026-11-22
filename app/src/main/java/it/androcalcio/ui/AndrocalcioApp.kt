@@ -138,6 +138,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     OBIETTIVI("Obiettivi", Icons.Filled.Done, "Dirigenza, premi, trofei", Color(0xFF6A1B9A)),
     GIORNALE("Giornale", Icons.Filled.List, "Pagelle, meteo, xG", Color(0xFF455A64)),
     PRESTITI("Prestiti", Icons.Filled.Refresh, "Finestre e prestiti", Color(0xFF1565C0)),
+    SOCIETA("Società", Icons.Filled.Person, "Disciplina, scambi, storia", Color(0xFF00838F)),
     OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B))
 }
 
@@ -263,10 +264,18 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }
                     MigliorieScreen(team, mig) { vm.avviaMiglioria(it) }
                 }
+                Screen.SOCIETA -> {
+                    val soc by vm.societa.collectAsState()
+                    val tuttiG by vm.allPlayers.collectAsState()
+                    LaunchedEffect(team?.id, players.size) { vm.aggiornaSocieta() }
+                    SocietaScreen(team, teams, players, tuttiG, soc, { r, ok -> vm.rispondiRichiesta(r, ok) }, { m, l, c -> vm.proponiScambio(m, l, c) })
+                }
                 Screen.OPZIONI -> {
                     val op by vm.opzioni.collectAsState()
                     val prof by vm.profilo.collectAsState()
-                    OpzioniScreen(op, { vm.setDifficolta(it) }, { vm.setVelocita(it) }, prof) { vm.setProfilo(it) }
+                    val testo by vm.testoPct.collectAsState()
+                    OpzioniScreen(op, { vm.setDifficolta(it) }, { vm.setVelocita(it) }, prof, { vm.setProfilo(it) },
+                        testo, { vm.setTesto(it) }, { vm.apriTutorial() })
                 }
                 Screen.RELAZIONI -> {
                     val ex by vm.extra.collectAsState()
@@ -670,7 +679,7 @@ fun HomeScreen(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
             Screen.STRUTTURE, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
-            Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
+            Screen.SOCIETA, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {
@@ -1172,7 +1181,12 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     val avatarMod by vm.avatar.collectAsState()
     val squadre by vm.teams.collectAsState()
     val tutti by vm.allPlayers.collectAsState()
+    val testoPct by vm.testoPct.collectAsState()
+    val tutorial by vm.tutorial.collectAsState()
+    val avviata by vm.started.collectAsState()
+    val dens = androidx.compose.ui.platform.LocalDensity.current
     CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * testoPct / 100f),
         LocalApriGiocatore provides { schedaAperta = it },
         LocalCaricaGiocatore provides { vm.dettaglioGiocatore(it) },
         LocalApriSquadra provides { squadraAperta = it },
@@ -1182,6 +1196,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         it.androcalcio.ui.components.LocalModificaAvatar provides { n -> avatarAperto = n }
     ) {
         AndrocalcioContenuto(vm)
+        if (tutorial && avviata) TutorialDialog { vm.chiudiTutorial() }
         schedaAperta?.let { p -> SchedaGiocatore(p, null, onClose = { schedaAperta = null }) }
         squadraAperta?.let { t -> SquadraSchedaDialog(t, { x -> vm.infoSquadra(x) }, { squadraAperta = null }) }
         avatarAperto?.let { n ->

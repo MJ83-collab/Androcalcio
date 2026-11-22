@@ -19,14 +19,15 @@ object ShirtNumbers {
     private fun rank(role: String) = when (role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
 
     /** Numero per ogni giocatore della rosa, senza doppi. */
-    fun assign(players: List<Player>): Map<Long, Int> {
+    fun assign(players: List<Player>, ritirati: Set<Int> = emptySet()): Map<Long, Int> {
         val result = HashMap<Long, Int>()
         val used = HashSet<Int>()
         // 1. Chi ha già un numero valido lo tiene
         players.sortedBy { it.id }.forEach { p ->
             if (p.numero in 1..99 && used.add(p.numero)) result[p.id] = p.numero
         }
-        // 2. Gli altri, dal portiere agli attaccanti, con il migliore per primo
+        // 2. Gli altri, dal portiere agli attaccanti, con il migliore per primo (i numeri ritirati restano liberi)
+        used.addAll(ritirati)
         players.filter { it.id !in result }
             .sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }, { it.id }))
             .forEach { p ->

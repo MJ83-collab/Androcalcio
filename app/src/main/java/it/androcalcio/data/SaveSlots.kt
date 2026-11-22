@@ -25,13 +25,15 @@ data class SlotInfo(
  */
 object SaveSlots {
     const val COUNT = 3
+    /** Autosalvataggio: uno slot in più, riscritto dall'app ogni poche partite. */
+    const val AUTO = 4
     const val DB_NAME = "androcalcio.db"
 
     private fun dir(ctx: Context) = File(ctx.filesDir, "salvataggi").apply { mkdirs() }
     private fun dbFile(ctx: Context, n: Int) = File(dir(ctx), "slot$n.db")
     private fun metaFile(ctx: Context, n: Int) = File(dir(ctx), "slot$n.json")
 
-    fun list(ctx: Context): List<SlotInfo> = (1..COUNT).map { n ->
+    fun list(ctx: Context): List<SlotInfo> = (1..AUTO).map { n ->
         val m = metaFile(ctx, n)
         if (!m.exists() || !dbFile(ctx, n).exists()) SlotInfo(n) else try {
             val j = JSONObject(m.readText())

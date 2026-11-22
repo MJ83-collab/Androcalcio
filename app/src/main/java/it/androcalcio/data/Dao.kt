@@ -201,6 +201,9 @@ interface AndrocalcioDao {
     @Query("SELECT * FROM albo ORDER BY season DESC, id")
     fun albo(): Flow<List<AlboEntry>>
 
+    @Query("SELECT * FROM movimenti WHERE teamId = :teamId AND season = :season")
+    suspend fun movimentiStagioneOnce(teamId: Long, season: String): List<Movimento>
+
     @Query("SELECT * FROM movimenti WHERE teamId = :teamId AND season = :season ORDER BY id")
     fun movimentiStagione(teamId: Long, season: String): Flow<List<Movimento>>
 
