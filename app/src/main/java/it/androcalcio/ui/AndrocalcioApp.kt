@@ -1164,6 +1164,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     var schedaAperta by remember { mutableStateOf<Player?>(null) }
     var squadraAperta by remember { mutableStateOf<Team?>(null) }
     var nazioneAperta by remember { mutableStateOf<String?>(null) }
+    var avatarAperto by remember { mutableStateOf<String?>(null) }
+    val avatarMod by vm.avatar.collectAsState()
     val squadre by vm.teams.collectAsState()
     val tutti by vm.allPlayers.collectAsState()
     CompositionLocalProvider(
@@ -1171,11 +1173,17 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         LocalCaricaGiocatore provides { vm.dettaglioGiocatore(it) },
         LocalApriSquadra provides { squadraAperta = it },
         LocalApriSquadraPerNome provides { n -> squadre.firstOrNull { it.name == n }?.let { squadraAperta = it } },
-        LocalApriNazione provides { nazioneAperta = it }
+        LocalApriNazione provides { nazioneAperta = it },
+        it.androcalcio.ui.components.LocalAvatarModificati provides avatarMod,
+        it.androcalcio.ui.components.LocalModificaAvatar provides { n -> avatarAperto = n }
     ) {
         AndrocalcioContenuto(vm)
         schedaAperta?.let { p -> SchedaGiocatore(p, null, onClose = { schedaAperta = null }) }
         squadraAperta?.let { t -> SquadraSchedaDialog(t, { x -> vm.infoSquadra(x) }, { squadraAperta = null }) }
+        avatarAperto?.let { n ->
+            AvatarEditorDialog(n, it.androcalcio.engine.AvatarGen.specDi(n, avatarMod), avatarMod.containsKey(n),
+                { sp -> vm.salvaAvatar(n, sp) }, { vm.salvaAvatar(n, null) }, { avatarAperto = null })
+        }
         nazioneAperta?.let { n ->
             val asIds = squadre.filter { it.nazione == AllStar.NAZIONE }.map { it.id }.toSet()
             NazioneSchedaDialog(n, tutti.filter { it.teamId !in asIds }, squadre, { nazioneAperta = null })

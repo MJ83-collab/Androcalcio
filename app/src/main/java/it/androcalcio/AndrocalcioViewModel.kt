@@ -1,5 +1,6 @@
 package it.androcalcio
 
+import it.androcalcio.engine.AvatarGen
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
 import it.androcalcio.engine.Migliorie
@@ -529,6 +530,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (e.morale != 0) dao.updatePlayers(dao.playersOnce(teamId).map { it.copy(morale = (it.morale + e.morale).coerceIn(0, 100)) })
         _notice.value = "Lavori finiti: " + finite.joinToString { it.nome } + "."
         caricaMigliorie()
+    }
+
+    // ---- Avatar modificati dall'utente (nome -> volto), salvati in Stato "avatar" ----
+    private val _avatar = MutableStateFlow<Map<String, AvatarGen.Spec>>(emptyMap())
+    val avatar: StateFlow<Map<String, AvatarGen.Spec>> = _avatar
+    init { viewModelScope.launch(Dispatchers.IO) { _avatar.value = AvatarGen.decodeMappa(dao.stato("avatar")) } }
+    /** Salva il volto di [nome]; con [spec] nullo ripristina quello generato dal nome. */
+    fun salvaAvatar(nome: String, spec: AvatarGen.Spec?) {
+        val nuova = if (spec == null) _avatar.value - nome else _avatar.value + (nome to spec)
+        _avatar.value = nuova
+        viewModelScope.launch(Dispatchers.IO) { dao.setStato(Stato("avatar", AvatarGen.encodeMappa(nuova))) }
     }
 
     // ---- Extra: stampa, colloqui, psicologo, marketing, obiettivi, prezzi, giornale, trofei, avanzate, prestiti ----
