@@ -22,6 +22,8 @@ Test motore in locale: 48/48 ok. **Ultima build CI non partita**: GitHub ha bloc
 5. **Difficoltà** più ampia (5 livelli che toccano budget, fiducia, IA avversarie, infortuni, mercato) + **profilo personalizzato**.
 6. **Nazionali Under 21** con calendari propri.
 7. **Psicologo** nello staff: migliora il morale dei giocatori in difficoltà.
+8. **Squadre All Star per decennio** (anni '60, '70, '80, '90, 2000, 2010, 2020), giocabili solo in amichevole. Nomi storpiati come per le squadre (decisione da confermare).
+9. **Tutto collegato**: in ogni scheda e in ogni riga, toccando un nome, una bandiera di nazionalità o una squadra si apre la scheda relativa (giocatore → squadra → nazionale → staff…). Serve una navigazione unica con "indietro".
 
 ## 20 migliorie consigliate
 1. Conferenza stampa pre/post partita con risposte che toccano morale e tifosi.
@@ -48,6 +50,7 @@ Test motore in locale: 48/48 ok. **Ultima build CI non partita**: GitHub ha bloc
 ## Domande aperte
 - Avatar: generi tu le immagini o preferisci che prepari i prompt da usare con un'IA di immagini?
 - Ordine dei lavori: va bene quello sopra?
+- All Star: nomi storpiati dei campioni (come le squadre) o nomi inventati?
 - GitHub Actions: sbloccare il pagamento per tornare a compilare l'APK.
 
 Modello: per implementare basta Sonnet; Opus solo per bilanciamento/progettazione.
