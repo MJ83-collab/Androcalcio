@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import it.androcalcio.data.Player
 import it.androcalcio.data.ScoutReport
 import it.androcalcio.data.Team
@@ -79,7 +80,12 @@ fun VivaioScreen(
     onDiscard: (Youth) -> Unit,
     onScout: (String, String) -> Unit,
     onFollow: (Player) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    inPrima: Set<Long> = emptySet(),
+    scheda: it.androcalcio.engine.Giovanili.Scheda? = null,
+    onScheda: (Youth) -> Unit = {},
+    onApparizione: (Youth) -> Unit = {},
+    onChiudiScheda: () -> Unit = {}
 ) {
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -121,7 +127,7 @@ fun VivaioScreen(
                                 RoleBadge(y.role)
                                 Column(Modifier.padding(start = 12.dp)) {
                                     Text(y.name, style = MaterialTheme.typography.titleSmall)
-                                    Text("${y.age} anni · ${y.nationality}",
+                                    Text("${y.age} anni · ${y.nationality}" + if (y.id in inPrima) " · con la prima squadra" else "",
                                         style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
                                 }
                             }
@@ -130,9 +136,12 @@ fun VivaioScreen(
                                     Youths.judge(Youths.perceived(y, team.youthCoachSkill)),
                                 modifier = Modifier.padding(top = 8.dp), color = AC.Accent
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                PcAction(onClick = { onPromote(y) }) { Text("Promuovi") }
-                                TextButton(onClick = { onDiscard(y) }) { Text("Scarta") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                PcAction(onClick = { onScheda(y) }) { Text("Scheda", fontSize = 12.sp) }
+                                if (y.age >= it.androcalcio.engine.Giovanili.ETA_APPARIZIONE && y.id !in inPrima)
+                                    PcAction(onClick = { onApparizione(y) }) { Text("Prova", fontSize = 12.sp) }
+                                PcAction(onClick = { onPromote(y) }) { Text("Promuovi", fontSize = 12.sp) }
+                                TextButton(onClick = { onDiscard(y) }) { Text("Libera", fontSize = 12.sp) }
                             }
                         }
                     }
@@ -187,6 +196,17 @@ fun VivaioScreen(
                 }
             }
         }
+    }
+
+    scheda?.let { sc ->
+        AlertDialog(
+            onDismissRequest = onChiudiScheda, title = { Text(sc.titolo) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                sc.righe.forEach { Text(it) }
+                Text(sc.consiglio, color = AC.Accent, fontWeight = FontWeight.Bold)
+            } },
+            confirmButton = { TextButton(onClick = onChiudiScheda) { Text("OK") } }
+        )
     }
 
     notice?.let {

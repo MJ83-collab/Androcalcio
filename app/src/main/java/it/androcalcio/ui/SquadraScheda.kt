@@ -9,6 +9,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import it.androcalcio.data.Team
 import it.androcalcio.engine.InfoSquadra
@@ -28,7 +29,7 @@ fun SquadraSchedaDialog(t: Team, carica: suspend (Team) -> InfoSquadra, onClose:
                 Text("Caricamento…")
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${i.campionato} · ${t.nazione}", color = AC.TextDim)
+                    Text("${flagOf(t.nazione)} ${i.campionato} · ${t.nazione}", Modifier.apriNazione(t.nazione), color = AC.TextDim)
                     Text("Aspettative: ${i.posizioneAttesa}", color = AC.Accent)
                     Text("Sponsor: ${i.sponsor} · Stadio ${i.stadio}")
                     Text("Finanze", style = MaterialTheme.typography.titleSmall)
@@ -38,7 +39,7 @@ fun SquadraSchedaDialog(t: Team, carica: suspend (Team) -> InfoSquadra, onClose:
                     Text("${i.rosa} giocatori · media ${"%.1f".format(i.media)}")
                     Text(if (i.ruoliCarenti.isEmpty()) "Nessun ruolo carente"
                          else "Ruoli carenti: ${i.ruoliCarenti.joinToString(", ")}")
-                    Text("Capitano: ${i.capitano?.let { "${it.name} (${it.overall})" } ?: "—"}")
+                    Text("Capitano: ${i.capitano?.let { "${it.name} (${it.overall})" } ?: "—"}", i.capitano?.let { cap -> Modifier.apriScheda(cap) } ?: Modifier)
                     i.rivale?.let { Text("Derby con $it", color = AC.Danger) }
                 }
             }

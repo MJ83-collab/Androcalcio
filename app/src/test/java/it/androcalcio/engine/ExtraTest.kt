@@ -209,3 +209,79 @@ class ExtraTest {
         assertEquals(120 * Avanzate.XG_PER_TIRO, t.xgF, 1e-9)
     }
 }
+
+class GiovaniliTest {
+    private val team = it.androcalcio.data.Team(id = 1, name = "Casa", shortName = "CAS", colorPrimary = 0xFF0000FFL,
+        colorSecondary = 0xFFFFFFFFL, budget = 20_000_000, stadiumCapacity = 1000, ticketPrice = 10, sponsor = "")
+
+    @Test fun inizialeHaTutteLeEtaDa10A16() {
+        val tutti = (1..40).flatMap { Giovanili.iniziale(team, "2026", kotlin.random.Random(it)) }
+        assertTrue(tutti.all { it.age in Giovanili.ETA_MIN..Giovanili.ETA_MAX })
+        assertEquals((Giovanili.ETA_MIN..Giovanili.ETA_MAX).toSet(), tutti.map { it.age }.toSet())
+        assertEquals(14, Giovanili.iniziale(team, "2026", kotlin.random.Random(1)).size)
+    }
+
+    @Test fun iPiuPiccoliHannoOverallPiuBasso() {
+        val tutti = (1..60).flatMap { Giovanili.iniziale(team, "2026", kotlin.random.Random(it)) }
+        val piccoli = tutti.filter { it.age <= 11 }.map { it.overall }.average()
+        val grandi = tutti.filter { it.age >= 15 }.map { it.overall }.average()
+        assertTrue("piccoli=$piccoli grandi=$grandi", grandi - piccoli > 8)
+        assertTrue(tutti.all { it.overall <= it.potential })
+    }
+
+    @Test fun nuovaLevaSoloPiccoli() {
+        assertTrue(Giovanili.nuovaLeva(team, "2027", kotlin.random.Random(2)).all { it.age <= Giovanili.ETA_MIN + 2 })
+    }
+
+    @Test fun crescitaAnnuale() {
+        val y = Giovanili.iniziale(team, "2026", kotlin.random.Random(3)).first()
+        var x = y
+        repeat(6) { x = Giovanili.cresci(x, kotlin.random.Random(it), 55) }
+        assertEquals(y.age + 6, x.age)
+        assertTrue(x.overall >= y.overall && x.overall <= x.potential)
+        val bravo = Giovanili.cresci(y, kotlin.random.Random(9), 99, 10)
+        val scarso = Giovanili.cresci(y, kotlin.random.Random(9), 1, 0)
+        assertTrue(bravo.overall >= scarso.overall)
+    }
+
+    @Test fun ultimoAnnoEScadenza() {
+        val y = Giovanili.iniziale(team, "2026", kotlin.random.Random(4)).first().copy(age = 17)
+        assertFalse(Giovanili.scaduto(y))
+        assertTrue(Giovanili.scaduto(Giovanili.cresci(y, kotlin.random.Random(1), 55)))
+        assertTrue(Giovanili.puoDebuttare(y.copy(age = 15)))
+        assertFalse(Giovanili.puoDebuttare(y.copy(age = 14)))
+    }
+
+    @Test fun schedaECoerente() {
+        val y = Giovanili.iniziale(team, "2026", kotlin.random.Random(5)).first().copy(age = 16, overall = 66)
+        val s = Giovanili.scheda(y, 60, 60)
+        assertTrue(s.righe.any { it.contains("+6") })
+        assertTrue(s.consiglio.contains("apparizione"))
+        assertTrue(Giovanili.scheda(y.copy(age = 17, overall = 40), 40, 60).consiglio.contains("liberarlo"))
+    }
+
+    @Test fun apparizioniSiSalvano() {
+        val l = listOf(3L to 90L, 4L to 91L)
+        assertEquals(l, Giovanili.decodeApparizioni(Giovanili.encodeApparizioni(l)))
+        assertTrue(Giovanili.decodeApparizioni("").isEmpty())
+    }
+}
+
+class NazionaliU21Test {
+    @Test fun dateU21NonCoincidonoConLeSenior() {
+        assertTrue(Nazionali.DATE_U21.none { it in Nazionali.DATE })
+        assertTrue(Nazionali.DATE_U21.all { it in 1..38 })
+    }
+    @Test fun nomiEEta() {
+        assertEquals("Italia U21", Nazionali.nomeU21("Italia"))
+        assertTrue(Nazionali.isU21("Italia U21"))
+        assertFalse(Nazionali.isU21("Italia"))
+        assertEquals("Italia", Nazionali.senzaU21("Italia U21"))
+        assertTrue(Nazionali.europeoU21(2027) && !Nazionali.europeoU21(2028))
+    }
+    @Test fun soloGliUnder21() {
+        val g = (18..30).map { Player(id = it.toLong(), teamId = 1, name = "G$it", role = "C", age = it, overall = 60, morale = 50,
+            salary = 1, nationality = "Italia") }
+        assertEquals(listOf(18, 19, 20, 21), Nazionali.eleggibiliU21(g).map { it.age })
+    }
+}

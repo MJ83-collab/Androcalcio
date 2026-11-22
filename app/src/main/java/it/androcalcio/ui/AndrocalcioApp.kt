@@ -95,6 +95,7 @@ import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Movimento
 import it.androcalcio.engine.Stadium
 import it.androcalcio.engine.Sponsorship
+import it.androcalcio.engine.AllStar
 import it.androcalcio.engine.Strutture
 import it.androcalcio.engine.Insurance
 import it.androcalcio.data.Player
@@ -351,10 +352,14 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val scouted by vm.scouted.collectAsState()
                     val reports by vm.reports.collectAsState()
                     val notice by vm.notice.collectAsState()
+                    val exViv by vm.extra.collectAsState()
+                    val schedaViv by vm.scheda.collectAsState()
+                    LaunchedEffect(team?.id) { vm.aggiornaExtra() }
                     VivaioScreen(
                         team, teams, players, youths, scouted, reports, notice, season,
                         { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
-                        { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() }
+                        { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() },
+                        exViv.inPrima, schedaViv, { vm.richiediScheda(it) }, { vm.apparizione(it) }, { vm.chiudiScheda() }
                     )
                 }
                 Screen.EDITOR -> {
@@ -1157,11 +1162,23 @@ private fun FormazioneCard(
 @Composable
 fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
     var schedaAperta by remember { mutableStateOf<Player?>(null) }
+    var squadraAperta by remember { mutableStateOf<Team?>(null) }
+    var nazioneAperta by remember { mutableStateOf<String?>(null) }
+    val squadre by vm.teams.collectAsState()
+    val tutti by vm.allPlayers.collectAsState()
     CompositionLocalProvider(
         LocalApriGiocatore provides { schedaAperta = it },
-        LocalCaricaGiocatore provides { vm.dettaglioGiocatore(it) }
+        LocalCaricaGiocatore provides { vm.dettaglioGiocatore(it) },
+        LocalApriSquadra provides { squadraAperta = it },
+        LocalApriSquadraPerNome provides { n -> squadre.firstOrNull { it.name == n }?.let { squadraAperta = it } },
+        LocalApriNazione provides { nazioneAperta = it }
     ) {
         AndrocalcioContenuto(vm)
         schedaAperta?.let { p -> SchedaGiocatore(p, null, onClose = { schedaAperta = null }) }
+        squadraAperta?.let { t -> SquadraSchedaDialog(t, { x -> vm.infoSquadra(x) }, { squadraAperta = null }) }
+        nazioneAperta?.let { n ->
+            val asIds = squadre.filter { it.nazione == AllStar.NAZIONE }.map { it.id }.toSet()
+            NazioneSchedaDialog(n, tutti.filter { it.teamId !in asIds }, squadre, { nazioneAperta = null })
+        }
     }
 }

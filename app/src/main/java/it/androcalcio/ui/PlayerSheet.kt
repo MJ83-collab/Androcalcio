@@ -87,11 +87,11 @@ fun PlayerSheet(
                 }
                 Text(Attr.posName(p).uppercase(), fontWeight = FontWeight.ExtraBold, color = AC.PaperText, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Tag("${p.age} anni", AC.ColGreen); Tag(p.nationality, AC.ColBlue)
+                    Tag("${p.age} anni", AC.ColGreen); Tag(p.nationality, AC.ColBlue, Modifier.apriNazione(p.nationality))
                     Tag(Attr.FOOT_NAMES[p.foot] ?: "Destro", AC.ColOrange)
                 }
                 val squadra = dettaglio?.squadra ?: team?.name
-                if (squadra != null) Text(squadra, fontSize = 12.sp, color = AC.PaperText)
+                if (squadra != null) Text(squadra, Modifier.apriSquadraNome(squadra), fontSize = 12.sp, color = AC.ColBlue, fontWeight = FontWeight.Bold)
                 Text(if (p.injuredRounds > 0) "INFORTUNATO: ${p.injuredRounds} turni" else "NON INFORTUNATO",
                     fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
                     color = if (p.injuredRounds > 0) AC.ColEn else AC.ColGreen)
@@ -128,7 +128,7 @@ fun PlayerSheet(
                     }
                 }
                 Titolo("NAZIONALE")
-                Text("Nazionale: ${p.nationality}", fontSize = 12.sp, color = AC.PaperText)
+                Text("Nazionale: ${flagOf(p.nationality)} ${p.nationality}", Modifier.apriNazione(p.nationality), fontSize = 12.sp, color = AC.ColBlue, fontWeight = FontWeight.Bold)
                 if (dettaglio == null) {
                     Text("Caricamento…", fontSize = 11.sp, color = AC.PaperText)
                 } else {
@@ -164,8 +164,8 @@ private fun Titolo(testo: String) {
 }
 
 @Composable
-private fun Tag(text: String, color: Color) {
-    Text(text, Modifier.background(color).padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White,
+private fun Tag(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(text, modifier.background(color).padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White,
         fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
 }
 

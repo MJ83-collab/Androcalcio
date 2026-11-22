@@ -56,6 +56,15 @@ interface AndrocalcioDao {
     @Insert
     suspend fun insertYouths(list: List<Youth>)
 
+    @Query("SELECT * FROM youths WHERE teamId = :teamId")
+    suspend fun youthsOnce(teamId: Long): List<Youth>
+
+    @Query("SELECT * FROM youths")
+    suspend fun allYouths(): List<Youth>
+
+    @Update
+    suspend fun updateYouths(list: List<Youth>)
+
     @Query("SELECT * FROM youths WHERE teamId = :teamId ORDER BY potential DESC")
     fun youths(teamId: Long): Flow<List<Youth>>
 

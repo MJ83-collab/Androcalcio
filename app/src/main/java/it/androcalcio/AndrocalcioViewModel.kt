@@ -9,6 +9,7 @@ import it.androcalcio.engine.Agenti
 import it.androcalcio.engine.AllStar
 import it.androcalcio.engine.Avanzate
 import it.androcalcio.engine.Finestre
+import it.androcalcio.engine.Giovanili
 import it.androcalcio.engine.Giornale
 import it.androcalcio.engine.Meteo
 import it.androcalcio.engine.Obiettivi
@@ -408,7 +409,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val totaliLega = ms.filter { !Cup.isCup(it.round) }.maxOfOrNull { it.round } ?: 38
             val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
                 .let { if (all) it else it.take(1) }
-            rounds.forEach { giocaDataNazionali(_season.value, it) }
+            rounds.forEach { giocaDataNazionali(_season.value, it); giocaDataU21(_season.value, it) }
             val assentiPerTurno: Map<Int, Set<Long>> = rounds.associateWith { r ->
                 dao.convocazioniData(_season.value, r).map { it.playerId }.toSet()
             }
@@ -541,7 +542,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val trofei: Set<String> = emptySet(), val avanzate: Avanzate.Totali = Avanzate.Totali(),
         val finestra: Finestre.Stato = Finestre.Stato.ESTIVA, val ultimoGiorno: Boolean = false,
         val prestiti: List<Prestiti.Prestito> = emptyList(),
-        val meteo: Meteo.Condizioni? = null, val budget: Long = 0L, val giornata: Int = 1
+        val meteo: Meteo.Condizioni? = null, val budget: Long = 0L, val giornata: Int = 1,
+        val inPrima: Set<Long> = emptySet()
     )
     private val _extra = MutableStateFlow(ExtraStato())
     val extra: StateFlow<ExtraStato> = _extra
@@ -592,7 +594,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             premi = Premi.decode(dao.stato("premi")), giornale = Giornale.decode(dao.stato("giornale")),
             trofei = Achievement.decode(dao.stato("achievement")), avanzate = Avanzate.decode(dao.stato("avanzate")),
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
-            prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima
+            prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
+            inPrima = Giovanili.decodeApparizioni(dao.stato("apparizioni")).map { it.first }.toSet()
         )
     }
 
@@ -1347,10 +1350,86 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val t = selectedTeam.value ?: return@launch
             val s = _season.value
             if (t.youthClaimed == s) return@launch
-            dao.insertYouths(Youths.generate(t, s, bonusVivaio = Strutture.bonusVivaio(dao.statoInt(Strutture.VIVAIO)) +
-                Migliorie.effetti(Migliorie.decodeFatte(dao.stato("migliorie_fatte"))).vivaio))
+            val bonus = Strutture.bonusVivaio(dao.statoInt(Strutture.VIVAIO)) +
+                Migliorie.effetti(Migliorie.decodeFatte(dao.stato("migliorie_fatte"))).vivaio
+            val primaVolta = dao.youthsOnce(t.id).isEmpty()
+            dao.insertYouths(if (primaVolta) Giovanili.iniziale(t, s, bonusVivaio = bonus) else Giovanili.nuovaLeva(t, s, bonusVivaio = bonus))
             dao.updateTeam(t.copy(youthClaimed = s))
+            _notice.value = if (primaVolta) "Il settore giovanile ha ${Giovanili.iniziale(t, s).size} ragazzi dai ${Giovanili.ETA_MIN} ai ${Giovanili.ETA_MAX} anni."
+                else "Sono arrivati 5 nuovi ragazzi nelle giovanili."
         }
+    }
+
+    // ---- Settore giovanile: scheda dei progressi e apparizioni in prima squadra ----
+    private val _scheda = MutableStateFlow<Giovanili.Scheda?>(null)
+    val scheda: StateFlow<Giovanili.Scheda?> = _scheda
+    fun chiudiScheda() { _scheda.value = null }
+
+    fun richiediScheda(y: Youth) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val t = selectedTeam.value ?: return@launch
+            val prima = dao.stato("viv_prev_${y.id}")?.toIntOrNull() ?: y.overall
+            _scheda.value = Giovanili.scheda(y, prima, dao.team(t.id).youthCoachSkill)
+        }
+    }
+
+    /** Il ragazzo si aggrega alla prima squadra per la prossima partita, poi torna nelle giovanili. */
+    fun apparizione(y: Youth) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            if (!Giovanili.puoDebuttare(y)) { _notice.value = "${y.name} è troppo giovane: servono almeno ${Giovanili.ETA_APPARIZIONE} anni."; return@launch }
+            val corrente = Giovanili.decodeApparizioni(dao.stato("apparizioni"))
+            if (corrente.any { it.first == y.id }) { _notice.value = "${y.name} è già con la prima squadra."; return@launch }
+            if (dao.playersOnce(me.id).size >= Market.MAX_SQUAD) { _notice.value = "Rosa piena (massimo ${Market.MAX_SQUAD})."; return@launch }
+            val p = Attr.fill(Player(teamId = me.id, name = y.name, role = y.role, age = y.age, overall = y.overall, morale = 80,
+                salary = 0, nationality = y.nationality, potential = y.potential, contract = 1), kotlin.random.Random)
+            val ids = dao.insertPlayers(listOf(p))
+            dao.setStato(Stato("apparizioni", Giovanili.encodeApparizioni(corrente + (y.id to ids.first()))))
+            _notice.value = "${y.name} è con la prima squadra per la prossima partita: schieralo in Tattica."
+            caricaExtra()
+        }
+    }
+
+    /** Dopo la partita gli aggregati tornano nelle giovanili; chi ha giocato guadagna esperienza. */
+    private suspend fun concludiApparizioni() {
+        val l = Giovanili.decodeApparizioni(dao.stato("apparizioni"))
+        if (l.isEmpty()) return
+        val stats = dao.statsOf(_season.value).associateBy { it.playerId }
+        val youths = dao.allYouths().associateBy { it.id }
+        val righe = mutableListOf<String>()
+        l.forEach { (yid, pid) ->
+            val p = dao.playerById(pid) ?: return@forEach
+            val y = youths[yid]
+            val giocato = (stats[pid]?.presenze ?: 0) > 0
+            if (y != null && giocato) dao.updateYouths(listOf(y.copy(overall = (y.overall + 2).coerceAtMost(y.potential))))
+            dao.deletePlayer(p)
+            righe += "${p.name}: " + if (giocato) "ha giocato, esperienza preziosa (+2)" else "è rimasto in panchina"
+        }
+        dao.setStato(Stato("apparizioni", ""))
+        if (righe.isNotEmpty()) avviso("Apparizioni: " + righe.joinToString("; ") + ". Tornano nelle giovanili.")
+    }
+
+    /** Fine stagione: i giovani crescono di un anno; a 18 anni chi non è stato promosso lascia il vivaio. */
+    private suspend fun cresciGiovani(me: Team): String {
+        concludiApparizioni()
+        val tutti = dao.allYouths()
+        if (tutti.isEmpty()) return ""
+        val rng = kotlin.random.Random.Default
+        val coach = dao.team(me.id).youthCoachSkill
+        val bonus = Strutture.bonusVivaio(dao.statoInt(Strutture.VIVAIO)) +
+            Migliorie.effetti(Migliorie.decodeFatte(dao.stato("migliorie_fatte"))).vivaio
+        val restano = ArrayList<Youth>(); val via = ArrayList<Youth>(); val progressi = ArrayList<Pair<Youth, Int>>()
+        tutti.forEach { y ->
+            dao.setStato(Stato("viv_prev_${y.id}", y.overall.toString()))
+            val g = Giovanili.cresci(y, rng, coach, bonus)
+            if (Giovanili.scaduto(g)) via += y else { restano += g; progressi += g to (g.overall - y.overall) }
+        }
+        dao.updateYouths(restano)
+        via.forEach { dao.deleteYouth(it) }
+        val top = progressi.sortedByDescending { it.second }.take(3).joinToString { "${it.first.name} +${it.second}" }
+        return "Vivaio: tutti crescono di un anno (migliori: $top)." +
+            (if (via.isNotEmpty()) " Lasciano per limiti d'età: ${via.joinToString { it.name }}." else "") +
+            " Chiedi la scheda ai tuoi allenatori dalla sezione Vivaio."
     }
 
     fun promote(y: Youth) {
@@ -1359,7 +1438,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 _notice.value = "Rosa piena (massimo ${Market.MAX_SQUAD} giocatori)."
                 return@launch
             }
-            dao.insertPlayer(
+            val app = Giovanili.decodeApparizioni(dao.stato("apparizioni"))
+            val aggregato = app.firstOrNull { it.first == y.id }
+            if (aggregato != null) {
+                // Già in rosa per l'apparizione: diventa un giocatore a tutti gli effetti
+                dao.playerById(aggregato.second)?.let { dao.updatePlayer(it.copy(salary = 30_000, contract = 3)) }
+                dao.setStato(Stato("apparizioni", Giovanili.encodeApparizioni(app - aggregato)))
+            } else dao.insertPlayer(
                 Attr.fill(Player(teamId = y.teamId, name = y.name, role = y.role, age = y.age,
                     overall = y.overall, morale = 75, salary = 30_000, nationality = y.nationality,
                     potential = y.potential, contract = 3), kotlin.random.Random)
@@ -1492,6 +1577,27 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Nazionali Under 21 (solo IA): giocatori con al massimo 21 anni, calendario proprio. */
+    private suspend fun poolU21(): Map<String, List<Player>> =
+        nazioniPool().mapNotNull { (n, ps) ->
+            val g = Nazionali.eleggibiliU21(ps)
+            if (Medical.available(g).size >= Nazionali.MIN_ROSA) Nazionali.nomeU21(n) to g else null
+        }.toMap()
+
+    private suspend fun giocaDataU21(season: String, round: Int) {
+        if (round !in Nazionali.DATE_U21) return
+        if (dao.convocazioniData(season, round).isNotEmpty()) return
+        val rng = kotlin.random.Random.Default
+        val pool = poolU21()
+        val base = dao.allTeams().firstOrNull() ?: return
+        pool.keys.shuffled(rng).chunked(2).filter { it.size == 2 }.forEachIndexed { i, coppia ->
+            val ca = Nazionali.convoca(pool.getValue(coppia[0]))
+            val cb = Nazionali.convoca(pool.getValue(coppia[1]))
+            val r = Nazionali.gioca(Nazionali.squadra(base, coppia[0], 2 * i), ca, Nazionali.squadra(base, coppia[1], 2 * i + 1), cb, rng)
+            registraNazionale(season, "Amichevole Under 21", round, coppia[0], coppia[1], ca, cb, r)
+        }
+    }
+
     /** Eliminazione diretta: turni sorteggiati, il pareggio si decide a caso (come ai rigori). */
     /** Restituisce le nazionali uscite sotto le attese (ct esonerato): il posto in classifica di forza decide l'attesa. */
     private suspend fun eliminazione(
@@ -1546,6 +1652,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val top = pool.keys.filter { it in Nazionali.EUROPA }
                 .sortedByDescending { Nazionali.forza(pool.getValue(it)) }.take(8)
             licenziati += eliminazione(season, "Europei", top, pool, base, rng)
+        }
+        if (Nazionali.europeoU21(annoInizio)) {
+            val pu = poolU21()
+            val top = pu.keys.filter { Nazionali.senzaU21(it) in Nazionali.EUROPA }
+                .sortedByDescending { Nazionali.forza(pu.getValue(it)) }.take(8)
+            eliminazione(season, "Europeo Under 21", top, pu, base, rng)   // i ct delle U21 non vengono esonerati
         }
         return licenziati.distinct()
     }
@@ -1900,7 +2012,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val byId = ts.associateBy { it.id }
                 // In ordine di giornata: gli infortunati saltano davvero i turni successivi
                 val turniLega = dao.matchesOnce(key, s).filter { !it.played }.map { it.round }.distinct()
-                turniLega.forEach { giocaDataNazionali(s, it) }
+                turniLega.forEach { giocaDataNazionali(s, it); giocaDataU21(s, it) }
                 val assentiLega: Map<Int, Set<Long>> = turniLega.associateWith { r ->
                     if (Cup.isCup(r)) emptySet() else dao.convocazioniData(s, r).map { it.playerId }.toSet()
                 }
@@ -2042,6 +2154,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.deleteAlboSeason(s)
             dao.insertAlbo(alboRows)
             Nazionali.DATE.forEach { giocaDataNazionali(s, it) }
+            Nazionali.DATE_U21.forEach { giocaDataU21(s, it) }
             // Ct vacanti: esonerati per risultati sotto le attese, oppure dimissioni (3% a stagione per nazione)
             val vacanti = ArrayList<String>()
             vacanti += tornei(s, prefs.getInt("season_year", 2026))
@@ -2366,7 +2479,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             // Il club torna senza figura: vivaio e scout riprendono l'abilità "vuoto"
             staffNext.filter { it.contract <= 0 }.forEach { syncTeamSkill(it.teamId, it.role, Staffing.VUOTO) }
-            dao.clearYouths()
+            val noteVivaio = cresciGiovani(me)
             dao.clearGoals()
             val y = prefs.getInt("season_year", 2026) + 1
             prefs.edit().putInt("season_year", y).apply()
@@ -2377,6 +2490,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             refreshClub()
             aggiornaClassifica()
             _notice.value = "Nuova stagione ${seasonName(y)}. $report $numeri Sono emersi ${talenti.size} talenti precoci nei club." +
+                (if (noteVivaio.isNotEmpty()) " $noteVivaio" else "") +
                 (if (expired.isNotEmpty()) " Sponsor scaduti: ${expired.joinToString(", ")}." else "") +
                 (if (leavers.isNotEmpty()) " Lasciano: ${leavers.joinToString(", ")}." else "")
         }
@@ -2611,6 +2725,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val evento: StateFlow<Evento?> = _evento
 
     private suspend fun dopoMiaPartita(me: Long, m: MatchResult, evento: Boolean) {
+        concludiApparizioni()
         val gf = if (m.homeTeamId == me) m.homeGoals else m.awayGoals
         val gs = if (m.homeTeamId == me) m.awayGoals else m.homeGoals
         // La fama dell'allenatore cresce con i risultati

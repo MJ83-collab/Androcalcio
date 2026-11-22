@@ -83,7 +83,8 @@ fun Crest(team: Team, size: Dp = 44.dp, modifier: Modifier = Modifier) {
     val motivo = h % 5
     val mascotte = it.androcalcio.engine.Stemmi.MASCOTTE[team.name] ?: MASCOTTE[(h / 5) % MASCOTTE.size]
     val storto = ((h / 7) % 9 - 4).toFloat()   // da -4 a +4 gradi
-    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+    val apriSquadra = it.androcalcio.ui.LocalApriSquadra.current
+    Box(modifier.size(size).clickable { apriSquadra(team) }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
             val w = this.size.width; val hh = this.size.height
             val scudo = androidx.compose.ui.graphics.Path().apply {
@@ -334,7 +335,8 @@ fun FlagBox(nazione: String, modifier: Modifier = Modifier) {
         "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF))
         else -> null
     }
-    Canvas(modifier.width(18.dp).height(12.dp).border(1.dp, Color.Black.copy(alpha = 0.6f))) {
+    val apriNazione = it.androcalcio.ui.LocalApriNazione.current
+    Canvas(modifier.width(18.dp).height(12.dp).border(1.dp, Color.Black.copy(alpha = 0.6f)).clickable { apriNazione(nazione) }) {
         when {
             v != null -> v.forEachIndexed { i, c ->
                 drawRect(c, Offset(size.width / v.size * i, 0f), Size(size.width / v.size + 1f, size.height)) }

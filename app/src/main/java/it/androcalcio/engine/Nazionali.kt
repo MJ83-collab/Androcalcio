@@ -12,10 +12,24 @@ object Nazionali {
      * I convocati non giocano il club in quella giornata.
      */
     val DATE = setOf(5, 6, 11, 12, 29, 30, 35, 36)
+    /** Date dell'Under 21 (giornate diverse dalle senior): amichevoli di preparazione e qualificazioni. */
+    val DATE_U21 = setOf(8, 14, 32)
+    const val ETA_U21 = 21
+    const val SUFFISSO_U21 = " U21"
     const val CONVOCATI = 23
     const val MIN_ROSA = 11
     val EUROPA = setOf("Italia", "Spagna", "Inghilterra", "Germania", "Francia", "Portogallo", "Olanda",
         "Belgio", "Croazia", "Polonia", "Serbia")
+
+    /** Europeo Under 21 ogni due anni (stagioni che iniziano in anni dispari). */
+    fun europeoU21(annoInizio: Int) = annoInizio % 2 == 1
+
+    fun nomeU21(nazione: String) = nazione + SUFFISSO_U21
+    fun isU21(nome: String) = nome.endsWith(SUFFISSO_U21)
+    fun senzaU21(nome: String) = nome.removeSuffix(SUFFISSO_U21)
+
+    /** Giocatori di una nazione utili all'Under 21: massimo 21 anni. */
+    fun eleggibiliU21(rosa: List<Player>): List<Player> = rosa.filter { it.age <= ETA_U21 }
 
     /** Mondiali ogni quattro anni (stagioni che iniziano nel 2026, 2030…). */
     fun mondiale(annoInizio: Int) = annoInizio % 4 == 2

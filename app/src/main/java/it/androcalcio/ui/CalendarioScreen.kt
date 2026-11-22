@@ -237,7 +237,7 @@ fun CalendarioScreen(
                                     fontWeight = FontWeight.ExtraBold, color = androidx.compose.ui.graphics.Color.White)
                                 Row(Modifier.width(128.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Crest(r.team, 18.dp)
-                                    Text(r.team.name, Modifier.padding(start = 6.dp), color = c, maxLines = 1,
+                                    Text(r.team.name, Modifier.padding(start = 6.dp).apriSquadra(r.team), color = c, maxLines = 1,
                                         fontSize = 12.sp, fontWeight = if (mine) FontWeight.ExtraBold else FontWeight.Medium)
                                 }
                                 val cells = listOf(r.played, r.won, r.drawn, r.lost, r.gf, r.ga, r.gd, r.pts)
@@ -265,7 +265,7 @@ private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: In
     val w = if (mine) FontWeight.ExtraBold else FontWeight.Medium
     PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
         IconaCompetizione(m, byId[teamId]?.nazione ?: "")
-        Text(h?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w,
+        Text(h?.name ?: "?", Modifier.weight(1f).let { m -> if (h != null) m.apriSquadra(h) else m }, color = c, fontWeight = w,
             textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)
         Box(
             Modifier.padding(horizontal = 6.dp).widthIn(min = 54.dp).background(AC.Btn).padding(vertical = 3.dp),
@@ -275,7 +275,7 @@ private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: In
             Text(if (m.played) "${m.homeGoals} - ${m.awayGoals}$pens" else "-", color = Color.White,
                 fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
         }
-        Text(a?.name ?: "?", Modifier.weight(1f), color = c, fontWeight = w, fontSize = 12.sp, maxLines = 1)
+        Text(a?.name ?: "?", Modifier.weight(1f).let { m -> if (a != null) m.apriSquadra(a) else m }, color = c, fontWeight = w, fontSize = 12.sp, maxLines = 1)
     }
 }
 
