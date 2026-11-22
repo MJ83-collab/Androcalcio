@@ -1,55 +1,47 @@
-# Androcalcio — report per la nuova chat (22/11/2026)
+# Androcalcio — report (22/11/2026) · versione 0.3.0
 
-Repo `MJ83-collab/Androcalcio`, ramo `feat/pc7-meccaniche` (PR #2). Kotlin/Compose/Room, DB v24, app v0.2.0.
-Test motore in locale: 48/48 ok. **Ultima build CI non partita**: GitHub ha bloccato le Actions per un problema di pagamento/limite di spesa dell'account (Settings → Billing & plans). Ultima build verde: `d97c5f9`.
+Repo `MJ83-collab/Androcalcio`, ramo `feat/pc7-meccaniche` = `main`. Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione nuova: gli extra stanno nella tabella Stato).
+**Test motore: 87/87 ok. Build GitHub Actions: verde.** Non ho potuto provare l'app su un telefono: la parte grafica è verificata solo dalla compilazione.
 
-## Fatto finora
-- Bug: migrazioni DB, prezzo mercato, gironi Serie C, confronti tra nazioni, vendite che creavano soldi, clausole lente, stato carriera in import/export e a nuova carriera.
-- Economia estratta in `engine/Economia.kt` e testata. Difficoltà (budget iniziale) in Opzioni.
-- Grafica "mista": menu e tabelle PC Calcio 7, partita dal vivo notturna neon (ciano casa, magenta ospiti, giallo gol).
-- Home con logo + versione su una riga, prossima partita; menu laterale a scomparsa; mentalità leggibile.
-- Stemmi: scudo con colori sociali + mascotte ispirata al simbolo del club (Inter serpente, Milan diavolo, Juve zebra, Roma lupo, Torino toro…), **unica per campionato** (`engine/Stemmi.kt`, generato). Niente loghi reali.
-- Calendario: data di ogni giornata (domenica, sosta di Natale); tolta la mentalità.
-- Mercato: filtri liberi a intervallo (età 10–45, media, contratto), ruolo preciso, prezzo massimo, svincolati.
-- Gabriele Jannino: MED + DC 90 + TS 85 + TD 85 (quarto ruolo `sec4`, migrazione 23→24).
-- Avatar a fumetto procedurali: giudicati **insufficienti** dall'utente.
+## Le 20 migliorie approvate (tutte fatte)
+| # | Cosa | Dove nell'app | Note |
+|---|------|---------------|------|
+| 1 | Conferenze stampa | Stampa | 8 domande, 3 risposte con effetto su morale, tifosi, fiducia; una a giornata |
+| 2 | Colloqui individuali | Stampa | Elogio / Rassicura / Rimprovero, effetto diverso secondo il morale; uno a giornata per giocatore |
+| 3 | Psicologo | Stampa | 3 livelli, recupera morale a chi è sotto 60 a ogni partita; costo annuo |
+| 4 | Addetto marketing + 10 sponsor | Marketing | 10 tipi (maglia, tecnico, stadio, abbigliamento, manica, banca, media, retro, bevande, pantaloncini); 3 livelli di addetto: più offerte e compensi più alti |
+| 5 | Vivaio 10–16 anni | Vivaio | Crescono ogni anno; scheda dei progressi su richiesta; "Prova" (apparizione) o "Promuovi"; a 18 anni chi non è promosso lascia il vivaio |
+| 6 | Nazionali Under 21 | Nazionali | Solo IA: calendario proprio (giornate 8, 14, 32) ed Europeo U21 negli anni dispari |
+| 7 | All Star per decennio | Amichevoli (nazione "All Star") | 8 squadre (anni '50–2020), 14 giocatori ciascuna con nomi storpiati; accettano sempre |
+| 8 | Schede collegate | ovunque | Stemma/nome squadra → scheda squadra; bandiera/nazionalità → scheda nazione; nomi → scheda giocatore |
+| 9 | Difficoltà | Opzioni | 5 livelli + Personalizzata (budget, incassi, infortuni, severità dirigenza) |
+| 10 | Finestre di mercato | Prestiti | Estiva (giornate 1–3) e invernale (a metà campionato); ultimo giorno: i club accettano più facilmente |
+| 11 | Prestiti | Prestiti | Presta o prendi un giocatore fino a fine stagione; riscatto |
+| 12 | Agenti | Mercato (firme) | Commissione 2–12% dell'ingaggio per gli anni di contratto |
+| 13 | Obiettivi della dirigenza | Obiettivi | Fissati a inizio stagione dalla tua forza; bonus in denaro e fiducia |
+| 14 | Premi individuali | Obiettivi | Capocannoniere, miglior giovane, miglior portiere, giocatore e allenatore dell'anno (a fine stagione) |
+| 15 | Giornale sportivo | Giornale | Titolo, sommario e pagelle dell'ultima partita |
+| 16 | Derby | Partite | Esistevano già (coppie in `Rivalita`); ora i derby vinti contano nei trofei e nel giornale |
+| 17 | Meteo e campo | Giornale / partite | 7 tempi, 5 stati del campo; ibrido e riscaldamento aiutano; cambia le occasioni da gol |
+| 18 | Statistiche avanzate | Giornale | Tiri, xG stimato, rendimento attacco/difesa, possesso, mappa di calore dei tiri |
+| 19 | Prezzi per settore | Marketing | 4 settori, prezzo 50–200%; elasticità; effetto sugli incassi di fine stagione |
+| 20 | Achievement | Obiettivi | 29 trofei che si sbloccano da soli |
 
-## Da fare (richieste dell'utente, in ordine proposto)
-1. **Avatar stile Sakamoto Days**: disegnati a codice non raggiungono quella qualità. Proposta: immagini PNG/WebP (generate dall'utente con un'IA di immagini o un illustratore) da importare come risorse; il codice le assegna per ruolo/età/nome. Decidere quante (es. 40 volti).
-2. **Vivaio**: giovani 10–16 anni, crescono anno per anno nelle giovanili; avatar; scheda dettagliata dei progressi dall'allenatore delle giovanili (annuale o su richiesta); scelta tra "convoca per la prossima partita" e "promuovi in prima squadra".
-3. **Stadio**: almeno 30 migliorie con costo, tempi di lavoro (in giornate), ritorno economico (incassi, merchandising, tifosi), grafica dello stadio che cresce.
-4. **Sponsor**: tecnico, abbigliamento, maglia, stadio, ecc. (almeno 10 categorie); nuova figura **addetto marketing** che trova offerte migliori.
-5. **Difficoltà** più ampia (5 livelli che toccano budget, fiducia, IA avversarie, infortuni, mercato) + **profilo personalizzato**.
-6. **Nazionali Under 21** con calendari propri.
-7. **Psicologo** nello staff: migliora il morale dei giocatori in difficoltà.
-8. **Squadre All Star per decennio** (anni '60, '70, '80, '90, 2000, 2010, 2020), giocabili solo in amichevole. Nomi dei campioni **storpiati** come per le squadre (deciso dall'utente).
-9. **Tutto collegato**: in ogni scheda e in ogni riga, toccando un nome, una bandiera di nazionalità o una squadra si apre la scheda relativa (giocatore → squadra → nazionale → staff…). Serve una navigazione unica con "indietro".
+## Correzione importante
+Nell'ultimo giro (stadio e centro) gli **incassi extra e la manutenzione delle migliorie comparivano nel bilancio ma non entravano nel budget**. Ora entrano davvero (insieme agli extra nuovi: prezzi per settore, bonus obiettivo, psicologo, marketing, difficoltà).
 
-## 20 migliorie consigliate
-1. Conferenza stampa pre/post partita con risposte che toccano morale e tifosi.
-2. Colloqui individuali con i giocatori (minuti, contratto, ruolo).
-3. Infortuni con diagnosi, tempi e staff medico.
-4. Allenamento settimanale a calendario (giorni, carichi, riposo).
-5. Clausole rescissorie e prestiti con diritto di riscatto.
-6. Osservatori con rapporti a stelle e "nebbia" sui parametri.
-7. Notizie e giornale sportivo con voti in pagella.
-8. Rivalità e derby con premi extra e pressione.
-9. Obiettivi stagionali della dirigenza (salvezza, Europa, scudetto).
-10. Premi individuali (capocannoniere, miglior giovane, allenatore del mese).
-11. Storico carriera dell'allenatore con trofei e grafico.
-12. Mercato con finestre estiva/invernale e ultimo giorno.
-13. Agenti dei giocatori e commissioni.
-14. Fair play finanziario e bilancio mensile.
-15. Statistiche avanzate partita (xG, mappa di calore, passaggi).
-16. Highlights testuali/2D dei gol rivedibili.
-17. Meteo e condizioni del campo che influenzano la gara.
-18. Tifoseria: coreografie, abbonamenti, prezzi per settore.
-19. Achievement e sfide (es. vinci con squadra di Serie C).
-20. Salvataggio automatico e backup cloud/esportazione.
+## Limiti noti (onesti)
+- **Avatar stile Sakamoto Days: ancora da fare.** Servono immagini vere (PNG/WebP). Decisione aperta: le generi tu con un'IA di immagini o preparo io i prompt?
+- Difficoltà: il parametro "infortuni" sopra il 100% aggiunge infortuni solo alla tua squadra; sotto il 100% ne cura qualcuno subito.
+- Under 21: la tua nazionale personale resta solo senior.
+- "Allenatore del mese" è diventato "Allenatore dell'anno" (premio a fine stagione).
+- Le squadre All Star vivono nel database come nazione "All Star": escluse da mercato, nazionali e fine stagione, ma visibili in Squadre.
+- Salvataggi vecchi: gli extra partono da zero; l'obiettivo si fissa alla prima apertura. Per vedere i nuovi equilibri economici conviene una nuova carriera.
+- Rimasti da prima: `Insurance.ROUNDS=38` fisso, `wipe` non svuota l'albo, `androcalcio.zip` nella radice, README minimo.
 
-## Domande aperte
-- Avatar: generi tu le immagini o preferisci che prepari i prompt da usare con un'IA di immagini?
-- Ordine dei lavori: va bene quello sopra?
-- GitHub Actions: sbloccare il pagamento per tornare a compilare l'APK.
+## Prossimi passi
+1. Avatar (vedi sopra).
+2. Giocare qualche stagione per tarare economia, prezzi per settore e sponsor.
+3. Opzionale: release GitHub v0.3.0 con l'APK; chiudere la PR #1 e cancellare il ramo `feat/pc7-numeri-campo` (azione tua).
 
-Modello: per implementare basta Sonnet; Opus solo per bilanciamento/progettazione.
+Modello: per proseguire basta Sonnet (default). Opus solo per bilanciare l'economia o progettare le nuove meccaniche.
