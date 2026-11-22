@@ -49,3 +49,12 @@ Scelta: menu e tabelle in stile PC Calcio 7 (già presenti), partita dal vivo in
 - Test: aggiunto DifficoltaTest → 46/46 ok.
 
 Non verificato: l'interfaccia non è compilabile qui; la build la fa la CI sul ramo. Gli stemmi restano quelli generati dai colori (niente loghi reali dei club, per diritti).
+
+# Aggiornamento 22/11/2026 sera (v0.2.0, DB v24)
+- Stemmi: scudo storto con motivo dei colori sociali + mascotte comica, generati dal nome (originali, nessun logo reale).
+- Avatar a fumetto (contorni neri, giacca e cravatta) per allenatore, staff, osservatori e scheda giocatore.
+- Menu laterale a scomparsa (linguetta ☰ / ›).
+- Logo ANDROCALCIO su una riga con la versione.
+- Mentalità: tre pulsanti di uguale larghezza, tutti leggibili.
+- Gabriele Jannino: centrocampista (mediano) + centrale 90%, terzino sx 85%, terzino dx 85%. Nuovo quarto ruolo (sec4) con migrazione 23→24 che aggiorna anche le partite in corso.
+- Build CI: ok.
