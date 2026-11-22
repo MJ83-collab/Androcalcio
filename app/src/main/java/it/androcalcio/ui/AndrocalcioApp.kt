@@ -293,11 +293,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val ex by vm.extra.collectAsState()
                     val tutti by vm.allPlayers.collectAsState()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
-                    if (team != null) {
+                    val tm = team
+                    if (tm != null) {
                         val nomi = teams.associate { it.id to it.name }
-                        val altri = tutti.filter { p -> p.teamId != team.id && teams.any { t -> t.id == p.teamId && t.nazione == team.nazione } }
+                        val altri = tutti.filter { p -> p.teamId != tm.id && teams.any { t -> t.id == p.teamId && t.nazione == tm.nazione } }
                             .sortedByDescending { it.overall }.filter { it.overall <= 80 }
-                        PrestitiScreen(ex, team, players, altri, nomi, { vm.prestaGiocatore(it) }, { vm.prendiInPrestito(it) }, { vm.riscatta(it) })
+                        PrestitiScreen(ex, tm, players, altri, nomi, { vm.prestaGiocatore(it) }, { vm.prendiInPrestito(it) }, { vm.riscatta(it) })
                     }
                 }
                 Screen.ROSA -> {
