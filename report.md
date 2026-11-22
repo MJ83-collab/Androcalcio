@@ -1,7 +1,7 @@
 # Androcalcio — report (22/11/2026) · versione 0.3.0
 
 Repo `MJ83-collab/Androcalcio`, ramo `feat/pc7-meccaniche` = `main`. Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione nuova: gli extra stanno nella tabella Stato).
-**Test motore: 87/87 ok. Build GitHub Actions: verde.** Non ho potuto provare l'app su un telefono: la parte grafica è verificata solo dalla compilazione.
+**Test motore: 92/92 ok. Build GitHub Actions: verde.** Non ho potuto provare l'app su un telefono: la parte grafica è verificata solo dalla compilazione.
 
 ## Le 20 migliorie approvate (tutte fatte)
 | # | Cosa | Dove nell'app | Note |
@@ -31,7 +31,7 @@ Repo `MJ83-collab/Androcalcio`, ramo `feat/pc7-meccaniche` = `main`. Kotlin 2.0 
 Nell'ultimo giro (stadio e centro) gli **incassi extra e la manutenzione delle migliorie comparivano nel bilancio ma non entravano nel budget**. Ora entrano davvero (insieme agli extra nuovi: prezzi per settore, bonus obiettivo, psicologo, marketing, difficoltà).
 
 ## Limiti noti (onesti)
-- **Avatar stile Sakamoto Days: ancora da fare.** Servono immagini vere (PNG/WebP). Decisione aperta: le generi tu con un'IA di immagini o preparo io i prompt?
+- **Avatar: fatti in codice** (non immagini). 13 elementi (14 tagli, 4 forme viso, 6 occhi, barba, occhiali, extra, 10 colori giacca/capelli/sfondo, 8 carnagioni, 5 colletti): milioni di combinazioni. Il volto nasce dal nome; toccando un avatar (scheda giocatore, staff, osservatori) si apre l'editor: selettori, "Casuale", "Dal nome", "Ripristina". Le modifiche sono salvate ed entrano in export/reset. Non è lo stile Sakamoto Days vero (servirebbero illustrazioni): è un fumetto a contorni neri. Restano senza avatar liste e vivaio.
 - Difficoltà: il parametro "infortuni" sopra il 100% aggiunge infortuni solo alla tua squadra; sotto il 100% ne cura qualcuno subito.
 - Under 21: la tua nazionale personale resta solo senior.
 - "Allenatore del mese" è diventato "Allenatore dell'anno" (premio a fine stagione).
@@ -40,7 +40,7 @@ Nell'ultimo giro (stadio e centro) gli **incassi extra e la manutenzione delle m
 - Rimasti da prima: `Insurance.ROUNDS=38` fisso, `wipe` non svuota l'albo, `androcalcio.zip` nella radice, README minimo.
 
 ## Prossimi passi
-1. Avatar (vedi sopra).
+1. Mostrare gli avatar anche nel vivaio e nelle liste.
 2. Giocare qualche stagione per tarare economia, prezzi per settore e sponsor.
 3. Opzionale: release GitHub v0.3.0 con l'APK; chiudere la PR #1 e cancellare il ramo `feat/pc7-numeri-campo` (azione tua).
 
