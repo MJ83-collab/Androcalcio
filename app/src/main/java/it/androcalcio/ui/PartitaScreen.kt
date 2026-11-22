@@ -232,41 +232,60 @@ fun Pitch(
     home: Team, away: Team, bx: Float, by: Float, hf: Formation, af: Formation,
     homeXI: List<Player> = emptyList(), awayXI: List<Player> = emptyList()
 ) {
-    val homeColor = Color(home.colorPrimary)
-    val awayColor = Color(if (home.colorPrimary == away.colorPrimary) away.colorSecondary else away.colorPrimary)
+    // Stile notturno Androcalcio: prato a strisce, casa in ciano e ospiti in magenta con alone luminoso.
+    val homeColor = AC.Neon
+    val awayColor = AC.NeonPink
     val homePos = hf.coords()
     val awayPos = af.coords()
     val homeNums = numbered(homeXI)
     val awayNums = numbered(awayXI)
     val textMeasurer = rememberTextMeasurer()
-    val numStyle = TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-    Canvas(Modifier.fillMaxWidth().aspectRatio(1.6f)) {
+    val numStyle = TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+    Canvas(
+        Modifier.fillMaxWidth().aspectRatio(1.6f)
+            .border(2.dp, AC.Neon.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+            .padding(2.dp)
+    ) {
         val w = size.width; val h = size.height
-        val line = Color.White.copy(alpha = 0.6f)
+        val strisce = 12
+        for (i in 0 until strisce) drawRect(if (i % 2 == 0) AC.PitchA else AC.PitchB,
+            Offset(i * w / strisce, 0f), Size(w / strisce + 1f, h))
+        val line = Color.White.copy(alpha = 0.75f)
         val st = Stroke(width = 2f)
-        drawRect(Color(0xFF1F7A3A))
-        drawRect(line, style = st)
-        drawLine(line, Offset(w / 2, 0f), Offset(w / 2, h), 2f)
+        val m = h * 0.04f
+        drawRect(line, Offset(m, m), Size(w - 2 * m, h - 2 * m), style = st)
+        drawLine(line, Offset(w / 2, m), Offset(w / 2, h - m), 2f)
         drawCircle(line, h * 0.15f, Offset(w / 2, h / 2), style = st)
-        drawRect(line, Offset(0f, h * 0.25f), Size(w * 0.14f, h * 0.5f), style = st)
-        drawRect(line, Offset(w * 0.86f, h * 0.25f), Size(w * 0.14f, h * 0.5f), style = st)
+        drawCircle(line, 3f, Offset(w / 2, h / 2))
+        drawRect(line, Offset(m, h * 0.22f), Size(w * 0.14f, h * 0.56f), style = st)
+        drawRect(line, Offset(w - m - w * 0.14f, h * 0.22f), Size(w * 0.14f, h * 0.56f), style = st)
+        drawRect(line, Offset(m, h * 0.38f), Size(w * 0.05f, h * 0.24f), style = st)
+        drawRect(line, Offset(w - m - w * 0.05f, h * 0.38f), Size(w * 0.05f, h * 0.24f), style = st)
         val shift = (bx - 0.5f) * 0.2f
-        val r = h * 0.03f
+        val r = h * 0.038f
         fun drawNumber(n: Int, c: Offset) {
-            val m = textMeasurer.measure(n.toString(), numStyle)
-            drawText(textMeasurer, n.toString(), topLeft = Offset(c.x - m.size.width / 2f, c.y - m.size.height / 2f), style = numStyle)
+            val mm = textMeasurer.measure(n.toString(), numStyle)
+            drawText(textMeasurer, n.toString(), topLeft = Offset(c.x - mm.size.width / 2f, c.y - mm.size.height / 2f), style = numStyle)
+        }
+        fun pallino(col: Color, c: Offset) {
+            drawCircle(col.copy(alpha = 0.28f), r * 1.75f, c)
+            drawCircle(AC.Night, r, c)
+            drawCircle(col, r, c, style = Stroke(width = r * 0.32f))
         }
         homePos.forEachIndexed { i, (fx, fy) ->
-            val c = Offset((fx + shift).coerceIn(0.02f, 0.98f) * w, fy * h)
-            drawCircle(homeColor, r, c)
+            val c = Offset((fx + shift).coerceIn(0.03f, 0.97f) * w, fy * h)
+            pallino(homeColor, c)
             homeNums.firstOrNull { it.first == i + 1 }?.let { (pos, p) -> drawNumber(if (p.numero > 0) p.numero else pos, c) }
         }
         awayPos.forEachIndexed { i, (fx, fy) ->
-            val c = Offset(((1f - fx) + shift).coerceIn(0.02f, 0.98f) * w, fy * h)
-            drawCircle(awayColor, r, c)
+            val c = Offset(((1f - fx) + shift).coerceIn(0.03f, 0.97f) * w, fy * h)
+            pallino(awayColor, c)
             awayNums.firstOrNull { it.first == i + 1 }?.let { (pos, p) -> drawNumber(if (p.numero > 0) p.numero else pos, c) }
         }
-        drawCircle(Color.White, r * 0.8f, Offset(bx * w, by * h))
+        val ball = Offset(bx * w, by * h)
+        drawCircle(Color.White.copy(alpha = 0.3f), r * 1.2f, ball)
+        drawCircle(Color.White, r * 0.7f, ball)
+        drawCircle(AC.Night, r * 0.7f, ball, style = Stroke(width = 1.5f))
     }
 }
 
@@ -320,29 +339,36 @@ fun TrainingPicker(plan: TrainingPlan, onChange: (TrainingPlan) -> Unit) {
     }
 }
 
-/** Tabellone stile TV: fascia blu con le squadre, punteggio bianco al centro, minuto in azzurro, stemmi grandi. */
+/** Tabellone notturno: stemmi e nomi ai lati, punteggio grande in ciano, minuto in una pillola luminosa. */
 @Composable
 fun Scoreboard(home: Team, away: Team, hg: Int, ag: Int, status: String) {
-    val blu = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF3D63E0), Color(0xFF1C3BB0)))
-    Column(
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+    val glow = androidx.compose.ui.graphics.Shadow(AC.Neon, blurRadius = 18f)
+    Row(
         Modifier.fillMaxWidth()
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF0A1440), Color(0xFF1B5E20))))
-            .padding(vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.NightHi, AC.Night)), shape)
+            .border(1.5.dp, AC.Neon.copy(alpha = 0.55f), shape)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(home.shortName.uppercase(), Modifier.weight(1f).background(blu).padding(vertical = 8.dp),
-                color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, textAlign = TextAlign.Center)
-            Text("$hg - $ag", Modifier.background(Color.White).border(2.dp, Color(0xFFC62828)).padding(horizontal = 16.dp, vertical = 4.dp),
-                color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp)
-            Text(away.shortName.uppercase(), Modifier.weight(1f).background(blu).padding(vertical = 8.dp),
-                color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, textAlign = TextAlign.Center)
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Crest(home, 46.dp)
+            Text(home.name.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp,
+                maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
         }
-        Text(status, Modifier.background(Color(0xFF4FC3F7)).padding(horizontal = 18.dp, vertical = 2.dp),
-            color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Box(Modifier.border(3.dp, Color(0xFFD4AF37), androidx.compose.foundation.shape.CircleShape).padding(3.dp)) { Crest(home, 64.dp) }
-            Box(Modifier.border(3.dp, Color(0xFFD4AF37), androidx.compose.foundation.shape.CircleShape).padding(3.dp)) { Crest(away, 64.dp) }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$hg  $ag", color = AC.Neon, fontWeight = FontWeight.Black, fontSize = 36.sp,
+                fontFamily = it.androcalcio.ui.theme.PcTitle,
+                style = MaterialTheme.typography.headlineMedium.copy(shadow = glow))
+            Text(status, Modifier.padding(top = 2.dp)
+                .border(1.5.dp, AC.Neon, androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .padding(horizontal = 14.dp, vertical = 2.dp),
+                color = AC.Neon, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+        }
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Crest(away, 46.dp)
+            Text(away.name.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp,
+                maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }

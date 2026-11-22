@@ -62,6 +62,16 @@ object AC {
     /** Banda delle intestazioni di sezione ("GIOCATORI CONVOCATI"). */
     val SectionTop = Color(0xFF5C7BD6)
     val SectionBottom = Color(0xFF223A98)
+
+    // Stile "Androcalcio": menu e tabelle PC Calcio 7, partita dal vivo in notturna con luci neon.
+    // Ciano = la squadra di casa (e i tuoi dati in evidenza), magenta = gli ospiti. Stessi colori in tutta l'app.
+    val Night = Color(0xFF060B24)
+    val NightHi = Color(0xFF0F1A45)
+    val Neon = Color(0xFF3DE8FF)
+    val NeonPink = Color(0xFFFF3D8B)
+    val PitchA = Color(0xFF2F7D3C)
+    val PitchB = Color(0xFF29703A)
+    val GoalBanner = Color(0xFFFFE23D)
 }
 
 private fun scheme() = darkColorScheme(

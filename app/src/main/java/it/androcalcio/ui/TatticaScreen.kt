@@ -147,10 +147,10 @@ fun TacticPitch(xi: List<Player>, formation: Formation, modifier: Modifier = Mod
     val measurer = rememberTextMeasurer()
     val ordered = orderedXI(xi)
     val coords = formation.coords()
-    Canvas(modifier.fillMaxWidth().aspectRatio(1.7f).background(Color(0xFF1B5E20))) {
+    Canvas(modifier.fillMaxWidth().aspectRatio(1.7f).background(AC.PitchB)) {
         // strisce del prato
         val stripe = size.width / 12f
-        for (k in 0 until 12 step 2) drawRect(Color(0xFF2E7D32), Offset(k * stripe, 0f), Size(stripe, size.height))
+        for (k in 0 until 12 step 2) drawRect(AC.PitchA, Offset(k * stripe, 0f), Size(stripe, size.height))
         val line = Color.White.copy(alpha = 0.85f)
         val st = Stroke(2f)
         drawRect(line, Offset(6f, 6f), Size(size.width - 12f, size.height - 12f), style = st)
@@ -166,10 +166,13 @@ fun TacticPitch(xi: List<Player>, formation: Formation, modifier: Modifier = Mod
             val x = size.width * (0.05f + (c.first - 0.05f) / 0.41f * 0.78f)
             val y = size.height * (0.08f + c.second * 0.84f)
             if (p.role == "C" || p.role == "A") arrow(Offset(x + r, y), r, if (p.role == "A") Color(0xFFFFE23D) else Color.White)
-            drawCircle(if (p.role == "P") Color(0xFFFFE23D) else Color(0xFF66BB6A), r, Offset(x, y))
-            drawCircle(Color.Black, r, Offset(x, y), style = Stroke(1.5f))
+            // Stile Androcalcio: pallino notte con anello ciano (portiere giallo) e alone, come nella partita dal vivo
+            val ring = if (p.role == "P") AC.GoalBanner else AC.Neon
+            drawCircle(ring.copy(alpha = 0.28f), r * 1.6f, Offset(x, y))
+            drawCircle(AC.Night, r, Offset(x, y))
+            drawCircle(ring, r, Offset(x, y), style = Stroke(r * 0.28f))
             val label = if (p.numero > 0) "${p.numero}" else "${i + 1}"
-            val tl = measurer.measure(label, TextStyle(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black))
+            val tl = measurer.measure(label, TextStyle(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White))
             drawText(tl, topLeft = Offset(x - tl.size.width / 2f, y - tl.size.height / 2f))
         }
     }

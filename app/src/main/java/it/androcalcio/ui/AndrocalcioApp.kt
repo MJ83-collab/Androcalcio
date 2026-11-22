@@ -42,12 +42,12 @@ import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
@@ -129,7 +129,8 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     NAZIONALI("Nazionali", Icons.Filled.Star, "Convocazioni e tornei", Color(0xFF8E44AD)),
     EDITOR("Editor", Icons.Filled.Edit, "Modifica i dati", Color(0xFF7F8C8D)),
     SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita", Color(0xFF16A085)),
-    ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227))
+    ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227)),
+    OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B))
 }
 
 private val bottomTabs = listOf(
@@ -241,7 +242,17 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
             val liveInfo by vm.live.collectAsState()
             val li = liveInfo
             if (li != null) LiveMatchScreen(li, vm) else when (screen) {
-                Screen.HOME -> HomeScreen(team, players) { screen = it }
+                Screen.HOME -> {
+                    val tm = team
+                    val next = if (tm == null) null else matches
+                        .filter { !it.played && (it.homeTeamId == tm.id || it.awayTeamId == tm.id) }.minByOrNull { it.round }
+                    val oppId = next?.let { if (it.homeTeamId == tm?.id) it.awayTeamId else it.homeTeamId }
+                    HomeScreen(team, players, season, next, teams.firstOrNull { it.id == oppId }) { screen = it }
+                }
+                Screen.OPZIONI -> {
+                    val op by vm.opzioni.collectAsState()
+                    OpzioniScreen(op, { vm.setDifficolta(it) }, { vm.setVelocita(it) })
+                }
                 Screen.ROSA -> {
                     val modulo by vm.formation.collectAsState()
                     val press by vm.pressing.collectAsState()
@@ -529,7 +540,10 @@ fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
 }
 
 @Composable
-fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
+fun HomeScreen(
+    team: Team?, players: List<Player>, season: String = "",
+    prossima: it.androcalcio.data.MatchResult? = null, avversario: Team? = null, go: (Screen) -> Unit
+) {
     if (team == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Caricamento...", color = AC.TextDim)
@@ -540,6 +554,8 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(if (AC.pc7) 10.dp else 16.dp),
         verticalArrangement = Arrangement.spacedBy(if (AC.pc7) 10.dp else 12.dp)
     ) {
+        HomeBanner(team, season)
+        if (prossima != null && avversario != null) ProssimaPartitaCard(team, avversario, prossima) { go(Screen.PARTITA) }
         GlassCard(Modifier.fillMaxWidth()) {
             Row(
                 Modifier.padding(16.dp),
@@ -582,7 +598,7 @@ fun HomeScreen(team: Team?, players: List<Player>, go: (Screen) -> Unit) {
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
-            Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO
+            Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {
@@ -741,11 +757,33 @@ fun RosaScreen(
         contentPadding = PaddingValues(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        item { MediaSquadraBar(team, players) }
         item { AssistantCard(advice, onApplyXI, onApplyTattica) }
         item { RosaTable(players, onToggleStarter, { sheet = it }, onRole) }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
+    }
+}
+
+/** Testata della rosa come in PC Calcio: stemma, nome e media dei titolari a stelle. */
+@Composable
+private fun MediaSquadraBar(team: Team, players: List<Player>) {
+    val media = if (players.isEmpty()) 0 else players.sortedByDescending { it.overall }.take(11).map { it.overall }.average().toInt()
+    val shape = RoundedCornerShape(2.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.NavyTop, AC.NavyBottom)))
+            .border(2.dp, AC.NavyBorder, shape).padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Crest(team, 36.dp)
+        Column(Modifier.weight(1f).padding(start = 8.dp)) {
+            Text(team.name.uppercase(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
+            Text("MEDIA SQUADRA", color = AC.NavyText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
+        Text(stelle(media), color = AC.Accent, fontSize = 16.sp)
+        Text(" $media", color = AC.Neon, fontWeight = FontWeight.Black, fontSize = 18.sp)
     }
 }
 

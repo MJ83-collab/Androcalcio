@@ -35,3 +35,17 @@ Prestiti, oneri gestionali, premi coppa, bonus vivaio.
 2. Tengo la ricalibrazione dell'economia dopo una prova sull'APK?
 
 Modello: per l'implementazione basta quello di default (Sonnet) o anche Haiku; Opus serve solo per la taratura del bilanciamento.
+
+---
+
+# Aggiornamento grafica — 22/11/2026 (stile "misto")
+
+Scelta: menu e tabelle in stile PC Calcio 7 (già presenti), partita dal vivo in notturna neon. Colori unici per tutta l'app: **ciano = casa / tua squadra**, **magenta = ospiti**, **giallo = azioni e gol**, carta bianca per le tabelle.
+
+- **Partita dal vivo**: tabellone notturno (stemmi, punteggio ciano luminoso, minuto in pillola), barra del possesso, fascia gialla "GOL!" per 3 minuti, campo a strisce con pallini numerati e alone, barra comandi TATTICA / CAMBIO / STAT / PAUSA, pannelli apribili.
+- **Rosa**: testata con stemma e media squadra a stelle. Campo della Tattica con lo stesso stile dei pallini.
+- **Home**: logo ANDROCALCIO, stagione e budget in pillola, card "Prossima partita" (tocco = vai alla partita), voce Opzioni nel menu.
+- **Opzioni** (nuova): difficoltà Facile/Normale/Difficile (budget iniziale +50% / = / −40%, vale dalla prossima carriera), velocità predefinita della partita dal vivo, barra a tacche come PC Calcio 7.
+- Test: aggiunto DifficoltaTest → 46/46 ok.
+
+Non verificato: l'interfaccia non è compilabile qui; la build la fa la CI sul ramo. Gli stemmi restano quelli generati dai colori (niente loghi reali dei club, per diritti).

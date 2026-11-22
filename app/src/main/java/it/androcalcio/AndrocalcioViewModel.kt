@@ -1,5 +1,6 @@
 package it.androcalcio
 
+import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.DivisioneFine
 import it.androcalcio.engine.Allenatori
@@ -453,6 +454,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun playNextRound() = playRounds(false)
 
+    // ---- Opzioni (schermata Opzioni): salvate nelle preferenze ----
+    data class Opzioni(val difficolta: Int = Difficolta.NORMALE, val velocita: Int = 1)
+    private val _opzioni = MutableStateFlow(Opzioni(
+        prefs.getInt("difficolta", Difficolta.NORMALE), prefs.getInt("velocita_live", 1)))
+    val opzioni: StateFlow<Opzioni> = _opzioni
+    fun setDifficolta(d: Int) {
+        prefs.edit().putInt("difficolta", d).apply(); _opzioni.value = _opzioni.value.copy(difficolta = d)
+    }
+    fun setVelocita(v: Int) {
+        prefs.edit().putInt("velocita_live", v).apply(); _opzioni.value = _opzioni.value.copy(velocita = v)
+    }
+
     // ---- Partita dal vivo: pausa, velocità, cambi e mentalità decisi da te ----
     data class LiveInfo(
         val m: LiveMatch, val tick: Int = 0, val paused: Boolean = false, val speed: Int = 1,
@@ -487,7 +500,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             awayStile = if (userHome) Staffing.stile(staffBy, away.id) else null,
             homeTiri = if (userHome) tiriMe else SetPieces.NONE, awayTiri = if (userHome) SetPieces.NONE else tiriMe
         )
-        return LiveInfo(m, userHome = userHome, league = league)
+        return LiveInfo(m, speed = _opzioni.value.velocita, userHome = userHome, league = league)
     }
 
     private fun startTicker() {
@@ -2247,7 +2260,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         _presidente.value = Presidente.benvenuto(team.name, nome, cognome)
         _allenatore.value = "$nome $cognome"
         _started.value = true
-        viewModelScope.launch(Dispatchers.IO) { refreshSponsorOffers(team.id); refreshClub(); aggiornaClassifica() }
+        viewModelScope.launch(Dispatchers.IO) {
+            // Difficoltà scelta nelle Opzioni: cambia il budget di mercato iniziale della nuova carriera.
+            val liv = _opzioni.value.difficolta
+            if (liv != Difficolta.NORMALE) {
+                val t = dao.team(team.id)
+                dao.updateTeam(t.copy(budget = Difficolta.budgetIniziale(t.budget, liv)))
+            }
+            refreshSponsorOffers(team.id); refreshClub(); aggiornaClassifica()
+        }
     }
 
     fun selectTeam(team: Team) {

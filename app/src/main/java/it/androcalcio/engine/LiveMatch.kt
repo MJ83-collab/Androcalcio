@@ -58,6 +58,10 @@ class LiveMatch(
     var hg = 0; private set
     var ag = 0; private set
     private var hs = 0; private var asht = 0
+    /** Dati per il tabellone dal vivo: tiri e possesso stimato della squadra di casa (%). */
+    val tiriCasa get() = hs
+    val tiriOspiti get() = asht
+    val possessoCasa get() = (pHome * 100).toInt()
     val finished get() = minute >= 90
 
     // Mentalità iniziale delle squadre AI: in base al rapporto di forza
