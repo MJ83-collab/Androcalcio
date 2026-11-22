@@ -86,7 +86,7 @@ fun PartitaScreen(
 ) {
     if (team == null) return
     if (report == null) {
-        val rivals = teams.filter { it.campionato == team.campionato && it.id != team.id }
+        val rivals = teams.filter { it.nazione == team.nazione && it.campionato == team.campionato && it.id != team.id }
         var awayId by rememberSaveable { mutableStateOf(-1L) }
         val away = rivals.firstOrNull { it.id == awayId } ?: rivals.firstOrNull()
         Column(

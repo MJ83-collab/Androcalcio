@@ -77,7 +77,7 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
         val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `teams` ADD COLUMN `wageBudget` INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("UPDATE `teams` SET `wageBudget` = CAST((SELECT COALESCE(SUM(salary), 0) FROM `Player` WHERE teamId = teams.id) * 1.2 AS INTEGER)")
+                db.execSQL("UPDATE `teams` SET `wageBudget` = CAST((SELECT COALESCE(SUM(salary), 0) FROM `players` WHERE teamId = teams.id) * 1.2 AS INTEGER)")
             }
         }
         /** 17 -> 18: tabella dello stato dell'utente (fiducia, tifosi, reputazione, clima). */
@@ -122,21 +122,21 @@ abstract class AndrocalcioDatabase : RoomDatabase() {
         }
         val MIGRATION_14_15 = object : Migration(14, 15) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `Player` ADD COLUMN `numero` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `players` ADD COLUMN `numero` INTEGER NOT NULL DEFAULT 0")
             }
         }
         val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `Player` ADD COLUMN `ruoloPartita` TEXT NOT NULL DEFAULT ''")
-                db.execSQL("ALTER TABLE `Player` ADD COLUMN `sec2` TEXT NOT NULL DEFAULT ''")
-                db.execSQL("ALTER TABLE `Player` ADD COLUMN `aff2` INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("ALTER TABLE `Player` ADD COLUMN `sec3` TEXT NOT NULL DEFAULT ''")
-                db.execSQL("ALTER TABLE `Player` ADD COLUMN `aff3` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `players` ADD COLUMN `ruoloPartita` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `players` ADD COLUMN `sec2` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `players` ADD COLUMN `aff2` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `players` ADD COLUMN `sec3` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `players` ADD COLUMN `aff3` INTEGER NOT NULL DEFAULT 0")
                 // Ruoli affini di default per i giocatori esistenti, come in TacticalRoles.AFFINI
                 it.androcalcio.engine.TacticalRoles.AFFINI.forEach { (pos, affini) ->
                     val (s2, a2) = affini.getOrNull(0) ?: ("" to 0)
                     val (s3, a3) = affini.getOrNull(1) ?: ("" to 0)
-                    db.execSQL("UPDATE Player SET sec2 = '$s2', aff2 = $a2, sec3 = '$s3', aff3 = $a3 WHERE pos = '$pos'")
+                    db.execSQL("UPDATE players SET sec2 = '$s2', aff2 = $a2, sec3 = '$s3', aff3 = $a3 WHERE pos = '$pos'")
                 }
             }
         }

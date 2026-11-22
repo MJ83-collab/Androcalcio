@@ -57,19 +57,28 @@ object RoseFisse {
         else -> if (tier == 0) 72 to 62 else 62 to 54
     }
 
-    /** Genera tutti i giocatori di partenza: rose delle squadre, talento precoce e svincolati. */
-    fun genera(squadre: List<Squadra>): List<Riga> {
-        // Livello della divisione: ordine di prima comparsa dentro ogni nazione (0 = massima serie)
+    /**
+     * Livello di ogni campionato (chiave "nazione|campionato"): ordine di prima comparsa dentro la nazione,
+     * 0 = massima serie. I gironi della stessa serie ("Serie C Girone A/B/C") hanno lo stesso livello:
+     * prima ogni girone contava come una divisione a sé, con stadi e prezzi sempre più piccoli.
+     */
+    fun livelli(squadre: List<Squadra>): Map<String, Int> {
         val tierOf = mutableMapOf<String, Int>()
+        val serie = mutableMapOf<String, Int>()    // "nazione|serie" -> livello
         val perNation = mutableMapOf<String, Int>()
         for (s in squadre) {
-            val key = s.nazione + "|" + s.campionato
-            if (key !in tierOf) {
-                val t = perNation.getOrDefault(s.nazione, 0)
-                tierOf[key] = t
-                perNation[s.nazione] = t + 1
+            val serieKey = s.nazione + "|" + (if (s.campionato.startsWith("Serie C")) "Serie C" else s.campionato)
+            val livello = serie.getOrPut(serieKey) {
+                perNation.getOrDefault(s.nazione, 0).also { perNation[s.nazione] = it + 1 }
             }
+            tierOf[s.nazione + "|" + s.campionato] = livello
         }
+        return tierOf
+    }
+
+    /** Genera tutti i giocatori di partenza: rose delle squadre, talento precoce e svincolati. */
+    fun genera(squadre: List<Squadra>): List<Riga> {
+        val tierOf = livelli(squadre)
         val leagueKey = squadre.map { it.nazione + "|" + it.campionato }
         val tiers = leagueKey.map { tierOf[it] ?: 0 }
         // Posizione di ogni squadra nel suo campionato (la lista è in ordine di forza) e numero di squadre

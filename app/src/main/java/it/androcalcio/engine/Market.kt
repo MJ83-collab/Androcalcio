@@ -46,6 +46,10 @@ object Market {
         return ((value(p) * f).toLong() / 10_000L) * 10_000L
     }
 
+    /** Prezzo che il club chiede alla tua squadra: la richiesta fissa, scontata dalla reputazione dell'allenatore.
+     *  Lo usano sia la trattativa sia la risposta del club alla giornata dopo (devono coincidere). */
+    fun richiestaClub(p: Player, reputazione: Int): Long = (demand(p) * Allenatori.scontoClub(reputazione)).toLong()
+
     /** Ingaggio annuo realistico alla FM: ~8% del valore di mercato di quel livello (80 ≈ 2 M, 85 ≈ 5 M, 90 ≈ 12 M). */
     fun wageAt(level: Int, age: Int = 27): Long {
         val f = if (age < 24 || age > 32) 0.8 else 1.0
@@ -79,14 +83,4 @@ object Market {
         if (p.age < 24 && years < 3) w *= 1.10
         return (w.toLong() / 10_000L) * 10_000L
     }
-}
-
-/** Costanti di bilancio dell'economia (un solo posto dove tararle dopo le prove in gioco). */
-object Economia {
-    const val INGAGGIO_MINIMO_PER_LIVELLO = 40_000L        // (livello - 40) x 40.000 € l'anno
-    val DIRITTI_TV = listOf(18_000_000L, 5_000_000L, 1_500_000L, 600_000L)   // per divisione, scalati dal piazzamento
-    /** Riempimento dello stadio: 45% per la squadra più debole del campionato, 90% per la più forte. */
-    fun riempimento(rel: Double) = 0.45 + 0.45 * rel.coerceIn(0.0, 1.0)
-    /** Quota dei diritti TV: 60% in fondo alla classifica, 140% in cima. */
-    fun quotaTv(frac: Double) = 0.6 + 0.8 * frac.coerceIn(0.0, 1.0)
 }

@@ -1,5 +1,6 @@
 package it.androcalcio.data
 
+import it.androcalcio.engine.Economia
 import it.androcalcio.engine.Market
 import android.content.Context
 import android.graphics.Color
@@ -21,19 +22,10 @@ object SeedData {
         val text = context.assets.open("squadre.json").bufferedReader().use { it.readText() }
         val arr = JSONArray(text)
 
-        // Livello della divisione: ordine di prima comparsa dentro ogni nazione (0 = massima serie)
-        val tierOf = mutableMapOf<String, Int>()
-        val perNation = mutableMapOf<String, Int>()
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            val n = o.getString("nazione")
-            val key = n + "|" + o.getString("campionato")
-            if (key !in tierOf) {
-                val t = perNation.getOrDefault(n, 0)
-                tierOf[key] = t
-                perNation[n] = t + 1
-            }
-        }
+        // Livello della divisione (0 = massima serie); i gironi di Serie C hanno tutti lo stesso livello
+        val tierOf = RoseFisse.livelli((0 until arr.length()).map { i ->
+            arr.getJSONObject(i).let { o -> RoseFisse.Squadra(o.getString("nazione"), o.getString("campionato"), o.getString("squadra")) }
+        })
 
         val sizes = (0 until arr.length()).map { arr.getJSONObject(it).let { o -> o.getString("nazione") + "|" + o.getString("campionato") } }
             .groupingBy { it }.eachCount()
@@ -60,7 +52,7 @@ object SeedData {
                 colorSecondary = Color.parseColor(o.getString("colore2")).toLong() and 0xFFFFFFFFL,
                 budget = (budget + rng.nextLong(0, budget / 10 + 1)) / 100_000L * 100_000L,
                 stadiumCapacity = (50_000 - tier * 9_000).coerceAtLeast(3_000) + rng.nextInt(0, 4_000),
-                ticketPrice = (45 - tier * 8).coerceAtLeast(8),
+                ticketPrice = Economia.prezzoBiglietto(n, tier),
                 sponsor = o.getString("sponsor"),
                 nazione = n,
                 campionato = camp,

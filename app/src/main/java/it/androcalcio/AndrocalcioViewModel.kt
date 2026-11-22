@@ -805,7 +805,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     /** Trattativa col club: la risposta non è immediata se l'offerta è valida (arriva alla prossima giornata). */
     private suspend fun clubTalk(p: Player, buyer: Team, price: Long, years: Int): OfferResult {
         // Con reputazione alta il club chiede un po' meno
-        val d = (Market.demand(p) * Allenatori.scontoClub(dao.statoInt(StatoKeys.REPUTAZIONE))).toLong()
+        val d = Market.richiestaClub(p, dao.statoInt(StatoKeys.REPUTAZIONE))
         val squadraVenditrice = dao.playersOnce(p.teamId)
         val titolareChiave = squadraVenditrice.sortedByDescending { it.overall }.take(3).any { it.id == p.id }
         return when {
@@ -882,7 +882,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val prezzo = s.valore.toLongOrNull() ?: 0L
             if (prezzo <= 0L || dao.statoInt(MK.clubOk(pid)) == 1) continue
             val p = dao.playerById(pid) ?: continue
-            if (rng.nextInt(100) < 85 && prezzo >= Market.demand(p)) {
+            if (rng.nextInt(100) < 85 && prezzo >= Market.richiestaClub(p, dao.statoInt(StatoKeys.REPUTAZIONE))) {
                 dao.setStatoInt(MK.clubOk(pid), 1)
                 _notice.value = "${p.name}: il club accetta. Ora puoi trattare con il giocatore."
             } else {
@@ -923,11 +923,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             val price = (Market.value(p) * 0.9).toLong()
-            val buyer = teams.value.filter { it.id != me.id && it.campionato == me.campionato }
-                .randomOrNull() ?: return@launch
+            // Compra un club della tua divisione che può permetterselo (prima il denaro veniva creato dal nulla)
+            val buyer = teams.value.filter {
+                it.id != me.id && it.nazione == me.nazione && it.campionato == me.campionato && it.budget >= price
+            }.randomOrNull()
+            if (buyer == null) {
+                _offer.value = OfferResult.Rejected("Nessun club della tua divisione può permettersi ${p.name} a ${money(price)}.")
+                return@launch
+            }
             dao.updateTeam(me.copy(budget = me.budget + price))
-            dao.updateTeam(buyer.copy(budget = (buyer.budget - price).coerceAtLeast(0)))
-            dao.updatePlayer(p.copy(teamId = buyer.id))
+            dao.updateTeam(buyer.copy(budget = buyer.budget - price))
+            dao.updatePlayer(p.copy(teamId = buyer.id, starter = false))
             registra(me.id, "Vendita ${p.name} a ${buyer.name}", price, me.budget + price)
             _offer.value = OfferResult.Accepted("${p.name} ceduto a ${buyer.name} per ${money(price)}.")
         }
@@ -1698,11 +1704,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val st = finals.getValue(k)
                     val size = st.size
                     val tier = if (serieC(k)) 3 else catena.indexOf(k)
-                    val base = listOf(20_000_000L, 6_000_000L, 2_000_000L).getOrElse(tier) { 800_000L }
                     st.forEachIndexed { pos, row ->
                         val frac = (size - 1 - pos).toDouble() / (size - 1).coerceAtLeast(1)
-                        prizes[row.team.id] = (base * frac).toLong() +
-                            (Economia.DIRITTI_TV.getOrElse(tier) { 600_000L } * Economia.quotaTv(frac)).toLong()   // premio + diritti TV
+                        prizes[row.team.id] = Economia.premioStagione(tier, frac)   // premio di piazzamento + diritti TV
                         posInfo[row.team.id] = "${pos + 1}º su $size in ${k.second}"
                     }
                 }
@@ -1860,11 +1864,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     added += Progression.newYoung(t, rng, i == 0 && noKeeper)
                 }
                 val wages = keep.sumOf { it.salary } + (staffBy[t.id]?.sumOf { it.salary } ?: 0L)
-                val lg = teamsNow.filter { it.campionato == t.campionato }.map { x -> x.id to
-                    cache[x.id].orEmpty().map { it.overall }.sortedDescending().take(11).average() }
-                val lo = lg.minOf { it.second }; val hi = lg.maxOf { it.second }
-                val rel = if (hi > lo) ((lg.firstOrNull { it.first == t.id }?.second ?: lo) - lo) / (hi - lo) else 0.5
-                val gate = (t.stadiumCapacity.toLong() * t.ticketPrice * Economia.riempimento(rel) * 19).toLong()
+                // Solo le squadre della stessa nazione: "Serie A" e "Primera" esistono in più paesi
+                val lg = teamsNow.filter { it.nazione == t.nazione && it.campionato == t.campionato }.associate { x ->
+                    x.id to cache[x.id].orEmpty().map { it.overall }.sortedDescending().take(11).average() }
+                val rel = Economia.forzaRelativa(lg[t.id] ?: 0.0, lg.values)
+                val gate = Economia.incassoStadio(t.stadiumCapacity, t.ticketPrice, rel, lg.size)
                 val net = gate - wages   // monte ingaggi intero (scala reale)
                 val newLeague = moves[t.id]
                 if (t.id == me.id) {
@@ -1885,7 +1889,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.updatePlayers(updated)
             dao.deletePlayers(removed)
-            dao.deleteClausole(dao.clausoleOnce().filter { c -> updated.none { it.id == c.playerId } })
+            val idRimasti = updated.mapTo(HashSet()) { it.id }
+            dao.deleteClausole(dao.clausoleOnce().filter { c -> c.playerId !in idRimasti })
             dao.insertPlayers(added)
             // Talenti precoci: tre a stagione, in club a caso; i nomi restano da scoprire
             val talenti = it.androcalcio.engine.Talenti.genera(teamsNow, rng, 3)
@@ -2296,6 +2301,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Nuovo campionato: stessi club e giocatori; si ricomincia dalla scelta di squadra e allenatore. */
     fun nuovoCampionato() {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Una nuova carriera riparte da valori neutri: niente fiducia, sponsor o esonero ereditati.
+            DataIO.CHIAVI_STATO.forEach { k -> dao.setStato(Stato(k, "")) }
+            dao.setStato(Stato("offerte", ""))
+        }
         prefs.edit().remove("team_id").putBoolean("partita_iniziata", false).apply()
         selectedId.value = null
         _started.value = false

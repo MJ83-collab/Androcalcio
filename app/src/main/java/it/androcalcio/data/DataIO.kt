@@ -11,6 +11,10 @@ import org.json.JSONObject
 object DataIO {
     private const val FORMAT = "androcalcio-dati"
 
+    /** Chiavi di stato semplici (senza id di giocatori/squadre) che fanno parte della carriera. */
+    val CHIAVI_STATO = listOf("fiducia", "tifosi", "reputazione", "clima", "liv_allenamento", "liv_vivaio",
+        "stipendio_allenatore", "esonero", "sponsor")
+
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()
         dao.clearStaff(); dao.clearGoals(); dao.clearStats(); dao.clearClausole(); dao.clearMissions(); dao.clearConvocazioni(); dao.clearNazionaleStats(); dao.clearRosaNazionale(); dao.clearPlayers(); dao.clearTeams(); dao.clearMovimenti(); dao.clearStato()
@@ -82,7 +86,9 @@ object DataIO {
         }
         val rnJ = JSONArray()
         dao.rosaNazionale().forEach { r -> rnJ.put(JSONObject().put("playerId", r.playerId).put("nazione", r.nazione)) }
-        return JSONObject().put("formato", FORMAT).put("versione", 3).put("convocazioni", cvJ).put("nazionaleStats", nzJ)
+        val stJ = JSONObject()
+        CHIAVI_STATO.forEach { k -> dao.stato(k)?.let { stJ.put(k, it) } }
+        return JSONObject().put("formato", FORMAT).put("versione", 3).put("stato", stJ).put("convocazioni", cvJ).put("nazionaleStats", nzJ)
             .put("rosaNazionale", rnJ).put("nazioneAllenata", dao.stato("nazione_allenata").orEmpty()).put("tiri", tiriJ)
             .put("squadre", arr).put("statistiche", statJ).put("clausole", clJ).put("missioni", miJ).toString(1)
     }
@@ -207,6 +213,9 @@ object DataIO {
                 dao.setStato(Stato("ang_$tid", mappa(o.optString("ang"))))
                 dao.setStato(Stato("cap_$tid", pMap[o.optString("cap").toLongOrNull() ?: -1L]?.toString().orEmpty()))
             }
+        }
+        root.optJSONObject("stato")?.let { o ->
+            CHIAVI_STATO.forEach { k -> if (o.has(k)) dao.setStato(Stato(k, o.optString(k))) }
         }
         root.optString("nazioneAllenata", "").takeIf { it.isNotEmpty() }?.let { dao.setStato(Stato("nazione_allenata", it)) }
         root.optJSONArray("nazionaleStats")?.let { a ->
