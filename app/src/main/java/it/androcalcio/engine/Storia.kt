@@ -31,7 +31,7 @@ object Storia {
     /** Risultati della tua stagione in ordine di giornata: (gol fatti, gol subiti). */
     fun nuoviRecord(vecchi: Record, risultati: List<Pair<Int, Int>>, stagione: String): Record {
         if (risultati.isEmpty()) return vecchi
-        val punti = risultati.sumOf { (a, b) -> if (a > b) 3 else if (a == b) 1 else 0 }
+        val punti = risultati.fold(0) { acc, r -> acc + (if (r.first > r.second) 3 else if (r.first == r.second) 1 else 0) }
         val gf = risultati.sumOf { it.first }; val gs = risultati.sumOf { it.second }
         var serie = 0; var best = 0
         risultati.forEach { (a, b) -> if (a >= b) { serie++; best = maxOf(best, serie) } else serie = 0 }
