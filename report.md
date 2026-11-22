@@ -1,60 +1,53 @@
-# Report Androcalcio — sessione del 22/11/2026
+# Androcalcio — report per la nuova chat (22/11/2026)
 
-Ramo: `feat/pc7-meccaniche` (PR #2, non unita). Test del motore in locale: **45/45 ok** (prima 36).
+Repo `MJ83-collab/Androcalcio`, ramo `feat/pc7-meccaniche` (PR #2). Kotlin/Compose/Room, DB v24, app v0.2.0.
+Test motore in locale: 48/48 ok. **Ultima build CI non partita**: GitHub ha bloccato le Actions per un problema di pagamento/limite di spesa dell'account (Settings → Billing & plans). Ultima build verde: `d97c5f9`.
 
-## Bug corretti
-- **Crash migrazioni DB**: nelle migrazioni 13→14, 14→15, 16→17 la tabella era chiamata `Player` invece di `players`.
-- **Prezzo mercato incoerente**: trattativa e risposta del club usavano formule diverse. Ora un'unica `Market.richiestaClub`.
-- **Serie C**: i 3 gironi avevano livelli diversi in rose e stadi. Ora `RoseFisse.livelli` li tratta come un solo livello (CSV congelato invariato, verificato dal test).
-- **Confronti tra campionati**: economia, vendite e rivali in PartitaScreen mischiavano squadre di nazioni diverse. Ora filtrano nazione + campionato.
-- **Soldi dal nulla in vendita**: `sell()` ora richiede un acquirente della stessa divisione con budget sufficiente e lo scala.
-- **Clausole**: pulizia O(n²) resa lineare.
-- **Salvataggio/import JSON**: fiducia, tifosi, reputazione, clima, livelli strutture, stipendio allenatore, esonero e sponsor ora vengono esportati e ripristinati.
-- **Nuovo campionato**: non eredita più stato (fiducia, sponsor, esonero, offerte) dalla carriera precedente.
+## Fatto finora
+- Bug: migrazioni DB, prezzo mercato, gironi Serie C, confronti tra nazioni, vendite che creavano soldi, clausole lente, stato carriera in import/export e a nuova carriera.
+- Economia estratta in `engine/Economia.kt` e testata. Difficoltà (budget iniziale) in Opzioni.
+- Grafica "mista": menu e tabelle PC Calcio 7, partita dal vivo notturna neon (ciano casa, magenta ospiti, giallo gol).
+- Home con logo + versione su una riga, prossima partita; menu laterale a scomparsa; mentalità leggibile.
+- Stemmi: scudo con colori sociali + mascotte ispirata al simbolo del club (Inter serpente, Milan diavolo, Juve zebra, Roma lupo, Torino toro…), **unica per campionato** (`engine/Stemmi.kt`, generato). Niente loghi reali.
+- Calendario: data di ogni giornata (domenica, sosta di Natale); tolta la mentalità.
+- Mercato: filtri liberi a intervallo (età 10–45, media, contratto), ruolo preciso, prezzo massimo, svincolati.
+- Gabriele Jannino: MED + DC 90 + TS 85 + TD 85 (quarto ruolo `sec4`, migrazione 23→24).
+- Avatar a fumetto procedurali: giudicati **insufficienti** dall'utente.
 
-## Economia
-Estratta in `engine/Economia.kt` (funzioni pure, testate). Il PDF partiva dall'idea che i club fossero in bancarotta: dal codice risultava l'opposto (entrate troppo generose). Ricalibrati: quota incasso stadio 55%, riempimento 45–90% in base alla forza, premi e diritti TV per divisione, prezzi biglietto per divisione/nazione. **Da verificare giocando**: i numeri vanno provati su una partita vera.
+## Da fare (richieste dell'utente, in ordine proposto)
+1. **Avatar stile Sakamoto Days**: disegnati a codice non raggiungono quella qualità. Proposta: immagini PNG/WebP (generate dall'utente con un'IA di immagini o un illustratore) da importare come risorse; il codice le assegna per ruolo/età/nome. Decidere quante (es. 40 volti).
+2. **Vivaio**: giovani 10–16 anni, crescono anno per anno nelle giovanili; avatar; scheda dettagliata dei progressi dall'allenatore delle giovanili (annuale o su richiesta); scelta tra "convoca per la prossima partita" e "promuovi in prima squadra".
+3. **Stadio**: almeno 30 migliorie con costo, tempi di lavoro (in giornate), ritorno economico (incassi, merchandising, tifosi), grafica dello stadio che cresce.
+4. **Sponsor**: tecnico, abbigliamento, maglia, stadio, ecc. (almeno 10 categorie); nuova figura **addetto marketing** che trova offerte migliori.
+5. **Difficoltà** più ampia (5 livelli che toccano budget, fiducia, IA avversarie, infortuni, mercato) + **profilo personalizzato**.
+6. **Nazionali Under 21** con calendari propri.
+7. **Psicologo** nello staff: migliora il morale dei giocatori in difficoltà.
 
-## Test aggiunti
-EconomiaTest (monotonia premi, range, prezzi, incasso) e FixturesTest (andata/ritorno, nessun doppio impegno, casi limite).
+## 20 migliorie consigliate
+1. Conferenza stampa pre/post partita con risposte che toccano morale e tifosi.
+2. Colloqui individuali con i giocatori (minuti, contratto, ruolo).
+3. Infortuni con diagnosi, tempi e staff medico.
+4. Allenamento settimanale a calendario (giorni, carichi, riposo).
+5. Clausole rescissorie e prestiti con diritto di riscatto.
+6. Osservatori con rapporti a stelle e "nebbia" sui parametri.
+7. Notizie e giornale sportivo con voti in pagella.
+8. Rivalità e derby con premi extra e pressione.
+9. Obiettivi stagionali della dirigenza (salvezza, Europa, scudetto).
+10. Premi individuali (capocannoniere, miglior giovane, allenatore del mese).
+11. Storico carriera dell'allenatore con trofei e grafico.
+12. Mercato con finestre estiva/invernale e ultimo giorno.
+13. Agenti dei giocatori e commissioni.
+14. Fair play finanziario e bilancio mensile.
+15. Statistiche avanzate partita (xG, mappa di calore, passaggi).
+16. Highlights testuali/2D dei gol rivedibili.
+17. Meteo e condizioni del campo che influenzano la gara.
+18. Tifoseria: coreografie, abbonamenti, prezzi per settore.
+19. Achievement e sfide (es. vinci con squadra di Serie C).
+20. Salvataggio automatico e backup cloud/esportazione.
 
-## CI
-Il workflow ora parte anche su push di `feat/**` e sulle pull request, quindi esegue `testDebugUnitTest` e `assembleDebug`. Aggiunto `.gitignore` per `app/build/`.
+## Domande aperte
+- Avatar: generi tu le immagini o preferisci che prepari i prompt da usare con un'IA di immagini?
+- Ordine dei lavori: va bene quello sopra?
+- GitHub Actions: sbloccare il pagamento per tornare a compilare l'APK.
 
-## Non verificato
-- L'APK **non è stato compilato** qui (niente Android SDK): le modifiche a ViewModel, UI e Room sono state controllate solo leggendo il codice. Serve la build della CI.
-- Non ho potuto lanciare il workflow da GitHub (token non valido).
-- I salvataggi esistenti mantengono i vecchi dati degli stadi di Serie C: **iniziare una NUOVA partita**.
-- `Insurance.ROUNDS=38` fisso; `wipe` non svuota l'albo; `androcalcio.zip` in radice; README minimale.
-
-## Idee del PDF non implementate
-Prestiti, oneri gestionali, premi coppa, bonus vivaio.
-
-## Domande per te
-1. Mi mandi l'input grafico?
-2. Tengo la ricalibrazione dell'economia dopo una prova sull'APK?
-
-Modello: per l'implementazione basta quello di default (Sonnet) o anche Haiku; Opus serve solo per la taratura del bilanciamento.
-
----
-
-# Aggiornamento grafica — 22/11/2026 (stile "misto")
-
-Scelta: menu e tabelle in stile PC Calcio 7 (già presenti), partita dal vivo in notturna neon. Colori unici per tutta l'app: **ciano = casa / tua squadra**, **magenta = ospiti**, **giallo = azioni e gol**, carta bianca per le tabelle.
-
-- **Partita dal vivo**: tabellone notturno (stemmi, punteggio ciano luminoso, minuto in pillola), barra del possesso, fascia gialla "GOL!" per 3 minuti, campo a strisce con pallini numerati e alone, barra comandi TATTICA / CAMBIO / STAT / PAUSA, pannelli apribili.
-- **Rosa**: testata con stemma e media squadra a stelle. Campo della Tattica con lo stesso stile dei pallini.
-- **Home**: logo ANDROCALCIO, stagione e budget in pillola, card "Prossima partita" (tocco = vai alla partita), voce Opzioni nel menu.
-- **Opzioni** (nuova): difficoltà Facile/Normale/Difficile (budget iniziale +50% / = / −40%, vale dalla prossima carriera), velocità predefinita della partita dal vivo, barra a tacche come PC Calcio 7.
-- Test: aggiunto DifficoltaTest → 46/46 ok.
-
-Non verificato: l'interfaccia non è compilabile qui; la build la fa la CI sul ramo. Gli stemmi restano quelli generati dai colori (niente loghi reali dei club, per diritti).
-
-# Aggiornamento 22/11/2026 sera (v0.2.0, DB v24)
-- Stemmi: scudo storto con motivo dei colori sociali + mascotte comica, generati dal nome (originali, nessun logo reale).
-- Avatar a fumetto (contorni neri, giacca e cravatta) per allenatore, staff, osservatori e scheda giocatore.
-- Menu laterale a scomparsa (linguetta ☰ / ›).
-- Logo ANDROCALCIO su una riga con la versione.
-- Mentalità: tre pulsanti di uguale larghezza, tutti leggibili.
-- Gabriele Jannino: centrocampista (mediano) + centrale 90%, terzino sx 85%, terzino dx 85%. Nuovo quarto ruolo (sec4) con migrazione 23→24 che aggiorna anche le partite in corso.
-- Build CI: ok.
+Modello: per implementare basta Sonnet; Opus solo per bilanciamento/progettazione.
