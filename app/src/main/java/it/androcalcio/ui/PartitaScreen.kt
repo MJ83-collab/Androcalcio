@@ -212,8 +212,8 @@ private fun pcEventColor(t: EventType): Color = when (t) {
 
 /** Scelta a pulsante (stile PC 7) oppure chip Material. */
 @Composable
-private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
-    if (AC.pc7) PcButton(label, onClick, main = selected)
+private fun Choice(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    if (AC.pc7) PcButton(label, onClick, modifier, main = selected, compatto = true)
     else PcChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
@@ -295,7 +295,7 @@ fun MentalityPicker(current: Mentality, onPick: (Mentality) -> Unit) {
     SectionTitle("Mentalità")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Mentality.values().forEach { m ->
-            Choice(m.label, m == current) { onPick(m) }
+            Choice(m.label, m == current, Modifier.weight(1f)) { onPick(m) }
         }
     }
 }

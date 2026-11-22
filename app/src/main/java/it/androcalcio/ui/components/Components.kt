@@ -65,33 +65,53 @@ fun Modifier.bevel(raised: Boolean = true, w: Dp = 2.dp): Modifier = this.drawBe
 /** Sfumatura verticale dei pulsanti PC 7. */
 val BtnGradient = Brush.verticalGradient(listOf(Color(0xFF30303C), Color(0xFF07070B)))
 
-/** Stemma generato dai colori della squadra: due tinte in diagonale e la sigla. */
+/** Mascotte comiche degli stemmi: scelte dal nome della squadra, sempre la stessa per lo stesso club. */
+private val MASCOTTE = listOf("🐂", "🦁", "🐺", "🐍", "🦅", "🐓", "🐗", "🐴", "🐟", "🦆", "🐐", "🦊",
+    "🐻", "🐝", "🐸", "🦈", "🐧", "🐷", "🦉", "🐌", "🦀", "🐊", "🦬", "🐿")
+
+/**
+ * Stemma originale e un po' comico: scudo storto con il motivo dei colori sociali (strisce, bande, metà...)
+ * e una mascotte al centro. È generato dal nome: niente loghi reali dei club.
+ */
 @Composable
 fun Crest(team: Team, size: Dp = 44.dp, modifier: Modifier = Modifier) {
     val c1 = Color(team.colorPrimary)
     val c2 = Color(team.colorSecondary)
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(
-                Brush.linearGradient(
-                    colorStops = arrayOf(0f to c1, 0.5f to c1, 0.5f to c2, 1f to c2)
-                )
-            )
-            .border(if (AC.pc7) (size.value * 0.06f).coerceAtLeast(2f).dp else 2.dp,
-                if (AC.pc7) Brush.linearGradient(listOf(Color(0xFFFFE9A0), Color(0xFFB8860B), Color(0xFFFFD86B)))
-                else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.3f))), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            team.shortName,
-            color = Color.White,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = (size.value * 0.3f).sp,
-            style = MaterialTheme.typography.labelSmall.copy(
-                shadow = Shadow(Color.Black, blurRadius = 6f)
-            )
+    val h = Math.floorMod(team.name.hashCode(), 1_000_003)
+    val motivo = h % 5
+    val mascotte = MASCOTTE[(h / 5) % MASCOTTE.size]
+    val storto = ((h / 7) % 9 - 4).toFloat()   // da -4 a +4 gradi
+    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(size)) {
+            val w = this.size.width; val hh = this.size.height
+            val scudo = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w * 0.10f, hh * 0.08f)
+                quadraticBezierTo(w * 0.5f, hh * 0.16f, w * 0.90f, hh * 0.08f)
+                lineTo(w * 0.90f, hh * 0.50f)
+                quadraticBezierTo(w * 0.88f, hh * 0.80f, w * 0.5f, hh * 0.96f)
+                quadraticBezierTo(w * 0.12f, hh * 0.80f, w * 0.10f, hh * 0.50f)
+                close()
+            }
+            androidx.compose.ui.graphics.drawscope.rotate(storto) {
+                androidx.compose.ui.graphics.drawscope.clipPath(scudo) {
+                    drawRect(c1)
+                    when (motivo) {
+                        0 -> for (i in 0 until 5 step 2) drawRect(c2, Offset(w * (0.1f + i * 0.16f), 0f), Size(w * 0.16f, hh))
+                        1 -> drawRect(c2, Offset(w / 2, 0f), Size(w / 2, hh))
+                        2 -> drawLine(c2, Offset(0f, 0f), Offset(w, hh), strokeWidth = w * 0.26f)
+                        3 -> for (i in 0 until 5 step 2) drawRect(c2, Offset(0f, hh * (0.1f + i * 0.17f)), Size(w, hh * 0.17f))
+                        else -> { drawRect(c2, Offset(w / 2, 0f), Size(w / 2, hh / 2)); drawRect(c2, Offset(0f, hh / 2), Size(w / 2, hh / 2)) }
+                    }
+                }
+                drawPath(scudo, Color.Black, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
+                drawPath(scudo, if (AC.pc7) Color(0xFFFFD86B) else Color.White,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.04f))
+            }
+        }
+        Text(mascotte, fontSize = (size.value * 0.40f).sp, modifier = Modifier.padding(bottom = (size.value * 0.06f).dp))
+        if (size >= 40.dp) Text(
+            team.shortName, Modifier.align(Alignment.BottomCenter).background(Color.Black.copy(alpha = 0.75f)).padding(horizontal = 3.dp),
+            color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.17f).sp, maxLines = 1
         )
     }
 }
@@ -127,7 +147,8 @@ fun PcButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     main: Boolean = false,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    compatto: Boolean = false
 ) {
     Box(
         modifier = modifier
@@ -136,14 +157,14 @@ fun PcButton(
             .border(2.dp, if (main) AC.Accent else AC.BtnBorder, RoundedCornerShape(3.dp))
             .bevel()
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .padding(horizontal = if (compatto) 4.dp else 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text.uppercase(Locale.ITALY),
             color = if (!enabled) AC.BtnBorder else if (main) AC.Accent else Color.White,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 13.sp,
+            fontSize = if (compatto) 12.sp else 13.sp,
             letterSpacing = 0.8.sp,
             maxLines = 1
         )

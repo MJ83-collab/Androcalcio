@@ -47,6 +47,7 @@ object TacticalRoles {
             r == p.pos -> 1.0
             r == p.sec2 -> p.aff2 / 100.0
             r == p.sec3 -> p.aff3 / 100.0
+            r == p.sec4 -> p.aff4 / 100.0
             else -> 1.0
         }
     }
@@ -55,6 +56,7 @@ object TacticalRoles {
     fun options(p: Player): List<Pair<String, Int>> = listOfNotNull(
         p.pos.takeIf { it.isNotEmpty() }?.let { it to 100 },
         p.sec2.takeIf { it.isNotEmpty() }?.let { it to p.aff2 },
-        p.sec3.takeIf { it.isNotEmpty() }?.let { it to p.aff3 }
+        p.sec3.takeIf { it.isNotEmpty() }?.let { it to p.aff3 },
+        p.sec4.takeIf { it.isNotEmpty() }?.let { it to p.aff4 }
     )
 }

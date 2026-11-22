@@ -19,9 +19,9 @@ object RoseFisse {
 
     /** Colonne del CSV, nell'ordine usato da [toCsv] e [fromCsv]. */
     const val INTESTAZIONE = "squadra|ruolo|eta|overall|morale|salario|nazionalita|potenziale|contratto|" +
-        "nome|ve|re|ag|qu|fo|gm|en|pa|dr|fi|ti|ri|piede|pos|sec2|aff2|sec3|aff3"
+        "nome|ve|re|ag|qu|fo|gm|en|pa|dr|fi|ti|ri|piede|pos|sec2|aff2|sec3|aff3|sec4|aff4"
 
-    private const val COLONNE = 28
+    private const val COLONNE = 30
     private const val SEME_SVINCOLATI = 20_260_101
     private const val SEME_TALENTI = 20_260_102
 
@@ -156,7 +156,10 @@ object RoseFisse {
 
         // Talento precoce di partenza: nella Valceresio
         squadre.indexOfFirst { it.nome == "Valceresio" }.takeIf { it >= 0 }?.let { idx ->
-            righe += Riga(squadre[idx].nome, Talenti.nuovo(0L, "Gabriele Jannino", Random(SEME_TALENTI)))
+            // Centrocampista (mediano) che gioca anche centrale, terzino sinistro e destro
+            val g = Talenti.nuovo(0L, "Gabriele Jannino", Random(SEME_TALENTI))
+                .copy(role = "C", pos = "MED", sec2 = "DC", aff2 = 90, sec3 = "TS", aff3 = 85, sec4 = "TD", aff4 = 85)
+            righe += Riga(squadre[idx].nome, g)
         }
 
         // Svincolati di partenza: ruoli e livelli vari, stipendio da firmare
@@ -189,7 +192,7 @@ object RoseFisse {
             val campi = listOf(
                 r.squadra, p.role, p.age, p.overall, p.morale, p.salary, p.nationality, p.potential, p.contract,
                 p.name, p.ve, p.re, p.ag, p.qu, p.fo, p.gm, p.en, p.pa, p.dr, p.fi, p.ti, p.ri,
-                p.foot, p.pos, p.sec2, p.aff2, p.sec3, p.aff3
+                p.foot, p.pos, p.sec2, p.aff2, p.sec3, p.aff3, p.sec4, p.aff4
             )
             append(campi.joinToString("|")).append('\n')
         }
@@ -211,7 +214,7 @@ object RoseFisse {
                     fo = c[14].toInt(), gm = c[15].toInt(), en = c[16].toInt(), pa = c[17].toInt(),
                     dr = c[18].toInt(), fi = c[19].toInt(), ti = c[20].toInt(), ri = c[21].toInt(),
                     foot = c[22], pos = c[23],
-                    sec2 = c[24], aff2 = c[25].toInt(), sec3 = c[26], aff3 = c[27].toInt()
+                    sec2 = c[24], aff2 = c[25].toInt(), sec3 = c[26], aff3 = c[27].toInt(), sec4 = c[28], aff4 = c[29].toInt()
                 )
             )
         }

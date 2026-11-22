@@ -80,9 +80,10 @@ fun PlayerSheet(
         title = null,
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.fillMaxWidth().background(AC.ColBlue).padding(8.dp)) {
+                Row(Modifier.fillMaxWidth().background(AC.ColBlue).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    it.androcalcio.ui.components.Avatar(p.name, 48.dp)
                     Text((if (p.numero > 0) "${p.numero}  " else "") + p.name.uppercase(), color = Color.White,
-                        fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                        fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, modifier = Modifier.padding(start = 10.dp))
                 }
                 Text(Attr.posName(p).uppercase(), fontWeight = FontWeight.ExtraBold, color = AC.PaperText, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

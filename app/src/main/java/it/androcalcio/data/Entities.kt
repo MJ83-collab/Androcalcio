@@ -62,6 +62,9 @@ data class Player(
     @ColumnInfo(defaultValue = "0") val aff2: Int = 0,
     @ColumnInfo(defaultValue = "") val sec3: String = "",
     @ColumnInfo(defaultValue = "0") val aff3: Int = 0,
+    // Quarto ruolo (v24): per i giocatori molto duttili, vuoto = nessuno
+    @ColumnInfo(defaultValue = "") val sec4: String = "",
+    @ColumnInfo(defaultValue = "0") val aff4: Int = 0,
     // Numero di maglia (v15): deciso a inizio stagione dall'allenatore in seconda; 0 = non ancora assegnato
     @ColumnInfo(defaultValue = "0") val numero: Int = 0
 )

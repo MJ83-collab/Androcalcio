@@ -140,6 +140,7 @@ private val bottomTabs = listOf(
 @Composable
 private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
+    var menuAperto by rememberSaveable { mutableStateOf(false) }
     val teams by vm.teams.collectAsState()
     val team by vm.selectedTeam.collectAsState()
     val players by vm.players.collectAsState()
@@ -394,7 +395,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 else -> ComingSoon(screen)
             }
         }
-        SideMenu(screen) { screen = it }
+        // Menu laterale a scomparsa: chiuso resta solo una linguetta, così le schermate hanno tutto lo spazio
+        MenuLinguetta(menuAperto) { menuAperto = !menuAperto }
+        if (menuAperto) SideMenu(screen) { screen = it; menuAperto = false }
         }
         }
     }
@@ -482,6 +485,20 @@ fun HeaderBarPc7(team: Team?, season: String, screen: Screen) {
 }
 
 /** Menu laterale: in PC 7 colonna di pulsanti navy in rilievo con icona e voce su una riga sola. */
+/** Linguetta del menu laterale: ☰ per aprirlo, › per chiuderlo. */
+@Composable
+private fun MenuLinguetta(aperto: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.width(26.dp).fillMaxHeight()
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(AC.NavyTop, AC.NavyBottom)))
+            .border(1.dp, AC.NavyBorder)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(if (aperto) "›" else "☰", color = AC.Accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
+    }
+}
+
 @Composable
 fun SideMenu(current: Screen, onSelect: (Screen) -> Unit) {
     if (AC.pc7) {

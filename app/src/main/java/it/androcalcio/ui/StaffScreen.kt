@@ -3,6 +3,13 @@ package it.androcalcio.ui
 import it.androcalcio.ui.components.PcAction
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import it.androcalcio.ui.components.Avatar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -95,7 +102,13 @@ fun StaffScreen(
             items(posti) { posto ->
                 val s = staff.firstOrNull { Staffing.stessoPosto(it, posto) }
                 GlassCard(Modifier.fillMaxWidth().then(if (s != null) Modifier.clickable { aperto = s } else Modifier)) {
-                    Column(Modifier.padding(12.dp)) {
+                    Row(Modifier.padding(start = 12.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val chi = if (posto.role == Staffing.ALLENATORE && allenatore != null) allenatore else s?.name
+                    if (chi != null) Avatar(chi, 52.dp)
+                    else Box(Modifier.size(52.dp).background(AC.Surface, CircleShape), contentAlignment = Alignment.Center) {
+                        Text("?", color = AC.TextDim, fontWeight = FontWeight.Black)
+                    }
+                    Column(Modifier.padding(start = 0.dp, end = 12.dp, bottom = 12.dp).padding(horizontal = 12.dp)) {
                         Text(Staffing.roleName(posto.role, posto.specialita), style = MaterialTheme.typography.titleSmall)
                         if (posto.role == Staffing.ALLENATORE && allenatore != null) {
                             // Tu: la squadra che scegli la alleni tu
@@ -109,6 +122,7 @@ fun StaffScreen(
                                 Text("${punteggio(s.skill)} · ${s.name}", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                    }
                     }
                 }
             }
@@ -126,13 +140,16 @@ fun StaffScreen(
         items(osservatori) { s ->
             val m = missioni.firstOrNull { it.staffId == s.id }
             GlassCard(Modifier.fillMaxWidth().clickable { aperto = s }) {
-                Column(Modifier.padding(12.dp)) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Avatar(s.name, 44.dp)
+                Column(Modifier.padding(start = 12.dp)) {
                     Text("Osservatore · ${s.name}", style = MaterialTheme.typography.titleSmall)
                     Text(stelleTesto(s.skill), color = AC.Accent)
                     Text(
                         if (m == null) "Disponibile" else "In missione in ${m.area}: rientro tra ${m.giornate} giornate",
                         color = if (m == null) AC.Ok else AC.TextDim, style = MaterialTheme.typography.bodySmall
                     )
+                }
                 }
             }
         }

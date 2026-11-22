@@ -707,7 +707,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun apprendiRuolo(p: Player): Player {
         val r = TacticalRoles.assigned(p)
         if (r.isEmpty() || r == p.pos) return p
-        if ((r == p.sec2 && p.aff2 >= 100) || (r == p.sec3 && p.aff3 >= 100)) return p
+        if ((r == p.sec2 && p.aff2 >= 100) || (r == p.sec3 && p.aff3 >= 100) || (r == p.sec4 && p.aff4 >= 100)) return p
         val key = "esp_${p.id}_$r"
         val n = (dao.stato(key)?.toIntOrNull() ?: 0) + 1
         dao.setStato(Stato(key, n.toString()))
@@ -715,6 +715,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         return when {
             r == p.sec2 -> p.copy(aff2 = 100)
             r == p.sec3 -> p.copy(aff3 = 100)
+            r == p.sec4 -> p.copy(aff4 = 100)
             p.sec2.isEmpty() -> p.copy(sec2 = r, aff2 = 100)
             else -> p.copy(sec3 = r, aff3 = 100)   // sostituisce il terzo ruolo
         }

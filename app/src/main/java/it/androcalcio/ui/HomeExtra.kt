@@ -15,6 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -48,8 +50,18 @@ fun HomeBanner(team: Team, season: String) {
             .border(2.dp, AC.NavyBorder, shape)
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
-        Text("ANDROCALCIO", color = AC.Accent, fontFamily = PcTitle, fontSize = 30.sp, letterSpacing = 1.sp,
-            style = MaterialTheme.typography.headlineMedium.copy(shadow = Shadow(Color.Black, Offset(2f, 3f), 4f)))
+        val ctx = LocalContext.current
+        val versione = remember {
+            runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: ""
+        }
+        // Logo e versione sulla stessa riga: il logo non va mai a capo
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("ANDROCALCIO", Modifier.weight(1f, fill = false), color = AC.Accent, fontFamily = PcTitle, fontSize = 22.sp,
+                letterSpacing = 0.5.sp, maxLines = 1, softWrap = false,
+                style = MaterialTheme.typography.headlineMedium.copy(shadow = Shadow(Color.Black, Offset(2f, 3f), 4f)))
+            if (versione.isNotEmpty()) Text("v$versione", Modifier.padding(start = 8.dp, bottom = 3.dp),
+                color = AC.NavyText, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(if (season.isEmpty()) team.campionato else "Stagione $season · ${team.campionato}",
                 Modifier.weight(1f), color = AC.NavyText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
