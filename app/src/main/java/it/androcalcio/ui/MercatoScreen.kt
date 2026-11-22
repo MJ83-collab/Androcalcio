@@ -1,5 +1,12 @@
 package it.androcalcio.ui
 
+import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.Slider
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import it.androcalcio.engine.FiltroMercato
+import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
@@ -88,8 +95,12 @@ fun MercatoScreen(
     var tab by rememberSaveable { mutableStateOf(0) }
     var affordable by rememberSaveable { mutableStateOf(true) }
     var showFilters by rememberSaveable { mutableStateOf(false) }
-    var ageFilter by rememberSaveable { mutableStateOf(0) }     // 0 tutti · 1 fino a 23 · 2 24-29 · 3 dai 30
-    var minOvr by rememberSaveable { mutableStateOf(0) }        // 0 tutte · 70 · 80 (media minima)
+    // Filtri liberi: intervalli scelti da te (età, media, contratto), ruolo preciso, prezzo massimo
+    var eta by remember { mutableStateOf(10f..45f) }
+    var media by remember { mutableStateOf(1f..99f) }
+    var contr by remember { mutableStateOf(0f..5f) }
+    var posFiltro by rememberSaveable { mutableStateOf("") }
+    var prezzoMaxM by remember { mutableStateOf(0f) }        // milioni, 0 = nessun limite
     var onlyFree by rememberSaveable { mutableStateOf(false) }  // solo svincolati
     var target by remember { mutableStateOf<Player?>(null) }
     var amount by remember { mutableStateOf(0L) }
@@ -125,19 +136,31 @@ fun MercatoScreen(
                 }
             }
             if (showFilters) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    item { PcChip(selected = ageFilter == 1, onClick = { ageFilter = if (ageFilter == 1) 0 else 1 }, label = { Text("Under 23") }) }
-                    item { PcChip(selected = ageFilter == 2, onClick = { ageFilter = if (ageFilter == 2) 0 else 2 }, label = { Text("24-29") }) }
-                    item { PcChip(selected = ageFilter == 3, onClick = { ageFilter = if (ageFilter == 3) 0 else 3 }, label = { Text("30+") }) }
-                    item { PcChip(selected = minOvr == 70, onClick = { minOvr = if (minOvr == 70) 0 else 70 }, label = { Text("Media 70+") }) }
-                    item { PcChip(selected = minOvr == 80, onClick = { minOvr = if (minOvr == 80) 0 else 80 }, label = { Text("Media 80+") }) }
-                    item { PcChip(selected = onlyFree, onClick = { onlyFree = !onlyFree }, label = { Text("Svincolati") }) }
+                Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                    Text("Età ${eta.start.toInt()}–${eta.endInclusive.toInt()} anni", color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    RangeSlider(value = eta, onValueChange = { eta = it }, valueRange = 10f..45f, steps = 34)
+                    Text("Media ${media.start.toInt()}–${media.endInclusive.toInt()}", color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    RangeSlider(value = media, onValueChange = { media = it }, valueRange = 1f..99f, steps = 97)
+                    Text("Contratto ${contr.start.toInt()}–${contr.endInclusive.toInt()} anni", color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    RangeSlider(value = contr, onValueChange = { contr = it }, valueRange = 0f..5f, steps = 4)
+                    Text(if (prezzoMaxM <= 0f) "Prezzo massimo: nessun limite" else "Prezzo massimo ${prezzoMaxM.toInt()} M",
+                        color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Slider(value = prezzoMaxM, onValueChange = { prezzoMaxM = it }, valueRange = 0f..100f, steps = 99)
+                    Text("Ruolo preciso", color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item { PcChip(selected = posFiltro.isEmpty(), onClick = { posFiltro = "" }, label = { Text("Tutti") }) }
+                        items(TacticalRoles.NAMES.keys.toList()) { k ->
+                            PcChip(selected = posFiltro == k, onClick = { posFiltro = if (posFiltro == k) "" else k }, label = { Text(k) })
+                        }
+                        item { PcChip(selected = onlyFree, onClick = { onlyFree = !onlyFree }, label = { Text("Svincolati") }) }
+                    }
                 }
             }
-            val filtrati = market.filter { p ->
-                (ageFilter == 0 || when (ageFilter) { 1 -> p.age <= 23; 2 -> p.age in 24..29; else -> p.age >= 30 }) &&
-                    p.overall >= minOvr && (!onlyFree || p.teamId == Market.SVINCOLATO_ID)
-            }
+            val filtro = FiltroMercato(
+                eta.start.toInt(), eta.endInclusive.toInt(), media.start.toInt(), media.endInclusive.toInt(),
+                contr.start.toInt(), contr.endInclusive.toInt(), posFiltro, (prezzoMaxM * 1_000_000).toLong(), onlyFree
+            )
+            val filtrati = market.filter { p -> filtro.accetta(p, Market.value(p), p.teamId == Market.SVINCOLATO_ID) }
             val shown = (if (affordable) filtrati.filter { Market.value(it) <= team.budget } else filtrati)
             MarketTable(shown, { byId[it.teamId]?.name ?: if (it.teamId == Market.SVINCOLATO_ID) "SVINCOLATO" else "" },
                 { Market.value(it) }, Modifier.weight(1f)) {

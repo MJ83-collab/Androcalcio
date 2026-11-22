@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import it.androcalcio.engine.DateGiornate
 import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
@@ -128,7 +129,6 @@ fun CalendarioScreen(
             Text("Prima del campionato servono almeno ${Friendlies.MIN} amichevoli fissate e giocate.",
                 color = AC.Text, style = MaterialTheme.typography.bodySmall)
         }
-        if (pending) MentalityPicker(mentality, onMentality)
 
         if (!pending && matches.isNotEmpty()) {
             PcButton("Chiudi stagione e passa alla successiva", { round = 0; onClose() }, Modifier.fillMaxWidth(), main = true)
@@ -183,7 +183,7 @@ fun CalendarioScreen(
                 }
             }
         } else if (tab == 0) {
-            Text("Giornata $shown di $lastRound · ${team.campionato} $season", color = AC.Text,
+            Text("Giornata $shown di $lastRound · ${DateGiornate.testo(DateGiornate.anno(season), shown)} · ${team.campionato}", color = AC.Text,
                 style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items((1..lastRound).toList()) { r ->

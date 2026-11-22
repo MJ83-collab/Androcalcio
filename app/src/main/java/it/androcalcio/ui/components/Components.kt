@@ -81,7 +81,7 @@ fun Crest(team: Team, size: Dp = 44.dp, modifier: Modifier = Modifier) {
     val c2 = Color(team.colorSecondary)
     val h = Math.floorMod(team.name.hashCode(), 1_000_003)
     val motivo = h % 5
-    val mascotte = MASCOTTE[(h / 5) % MASCOTTE.size]
+    val mascotte = it.androcalcio.engine.Stemmi.MASCOTTE[team.name] ?: MASCOTTE[(h / 5) % MASCOTTE.size]
     val storto = ((h / 7) % 9 - 4).toFloat()   // da -4 a +4 gradi
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
