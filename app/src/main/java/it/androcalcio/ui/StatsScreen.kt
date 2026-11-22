@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import it.androcalcio.ui.components.Avatar
 import it.androcalcio.data.Clausola
 import it.androcalcio.data.Goal
 import it.androcalcio.data.PlayerStat
@@ -162,6 +163,7 @@ private fun ColumnScope.GiocatoriPane(
     LazyColumn(Modifier.weight(1f)) {
         items(elenco, key = { it.playerId }) { st ->
             Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                byPlayer[st.playerId]?.let { pl -> Avatar(pl.name, 28.dp, Modifier.padding(end = 6.dp)) }
                 Column(Modifier.weight(1f)) {
                     Text(byPlayer[st.playerId]?.name ?: "Ex giocatore",
                         modifier = byPlayer[st.playerId]?.let { Modifier.apriScheda(it) } ?: Modifier,

@@ -17,7 +17,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import it.androcalcio.ui.components.Avatar
 import androidx.compose.ui.unit.sp
 import it.androcalcio.data.AlboEntry
 import it.androcalcio.data.Convocazione
@@ -89,7 +91,8 @@ fun NazionaleScreen(
                 }
             }
             items(filtrati) { p ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Avatar(p.name, 28.dp)
                     Text("${p.name} (${p.role}) · media ${p.overall} · ${money(Market.value(p))}",
                         Modifier.weight(1f), fontSize = 12.sp)
                     if (p.id in rosaIds) PcButton("Togli", { onTogli(p) })

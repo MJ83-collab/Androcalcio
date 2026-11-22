@@ -53,6 +53,7 @@ object Personalita {
     fun nuove(rosa: List<Player>, esistenti: List<Richiesta>, rng: Random): List<Richiesta> {
         if (esistenti.size >= MAX_RICHIESTE) return emptyList()
         val gia = esistenti.map { it.playerId }.toSet()
+        val haTitolari = rosa.any { it.starter }
         val out = ArrayList<Richiesta>()
         for (p in rosa.shuffled(rng)) {
             if (p.id in gia || esistenti.size + out.size >= MAX_RICHIESTE) continue
@@ -60,7 +61,7 @@ object Personalita {
             when {
                 tipo(p) == Tipo.MERCENARIO && p.overall >= 62 && p.salary * 10 < giusto * 7 && rng.nextInt(100) < 12 ->
                     out += Richiesta(p.id, Richiesta.AUMENTO, giusto)
-                tipo(p) == Tipo.AMBIZIOSO && !p.starter && p.morale < 45 && rng.nextInt(100) < 12 ->
+                tipo(p) == Tipo.AMBIZIOSO && haTitolari && !p.starter && p.morale < 45 && rng.nextInt(100) < 12 ->
                     out += Richiesta(p.id, Richiesta.CESSIONE)
             }
         }

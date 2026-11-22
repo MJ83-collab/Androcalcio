@@ -100,7 +100,8 @@ class NuoveMeccanicheTest {
         val mov = listOf(
             Movimento(teamId = 1, season = "s", label = "Bilancio", importo = -5_000_000, saldo = 0),
             Movimento(teamId = 1, season = "s", label = "Acquisto X", importo = -90_000_000, saldo = 0),
-            Movimento(teamId = 1, season = "s", label = "Ampliamento stadio", importo = -20_000_000, saldo = 0))
+            Movimento(teamId = 1, season = "s", label = "Ampliamento stadio", importo = -20_000_000, saldo = 0),
+            Movimento(teamId = 1, season = "s", label = "Multa fair play", importo = -3_000_000, saldo = 0))
         assertEquals(-5_000_000L, FairPlay.operativo(mov))
     }
 

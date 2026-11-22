@@ -864,8 +864,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val staffBy = dao.allStaff().groupBy { it.teamId }
         val me = if (userHome) home else away
         val squalMie = Disciplina.decode(dao.stato("squal")).keys
-        val all = dao.playersOnce(me.id).filter { it.id !in squalMie }
-        if (squalMie.isNotEmpty()) avviso("Squalificati che non giocano: ${dao.playersOnce(me.id).count { it.id in squalMie }}.")
+        val rosaCompleta = dao.playersOnce(me.id)
+        val all = rosaCompleta.filter { it.id !in squalMie }
+        val nSqual = rosaCompleta.size - all.size
+        if (nSqual > 0) avviso("$nSqual ${if (nSqual == 1) "squalificato" else "squalificati"}: oggi non gioca${if (nSqual == 1) "" else "no"}.")
         val res = Lineup.resolve(all, _formation.value)
         if (res.notes.isNotEmpty()) _notice.value = res.notes.joinToString("\n")
         val myBench = Medical.available(all) - res.xi.toSet()

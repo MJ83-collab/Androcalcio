@@ -21,7 +21,7 @@ object FairPlay {
 
     /** Risultato operativo di una stagione: movimenti esclusi mercato e stadio. Negativo = perdita. */
     fun operativo(mov: List<Movimento>): Long =
-        mov.filter { Bilancio.categoria(it.label) !in setOf("Mercato", "Stadio") }.sumOf { it.importo }
+        mov.filter { Bilancio.categoria(it.label) !in setOf("Mercato", "Stadio") && !it.label.startsWith("Multa fair play") }.sumOf { it.importo }
 
     fun valuta(perditeStagioni: List<Long>, budget: Long): Esito {
         val perdita = perditeStagioni.takeLast(ANNI).sum().coerceAtLeast(0L)
