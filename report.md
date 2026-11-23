@@ -56,8 +56,14 @@ Verifica (test con le rose vere, una stagione tipo con 3 sponsor): Serie A media
 - **E** Confronto giocatori: ricerca per nome in tutto il database.
 - **F** Tema Chiaro (Opzioni → Tema). I pannelli navy restano scuri.
 
+## Correzione avvio (v0.6.0, 23/11 pomeriggio)
+- **Crash all'avvio** (c'era già da v0.4): alcune operazioni iniziali partivano prima che il gioco fosse pronto (stato dei mutui ancora nullo). Ora partono solo a gioco pronto.
+- **Prova automatica su emulatore** a ogni build: avvio + 9.000 tocchi casuali. Nessun crash.
+- **Chiave di firma fissa** (`app/androcalcio.keystore`): le prossime versioni si installano sopra senza disinstallare. Questa volta serve disinstallare la vecchia una volta (prima esporta i salvataggi).
+- **Un solo file**: `Androcalcio-0.6.0.apk` (rose e dati già dentro). Niente più debug/release/rose separati.
+
 ## Limiti noti
-- Non provato su telefono. Da guardare: tema Chiaro (contrasto) e grafico.
+- Provato su emulatore (Android 11), non sul telefono. Da guardare: tema Chiaro (contrasto) e grafico.
 - Playoff simulati con la forza delle rose (niente partita 2D).
 - Rivendita: solo verso club della stessa nazione.
 - Restano: avatar disegnati in codice.
