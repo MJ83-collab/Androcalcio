@@ -12,8 +12,29 @@ object Disciplina {
     const val GIALLI_SQUALIFICA = 5
 
     /** severita: 1 = tollerante, 2 = nella norma, 3 = severo. */
-    data class Arbitro(val nome: String, val severita: Int) {
+    data class Arbitro(val nome: String, val severita: Int, val capacita: Int = 2) {
         val descrizione get() = when (severita) { 1 -> "tollerante"; 3 -> "severo"; else -> "nella norma" }
+
+        /** Tipo di arbitro: dalla combinazione di severità e capacità (1 = scarso, 3 = ottimo). */
+        val profilo get() = when {
+            capacita == 1 && severita == 3 -> "Severo e impreciso"
+            capacita == 1 && severita == 1 -> "Distratto e permissivo"
+            capacita == 1 -> "Distratto"
+            capacita == 3 && severita == 3 -> "Ottimo ma severo"
+            capacita == 3 && severita == 1 -> "Ottimo, lascia giocare"
+            capacita == 3 -> "Ottimo"
+            severita == 3 -> "Severo"
+            severita == 1 -> "Permissivo"
+            else -> "Equilibrato"
+        }
+
+        /** Frase per l'assistente: cosa aspettarsi da questo arbitro. */
+        val consiglio get() = when {
+            capacita == 1 -> "Arbitro $nome ($profilo): può sbagliare, e il VAR potrebbe non bastare."
+            severita == 3 -> "Arbitro $nome ($profilo): attenzione ai falli, fischia e ammonisce molto."
+            severita == 1 -> "Arbitro $nome ($profilo): lascia correre, si può giocare duro."
+            else -> "Arbitro $nome ($profilo): partita sotto controllo."
+        }
     }
 
     private val NOMI = listOf(
@@ -24,7 +45,9 @@ object Disciplina {
     /** L'arbitro di una giornata: fisso per stagione e giornata (stesso risultato a ogni chiamata). */
     fun arbitro(round: Int, seed: Long): Arbitro {
         val r = Random(seed * 131 + round)
-        return Arbitro(NOMI[r.nextInt(NOMI.size)], r.nextInt(1, 4))
+        val nome = NOMI[r.nextInt(NOMI.size)]
+        val severita = r.nextInt(1, 4)
+        return Arbitro(nome, severita, r.nextInt(1, 4))
     }
 
     data class Esito(val gialli: List<Long>, val rossi: List<Long>)

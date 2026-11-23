@@ -46,6 +46,7 @@ import it.androcalcio.ui.components.LocalAvatarModificati
 import it.androcalcio.ui.components.coloriPersona
 import it.androcalcio.ui.theme.PcTitle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -151,14 +152,22 @@ fun MangaPitch(
         }
         hf.coords().forEachIndexed { i, (fx, fy) ->
             homeNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                figurina(pl, p((fx + shift).coerceIn(0.03f, 0.97f), fy), mH, if (pl.numero > 0) pl.numero else pos, true)
+                figurina(pl, p((fx + shift).coerceIn(0.03f, 0.97f), fy + (by - fy) * 0.08f), mH, if (pl.numero > 0) pl.numero else pos, true)
             }
         }
         af.coords().forEachIndexed { i, (fx, fy) ->
             awayNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                figurina(pl, p(((1f - fx) + shift).coerceIn(0.03f, 0.97f), fy), mA, if (pl.numero > 0) pl.numero else pos, false)
+                figurina(pl, p(((1f - fx) + shift).coerceIn(0.03f, 0.97f), fy + (by - fy) * 0.08f), mA, if (pl.numero > 0) pl.numero else pos, false)
             }
         }
+
+        // Arbitro: maglia gialla, segue l'azione a debita distanza
+        val arb = p((bx - 0.05f).coerceIn(0.05f, 0.95f), (by + 0.10f).coerceIn(0.08f, 0.92f))
+        drawOval(Color.Black.copy(alpha = 0.3f), Offset(arb.x - r * 0.8f, arb.y + r * 0.85f), Size(r * 1.6f, r * 0.5f))
+        drawRoundRect(Color(0xFFFFE23D), Offset(arb.x - r * 0.65f, arb.y - r * 0.15f), Size(r * 1.3f, r * 1.1f), CornerRadius(r * 0.4f))
+        drawRoundRect(Inchiostro, Offset(arb.x - r * 0.65f, arb.y - r * 0.15f), Size(r * 1.3f, r * 1.1f), CornerRadius(r * 0.4f), style = Stroke(width = r * 0.16f))
+        drawCircle(Color(0xFFF1C9A0), r * 0.48f, Offset(arb.x, arb.y - r * 0.55f))
+        drawCircle(Inchiostro, r * 0.48f, Offset(arb.x, arb.y - r * 0.55f), style = Stroke(width = r * 0.14f))
 
         // Pallone con linee di velocità verso la porta attaccata
         val ball = p(bx, by)
@@ -202,12 +211,12 @@ private fun DrawScope.tribuna(y: Float, alt: Float, c1: Color, c2: Color) {
  * della squadra, volto del protagonista e titolo con il contorno. Si chiude da solo o con un tocco.
  */
 @Composable
-fun MomentoChiave(titolo: String, testo: String, squadra: Team, giocatore: Player?, onFine: () -> Unit) {
+fun MomentoChiave(titolo: String, testo: String, squadra: Team, giocatore: Player?, onFine: () -> Unit, scenaVar: Boolean = false) {
     val anim = remember(titolo, testo) { Animatable(0f) }
     LaunchedEffect(titolo, testo) { anim.animateTo(1f, tween(350, easing = FastOutSlowInEasing)) }
     LaunchedEffect(titolo, testo) { delay(2000); onFine() }
-    val c1 = Color(squadra.colorPrimary)
-    val c2 = Color(squadra.colorSecondary)
+    val c1 = if (scenaVar) Color(0xFF0B3D91) else Color(squadra.colorPrimary)
+    val c2 = if (scenaVar) Color(0xFF00E5FF) else Color(squadra.colorSecondary)
     val mappa = LocalAvatarModificati.current
 
     Box(Modifier.fillMaxSize().background(Color.White).clickable { onFine() }) {
@@ -236,7 +245,11 @@ fun MomentoChiave(titolo: String, testo: String, squadra: Team, giocatore: Playe
             },
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (giocatore != null) {
+            if (scenaVar) {
+                Box(Modifier.background(Inchiostro).border(4.dp, Color(0xFF00E5FF)).padding(horizontal = 28.dp, vertical = 18.dp)) {
+                    Text("VAR", color = Color(0xFF00E5FF), fontFamily = PcTitle, fontSize = 56.sp)
+                }
+            } else if (giocatore != null) {
                 AvatarSpec(AvatarGen.specDi(giocatore.name, mappa), 150.dp,
                     Modifier.background(Color.White, androidx.compose.foundation.shape.CircleShape), maglia = c1 to c2)
             }
@@ -251,4 +264,41 @@ fun MomentoChiave(titolo: String, testo: String, squadra: Team, giocatore: Playe
             )
         }
     }
+}
+
+/** Posizione animata della palla: segue il percorso degli episodi e, negli altri minuti, si sposta con il possesso. */
+class PallaAnimata(val x: Float, val y: Float, val attacco: Boolean?)
+
+@Composable
+fun rememberPalla(events: List<it.androcalcio.engine.MatchEvent>, minuto: Int, possessoCasa: Int, veloce: Boolean): PallaAnimata {
+    val ax = remember { Animatable(0.5f) }
+    val ay = remember { Animatable(0.5f) }
+    var attacco by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
+    var inAzione by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val idx = events.indexOfLast { it.percorso.isNotEmpty() }
+    val ultimo = events.getOrNull(idx)
+    val durata = if (veloce) 30 else 150
+
+    LaunchedEffect(idx) {
+        val e = ultimo ?: return@LaunchedEffect
+        inAzione = true; attacco = e.home
+        for ((px, py) in e.percorso) {
+            kotlinx.coroutines.coroutineScope {
+                launch { ax.animateTo(px, tween(durata)) }
+                launch { ay.animateTo(py, tween(durata)) }
+            }
+        }
+        inAzione = false; attacco = null
+    }
+    LaunchedEffect(minuto) {
+        if (inAzione || (ultimo != null && ultimo.minute == minuto)) return@LaunchedEffect
+        val rnd = java.util.Random(minuto * 131L + possessoCasa)
+        val tx = (0.5f + (possessoCasa - 50) / 100f * 0.5f + (rnd.nextFloat() - 0.5f) * 0.5f).coerceIn(0.1f, 0.9f)
+        val ty = 0.15f + rnd.nextFloat() * 0.7f
+        kotlinx.coroutines.coroutineScope {
+            launch { ax.animateTo(tx, tween(if (veloce) 30 else 700)) }
+            launch { ay.animateTo(ty, tween(if (veloce) 30 else 700)) }
+        }
+    }
+    return PallaAnimata(ax.value, ay.value, attacco)
 }

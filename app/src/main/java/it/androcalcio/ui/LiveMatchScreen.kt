@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
@@ -64,116 +66,152 @@ import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.theme.AC
 
 /** Pannello della partita dal vivo aperto dalla barra in basso. */
-private enum class LivePanel { NESSUNO, TATTICA, STAT }
+private enum class LivePanel { NESSUNO, TATTICA, STAT, ASSISTENTE }
 
-/** La tua partita dal vivo, in notturna: tabellone, possesso, campo, gol in evidenza e barra comandi. */
+/** Partita dal vivo: tabellone in alto, campo grande al centro con telecronaca e vice, fascia comandi in basso. */
 @Composable
 fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewModel, onProssima: () -> Unit = {}) {
     val m = info.m
     @Suppress("UNUSED_VARIABLE") val t = info.tick   // ricomposizione a ogni minuto
     val events = m.events.toList()
-    val last = events.lastOrNull { it.type !in setOf(EventType.YELLOW, EventType.SUB, EventType.TACTIC, EventType.RED, EventType.INJURY) }
+    val ignorati = setOf(EventType.YELLOW, EventType.SUB, EventType.TACTIC, EventType.RED, EventType.INJURY,
+        EventType.COMMENTO, EventType.VAR)
+    val last = events.lastOrNull { it.type !in ignorati }
     val lastGoal = events.lastOrNull { it.type == EventType.GOAL }
-    val bx by animateFloatAsState(last?.x ?: 0.5f, tween(300), label = "bx")
-    val by by animateFloatAsState(last?.y ?: 0.5f, tween(300), label = "by")
+    val palla = rememberPalla(events, m.minute, m.possessoCasa, info.speed >= 4)
     var subOpen by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(LivePanel.NESSUNO) }
     val mySubs = if (info.userHome) m.subsH else m.subsA
+    val consiglio by vm.consiglio.collectAsState()
+    val livello by vm.assistenteLivello.collectAsState()
     // Fischio finale: prima voti e statistiche di ogni giocatore, poi si passa alla partita successiva
     if (m.finished) { FinePartitaScreen(info, vm, onProssima); return }
 
-    // Momenti chiave a tutto schermo: gol, espulsioni, rigori parati o sbagliati (non a velocità ×20)
+    // Momenti chiave a tutto schermo: gol, espulsioni, rigori, VAR (non a velocità ×20)
     var momento by remember { mutableStateOf<it.androcalcio.engine.MatchEvent?>(null) }
     var visti by remember { mutableStateOf(events.size) }
     androidx.compose.runtime.LaunchedEffect(events.size) {
         if (events.size > visti) {
             val nuovi = events.subList(visti, events.size)
             visti = events.size
-            if (info.speed < 20) nuovi.lastOrNull { titoloMomento(it) != null }?.let { momento = it }
+            if (info.speed < 20) {
+                val ev = nuovi.lastOrNull { it.type == EventType.VAR && titoloMomento(it) != null }
+                    ?: nuovi.lastOrNull { titoloMomento(it) != null }
+                if (ev != null) momento = ev
+            }
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-    LazyColumn(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi))),
-        contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item { Scoreboard(m.home, m.away, m.hg, m.ag, if (m.finished) "Finale" else "${m.minute}'" + if (info.paused) " · pausa" else "") }
-        item { PossessoBar(m.possessoCasa) }
-        if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
-        item { MangaPitch(m.home, m.away, bx, by, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), last?.home) }
-        if (!m.finished) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    NeonTile("Tattica", Icons.Filled.Edit, panel == LivePanel.TATTICA, Modifier.weight(1f)) {
-                        panel = if (panel == LivePanel.TATTICA) LivePanel.NESSUNO else LivePanel.TATTICA
-                    }
-                    NeonTile("Cambio $mySubs/${MatchEngine.MAX_SUBS}", Icons.Filled.Refresh, false, Modifier.weight(1f),
-                        enabled = mySubs < MatchEngine.MAX_SUBS) { vm.setLivePaused(true); subOpen = true }
-                    NeonTile("Stat", Icons.Filled.List, panel == LivePanel.STAT, Modifier.weight(1f)) {
-                        panel = if (panel == LivePanel.STAT) LivePanel.NESSUNO else LivePanel.STAT
-                    }
-                    NeonTile(if (info.paused) "Riprendi" else "Pausa", Icons.Filled.PlayArrow, info.paused, Modifier.weight(1f)) {
-                        vm.setLivePaused(!info.paused)
-                    }
-                }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("VELOCITÀ", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                    listOf(1, 2, 4, 20).forEach { x ->
-                        PcChip(selected = info.speed == x, onClick = { vm.setLiveSpeed(x) }, label = { Text("×$x") })
-                    }
-                }
-            }
-            if (panel == LivePanel.TATTICA) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi)))) {
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item { Scoreboard(m.home, m.away, m.hg, m.ag, "${m.minute}'" + if (info.paused) " · pausa" else "") }
+            item { PossessoBar(m.possessoCasa) }
+            item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + if (m.varAttivo) " · VAR" else "",
+                color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
+            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco ?: last?.home) }
+            item { TelecronacaBubble(events, m.minute) }
+            consiglio?.let { c ->
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("MODULO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            val attuale = if (info.userHome) m.homeF else m.awayF
-                            listOf(it.androcalcio.engine.Formation.F442, it.androcalcio.engine.Formation.F433,
-                                it.androcalcio.engine.Formation.F352, it.androcalcio.engine.Formation.F451).forEach { f ->
-                                PcChip(selected = f == attuale, onClick = { vm.liveModulo(f) }, label = { Text(f.label) })
+                    AssistenteBubble(c, onApplica = {
+                        val az = vm.applicaConsiglio()
+                        if (az is it.androcalcio.engine.AssistenteLive.Azione.Cambio) { vm.setLivePaused(true); subOpen = true }
+                    }, onChiudi = { vm.chiudiConsiglio() })
+                }
+            }
+            when (panel) {
+                LivePanel.TATTICA -> {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("MODULO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val attuale = if (info.userHome) m.homeF else m.awayF
+                                listOf(it.androcalcio.engine.Formation.F442, it.androcalcio.engine.Formation.F433,
+                                    it.androcalcio.engine.Formation.F352, it.androcalcio.engine.Formation.F451).forEach { f ->
+                                    PcChip(selected = f == attuale, onClick = { vm.liveModulo(f) }, label = { Text(f.label) })
+                                }
                             }
                         }
                     }
-                }
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("RITMO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            val attuale = if (info.userHome) m.ritmoH else m.ritmoA
-                            it.androcalcio.engine.Ritmo.values().forEach { r ->
-                                PcChip(selected = r == attuale, onClick = { vm.liveRitmo(r) }, label = { Text(r.label) })
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("RITMO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val attuale = if (info.userHome) m.ritmoH else m.ritmoA
+                                it.androcalcio.engine.Ritmo.values().forEach { r ->
+                                    PcChip(selected = r == attuale, onClick = { vm.liveRitmo(r) }, label = { Text(r.label) })
+                                }
                             }
                         }
                     }
-                }
-                item {
-                    val contro = if (info.userHome) m.contropiedeH else m.contropiedeA
-                    PcChip(selected = contro, onClick = { vm.liveContropiede(!contro) },
-                        label = { Text(if (contro) "Contropiede: attivo" else "Contropiede: off") })
-                }
-                item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
-                item {
-                    Column {
+                    item {
+                        val contro = if (info.userHome) m.contropiedeH else m.contropiedeA
+                        PcChip(selected = contro, onClick = { vm.liveContropiede(!contro) },
+                            label = { Text(if (contro) "Contropiede: attivo" else "Contropiede: off") })
+                    }
+                    item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
+                    item {
                         TacticsPicker(
                             if (info.userHome) m.pressH else m.pressA, if (info.userHome) m.lineH else m.lineA,
                             { vm.livePressing(it) }, { vm.liveLine(it) }
                         )
                     }
                 }
+                LivePanel.STAT -> item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
+                LivePanel.ASSISTENTE -> item {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("IL TUO VICE", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("Attivo", "Discreto", "Muto").forEachIndexed { i, l ->
+                                PcChip(selected = livello == i, onClick = { vm.setAssistenteLivello(i) }, label = { Text(l) })
+                            }
+                        }
+                        Text(when (livello) {
+                            0 -> "Ti ricorda tutto: cambi, tattica, arbitro."
+                            1 -> "Parla solo per le cose importanti e ferma la partita."
+                            else -> "Non parla. Decidi tutto tu."
+                        }, color = Color.White, fontSize = 12.sp)
+                    }
+                }
+                LivePanel.NESSUNO -> item { CronacaPanel(events.filter { it.type != EventType.COMMENTO }.reversed().take(12)) }
             }
-            if (panel == LivePanel.STAT) item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
             item { PcAction(onClick = { vm.liveSkip() }, modifier = Modifier.fillMaxWidth()) { Text("Termina partita") } }
         }
-        item { CronacaPanel(events.reversed()) }
+        // Fascia comandi fissa in basso
+        Column(Modifier.fillMaxWidth().background(AC.Night).padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                listOf(1, 2, 4, 20).forEach { x ->
+                    PcChip(selected = info.speed == x, onClick = { vm.setLiveSpeed(x) }, label = { Text("×$x", fontSize = 12.sp) })
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                NeonTile("Tattica", Icons.Filled.Edit, panel == LivePanel.TATTICA, Modifier.weight(1f)) {
+                    panel = if (panel == LivePanel.TATTICA) LivePanel.NESSUNO else LivePanel.TATTICA
+                }
+                NeonTile("Cambi $mySubs/${MatchEngine.MAX_SUBS}", Icons.Filled.Refresh, false, Modifier.weight(1f),
+                    enabled = mySubs < MatchEngine.MAX_SUBS) { vm.setLivePaused(true); subOpen = true }
+                NeonTile(when (livello) { 0 -> "Vice"; 1 -> "Vice·"; else -> "Muto" }, Icons.Filled.Person,
+                    panel == LivePanel.ASSISTENTE, Modifier.weight(1f)) {
+                    panel = if (panel == LivePanel.ASSISTENTE) LivePanel.NESSUNO else LivePanel.ASSISTENTE
+                }
+                NeonTile("Stat", Icons.Filled.List, panel == LivePanel.STAT, Modifier.weight(1f)) {
+                    panel = if (panel == LivePanel.STAT) LivePanel.NESSUNO else LivePanel.STAT
+                }
+                NeonTile(if (info.paused) "Riprendi" else "Pausa", Icons.Filled.PlayArrow, info.paused, Modifier.weight(1f)) {
+                    vm.setLivePaused(!info.paused)
+                }
+            }
+        }
     }
     momento?.let { ev ->
         val tutti = m.xiH + m.xiA + m.benchH + m.benchA
         MomentoChiave(titoloMomento(ev) ?: "", ev.text, if (ev.home) m.home else m.away,
-            tutti.firstOrNull { it.id == ev.playerId }) { momento = null }
+            tutti.firstOrNull { it.id == ev.playerId }, { momento = null }, scenaVar = ev.type == EventType.VAR)
     }
     }
 
@@ -190,6 +228,11 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
 private fun titoloMomento(e: it.androcalcio.engine.MatchEvent): String? {
     val rigore = e.text.contains("rigore", ignoreCase = true)
     return when {
+        e.type == EventType.VAR -> when {
+            e.text.contains("annullat", true) -> if (rigore) "RIGORE ANNULLATO!" else "GOL ANNULLATO!"
+            e.text.contains("valid", true) || e.text.contains("conferm", true) -> "GOL VALIDO!"
+            else -> "CONTROLLO VAR"
+        }
         e.type == EventType.GOAL -> if (rigore) "GOL SU RIGORE!" else "GOOOL!"
         e.type == EventType.RED -> "ESPULSO!"
         e.type == EventType.SAVE && rigore -> "RIGORE PARATO!"

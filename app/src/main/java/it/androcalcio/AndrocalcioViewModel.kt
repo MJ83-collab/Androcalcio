@@ -103,6 +103,7 @@ import it.androcalcio.engine.Forma
 import it.androcalcio.engine.Mentori
 import it.androcalcio.engine.Ritmo
 import it.androcalcio.engine.CalendarioGiorni
+import it.androcalcio.engine.AssistenteLive
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Mentality
@@ -988,9 +989,49 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             awayStile = if (userHome) Staffing.stile(staffBy, away.id) else null,
             homeTiri = if (userHome) tiriMe else SetPieces.NONE, awayTiri = if (userHome) SetPieces.NONE else tiriMe,
             meteoGol = cond.fattoreGol() * (if (userHome) Prato.fattore(dao.statoInt(Prato.KEY)) else 1.0),
-            trapH = userHome && _trappola.value, trapA = !userHome && _trappola.value
+            trapH = userHome && _trappola.value, trapA = !userHome && _trappola.value,
+            arbitro = Disciplina.arbitro(dao.statoInt("c_partite") + 1, _season.value.hashCode().toLong()),
+            varAttivo = true, immersivo = true
         )
+        assistVisti.clear(); assistUltimo = -1; _consiglio.value = null
         return LiveInfo(m, speed = _opzioni.value.velocita, userHome = userHome, league = league, meteo = cond.descrizione())
+    }
+
+    // Assistente dell'allenatore in partita: consiglio corrente, livello scelto (0 attivo, 1 discreto, 2 muto)
+    private val _assistLiv = MutableStateFlow(prefs.getInt("assistente_livello", 0).coerceIn(0, 2))
+    val assistenteLivello: StateFlow<Int> = _assistLiv
+    fun setAssistenteLivello(v: Int) {
+        prefs.edit().putInt("assistente_livello", v).apply(); _assistLiv.value = v
+        if (v == 2) _consiglio.value = null
+    }
+    private val _consiglio = MutableStateFlow<AssistenteLive.Consiglio?>(null)
+    val consiglio: StateFlow<AssistenteLive.Consiglio?> = _consiglio
+    private val assistVisti = mutableSetOf<String>()
+    private var assistUltimo = -1
+
+    private fun aggiornaAssistente(i: LiveInfo) {
+        val cur = _consiglio.value
+        if (cur != null && i.m.minute - cur.minuto > 8) _consiglio.value = null
+        if (_consiglio.value != null) return
+        val c = AssistenteLive.consiglia(i.m, i.userHome, AssistenteLive.Livello.values()[_assistLiv.value], assistVisti, assistUltimo) ?: return
+        _consiglio.value = c; assistVisti += c.id; assistUltimo = c.minuto
+        if (c.urgenza >= 3) setLivePaused(true)   // un consiglio urgente ferma la partita per lasciarti decidere
+    }
+
+    fun chiudiConsiglio() { _consiglio.value = null; setLivePaused(false) }
+
+    /** Esegue l'azione proposta (tranne il cambio, che apre la scelta del sostituto) e restituisce l'azione. */
+    fun applicaConsiglio(): AssistenteLive.Azione? {
+        val c = _consiglio.value ?: return null
+        when (val a = c.azione) {
+            is AssistenteLive.Azione.Mentalita -> liveMentality(a.m)
+            is AssistenteLive.Azione.Contropiede -> liveContropiede(a.on)
+            is AssistenteLive.Azione.Ritmo -> liveRitmo(a.r)
+            else -> {}
+        }
+        _consiglio.value = null
+        if (c.azione !is AssistenteLive.Azione.Cambio) setLivePaused(false)
+        return c.azione
     }
 
     private fun startTicker() {
@@ -1002,6 +1043,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 if (i.m.finished) break
                 if (!i.paused) {
                     i.m.step()
+                    aggiornaAssistente(i)
                     val c = _cambioPronto.value
                     if (c > 0 && !cambioFatto && i.m.minute >= c) { cambioFatto = true; i.m.cambioProgrammato(i.userHome) }
                     bump()

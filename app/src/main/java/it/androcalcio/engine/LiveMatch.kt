@@ -29,8 +29,52 @@ class LiveMatch(
     homeStile: Stile? = null, awayStile: Stile? = null,
     private val homeTiri: SetPieces = SetPieces.NONE, private val awayTiri: SetPieces = SetPieces.NONE,
     private val meteoGol: Double = 1.0,  // meteo e campo: moltiplicano le azioni pericolose (Meteo.Condizioni.fattoreGol)
-    var trapH: Boolean = false, var trapA: Boolean = false   // trappola del fuorigioco (vale solo con la linea alta)
+    var trapH: Boolean = false, var trapA: Boolean = false,   // trappola del fuorigioco (vale solo con la linea alta)
+    val arbitro: Disciplina.Arbitro = Disciplina.Arbitro("Arbitro", 2, 2),
+    val varAttivo: Boolean = true,
+    /** Partita raccontata: arbitro che può sbagliare, VAR, percorso della palla e telecronaca. Le simulazioni restano pulite. */
+    private val immersivo: Boolean = false
 ) {
+    private val vistaCasa = manualHome
+    private val rngI: Random = if (immersivo) Random(rng.nextLong()) else rng   // flusso separato: non altera il resto della partita
+
+    /** Tappe della palla verso il punto finale: dal centrocampo, con passaggi che cambiano lato. */
+    private fun percorso(homeAtt: Boolean, fine: Pair<Float, Float>): List<Pair<Float, Float>> {
+        if (!immersivo) return emptyList()
+        val sx = if (homeAtt) 0.28f + rngI.nextFloat() * 0.15f else 0.72f - rngI.nextFloat() * 0.15f
+        val n = 2 + rngI.nextInt(3)
+        val pts = ArrayList<Pair<Float, Float>>()
+        pts += sx to (0.25f + rngI.nextFloat() * 0.5f)
+        for (i in 1..n) pts += (sx + (fine.first - sx) * i / (n + 1f)) to (0.15f + rngI.nextFloat() * 0.7f)
+        pts += fine
+        return pts
+    }
+
+    /** Controllo dell'arbitro e del VAR su un gol azione. True = il gol vale. Non tocca il punteggio. */
+    private fun golValido(homeAtt: Boolean, squadra: String, chi: String, x: Float, y: Float): Boolean {
+        if (!immersivo) return true
+        val mancato = when (arbitro.capacita) { 1 -> 0.55; 2 -> 0.30; else -> 0.12 }
+        if (rngI.nextDouble() < 0.04) {   // gol irregolare (fuorigioco o fallo)
+            if (rngI.nextDouble() > mancato) {
+                events += MatchEvent(minute, EventType.VAR, homeAtt, "Gol annullato dall'arbitro: $chi ($squadra) era in posizione irregolare", x, y)
+                return false
+            }
+            if (varAttivo && rngI.nextDouble() < 0.85) {
+                events += MatchEvent(minute, EventType.VAR, homeAtt, "VAR: controllo in corso... gol annullato a $chi ($squadra)", x, y)
+                return false
+            }
+            return true   // nessuno se ne accorge
+        }
+        if (rngI.nextDouble() < (3 - arbitro.capacita) * 0.012) {   // l'arbitro annulla un gol buono
+            if (varAttivo && rngI.nextDouble() < 0.8) {
+                events += MatchEvent(minute, EventType.VAR, homeAtt, "VAR: l'arbitro aveva annullato, ma il gol di $chi ($squadra) è valido!", x, y)
+                return true
+            }
+            events += MatchEvent(minute, EventType.VAR, homeAtt, "Gol annullato dall'arbitro per un presunto fallo di $chi ($squadra): decisione contestata", x, y)
+            return false
+        }
+        return true
+    }
     var fuorigiocoH = 0; private set   // fuorigioco fischiati alla squadra di casa
     var fuorigiocoA = 0; private set
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
@@ -227,6 +271,7 @@ class LiveMatch(
     /** Gioca un minuto. */
     fun step() {
         if (finished) return
+        val prima = events.size
         minute++
         if (minute > 55) {
             xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressH.drain * ritmoH.consumo).coerceAtLeast(0.7) }
@@ -279,6 +324,7 @@ class LiveMatch(
                     (if (homeAtt) MatchEngine.HOME_FINISH else 1.0)).coerceIn(0.08, 0.45)
                 val r = rng.nextDouble()
                 when {
+                    r < pGoal && !golValido(homeAtt, team.shortName, who, x, y) -> Unit   // annullato: resta il tiro
                     r < pGoal -> {
                         if (homeAtt) hg++ else ag++
                         sh?.let { bump(it, 1.0) }
@@ -286,18 +332,18 @@ class LiveMatch(
                         ass?.let { bump(it, 0.4) }
                         events += MatchEvent(minute, EventType.GOAL, homeAtt,
                             "Gol! $who (${team.shortName})" + (ass?.let { ", assist ${it.name}" } ?: ""),
-                            x, y, sh?.id ?: 0L, ass?.id ?: 0L)
+                            x, y, sh?.id ?: 0L, ass?.id ?: 0L, percorso(homeAtt, x to y))
                     }
                     r < pGoal + (1 - pGoal) * 0.4 -> events += MatchEvent(
-                        minute, EventType.SAVE, homeAtt, "Tiro di $who, para il portiere", x, y)
-                    else -> events += MatchEvent(minute, EventType.MISS, homeAtt, "Tiro di $who fuori", x, y)
+                        minute, EventType.SAVE, homeAtt, "Tiro di $who, para il portiere", x, y, 0, 0, percorso(homeAtt, x to y))
+                    else -> events += MatchEvent(minute, EventType.MISS, homeAtt, "Tiro di $who fuori", x, y, 0, 0, percorso(homeAtt, x to y))
                 }
             }
         }
         // Calci piazzati: rigore raro e in area, punizione più frequente dal limite
         if (rng.nextDouble() < MatchEngine.PENALTY_PER_MINUTE) setPiece(penalty = true)
         else if (rng.nextDouble() < MatchEngine.SHOT_FREEKICK_PER_MINUTE) setPiece(penalty = false)
-        if (rng.nextDouble() < 0.018) {
+        if (rng.nextDouble() < (if (immersivo) 0.018 * (0.7 + 0.3 * arbitro.severita) else 0.018)) {
             val side = rng.nextBoolean()
             val ps = (if (side) xiH else xiA).filter { it.role != "P" }
             if (ps.isNotEmpty()) {
@@ -314,16 +360,51 @@ class LiveMatch(
         if (rng.nextDouble() < 0.0005) {
             val side = rng.nextBoolean()
             val ps = (if (side) xiH else xiA).filter { it.role != "P" }
-            if (ps.isNotEmpty()) espelli(side, MatchEngine.aggressive(ps, rng), "gioco violento")
+            if (ps.isNotEmpty()) {
+                val p = MatchEngine.aggressive(ps, rng)
+                if (immersivo && rngI.nextDouble() < (3 - arbitro.capacita) * 0.12) {   // rosso sbagliato
+                    if (varAttivo && rngI.nextDouble() < 0.8) events += MatchEvent(minute, EventType.VAR, side,
+                        "VAR: rosso cancellato per ${p.name}, l'intervento era regolare", 0.5f, 0.5f, p.id)
+                    else espelli(side, p, "decisione contestata")
+                } else espelli(side, p, "gioco violento")
+            }
+        }
+        // Rigore dubbio: più frequente con un arbitro scarso; il VAR a volte lo concede dopo la revisione
+        if (immersivo && rngI.nextDouble() < 0.0008 * (1.0 + (3 - arbitro.capacita) * 0.4)) {
+            val casa = rngI.nextBoolean()
+            val sq = if (casa) home.shortName else away.shortName
+            events += MatchEvent(minute, if (varAttivo) EventType.VAR else EventType.COMMENTO, casa,
+                if (varAttivo) "VAR: tocco di mano in area, rigore per $sq!" else "Rigore concesso a $sq per un contatto dubbio", 0.5f, 0.5f)
+            setPiece(penalty = true, forzaCasa = casa)
         }
         if (rng.nextDouble() < 0.0006) infortunio(rng.nextBoolean())
         if (minute == 45) events += MatchEvent(45, EventType.HALFTIME, true, "Fine primo tempo", 0.5f, 0.5f)
         if (minute == 90) events += MatchEvent(90, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
+        if (immersivo) telecronaca(prima)
+    }
+
+    /** Un commento a caldo sull'ultimo episodio, oppure ogni cinque minuti un commento di fondo con un indizio. */
+    private fun telecronaca(primaDi: Int) {
+        val nuovi = events.subList(primaDi, events.size)
+        val episodio = nuovi.lastOrNull { it.type in setOf(EventType.GOAL, EventType.SAVE, EventType.MISS, EventType.OFFSIDE, EventType.RED) }
+        val testo = if (episodio != null) { if (rngI.nextInt(10) < 7) Telecronaca.reazione(episodio, rngI) else null }
+        else if (minute % 5 == 2 && minute < 90) {
+            val mio = if (vistaCasa) xiH else xiA
+            val loro = if (vistaCasa) xiA else xiH
+            fun en(l: List<Player>) = if (l.isEmpty()) 1.0 else l.map { energyOf(it) }.average()
+            Telecronaca.commento(Telecronaca.Quadro(
+                minute, if (vistaCasa) hg else ag, if (vistaCasa) ag else hg,
+                if (vistaCasa) possessoCasa else 100 - possessoCasa,
+                if (vistaCasa) hs else asht, if (vistaCasa) asht else hs,
+                en(mio), en(loro), mio.size < 11, loro.size < 11, arbitro,
+                if (vistaCasa) mH else mA, MatchEngine.MAX_SUBS - (if (vistaCasa) subsH else subsA)), rngI)
+        } else null
+        if (testo != null) events += MatchEvent(minute, EventType.COMMENTO, vistaCasa, testo, 0.5f, 0.5f)
     }
 
     /** Rigore, punizione o calcio d'angolo per una squadra a caso: tira il primo della lista in campo, altrimenti il capitano. */
-    private fun setPiece(penalty: Boolean) {
-        val homeAtt = rng.nextBoolean()
+    private fun setPiece(penalty: Boolean, forzaCasa: Boolean? = null) {
+        val homeAtt = forzaCasa ?: rng.nextBoolean()
         val inCampo = (if (homeAtt) xiH else xiA)
         val tiri = if (homeAtt) homeTiri else awayTiri
         val angolo = !penalty && rng.nextDouble() < ANGOLO_QUOTA
@@ -341,11 +422,11 @@ class LiveMatch(
             if (homeAtt) hg++ else ag++
             bump(taker, 1.0)
             events += MatchEvent(minute, EventType.GOAL, homeAtt,
-                "Gol su $kind! ${taker.name} (${team.shortName})", x, y, taker.id)
+                "Gol su $kind! ${taker.name} (${team.shortName})", x, y, taker.id, 0, percorso(homeAtt, x to y))
         } else if (rng.nextBoolean()) {
-            events += MatchEvent(minute, EventType.SAVE, homeAtt, "$kind di ${taker.name}, para il portiere", x, y)
+            events += MatchEvent(minute, EventType.SAVE, homeAtt, "$kind di ${taker.name}, para il portiere", x, y, 0, 0, percorso(homeAtt, x to y))
         } else {
-            events += MatchEvent(minute, EventType.MISS, homeAtt, "$kind di ${taker.name} fuori", x, y)
+            events += MatchEvent(minute, EventType.MISS, homeAtt, "$kind di ${taker.name} fuori", x, y, 0, 0, percorso(homeAtt, x to y))
         }
     }
 
