@@ -22,6 +22,9 @@ object Insurance {
     }
 
     /** Rimborso per un infortunio di [rounds] turni. */
-    fun refund(salary: Long, rounds: Int, level: Int): Long =
-        (salary / ROUNDS.toDouble() * rounds * cover(level)).toLong()
+    fun refund(salary: Long, rounds: Int, level: Int, turniStagione: Int = ROUNDS): Long =
+        (salary / turniStagione.coerceAtLeast(1).toDouble() * rounds * cover(level)).toLong()
+
+    /** Turni di campionato veri: andata e ritorno con [squadre] squadre (38 con 20, 34 con 18). */
+    fun turni(squadre: Int): Int = if (squadre < 2) ROUNDS else (squadre - 1) * 2
 }

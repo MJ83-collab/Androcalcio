@@ -203,7 +203,11 @@ fun TatticaScreen(
     onCompito: (Player, String) -> Unit = { _, _ -> },
     ampiezza: it.androcalcio.engine.Ampiezza = it.androcalcio.engine.Ampiezza.NORMALE,
     onAmpiezza: (it.androcalcio.engine.Ampiezza) -> Unit = {},
-    cambioPronto: Int = 0, onCambioPronto: (Int) -> Unit = {}
+    cambioPronto: Int = 0, onCambioPronto: (Int) -> Unit = {},
+    trappola: Boolean = false, onTrappola: (Boolean) -> Unit = {},
+    formazioni: List<it.androcalcio.engine.FormazioniSalvate.Preset?> = emptyList(),
+    onSalvaFormazione: (Int) -> Unit = {}, onCaricaFormazione: (Int) -> Unit = {},
+    premio: Boolean = false, costoPremio: Long = 0L, onPremio: (Boolean) -> Unit = {}
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi)
     var roleFor by remember { mutableStateOf<Player?>(null) }
@@ -281,6 +285,27 @@ fun TatticaScreen(
             SectionTitle("Cambio programmato")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(0 to "Spento", 60 to "60'", 70 to "70'", 80 to "80'").forEach { (m, l) -> PcChip(cambioPronto == m, { onCambioPronto(m) }, { Text(l) }) }
+            }
+            SectionTitle("Trappola del fuorigioco")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PcChip(!trappola, { onTrappola(false) }, { Text("No") })
+                PcChip(trappola, { onTrappola(true) }, { Text("Sì") })
+            }
+            Text(if (line != DefLine.ALTA) "Funziona solo con la linea alta." else "Ferma molte azioni, ma se salta l'avversario va in porta da solo.",
+                color = AC.TextDim, fontSize = 12.sp)
+            SectionTitle("Premio partita")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PcChip(!premio, { onPremio(false) }, { Text("Nessuno") })
+                PcChip(premio, { onPremio(true) }, { Text("Prometti ${it.androcalcio.ui.components.money(costoPremio)}") })
+            }
+            Text("Morale più alto nella prossima partita. Si paga solo se vinci.", color = AC.TextDim, fontSize = 12.sp)
+            SectionTitle("Formazioni salvate")
+            formazioni.forEachIndexed { i, f ->
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${i + 1}. ${f?.nome ?: "vuoto"}", Modifier.weight(1f), color = AC.Text, fontSize = 13.sp)
+                    PcChip(false, { onSalvaFormazione(i) }, { Text("Salva") })
+                    if (f != null) PcChip(false, { onCaricaFormazione(i) }, { Text("Carica") })
+                }
             }
         }
     }

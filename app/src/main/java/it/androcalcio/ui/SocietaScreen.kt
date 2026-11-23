@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,7 @@ import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.AllStar
 import it.androcalcio.engine.Analisi
+import it.androcalcio.engine.Minutaggio
 import it.androcalcio.engine.Mutui
 import it.androcalcio.engine.Disciplina
 import it.androcalcio.engine.Personalita
@@ -96,7 +98,7 @@ fun SocietaScreen(
                 2 -> TabScambi(team, teams, rosa, tutti, onScambio)
                 3 -> TabFairPlay(s)
                 4 -> TabStoria(s)
-                5 -> TabAnalisi(team, rosa, s, onRiposo)
+                5 -> TabAnalisi(team, rosa, s, onRiposo, teams, tutti)
                 else -> TabCerca(teams, tutti, nomiSquadra)
             }
         }
@@ -300,8 +302,13 @@ fun TutorialDialog(onChiudi: () -> Unit) {
 }
 
 @Composable
-private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato, onRiposo: () -> Unit) {
+private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato, onRiposo: () -> Unit,
+                       teams: List<Team> = emptyList(), tutti: List<Player> = emptyList()) {
     val avvisiMutui = Analisi.rataInArrivo(s.mutui)
+    if (s.andamento.size >= 2) {
+        SectionTitle("Andamento in classifica")
+        GraficoAndamento(s.andamento, s.squadreLega)
+    }
     s.prossima?.let { nome ->
         SectionTitle("Prossima partita")
         GlassCard(Modifier.fillMaxWidth()) {
@@ -399,7 +406,16 @@ private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato, onRiposo
         SectionTitle("Giocatori seguiti")
         s.seguiti.forEach { RigaGiocatore(it, "${it.overall} · ${money(it.salary)}") }
     }
-    ConfrontoGiocatori(rosa + s.seguiti.filter { x -> rosa.none { it.id == x.id } })
+    ConfrontoGiocatori(rosa + s.seguiti.filter { x -> rosa.none { it.id == x.id } }, tutti)
+    ConfrontoSquadre(team, teams, tutti)
+    if (s.minutiPartite > 0) {
+        SectionTitle("Minuti giocati (${s.minutiPartite} partite)")
+        val scont = Minutaggio.scontenti(rosa, s.minuti, s.minutiPartite).map { it.id }.toSet()
+        rosa.sortedByDescending { s.minuti[it.id] ?: 0 }.forEach { p ->
+            val pct = Minutaggio.percentuale(s.minuti[p.id] ?: 0, s.minutiPartite)
+            RigaGiocatore(p, "$pct%" + if (p.id in scont) " · vuole giocare" else "")
+        }
+    }
 
     val pr = Analisi.promesse(rosa)
     if (pr.isNotEmpty()) {
@@ -421,11 +437,16 @@ private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato, onRiposo
 
 /** Confronto tra due giocatori scelti dalla tua rosa e dai seguiti. Il valore migliore è in evidenza. */
 @Composable
-private fun ConfrontoGiocatori(candidati: List<Player>) {
+private fun ConfrontoGiocatori(base: List<Player>, tutti: List<Player> = emptyList()) {
     var a by rememberSaveable { mutableStateOf<Long?>(null) }
     var b by rememberSaveable { mutableStateOf<Long?>(null) }
+    var cerca by rememberSaveable { mutableStateOf("") }
     SectionTitle("Confronto giocatori")
-    Text("Scegli il primo e il secondo.", color = AC.TextDim, fontSize = 12.sp)
+    Text("Scegli il primo e il secondo. Scrivi un nome per cercare in tutto il database.", color = AC.TextDim, fontSize = 12.sp)
+    OutlinedTextField(cerca, { cerca = it }, Modifier.fillMaxWidth(), label = { Text("Cerca giocatore") }, singleLine = true)
+    val trovati = if (cerca.length >= 2) tutti.filter { it.name.contains(cerca, ignoreCase = true) }.take(20) else emptyList()
+    val scelti = (base + tutti.filter { it.id == a || it.id == b }).distinctBy { it.id }
+    val candidati = (trovati + scelti).distinctBy { it.id }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         candidati.sortedByDescending { it.overall }.forEach { p ->
             PcChip(a == p.id, { a = if (a == p.id) null else p.id }, { Text(p.name.substringAfterLast(' ')) })
@@ -461,6 +482,73 @@ private fun ConfrontoGiocatori(candidati: List<Player>) {
                 Row(Modifier.fillMaxWidth()) {
                     Text("${pa.age} anni · ${money(pa.salary)}", Modifier.weight(1f), color = AC.TextDim, fontSize = 11.sp)
                     Text("${pb.age} anni · ${money(pb.salary)}", Modifier.weight(1f), color = AC.TextDim, fontSize = 11.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                }
+            }
+        }
+    }
+}
+
+/** Grafico della posizione giornata per giornata: in alto il primo posto. */
+@Composable
+private fun GraficoAndamento(pos: List<Int>, squadre: Int) {
+    val n = squadre.coerceAtLeast(pos.maxOrNull() ?: 1)
+    val linea = AC.Accent2; val griglia = AC.Border
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp)) {
+            androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(140.dp)) {
+                val w = size.width; val h = size.height
+                listOf(1, (n + 1) / 2, n).forEach { r ->
+                    val y = (r - 1) / (n - 1).coerceAtLeast(1).toFloat() * h
+                    drawLine(griglia, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(w, y), 1f)
+                }
+                val pts = pos.mapIndexed { i, p ->
+                    androidx.compose.ui.geometry.Offset(i / (pos.size - 1).coerceAtLeast(1).toFloat() * w, (p - 1) / (n - 1).coerceAtLeast(1).toFloat() * h)
+                }
+                pts.zipWithNext { p1, p2 -> drawLine(linea, p1, p2, 5f) }
+                pts.lastOrNull()?.let { drawCircle(linea, 8f, it) }
+            }
+            RigaDato("Adesso", "${pos.last()}º su $n")
+            RigaDato("Migliore / peggiore", "${pos.min()}º / ${pos.max()}º")
+        }
+    }
+}
+
+/** Confronto tra la tua squadra e un'altra: forza, valore, ingaggi, budget, stadio. */
+@Composable
+private fun ConfrontoSquadre(mia: Team, teams: List<Team>, tutti: List<Player>) {
+    var altra by rememberSaveable { mutableStateOf<Long?>(null) }
+    var cerca by rememberSaveable { mutableStateOf("") }
+    SectionTitle("Confronto squadre")
+    OutlinedTextField(cerca, { cerca = it }, Modifier.fillMaxWidth(), label = { Text("Cerca squadra") }, singleLine = true)
+    val lista = (if (cerca.length >= 2) teams.filter { it.name.contains(cerca, ignoreCase = true) }
+        else teams.filter { it.nazione == mia.nazione && it.campionato == mia.campionato }).filter { it.id != mia.id }.take(30)
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        lista.forEach { t -> PcChip(altra == t.id, { altra = if (altra == t.id) null else t.id }, { Text(t.name) }) }
+    }
+    val b = teams.firstOrNull { it.id == altra } ?: return
+    val byTeam = tutti.groupBy { it.teamId }
+    fun forza(t: Team) = byTeam[t.id].orEmpty().map { it.overall }.sortedDescending().take(11).average().let { if (it.isNaN()) 0.0 else it }
+    val ra = byTeam[mia.id].orEmpty(); val rb = byTeam[b.id].orEmpty()
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth()) {
+                Text(mia.name, Modifier.weight(1f), color = AC.Accent2, fontSize = 12.sp)
+                Text(b.name, Modifier.weight(1f), color = AC.Accent2, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            }
+            listOf(
+                Triple("Forza (11 migliori)", forza(mia).toLong(), forza(b).toLong()),
+                Triple("Valore rosa (M)", Analisi.valoreRosa(ra) / 1_000_000, Analisi.valoreRosa(rb) / 1_000_000),
+                Triple("Ingaggi (M)", ra.sumOf { it.salary } / 1_000_000, rb.sumOf { it.salary } / 1_000_000),
+                Triple("Budget (M)", mia.budget / 1_000_000, b.budget / 1_000_000),
+                Triple("Posti stadio", mia.stadiumCapacity.toLong(), b.stadiumCapacity.toLong()),
+                Triple("Giocatori", ra.size.toLong(), rb.size.toLong()),
+                Triple("Età media", ra.map { it.age }.average().let { if (it.isNaN()) 0L else it.toLong() }, rb.map { it.age }.average().let { if (it.isNaN()) 0L else it.toLong() })
+            ).forEach { (n, x, y) ->
+                Row(Modifier.fillMaxWidth()) {
+                    Text("$x", Modifier.weight(1f), color = if (x > y) AC.Ok else AC.Text, fontSize = 13.sp)
+                    Text(n, color = AC.TextDim, fontSize = 12.sp)
+                    Text("$y", Modifier.weight(1f), color = if (y > x) AC.Ok else AC.Text, fontSize = 13.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.End)
                 }
             }

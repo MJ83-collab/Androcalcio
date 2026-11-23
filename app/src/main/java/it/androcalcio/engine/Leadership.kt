@@ -7,6 +7,8 @@ import kotlin.math.roundToInt
 object Leadership {
     /** Capitano scelto dall'utente (0 = automatico). Vale solo se è in campo. */
     @Volatile var scelto: Long = 0L
+    /** Vicecapitano scelto (0 = nessuno): porta la fascia se il capitano non è in campo. */
+    @Volatile var vice: Long = 0L
 
     /** Carisma 0..100: da 18 anni (0) a 34 anni (70), più 30 punti a morale alto. */
     fun carisma(p: Player): Int {
@@ -20,5 +22,5 @@ object Leadership {
 
     /** Capitano tra i giocatori in campo (portieri esclusi): il migliore per punteggio. */
     fun capitano(inCampo: List<Player>): Player? =
-        inCampo.firstOrNull { it.id == scelto && scelto != 0L } ?: inCampo.filter { it.role != "P" }.maxByOrNull { punteggio(it) } ?: inCampo.maxByOrNull { punteggio(it) }
+        inCampo.firstOrNull { it.id == scelto && scelto != 0L } ?: inCampo.firstOrNull { it.id == vice && vice != 0L } ?: inCampo.filter { it.role != "P" }.maxByOrNull { punteggio(it) } ?: inCampo.maxByOrNull { punteggio(it) }
 }

@@ -16,7 +16,7 @@ object Bilancio {
         label.startsWith("Premio piazzamento") -> "Premi"
         label.startsWith("Premio assicurazione") || label.startsWith("Rimborso infortuni") -> "Assicurazione"
         label.startsWith("Ampliamento") -> "Stadio"
-        label.startsWith("Acquisto") || label.startsWith("Vendita") -> "Mercato"
+        label.startsWith("Acquisto") || label.startsWith("Vendita") || label.startsWith("Percentuale rivendita") -> "Mercato"
         label.startsWith("Interessi mutuo") -> "Interessi"
         label.startsWith("Mutuo") || label.startsWith("Rimborso mutuo") || label.startsWith("Estinzione mutuo") -> "Mutui"
         label.startsWith("Nuovo proprietario") -> "Proprietà"

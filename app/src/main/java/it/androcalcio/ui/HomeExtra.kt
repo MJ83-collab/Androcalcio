@@ -110,7 +110,7 @@ fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit,
                   profilo: Difficolta.Profilo = Difficolta.PROFILI[Difficolta.NORMALE], onProfilo: (Difficolta.Profilo) -> Unit = {},
                   testoPct: Int = 100, onTesto: (Int) -> Unit = {}, onTutorial: () -> Unit = {},
                   risparmio: Boolean = false, onRisparmio: (Boolean) -> Unit = {},
-                  temaNero: Boolean = false, onTemaNero: (Boolean) -> Unit = {}) {
+                  temaNero: Int = 0, onTemaNero: (Int) -> Unit = {}) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -145,8 +145,9 @@ fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit,
         }
         SectionTitle("Tema")
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PcChip(selected = !temaNero, onClick = { onTemaNero(false) }, label = { Text("Blu") })
-            PcChip(selected = temaNero, onClick = { onTemaNero(true) }, label = { Text("Nero (meno batteria)") })
+            PcChip(selected = temaNero == 0, onClick = { onTemaNero(0) }, label = { Text("Blu") })
+            PcChip(selected = temaNero == 1, onClick = { onTemaNero(1) }, label = { Text("Nero (meno batteria)") })
+            PcChip(selected = temaNero == 2, onClick = { onTemaNero(2) }, label = { Text("Chiaro") })
         }
         PcChip(selected = false, onClick = onTutorial, label = { Text("Rivedi il tutorial") })
         SectionTitle("Informazione")

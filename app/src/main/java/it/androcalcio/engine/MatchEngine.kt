@@ -5,7 +5,7 @@ import it.androcalcio.data.Team
 import kotlin.math.pow
 import kotlin.random.Random
 
-enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC, SUB }
+enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC, SUB, OFFSIDE }
 
 data class MatchEvent(
     val minute: Int,
@@ -127,11 +127,13 @@ object MatchEngine {
         homeStile: Stile? = null, awayStile: Stile? = null,   // tattica di base dell'allenatore (squadre AI)
         homeTiri: SetPieces = SetPieces.NONE, awayTiri: SetPieces = SetPieces.NONE,
         rng: Random = Random.Default,
-        meteoGol: Double = 1.0
+        meteoGol: Double = 1.0,
+        homeTrap: Boolean = false, awayTrap: Boolean = false
     ): MatchReport = LiveMatch(
         home, homePlayers, away, awayPlayers, homeF, awayF, homeCoach, awayCoach,
         homeMent, awayMent, homeBench, awayBench, rng,
         homePress = homePress, awayPress = awayPress, homeLine = homeLine, awayLine = awayLine, homeAmp = homeAmp, awayAmp = awayAmp,
-        homeStile = homeStile, awayStile = awayStile, homeTiri = homeTiri, awayTiri = awayTiri, meteoGol = meteoGol
+        homeStile = homeStile, awayStile = awayStile, homeTiri = homeTiri, awayTiri = awayTiri, meteoGol = meteoGol,
+        trapH = homeTrap, trapA = awayTrap
     ).also { it.runToEnd() }.report()
 }

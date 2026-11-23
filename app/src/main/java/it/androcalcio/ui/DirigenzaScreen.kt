@@ -88,7 +88,7 @@ fun DirigenzaScreen(team: Team?, c: ClubState, teams: List<Team>, onRequest: (St
                 )
                 ClubRequests.TIPI.forEach { tipo ->
                     val done = tipo in c.richieste
-                    Text(tipo.replaceFirstChar { it.uppercase() } + if (done) " (già richiesto)" else "",
+                    Text((if (tipo == "ingaggi") "Monte ingaggi (in più ogni anno)" else tipo.replaceFirstChar { it.uppercase() }) + if (done) " (già richiesto)" else "",
                         color = AC.Text, style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         ClubRequests.importi(tipo, c.reputazione, c.tifosi).forEach { imp ->

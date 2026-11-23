@@ -54,7 +54,8 @@ val LocalApriGiocatore = compositionLocalOf<(Player) -> Unit> { {} }
 /** Azioni sulla scheda: preferito, capitano, allenamento individuale. Null = nascoste. */
 data class AzioniGiocatore(
     val mioClub: Long, val preferiti: Set<Long>, val capitano: Long, val allenamento: Map<Long, Int>,
-    val onPreferito: (Player) -> Unit, val onCapitano: (Player?) -> Unit, val onAllenamento: (Player, Int?) -> Unit
+    val onPreferito: (Player) -> Unit, val onCapitano: (Player?) -> Unit, val onAllenamento: (Player, Int?) -> Unit,
+    val vice: Long = 0L, val onVice: (Player?) -> Unit = {}
 )
 val LocalAzioni = compositionLocalOf<AzioniGiocatore?> { null }
 
@@ -142,6 +143,8 @@ fun PlayerSheet(
                             { Text(if (p.id in az.preferiti) "★ Seguito" else "☆ Segui") })
                         if (p.teamId == az.mioClub) it.androcalcio.ui.components.PcChip(p.id == az.capitano, { az.onCapitano(if (p.id == az.capitano) null else p) },
                             { Text(if (p.id == az.capitano) "© Capitano" else "Fai capitano") })
+                        if (p.teamId == az.mioClub && p.id != az.capitano) it.androcalcio.ui.components.PcChip(p.id == az.vice, { az.onVice(if (p.id == az.vice) null else p) },
+                            { Text(if (p.id == az.vice) "Vicecapitano" else "Fai vice") })
                     }
                     if (p.teamId == az.mioClub) {
                         Text("Allenamento individuale", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
@@ -169,8 +172,17 @@ fun PlayerSheet(
                     Titolo("STAGIONI")
                     if (dettaglio.stagioni.isEmpty()) Text("Nessuna partita registrata.", fontSize = 11.sp, color = AC.PaperText)
                     dettaglio.stagioni.forEach { st ->
-                        Text("${st.season}: presenze ${st.presenze} · gol ${st.gol}", fontSize = 12.sp, color = AC.PaperText)
+                        val sq = dettaglio.squadreStagioni[st.teamId]?.let { " · $it" } ?: ""
+                        val voto = dettaglio.votiStagioni[st.season]?.let { " · voto %.1f".format(it) } ?: ""
+                        Text("${st.season}$sq: presenze ${st.presenze} · gol ${st.gol}$voto", fontSize = 12.sp, color = AC.PaperText)
                     }
+                    if (dettaglio.stagioni.size > 1) Text("Totale: presenze ${dettaglio.stagioni.sumOf { it.presenze }} · gol ${dettaglio.stagioni.sumOf { it.gol }}",
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
+                    dettaglio.minutiPct?.let { Text("Minuti giocati in stagione: $it%", fontSize = 12.sp, color = AC.PaperText) }
+                    Titolo("INFORTUNI")
+                    if (dettaglio.infortuni.isEmpty()) Text("Nessun infortunio registrato.", fontSize = 11.sp, color = AC.PaperText)
+                    dettaglio.infortuni.takeLast(8).reversed().forEach { (st, t) -> Text("$st: $t turni di stop", fontSize = 12.sp, color = AC.PaperText) }
+                    if (dettaglio.infortuni.size >= 3) Text("Giocatore fragile: si è fatto male spesso.", fontSize = 11.sp, color = AC.ColEn)
                     dettaglio.clausola?.let { c ->
                         Titolo("CLAUSOLE")
                         Text("30 presenze ${money(c.bonusPresenze)} · 20 gol ${money(c.bonusGol)} · " +
