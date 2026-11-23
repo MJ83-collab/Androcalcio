@@ -1037,6 +1037,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun liveModulo(f: Formation) { val i = _live.value ?: return; i.m.setModulo(i.userHome, f); bump() }
     fun liveRitmo(r: Ritmo) { val i = _live.value ?: return; i.m.setRitmo(i.userHome, r); bump() }
+    fun liveContropiede(on: Boolean) { val i = _live.value ?: return; i.m.setContropiede(i.userHome, on); bump() }
     fun livePressing(p: Pressing) { val i = _live.value ?: return; i.m.setPressing(i.userHome, p); bump() }
     fun liveLine(l: DefLine) { val i = _live.value ?: return; i.m.setLine(i.userHome, l); bump() }
 

@@ -67,6 +67,16 @@ class LiveMatch(
     // Ritmo di squadra (solo la tua squadra lo sceglie in partita)
     var ritmoH = Ritmo.NORMALE; private set
     var ritmoA = Ritmo.NORMALE; private set
+    // Contropiede: con meno possesso, le ripartenze sono più pericolose
+    var contropiedeH = false; private set
+    var contropiedeA = false; private set
+    fun setContropiede(homeSide: Boolean, on: Boolean) {
+        if (finished) return
+        if (homeSide) contropiedeH = on else contropiedeA = on
+        val t = if (homeSide) home else away
+        events += MatchEvent(minute, EventType.TACTIC, homeSide,
+            "${t.shortName} ${if (on) "gioca in contropiede" else "torna al gioco normale"}", 0.5f, 0.5f)
+    }
     private fun conAttacco(r: MatchEngine.Ratings, k: Double) =
         MatchEngine.Ratings(r.atk * k, r.mid, r.def, r.gk, r.stamina, r.players)
     private var h = MatchEngine.ratings(xiH, homeF, homeCoach)
@@ -249,6 +259,8 @@ class LiveMatch(
             val ampAtt = if (homeAtt) ampH else ampA
             val ampDef = if (homeAtt) ampA else ampH
             var ratio = att.atk * mAtt.atk * lAtt.atk * ampAtt.atk / (dfn.def * mDef.def * lDef.def * ampDef.def * defPen)
+            val contro = if (homeAtt) contropiedeH else contropiedeA
+            if (contro && (if (homeAtt) pNow else 1 - pNow) < 0.5) ratio *= 1.12
             // Trappola del fuorigioco: spesso ferma l'azione, ma se salta l'attaccante va in porta da solo
             val trappola = (if (homeAtt) trapA else trapH) && lDef == DefLine.ALTA
             val rT = rng.nextDouble()

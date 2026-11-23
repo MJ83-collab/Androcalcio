@@ -138,6 +138,11 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                         }
                     }
                 }
+                item {
+                    val contro = if (info.userHome) m.contropiedeH else m.contropiedeA
+                    PcChip(selected = contro, onClick = { vm.liveContropiede(!contro) },
+                        label = { Text(if (contro) "Contropiede: attivo" else "Contropiede: off") })
+                }
                 item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
                 item {
                     Column {
