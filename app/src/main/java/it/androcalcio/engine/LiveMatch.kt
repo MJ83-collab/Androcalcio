@@ -16,7 +16,7 @@ private const val ANGOLO_QUOTA = 0.4
 class LiveMatch(
     val home: Team, homePlayers: List<Player>,
     val away: Team, awayPlayers: List<Player>,
-    val homeF: Formation, val awayF: Formation,
+    var homeF: Formation, var awayF: Formation,
     private val homeCoach: Int, private val awayCoach: Int,
     private var homeMent: Mentality?, private var awayMent: Mentality?,
     homeBench: List<Player>?, awayBench: List<Player>?,
@@ -119,6 +119,15 @@ class LiveMatch(
 
     fun setPressing(homeSide: Boolean, p: Pressing) { if (homeSide) pressH = p else pressA = p }
     fun setLine(homeSide: Boolean, l: DefLine) { if (homeSide) lineH = l else lineA = l }
+
+    /** Cambio di modulo dal vivo: i giocatori restano in campo, cambiano posizioni e peso di ogni reparto. */
+    fun setModulo(homeSide: Boolean, f: Formation) {
+        if (finished) return
+        if (homeSide) homeF = f else awayF = f
+        refresh()
+        val t = if (homeSide) home else away
+        events += MatchEvent(minute, EventType.TACTIC, homeSide, "${t.shortName} passa al modulo ${f.label}", 0.5f, 0.5f)
+    }
 
     /** Con la linea alta, gli attaccanti avversari veloci trovano più spazio alle spalle. */
     private fun speedPenalty(line: DefLine, attackers: List<Player>): Double {

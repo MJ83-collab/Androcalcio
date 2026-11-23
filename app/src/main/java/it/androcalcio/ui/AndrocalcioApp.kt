@@ -361,7 +361,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         { vm.setMarketRole(it) }, { p, price, w, y -> vm.offer(p, price, w, y) },
                         { p, y -> vm.wageAsk(p, y) }, vm.wageRoom(),
                         clubOk, { p, y -> vm.consiglioVice(p, y) },
-                        { vm.sell(it) }, { vm.clearOffer() }
+                        { vm.sell(it) }, { vm.clearOffer() }, { vm.preContratto(it) }
                     )
                 }
                 Screen.VIVAIO -> {

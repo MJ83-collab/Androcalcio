@@ -54,6 +54,8 @@ fun FinePartitaScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMo
             item { Tabella(rep, info.userHome, m::minutiGiocati, info.esito, mie = true, pronta = pronta) }
             item { Titolo("Avversario · ${altra.shortName}") }
             item { Tabella(rep, !info.userHome, m::minutiGiocati, info.esito, mie = false, pronta = pronta) }
+            item { Titolo("Top 11 della partita") }
+            item { Top11(rep) }
             item { Titolo("Cronaca") }
             item { CronacaPanel(rep.events.reversed()) }
         }
@@ -64,6 +66,23 @@ fun FinePartitaScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMo
             ) { Text(if (pronta) "Prossima partita" else "Salvataggio in corso...") }
             TextButton(onClick = { vm.closeLive() }, enabled = pronta, modifier = Modifier.fillMaxWidth()) {
                 Text("Torna al calendario")
+            }
+        }
+    }
+}
+
+/** Le undici pagelle più alte della partita, tra le due squadre: squadra e voto. */
+@Composable
+private fun Top11(rep: MatchReport) {
+    val top = rep.playedPlayers.sortedByDescending { rep.playerRatings[it.id] ?: 6.0 }.take(11)
+    PaperPanel(Modifier.fillMaxWidth()) {
+        top.forEachIndexed { i, p ->
+            val casa = p.id in rep.homePlayed
+            PaperRow(i) {
+                Text("${i + 1}. ${p.name}", Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text((if (casa) rep.home.shortName else rep.away.shortName), color = AC.PaperLine, fontSize = 11.sp)
+                Text("%.1f".format(rep.playerRatings[p.id] ?: 6.0), Modifier.width(44.dp), textAlign = TextAlign.End,
+                    color = AC.ColBlue, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
     }

@@ -1032,6 +1032,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (!i.m.substitute(i.userHome, out, inP)) _notice.value = "Cambio non possibile."
         bump()
     }
+    fun liveModulo(f: Formation) { val i = _live.value ?: return; i.m.setModulo(i.userHome, f); bump() }
     fun livePressing(p: Pressing) { val i = _live.value ?: return; i.m.setPressing(i.userHome, p); bump() }
     fun liveLine(l: DefLine) { val i = _live.value ?: return; i.m.setLine(i.userHome, l); bump() }
 
@@ -1312,7 +1313,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val buyer = selectedTeam.value ?: return@launch
             val giornata = dao.statoInt(MK.GIORNATA)
             val cool = dao.statoInt(MK.cool(p.id))
-            val daAccordo = p.teamId == Market.SVINCOLATO_ID || dao.statoInt(MK.clubOk(p.id)) == 1
+            val daAccordo = p.teamId == Market.SVINCOLATO_ID || preContratto(p) || dao.statoInt(MK.clubOk(p.id)) == 1
             when {
                 dao.stato("ffp_blocco") == _season.value ->
                     _offer.value = OfferResult.Rejected("Mercato in entrata bloccato per il fair play finanziario: hai speso troppo rispetto agli incassi.")
@@ -1322,7 +1323,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     _offer.value = OfferResult.Rejected("Rosa piena (massimo ${Market.MAX_SQUAD} giocatori).")
                 cool > giornata ->
                     _offer.value = OfferResult.Rejected("${p.name} è deluso e non tratta: torna disponibile tra ${cool - giornata} giornate.")
-                p.teamId == Market.SVINCOLATO_ID || dao.statoInt(MK.clubOk(p.id)) == 1 ->
+                p.teamId == Market.SVINCOLATO_ID || preContratto(p) || dao.statoInt(MK.clubOk(p.id)) == 1 ->
                     _offer.value = playerTalk(p, buyer, wage, years)
                 else -> _offer.value = clubTalk(p, buyer, price, years)
             }
@@ -1378,8 +1379,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Firma: il prezzo concordato col club (zero per gli svincolati) va al club venditore. */
+    /** Pre-contratto: nella finestra di gennaio un giocatore all'ultimo anno si firma senza pagare il club. */
+    fun preContratto(p: Player): Boolean = p.teamId != Market.SVINCOLATO_ID && p.contract <= 1 && _extra.value.finestra == Finestre.Stato.INVERNALE
+
     private suspend fun firma(p: Player, buyer: Team, wage: Long, years: Int): OfferResult {
-        val svincolato = p.teamId == Market.SVINCOLATO_ID
+        val svincolato = p.teamId == Market.SVINCOLATO_ID || preContratto(p)
         val fee = if (svincolato) 0L else dao.statoInt(MK.pend(p.id)).toLong()
         val comm = Agenti.commissione(p, wage, years)
         // Acquisto a rate: metà subito, metà a fine stagione (nessun interesse)

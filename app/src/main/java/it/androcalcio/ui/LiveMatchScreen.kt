@@ -115,6 +115,18 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 }
             }
             if (panel == LivePanel.TATTICA) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("MODULO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            val attuale = if (info.userHome) m.homeF else m.awayF
+                            listOf(it.androcalcio.engine.Formation.F442, it.androcalcio.engine.Formation.F433,
+                                it.androcalcio.engine.Formation.F352, it.androcalcio.engine.Formation.F451).forEach { f ->
+                                PcChip(selected = f == attuale, onClick = { vm.liveModulo(f) }, label = { Text(f.label) })
+                            }
+                        }
+                    }
+                }
                 item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
                 item {
                     Column {

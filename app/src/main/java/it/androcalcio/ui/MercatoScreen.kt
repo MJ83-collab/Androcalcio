@@ -89,7 +89,8 @@ fun MercatoScreen(
     clubAccepted: Set<Long> = emptySet(),
     advice: (Player, Int) -> String = { _, _ -> "" },
     onSell: (Player) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    preContratto: (Player) -> Boolean = { false }
 ) {
     if (team == null) return
     val byId = teams.associateBy { it.id }
@@ -182,7 +183,8 @@ fun MercatoScreen(
 
     target?.let { p ->
         val step = maxOf(10_000L, Market.value(p) / 20)
-        val libero = p.teamId == Market.SVINCOLATO_ID
+        val pre = preContratto(p)
+        val libero = p.teamId == Market.SVINCOLATO_ID || pre
         val clubOk = p.id in clubAccepted
         AlertDialog(
             onDismissRequest = { target = null },
@@ -201,6 +203,8 @@ fun MercatoScreen(
                         color = AC.Text, fontSize = 12.sp
                     )
                     Text("Valore di mercato ${money(Market.value(p))}", color = AC.TextDim)
+                    if (pre) Text("Pre-contratto: l'ultimo anno di contratto. Firmi senza pagare il club.",
+                        color = AC.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     if (!libero && !clubOk) {
                         Text("Prezzo al club (risposta alla prossima giornata)", color = AC.TextDim, fontSize = 11.sp)
                         Row(verticalAlignment = Alignment.CenterVertically,
