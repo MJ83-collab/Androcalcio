@@ -34,7 +34,7 @@ class V06Test {
         val ms = listOf(m(1, 1, 2, 2, 0), m(2, 2, 1, 1, 1), m(3, 1, 2, 0, 1))
         val casa = ClassificaExtra.lato(ts, ms, true)
         assertEquals(3, casa.first { it.team.id == 1L }.pts)
-        assertEquals(3, casa.first { it.team.id == 2L }.pts)
+        assertEquals(1, casa.first { it.team.id == 2L }.pts)
         assertEquals("VNP", ClassificaExtra.forma(1L, ms))
         assertEquals(listOf(1, 1, 1), Andamento.posizioni(1L, ts, ms))
     }
