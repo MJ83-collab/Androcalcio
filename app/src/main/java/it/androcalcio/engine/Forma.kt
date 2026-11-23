@@ -14,6 +14,17 @@ object Forma {
     /** Media degli ultimi voti, oppure null se non ha ancora giocato. */
     fun media(s: List<Double>): Double? = if (s.isEmpty()) null else s.average()
 
+    /** Legge la lista salvata (voti in decimi separati da virgola). */
+    fun leggi(s: String?): List<Double> = s?.split(",")?.mapNotNull { it.toIntOrNull()?.let { v -> v / 10.0 } } ?: emptyList()
+
+    /** Icona della rosa: freccia su o giù se la forma è marcata. */
+    fun icona(m: Double?): String = when {
+        m == null -> ""
+        m >= 7.0 -> "↑ "
+        m < 5.5 -> "↓ "
+        else -> ""
+    }
+
     fun simbolo(m: Double?): String = when {
         m == null -> "nessuna partita"
         m >= 7.0 -> "↑ in forma"

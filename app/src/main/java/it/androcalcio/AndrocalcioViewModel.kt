@@ -3255,6 +3255,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Formazioni salvate: 3 posti con titolari, modulo e tattica. */
+    /** Media forma per giocatore della squadra selezionata (solo chi ha giocato). */
+    val formeRosa: StateFlow<Map<Long, Double>> = osserva("stato") {
+        val tid = selectedTeam.value?.id ?: return@osserva emptyMap<Long, Double>()
+        dao.playersOnce(tid).mapNotNull { p ->
+            Forma.media(Forma.leggi(dao.stato(Forma.key(p.id))))?.let { p.id to it }
+        }.toMap()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     val formazioniSalvate: StateFlow<List<FormazioniSalvate.Preset?>> = osserva("stato") { FormazioniSalvate.decode(dao.stato(FormazioniSalvate.KEY)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), List(FormazioniSalvate.POSTI) { null })
     fun salvaFormazione(posto: Int) {

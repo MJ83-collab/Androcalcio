@@ -327,7 +327,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() },
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) },
-                        consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() })
+                        consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
+                        forme = vm.formeRosa.collectAsStateWithLifecycle().value)
                 }
                 Screen.SQUADRE -> {   // solo consultazione: la panchina cambia con le offerte
                     var scheda by remember { mutableStateOf<Team?>(null) }
@@ -828,7 +829,8 @@ fun RosaScreen(
     training: TrainingPlan, onTraining: (TrainingPlan) -> Unit,
     onRole: (Player, String) -> Unit = { _, _ -> },
     advice: it.androcalcio.engine.AssistantCoach.Advice? = null, onApplyXI: () -> Unit = {},
-    onApplyTattica: () -> Unit = {}
+    onApplyTattica: () -> Unit = {},
+    forme: Map<Long, Double> = emptyMap()
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -860,7 +862,7 @@ fun RosaScreen(
     ) {
         item { MediaSquadraBar(team, players) }
         item { AssistantCard(advice, onApplyXI, onApplyTattica) }
-        item { RosaTable(players, onToggleStarter, { sheet = it }, onRole) }
+        item { RosaTable(players, onToggleStarter, { sheet = it }, onRole, forme) }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
@@ -900,7 +902,7 @@ private fun ruoloTag(r: String) = "[$r]"
 @Composable
 private fun RosaTable(
     players: List<Player>, onToggleStarter: (Player) -> Unit, onOpen: (Player) -> Unit,
-    onRole: (Player, String) -> Unit
+    onRole: (Player, String) -> Unit, forme: Map<Long, Double> = emptyMap()
 ) {
     val stats = listOf("EN", "VE", "RE", "AG", "QU", "SF", "MO", "ME")
     val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColOrange)
@@ -962,7 +964,7 @@ private fun RosaTable(
                     Text(if (p.numero > 0) "${p.numero}" else "-", Modifier.width(26.dp), textAlign = TextAlign.Center,
                         fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     it.androcalcio.ui.components.Avatar(p.name, 22.dp, Modifier.padding(end = 3.dp))
-                    Text(ruoloTag(p.role) + "  " + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
+                    Text(ruoloTag(p.role) + "  " + it.androcalcio.engine.Forma.icona(forme[p.id]) + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     val st = (p.overall / 20).coerceIn(0, 5)
