@@ -1,60 +1,49 @@
-# Androcalcio — report (23/11/2026) · ramo `feat/pc7-vivai-extra`
+# Androcalcio — report (23/11/2026) · v0.4.0
 
-Kotlin 2.0 / Compose / Room (DB v24, **nessuna migrazione nuova**: gli extra stanno come testo nella tabella Stato).
-**Test motore: tutti verdi in CI (92+ e i nuovi di `NuoveMeccanicheTest`). Build GitHub Actions: verde** (commit `de9148f`, run 45086065823).
-⚠️ Non ho potuto provare l'app su un telefono: grafica e schermate sono verificate solo dalla compilazione.
+Kotlin 2.0 / Compose / Room (DB v24, **nessuna migrazione**: gli extra stanno come testo nella tabella Stato).
+**Test motore e build GitHub Actions: verdi** (anche APK release con R8).
+⚠️ Non ho potuto provare l'app su un telefono: grafica e comportamento in release (R8) sono verificati solo da compilazione e test.
 
-## 1. Avatar nel vivaio e in tutte le schede
-Avatar con volto ora in: vivaio (lista e scheda), scouting, mercato, statistiche, nazionali, prestiti, rosa. Il volto nasce dal nome, come per i giocatori.
+## 1. Mutui bancari (Finanze → "Mutui bancari")
+6 banche con tasso, tetto e durata propri; soldi subito nel budget, rata fissa a fine stagione (capitale + interessi).
+| Banca | Tasso | Fino a | Anni |
+|---|---|---|---|
+| Cassa Rurale del Cugino Gigi | 4,0% | 3M | 3 |
+| Banca Popolare dello Zio Gaetano | 6,5% | 8M | 5 |
+| Credito Cooperativo Pantofola d'Oro | 9,0% | 15M | 4 |
+| Monte dei Pegni Svelti | 12,0% | 10M | 3 |
+| Istituto Sogni d'Oro & Figli | 7,5% | 20M | 8 |
+| Banca dei Fratelli Strozzi | 18,0% | 25M | 2 |
+Regole: un mutuo per banca, debito massimo 40M, minimo 500k; estinzione anticipata con penale 2%; se a fine stagione manca il budget si paga il possibile e il resto resta in debito con mora 5%. Gli **interessi** pesano sul fair play, il capitale no. Compaiono nel bilancio di stagione (categorie "Mutui" e "Interessi"). Salvati in Stato (chiave `mutui`), inclusi in export/reset.
 
-## 2. Grafica dai 3 screenshot
-- **Tabellone TV** (`TabelloneTV`): punteggio in stile telecronaca blu, al posto del vecchio tabellone nella schermata Partita.
-- **Formazione sul campo** (`FormazioneAvatar`): campo verticale con volto e cognome di ogni titolare, nella schermata Tattica.
-- **Tabelle a stelle (stile PC Calcio 6.0)** → scouting: stelle per livello e potenziale (stimato, con margine d'errore).
+## 2. Prestazioni e batteria
+- **Eliminato il polling**: 12 flussi interrogavano il database ogni 1,5–3 s anche con l'app ferma. Ora si rileggono solo quando la tabella cambia (`osserva(...)` con `InvalidationTracker`).
+- Le schermate smettono di aggiornarsi in background (`collectAsStateWithLifecycle`).
+- La partita dal vivo si mette in **pausa** quando l'app va in background.
+- **Opzione "Risparmio batteria"** (Opzioni): la partita avanza al massimo 8 volte al secondo.
+- **R8 + riduzione risorse** nell'APK release (firmato con chiave di debug: installabile subito).
 
-## 3. Scouting anche nei vivai
-Nuova scheda **Vivai** in Vivaio: missione dell'osservatore su 4 club × 2 giovani, filtro per ruolo, stelle, "Segui" e "Ingaggia" (prezzo = livello × potenziale × 110, tra 80k e 2,5M; massimo 30 giovani nel tuo vivaio). I vivai delle IA hanno minimo 8 giovani e si rigenerano da soli.
+## 3. Le 20 migliorie (scheda Società → "Analisi", più opzioni)
+1 Contratti in scadenza · 2 Infermeria · 3 Giocatori stanchi · 4 Ingaggi per reparto · 5 Età media/media/valore per reparto · 6 Giovani promesse · 7 Forma ultime 5 · 8 Serie (vittorie, imbattibilità, porta inviolata, senza vincere) · 9 Rendimento casa/trasferta · 10 Marcatori del club · 11 Consigli del vice per la prossima partita · 12 Peso ingaggi sul budget ingaggi · 13 Avviso rate dei mutui vs budget · 14 Risparmio batteria · 15 Gol fatti/subiti a partita · 16 Capitano suggerito · 17 Scontenti · 18 Attaccanti a secco · 19 Valore della rosa · 20 Rinnovi consigliati.
+Controllato che non esistessero già (a differenza del giro precedente).
 
-## 4. Le "20 migliorie" — verità
-Ammetto un errore: **circa 8 delle 20 che avevo proposto esistevano già** (es. conferenze, psicologo, derby, meteo, prestiti, agenti, giornale, achievement). Ho implementato solo quelle davvero mancanti, nuova schermata **Società**:
-| Cosa | Dettaglio |
-|---|---|
-| Disciplina | Diffida a 4 gialli, squalifica al 5°; rossi 1–3 turni; severità arbitro 1–3; squalificati esclusi dalla formazione |
-| Spogliatoio/personalità | 6 tipi (Leader, Professionista, Ambizioso, Mercenario, Sensibile, Fedele); richieste di aumento/cessione (max 3) |
-| Scambi | Giocatore + conguaglio; l'IA vuole valore ≥ 105% del tuo; niente scambi di portieri |
-| Fair play finanziario | Perdita operativa su 3 anni (esclusi mercato, stadio, multe); soglia 8M + 30% budget; multa 10% dell'eccesso; blocco mercato se eccesso > soglia/4 |
-| Storia | Scontri diretti, record di stagione, Hall of Fame (dopo 5 anni, media ≥ 78 o 50 gol), maglia ritirata dopo 8 anni |
-| Cerca | Ricerca nella società |
-| Autosalvataggio | Slot 4, ogni 4 partite tue; gli slot manuali non lo toccano |
-| Dimensione testo | 85/100/115/130% in Opzioni |
-| Tutorial | Alla prima apertura e da Opzioni ("Rivedi il tutorial") |
+## 4. Pulizia
+Tolti dalla radice e dal repository: `androcalcio.zip` e la cartella `.gradle/` (cache di build tracciata per errore). `.gitignore` esteso (`.idea`, `local.properties`, `*.apk`, `*.zip`). README riscritto.
 
-## 5. Controllo bug ("big")
-Rilettura del codice + CI. Corretti prima del push finale:
-- multa fair play contata due volte nell'operativo dell'anno dopo;
-- giocatori "Ambiziosi" che chiedevano la cessione senza che tu avessi scelto i titolari;
-- conteggio errato dei squalificati nell'avviso;
-- errori di compilazione (`matchParentSize`, `sumOf` ambiguo) e import mancanti.
-Morale/personalità sono aggiornati in `dopoMiaPartita` perché `runRounds` sovrascrive i giocatori con una cache.
+## 5. Bug-check
+Nuovo codice riletto; la CI compila e passa tutti i test (nuovi: `MutuiTest`, `AnalisiTest`). Corretto durante il lavoro: ramo morto in `Mutui.paga`. Verificato che i nomi tabella usati da `osserva` esistano (un nome errato farebbe crashare).
 
 ## 6. Limiti noti
-- Non provato su telefono; possibile ritocco di spaziature/dimensioni.
-- Soglie fair play e prezzi giovani **non tarati**: serve giocare qualche stagione.
-- Non aggiunti: tattica "ampiezza/stile" (pressing, linea, mentalità già presenti), consigli trasferte/turnover.
-- L'autosave può fotografare a metà giornata.
-- Salvataggi vecchi: gli extra ripartono da zero (meglio nuova carriera).
-- Avatar ancora disegnati in codice, non in stile Sakamoto Days.
-- Rimasti da prima: `Insurance.ROUNDS=38`, `wipe` non svuota l'albo, `androcalcio.zip` nella radice, README minimo.
+- Non provato su telefono; l'APK release (R8) non è stato avviato: se crasha, usare l'APK debug e segnalarmelo.
+- Tassi, tetti e soglie fair play non tarati con partite lunghe.
+- Il debito non influisce su fiducia/dirigenza (solo mora e fair play).
+- Alcune migliorie sono sola lettura (Analisi mostra, non agisce).
+- Avatar ancora disegnati in codice. Restano: `Insurance.ROUNDS=38`, `wipe` non svuota l'albo.
 
-## 7. Prossimi passi (decidi tu)
-1. Aprire PR di `feat/pc7-vivai-extra` verso `main` e fare merge.
-2. Provare l'APK e segnalarmi problemi grafici.
-3. Tarare economia/fair play dopo qualche stagione.
-
-**Modello:** basta Sonnet (default). Opus solo per bilanciare l'economia o progettare nuove meccaniche.
+**Modello:** basta Sonnet; Opus solo per tarare l'economia (tassi/soglie) o nuove meccaniche.
 
 ---
-# Report precedente (22/11/2026, v0.3.0)
+# Report precedente (22/11/2026)
 
 # Androcalcio — report (22/11/2026) · versione 0.3.0
 
