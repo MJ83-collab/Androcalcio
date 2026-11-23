@@ -196,3 +196,36 @@ class MutuiTest {
         org.junit.Assert.assertEquals(-300_000L, op)
     }
 }
+
+class AnalisiTest {
+    private fun p(gf: Int, gs: Int, casa: Boolean = true) = Analisi.Partita(gf, gs, casa)
+
+    @org.junit.Test fun formaESerie() {
+        val l = listOf(p(0, 1), p(2, 0), p(1, 1), p(3, 0), p(1, 0))
+        org.junit.Assert.assertEquals("SVNVV", Analisi.forma(l))
+        val s = Analisi.serie(l)
+        org.junit.Assert.assertEquals(2, s.vittorie)
+        org.junit.Assert.assertEquals(4, s.imbattuto)
+        org.junit.Assert.assertEquals(2, s.senzaSubire)
+        org.junit.Assert.assertEquals(0, s.senzaVincere)
+    }
+
+    @org.junit.Test fun casaETrasferta() {
+        val l = listOf(p(2, 0, true), p(0, 1, false), p(1, 1, false))
+        val c = Analisi.rendimento(l, true); val t = Analisi.rendimento(l, false)
+        org.junit.Assert.assertEquals(3, c.punti)
+        org.junit.Assert.assertEquals(1, t.punti)
+        org.junit.Assert.assertEquals(2, t.giocate)
+    }
+
+    @org.junit.Test fun nessunaPartita() {
+        org.junit.Assert.assertEquals("", Analisi.forma(emptyList()))
+        org.junit.Assert.assertEquals(0, Analisi.serie(emptyList()).vittorie)
+        org.junit.Assert.assertEquals(0.0 to 0.0, Analisi.mediaGol(emptyList()))
+    }
+
+    @org.junit.Test fun consigliSenzaTitolari() {
+        val c = Analisi.consigli(emptyList(), emptySet(), emptySet())
+        org.junit.Assert.assertTrue(c.first().contains("titolari"))
+    }
+}

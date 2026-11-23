@@ -32,6 +32,8 @@ import it.androcalcio.AndrocalcioViewModel.SocietaStato
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.AllStar
+import it.androcalcio.engine.Analisi
+import it.androcalcio.engine.Mutui
 import it.androcalcio.engine.Disciplina
 import it.androcalcio.engine.Personalita
 import it.androcalcio.engine.Market
@@ -79,7 +81,7 @@ fun SocietaScreen(
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
     val nomiSquadra = teams.associate { it.id to it.name }
-    val titoli = listOf("Disciplina", "Spogliatoio", "Scambi", "Fair play", "Storia", "Cerca")
+    val titoli = listOf("Disciplina", "Spogliatoio", "Scambi", "Fair play", "Storia", "Analisi", "Cerca")
     Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Società", style = MaterialTheme.typography.headlineSmall)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -92,6 +94,7 @@ fun SocietaScreen(
                 2 -> TabScambi(team, teams, rosa, tutti, onScambio)
                 3 -> TabFairPlay(s)
                 4 -> TabStoria(s)
+                5 -> TabAnalisi(team, rosa, s)
                 else -> TabCerca(teams, tutti, nomiSquadra)
             }
         }
@@ -292,4 +295,92 @@ fun TutorialDialog(onChiudi: () -> Unit) {
         },
         confirmButton = { PcAction(onClick = onChiudi) { Text("Ho capito") } }
     )
+}
+
+@Composable
+private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato) {
+    val avvisiMutui = Analisi.rataInArrivo(s.mutui)
+    SectionTitle("Consigli del vice")
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Analisi.consigli(rosa, s.squal.keys, Disciplina.diffidati(Disciplina.Registro(s.gialli, s.squal)).toSet())
+                .forEach { Text("• $it", color = AC.Text, fontSize = 13.sp) }
+        }
+    }
+
+    SectionTitle("Risultati")
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp)) {
+            val f = Analisi.forma(s.partite)
+            RigaDato("Forma (ultime 5)", if (f.isEmpty()) "-" else f.toCharArray().joinToString(" "))
+            val se = Analisi.serie(s.partite)
+            RigaDato("Vittorie di fila", "${se.vittorie}")
+            RigaDato("Imbattuto da", "${se.imbattuto} partite")
+            RigaDato("Senza subire gol da", "${se.senzaSubire} partite")
+            RigaDato("Senza vincere da", "${se.senzaVincere} partite")
+            val c = Analisi.rendimento(s.partite, true); val t = Analisi.rendimento(s.partite, false)
+            RigaDato("In casa", "${c.punti} pt in ${c.giocate} · reti ${c.gf}-${c.gs}")
+            RigaDato("In trasferta", "${t.punti} pt in ${t.giocate} · reti ${t.gf}-${t.gs}")
+            val (gf, gs) = Analisi.mediaGol(s.partite)
+            RigaDato("Gol a partita", "%.2f fatti · %.2f subiti".format(gf, gs))
+        }
+    }
+
+    SectionTitle("Marcatori del club")
+    val mar = Analisi.marcatori(s.stat, rosa)
+    if (mar.isEmpty()) Text("Ancora nessun gol in stagione.", color = AC.TextDim)
+    mar.forEach { (p, g) -> RigaGiocatore(p, "$g gol") }
+    val secco = Analisi.attaccantiASecco(s.stat, rosa)
+    if (secco.isNotEmpty()) {
+        SectionTitle("Attaccanti a secco")
+        secco.forEach { RigaGiocatore(it, "0 gol") }
+    }
+
+    SectionTitle("Rosa")
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp)) {
+            RigaDato("Valore della rosa", money(Analisi.valoreRosa(rosa)))
+            RigaDato("Ingaggi / budget ingaggi", "${Analisi.pesoIngaggi(rosa, team.wageBudget)}%",
+                if (Analisi.pesoIngaggi(rosa, team.wageBudget) > 90) AC.ColEn else AC.Text)
+            Analisi.capitanoSuggerito(rosa)?.let { RigaDato("Capitano suggerito", it.name) }
+            Analisi.reparti(rosa).forEach { r ->
+                RigaDato(when (r.ruolo) { "P" -> "Portieri"; "D" -> "Difensori"; "C" -> "Centrocampisti"; else -> "Attaccanti" },
+                    "${r.n} · età ${"%.1f".format(r.etaMedia)} · media ${"%.0f".format(r.overallMedio)} · ${money(r.ingaggi)}")
+            }
+        }
+    }
+
+    SectionTitle("Contratti")
+    val sc = Analisi.inScadenza(rosa)
+    if (sc.isEmpty()) Text("Nessun contratto in scadenza.", color = AC.TextDim)
+    val consigliati = Analisi.rinnoviConsigliati(rosa).map { it.id }.toSet()
+    sc.forEach { RigaGiocatore(it, if (it.id in consigliati) "Rinnova!" else "scade") }
+
+    SectionTitle("Infermeria e stanchi")
+    val inf = Analisi.infermeria(rosa)
+    if (inf.isEmpty()) Text("Nessun infortunato.", color = AC.TextDim)
+    inf.forEach { RigaGiocatore(it, "${it.injuredRounds} turni") }
+    Analisi.stanchi(rosa).forEach { RigaGiocatore(it, "${it.condition}%") }
+    val sco = Analisi.scontenti(rosa)
+    if (sco.isNotEmpty()) {
+        SectionTitle("Scontenti")
+        sco.forEach { RigaGiocatore(it, "morale ${it.morale}") }
+    }
+
+    val pr = Analisi.promesse(rosa)
+    if (pr.isNotEmpty()) {
+        SectionTitle("Giovani promesse")
+        pr.forEach { RigaGiocatore(it, "pot. ${it.potential}") }
+    }
+
+    if (s.mutui.isNotEmpty()) {
+        SectionTitle("Mutui")
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
+                RigaDato("Debito", money(Mutui.debitoTotale(s.mutui)))
+                RigaDato("Rate a fine stagione", money(avvisiMutui), if (avvisiMutui > team.budget) AC.ColEn else AC.Text)
+                if (avvisiMutui > team.budget) Text("Il budget attuale non copre le rate: rischi la mora.", color = AC.ColEn, fontSize = 12.sp)
+            }
+        }
+    }
 }

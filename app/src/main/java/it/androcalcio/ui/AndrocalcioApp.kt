@@ -277,7 +277,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val prof by vm.profilo.collectAsStateWithLifecycle()
                     val testo by vm.testoPct.collectAsStateWithLifecycle()
                     OpzioniScreen(op, { vm.setDifficolta(it) }, { vm.setVelocita(it) }, prof, { vm.setProfilo(it) },
-                        testo, { vm.setTesto(it) }, { vm.apriTutorial() })
+                        testo, { vm.setTesto(it) }, { vm.apriTutorial() },
+                        vm.risparmio.collectAsStateWithLifecycle().value, { vm.setRisparmio(it) })
                 }
                 Screen.RELAZIONI -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()

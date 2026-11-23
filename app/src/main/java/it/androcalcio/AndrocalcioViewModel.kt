@@ -18,6 +18,7 @@ import it.androcalcio.engine.Scambi
 import it.androcalcio.engine.FairPlay
 import it.androcalcio.engine.Storia
 import it.androcalcio.engine.Mutui
+import it.androcalcio.engine.Analisi
 import it.androcalcio.engine.Giornale
 import it.androcalcio.engine.Meteo
 import it.androcalcio.engine.Obiettivi
@@ -908,7 +909,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val i = _live.value ?: return@launch
                 if (i.m.finished) break
                 if (!i.paused) { i.m.step(); bump() }
-                kotlinx.coroutines.delay(if (i.speed >= 20) 50L else 1000L / i.speed)
+                kotlinx.coroutines.delay((if (i.speed >= 20) 50L else 1000L / i.speed).let { if (_risparmio.value) maxOf(it, 125L) else it })
             }
             finishLive()
         }
@@ -2871,6 +2872,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val tutorial: StateFlow<Boolean> = _tutorial
     fun chiudiTutorial() { prefs.edit().putBoolean("tutorial_visto", true).apply(); _tutorial.value = false }
     fun apriTutorial() { _tutorial.value = true }
+    /** Risparmio batteria: la partita dal vivo avanza al massimo 8 volte al secondo (meno CPU e schermo che si ridisegna). */
+    private val _risparmio = MutableStateFlow(prefs.getBoolean("risparmio", false))
+    val risparmio: StateFlow<Boolean> = _risparmio
+    fun setRisparmio(b: Boolean) { prefs.edit().putBoolean("risparmio", b).apply(); _risparmio.value = b }
 
     // ---- Società: disciplina, personalità, scambi, fair play, storia, autosalvataggio ----
     data class SocietaStato(
@@ -2879,7 +2884,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val richieste: List<Personalita.Richiesta> = emptyList(),
         val ffp: FairPlay.Esito? = null, val ffpBlocco: Boolean = false,
         val scontri: Map<String, Storia.Scontro> = emptyMap(), val record: Storia.Record = Storia.Record(),
-        val hall: List<Storia.Bandiera> = emptyList()
+        val hall: List<Storia.Bandiera> = emptyList(),
+        val partite: List<Analisi.Partita> = emptyList(), val stat: List<PlayerStat> = emptyList(),
+        val mutui: List<Mutui.Mutuo> = emptyList()
     )
     private val _societa = MutableStateFlow(SocietaStato())
     val societa: StateFlow<SocietaStato> = _societa
@@ -2897,7 +2904,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             ffp = if (ops.isEmpty()) null else FairPlay.valuta(ops.map { -it.second }, t.budget),
             ffpBlocco = dao.stato("ffp_blocco") == _season.value,
             scontri = Storia.decodeScontri(dao.stato("scontri")), record = Storia.decodeRecord(dao.stato("storia_rec")),
-            hall = Storia.decodeBandiere(dao.stato("storia_hall"))
+            hall = Storia.decodeBandiere(dao.stato("storia_hall")),
+            partite = Analisi.partiteMie(dao.matchesOnce(key(t), _season.value).filter { !Cup.isCup(it.round) }, t.id),
+            stat = dao.statsOf(_season.value).filter { it.teamId == t.id },
+            mutui = Mutui.decode(dao.stato("mutui"))
         )
     }
 
