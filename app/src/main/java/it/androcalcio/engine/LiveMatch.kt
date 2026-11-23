@@ -52,6 +52,12 @@ class LiveMatch(
     private fun bump(p: Player, d: Double) { pRatings[p.id] = (pRatings[p.id] ?: 6.0) + d }
 
     private val energy = HashMap<Long, Double>()
+    // Minuto di ingresso e di uscita di chi ha cambiato, per i minuti giocati a fine partita
+    private val minIn = HashMap<Long, Int>()
+    private val minOut = HashMap<Long, Int>()
+    /** Minuti giocati da un giocatore (0 se non è sceso in campo). */
+    fun minutiGiocati(id: Long): Int =
+        if (id !in playedH && id !in playedA) 0 else ((minOut[id] ?: minute) - (minIn[id] ?: 0)).coerceAtLeast(0)
     var subsH = 0; private set
     var subsA = 0; private set
     private var h = MatchEngine.ratings(xiH, homeF, homeCoach)
@@ -140,6 +146,7 @@ class LiveMatch(
         val bench = if (homeSide) benchH else benchA
         xi[xi.indexOf(out)] = inP; bench -= inP
         (if (homeSide) playedH else playedA) += inP.id
+        minOut[out.id] = minute; minIn[inP.id] = minute
         rated[inP.id] = inP; pRatings.putIfAbsent(inP.id, 6.0)
         if (homeSide) subsH++ else subsA++
         val t = if (homeSide) home else away

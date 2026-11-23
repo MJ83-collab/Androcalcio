@@ -156,7 +156,6 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     val teams by vm.teams.collectAsStateWithLifecycle()
     val team by vm.selectedTeam.collectAsStateWithLifecycle()
     val players by vm.players.collectAsStateWithLifecycle()
-    val report by vm.report.collectAsStateWithLifecycle()
     val matches by vm.matches.collectAsStateWithLifecycle()
     val cupMatches by vm.cupMatches.collectAsStateWithLifecycle()
     val friendlyMatches by vm.friendlyMatches.collectAsStateWithLifecycle()
@@ -254,7 +253,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
         Box(Modifier.weight(1f).fillMaxSize()) {
             val liveInfo by vm.live.collectAsStateWithLifecycle()
             val li = liveInfo
-            if (li != null) LiveMatchScreen(li, vm) else when (screen) {
+            if (li != null) LiveMatchScreen(li, vm) { screen = Screen.PARTITA } else when (screen) {
                 Screen.HOME -> {
                     val tm = team
                     val next = if (tm == null) null else matches
@@ -336,7 +335,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 Screen.PARTITA -> {
                     val ment by vm.mentality.collectAsStateWithLifecycle()
                     val modulo by vm.formation.collectAsStateWithLifecycle()
-                    PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() },
+                    ProssimaPartitaScreen(team, teams, matches, cupMatches, friendlyMatches,
+                        { vm.playNextRoundLive() }, { screen = Screen.CALENDARIO },
                         ment, { vm.setMentality(it) }, modulo, { vm.setFormation(it) })
                 }
                 Screen.CALENDARIO -> {

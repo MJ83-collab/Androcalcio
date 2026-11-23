@@ -179,19 +179,6 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             .flatMapLatest { t -> if (t == null) flowOf(emptyList()) else dao.playersOf(t.id) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _report = MutableStateFlow<MatchReport?>(null)
-    val report: StateFlow<MatchReport?> = _report
-
-    fun play(home: Team, away: Team, formation: Formation) {
-        viewModelScope.launch {
-            setFormation(formation)
-            _live.value = buildLive(home, away, true, null)
-            startTicker()
-        }
-    }
-
-    fun resetMatch() { _report.value = null }
-
     private fun avvio1() {
         viewModelScope.launch {
             if (dao.teamCount() == 0) SeedData.insertInto(ctx, dao)
@@ -951,10 +938,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- Partita dal vivo: pausa, velocità, cambi e mentalità decisi da te ----
+    /** Cosa è cambiato a un tuo giocatore dopo la partita (morale, infortunio, condizione, crescita). */
+    data class EsitoGiocatore(
+        val moraleDelta: Int, val infortunioTurni: Int, val condizione: Int, val miglioramenti: List<String>
+    )
     data class LiveInfo(
         val m: LiveMatch, val tick: Int = 0, val paused: Boolean = false, val speed: Int = 1,
         val userHome: Boolean = true, val league: MatchResult? = null, val saved: Boolean = false,
-        val meteo: String = ""
+        val meteo: String = "", val esito: Map<Long, EsitoGiocatore> = emptyMap()
     )
     private val _live = MutableStateFlow<LiveInfo?>(null)
     val live: StateFlow<LiveInfo?> = _live
@@ -1059,9 +1050,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val i = _live.value ?: return
         if (i.saved) return
         val mr = i.league
+        var esito: Map<Long, EsitoGiocatore> = emptyMap()
         if (mr != null) {
             val r = i.m.report()
             val t = selectedTeam.value
+            val prima = t?.let { dao.playersOnce(it.id) }.orEmpty().associateBy { it.id }
             val lg = mr.league
             dao.updateMatch(mr.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
             salvaStatistiche(_season.value, HashMap<Long, PlayerStat>().also { accumulaStat(it, _season.value, mr.homeTeamId, mr.awayTeamId, r) })
@@ -1083,6 +1076,21 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val finali = if (id == t?.id) infortunioExtra(beforeP, aggiornati, played, rng) else aggiornati
                 dao.updatePlayers(finali.map { p -> if (p.id in played) apprendiRuolo(p) else p })
             }
+            // Cosa è cambiato ai miei giocatori, per la schermata di fine partita
+            if (t != null) esito = dao.playersOnce(t.id).mapNotNull { dopo ->
+                val p = prima[dopo.id] ?: return@mapNotNull null
+                val novita = buildList {
+                    if (dopo.overall != p.overall) add("Livello ${if (dopo.overall > p.overall) "+" else ""}${dopo.overall - p.overall}")
+                    if (dopo.fo != p.fo) add("Forma ${if (dopo.fo > p.fo) "+" else ""}${dopo.fo - p.fo}")
+                    listOf(Triple(dopo.sec2, dopo.aff2, p.aff2 to p.sec2), Triple(dopo.sec3, dopo.aff3, p.aff3 to p.sec3),
+                        Triple(dopo.sec4, dopo.aff4, p.aff4 to p.sec4)).forEach { (ruolo, aff, vecchio) ->
+                        if (ruolo.isNotEmpty() && (ruolo != vecchio.second || aff > vecchio.first))
+                            add("Ruolo ${TacticalRoles.label(ruolo)} al $aff%")
+                    }
+                }
+                dopo.id to EsitoGiocatore(dopo.morale - p.morale, dopo.injuredRounds.takeIf { it > p.injuredRounds } ?: 0,
+                    dopo.condition, novita)
+            }.toMap()
         }
         if (mr != null && Cup.isCup(mr.round)) {
             // Partita di coppa: supplementari e rigori se in parità, poi il turno successivo se è finito
@@ -1097,7 +1105,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     _season.value, ck, t.nazione, kotlin.random.Random.Default))
             }
         }
-        _live.value = _live.value?.copy(saved = true, tick = i.tick + 1)
+        _live.value = _live.value?.copy(saved = true, tick = i.tick + 1, esito = esito)
     }
 
     fun closeLive() {

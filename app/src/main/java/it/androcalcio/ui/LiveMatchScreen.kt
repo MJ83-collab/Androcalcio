@@ -58,6 +58,7 @@ import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Player
 import it.androcalcio.engine.EventType
 import it.androcalcio.engine.MatchEngine
+import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.theme.AC
@@ -67,7 +68,7 @@ private enum class LivePanel { NESSUNO, TATTICA, STAT }
 
 /** La tua partita dal vivo, in notturna: tabellone, possesso, campo, gol in evidenza e barra comandi. */
 @Composable
-fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewModel) {
+fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewModel, onProssima: () -> Unit = {}) {
     val m = info.m
     @Suppress("UNUSED_VARIABLE") val t = info.tick   // ricomposizione a ogni minuto
     val events = m.events.toList()
@@ -78,6 +79,8 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
     var subOpen by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(LivePanel.NESSUNO) }
     val mySubs = if (info.userHome) m.subsH else m.subsA
+    // Fischio finale: prima voti e statistiche di ogni giocatore, poi si passa alla partita successiva
+    if (m.finished) { FinePartitaScreen(info, vm, onProssima); return }
 
     LazyColumn(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi))),
@@ -124,14 +127,6 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
             }
             if (panel == LivePanel.STAT) item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
             item { PcAction(onClick = { vm.liveSkip() }, modifier = Modifier.fillMaxWidth()) { Text("Termina partita") } }
-        } else {
-            item {
-                PcAction(onClick = { vm.closeLive() }, modifier = Modifier.fillMaxWidth(), enabled = info.saved || info.league == null,
-                    colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)) {
-                    Text(if (info.league != null) "Torna al calendario" else "Chiudi")
-                }
-            }
-            item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
         }
         item { CronacaPanel(events.reversed()) }
     }
@@ -140,6 +135,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         xi = if (info.userHome) m.xiH.toList() else m.xiA.toList(),
         bench = if (info.userHome) m.benchH.toList() else m.benchA.toList(),
         energy = { (m.energyOf(it) * 100).toInt() },
+        ammoniti = events.filter { it.type == EventType.YELLOW }.map { it.playerId }.toSet(),
         onDone = { out, inP -> if (out != null && inP != null) vm.liveSub(out, inP); subOpen = false }
     )
 }
@@ -190,7 +186,7 @@ private fun NeonTile(label: String, icon: ImageVector, on: Boolean, modifier: Mo
 
 /** Statistiche della partita su carta bianca. */
 @Composable
-private fun StatPanel(tiriCasa: Int, tiriOspiti: Int, possesso: Int) {
+internal fun StatPanel(tiriCasa: Int, tiriOspiti: Int, possesso: Int) {
     PaperPanel(Modifier.fillMaxWidth()) {
         listOf("Tiri" to "$tiriCasa - $tiriOspiti", "Possesso" to "$possesso% - ${100 - possesso}%").forEachIndexed { i, (k, v) ->
             PaperRow(i) {
@@ -201,28 +197,64 @@ private fun StatPanel(tiriCasa: Int, tiriOspiti: Int, possesso: Int) {
     }
 }
 
-/** Scelta del cambio: prima chi esce (con l'energia), poi chi entra dalla panchina. */
+/** Ruolo dettagliato del giocatore (DC, TS, MED...) o, se manca, la lettera del reparto. */
+private fun posTxt(p: Player) = p.pos.ifEmpty { p.role }
+
+/** Affinità % del giocatore con un ruolo dettagliato; null se non è tra i suoi ruoli. */
+private fun affinita(p: Player, ruolo: String): Int? = when {
+    ruolo.isEmpty() -> null
+    p.pos == ruolo -> 100
+    p.sec2 == ruolo -> p.aff2
+    p.sec3 == ruolo -> p.aff3
+    p.sec4 == ruolo -> p.aff4
+    else -> null
+}
+
+private fun reparto(r: String) = when (r) { "P" -> "portiere"; "D" -> "difensore"; "C" -> "centrocampista"; else -> "attaccante" }
+
+/** Scelta del cambio: prima chi esce (ruolo, energia, ammonizione), poi chi entra con affinità e consigliato. */
 @Composable
 private fun SubDialog(
-    xi: List<Player>, bench: List<Player>, energy: (Player) -> Int,
+    xi: List<Player>, bench: List<Player>, energy: (Player) -> Int, ammoniti: Set<Long>,
     onDone: (Player?, Player?) -> Unit
 ) {
     var out by remember { mutableStateOf<Player?>(null) }
     var inP by remember { mutableStateOf<Player?>(null) }
+    val o = out
+    // Panchina ordinata: stesso reparto prima, poi affinità col ruolo di chi esce, poi livello
+    val ruoloOut = o?.let { TacticalRoles.assigned(it) }.orEmpty()
+    val ordinati = if (o == null) emptyList() else bench.sortedWith(
+        compareByDescending<Player> { it.role == o.role }
+            .thenByDescending { affinita(it, ruoloOut) ?: 0 }
+            .thenByDescending { it.overall }
+    )
+    val consigliato = ordinati.firstOrNull()?.takeIf { o != null && it.role == o.role }
     AlertDialog(
         onDismissRequest = { onDone(null, null) },
-        title = { Text(if (out == null) "Chi esce?" else "Chi entra al posto di ${out!!.name}?") },
+        title = { Text(if (o == null) "Chi esce?" else "Chi entra al posto di ${o.name} (${posTxt(o)})?") },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (out == null) items(xi) { p ->
+                if (o == null) items(xi) { p ->
                     val e = energy(p)
-                    Text("${p.role}  ${p.name}   energia $e%",
-                        Modifier.fillMaxWidth().clickable { out = p }.padding(vertical = 8.dp),
-                        color = if (e < 85) AC.Danger else if (e < 93) AC.Warn else AC.Text)
-                } else items(bench.sortedByDescending { it.role == out!!.role }) { p ->
-                    Text("${p.role}  ${p.name}   LIV ${p.overall}",
-                        Modifier.fillMaxWidth().clickable { inP = p }.padding(vertical = 8.dp),
-                        color = if (p == inP) AC.Accent else if (p.role == out!!.role) AC.Text else AC.TextDim)
+                    Column(Modifier.fillMaxWidth().clickable { out = p }.padding(vertical = 6.dp)) {
+                        Text("${posTxt(p)}  ${p.name}", color = AC.Text, fontWeight = FontWeight.Bold)
+                        Text("energia $e%" + if (p.id in ammoniti) " · ammonito" else "",
+                            color = if (e < 85) AC.Danger else if (e < 93) AC.Warn else AC.TextDim, fontSize = 12.sp)
+                    }
+                } else items(ordinati) { p ->
+                    val aff = affinita(p, ruoloOut)
+                    val stesso = p.role == o.role
+                    val dettaglio = when {
+                        aff != null -> "affinità $aff% come $ruoloOut"
+                        stesso -> "stesso reparto, ruolo naturale ${posTxt(p)}"
+                        else -> "fuori reparto (${reparto(p.role)})"
+                    }
+                    Column(Modifier.fillMaxWidth().clickable { inP = p }.padding(vertical = 6.dp)) {
+                        Text("${posTxt(p)}  ${p.name}   LIV ${p.overall}" + if (p == consigliato) "  ★ consigliato" else "",
+                            color = if (p == inP) AC.Accent else if (stesso) AC.Text else AC.TextDim, fontWeight = FontWeight.Bold)
+                        Text("$dettaglio · condizione ${p.condition}%",
+                            color = if (p == inP) AC.Accent else AC.TextDim, fontSize = 12.sp)
+                    }
                 }
             }
         },
