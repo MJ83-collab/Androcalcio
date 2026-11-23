@@ -1253,7 +1253,7 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         LocalApriGiocatore provides { schedaAperta = it },
         LocalCaricaGiocatore provides { vm.dettaglioGiocatore(it) },
         LocalAzioni provides AzioniGiocatore(
-            team?.id ?: -1L, vm.preferiti.collectAsStateWithLifecycle().value, vm.capitanoScelto.collectAsStateWithLifecycle().value,
+            vm.selectedTeam.collectAsStateWithLifecycle().value?.id ?: -1L, vm.preferiti.collectAsStateWithLifecycle().value, vm.capitanoScelto.collectAsStateWithLifecycle().value,
             vm.allenamentoInd.collectAsStateWithLifecycle().value,
             { vm.togglePreferito(it) }, { vm.scegliCapitano(it) }, { p, f -> vm.setAllenamentoInd(p, f) }),
         LocalApriSquadra provides { squadraAperta = it },

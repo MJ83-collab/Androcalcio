@@ -232,9 +232,8 @@ class AnalisiTest {
 
 class NovitaTest {
     private fun pl(id: Long, role: String, ov: Int, cond: Int, starter: Boolean) =
-        it.androcalcio.data.Player(id = id, teamId = 1, name = "G$id", role = role, age = 25, nationality = "ITA",
-            ve = ov, re = ov, ag = ov, qu = ov, fo = 50, gm = ov, pa = ov, dr = ov, fi = ov, en = ov, ti = ov, ri = ov,
-            potential = ov, salary = 100_000L, contract = 3, condition = cond, starter = starter)
+        it.androcalcio.data.Player(id = id, teamId = 1, name = "G$id", role = role, age = 25, overall = ov, morale = 70,
+            salary = 100_000L, nationality = "ITA", potential = ov, contract = 3, condition = cond, starter = starter)
 
     @org.junit.Test fun rifinanziaSoloSeIlTassoScende() {
         val caro = Mutui.Mutuo(5, 5_000_000L, 2, 0.18, Mutui.rata(5_000_000L, 0.18, 2))
