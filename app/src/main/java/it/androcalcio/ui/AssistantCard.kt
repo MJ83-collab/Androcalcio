@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,16 +18,17 @@ import it.androcalcio.ui.theme.AC
 
 /** Consigli dell'allenatore in seconda: undici in forma e notizie sul prossimo avversario. */
 @Composable
-fun AssistantCard(advice: AssistantCoach.Advice?, onApply: () -> Unit, onApplyTattica: () -> Unit = {}) {
-    GlassCard(Modifier.fillMaxWidth()) {
+fun AssistantCard(advice: AssistantCoach.Advice?, onApply: () -> Unit, onApplyTattica: () -> Unit = {}, onCerca: () -> Unit = {}) {
+    GlassCard(Modifier.fillMaxWidth().clickable(enabled = advice?.assistantName == null, onClick = onCerca)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SectionTitle("Allenatore in seconda")
             val a = advice
             if (a == null || a.assistantName == null) {
                 Text(
-                    "Non hai un allenatore in seconda. Assumilo dallo staff per avere consigli su undici e avversario.",
+                    "Non hai un allenatore in seconda. Tocca qui per cercarlo nello staff: pubblichi un annuncio e i professionisti interessati rispondono.",
                     color = AC.TextDim, style = MaterialTheme.typography.bodySmall
                 )
+                PcAction(onClick = onCerca) { Text("Cerca allenatore in seconda") }
                 return@Column
             }
             Text(a.assistantName, style = MaterialTheme.typography.titleSmall)

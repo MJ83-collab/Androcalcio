@@ -16,6 +16,7 @@ object Staffing {
     const val GIOVANILI = "GIO"
     const val PREPARATORE = "PRE"
     const val FISIOTERAPISTA = "FIS"
+    const val TUTTOFARE = "GIA"      // giardiniere e tuttofare: cura il manto erboso e lo stadio
     const val SCOUT = "SCO"          // osservatori: più di uno, fino a MAX_OSSERVATORI, fuori dai POSTI
     const val MAX_OSSERVATORI = 5
     const val NEUTRAL = 50          // squadre AI e posti vuoti: effetto nullo
@@ -32,7 +33,7 @@ object Staffing {
     const val RECUPERO = "REC"
     const val PREVENZIONE = "PRV"
 
-    val ROLES = listOf(ALLENATORE, ASSISTENTE, GIOVANILI, PREPARATORE, FISIOTERAPISTA, SCOUT)
+    val ROLES = listOf(ALLENATORE, ASSISTENTE, GIOVANILI, PREPARATORE, FISIOTERAPISTA, SCOUT, TUTTOFARE)
     private val SPEC_PREPARATORI = listOf(GENERALE, FORMA, PORTIERI, ATTACCANTI, CENTROCAMPISTI, DIFENSORI)
     private val SPEC_FISIO = listOf(RECUPERO, PREVENZIONE)
 
@@ -40,7 +41,7 @@ object Staffing {
     data class Posto(val role: String, val specialita: String = "")
 
     val POSTI: List<Posto> = listOf(Posto(ALLENATORE), Posto(ASSISTENTE), Posto(GIOVANILI)) +
-        SPEC_PREPARATORI.map { Posto(PREPARATORE, it) } + SPEC_FISIO.map { Posto(FISIOTERAPISTA, it) }
+        SPEC_PREPARATORI.map { Posto(PREPARATORE, it) } + SPEC_FISIO.map { Posto(FISIOTERAPISTA, it) } + Posto(TUTTOFARE)
 
     fun roleName(role: String, specialita: String = ""): String = when (role) {
         ALLENATORE -> "Allenatore"
@@ -49,6 +50,7 @@ object Staffing {
         PREPARATORE -> "Preparatore atletico · ${specialitaNome(specialita)}"
         FISIOTERAPISTA -> "Fisioterapista · ${specialitaNome(specialita)}"
         SCOUT -> "Osservatore"
+        TUTTOFARE -> "Giardiniere e tuttofare"
         else -> ""
     }
 
@@ -79,7 +81,8 @@ object Staffing {
     /** Effetti dello staff medico e atletico, letti una volta per partita. */
     data class Cura(
         val generale: Int, val forma: Int, val recupero: Int, val prevenzione: Int,
-        val ruoli: Map<String, Int>   // preparatore del reparto per P, D, C, A
+        val ruoli: Map<String, Int>,   // preparatore del reparto per P, D, C, A
+        val campo: Int = NEUTRAL       // giardiniere: stato del manto erboso
     ) {
         /** Abilità del preparatore del ruolo dato; neutra se manca. */
         fun perRuolo(role: String): Int = ruoli[role] ?: NEUTRAL
@@ -96,8 +99,11 @@ object Staffing {
         fun fis(s: String) = lista.firstOrNull { it.role == FISIOTERAPISTA && it.specialita == s }?.skill ?: NEUTRAL
         return Cura(
             generale = prep(GENERALE), forma = prep(FORMA),
-            recupero = fis(RECUPERO), prevenzione = fis(PREVENZIONE),
-            ruoli = mapOf("P" to prep(PORTIERI), "D" to prep(DIFENSORI), "C" to prep(CENTROCAMPISTI), "A" to prep(ATTACCANTI))
+            recupero = fis(RECUPERO),
+            // un buon giardiniere tiene il prato in ordine: meno infortuni muscolari (pesa il 20% della prevenzione)
+            prevenzione = (fis(PREVENZIONE) * 0.8 + (lista.firstOrNull { it.role == TUTTOFARE }?.skill ?: NEUTRAL) * 0.2).toInt(),
+            ruoli = mapOf("P" to prep(PORTIERI), "D" to prep(DIFENSORI), "C" to prep(CENTROCAMPISTI), "A" to prep(ATTACCANTI)),
+            campo = lista.firstOrNull { it.role == TUTTOFARE }?.skill ?: NEUTRAL
         )
     }
 
@@ -172,6 +178,11 @@ object Staffing {
             ASSISTENTE -> {
                 if (su) bonus += "Consigli tattici sull'avversario e sull'undici più affidabili"
                 if (giu) malus += "Consigli tattici incerti: undici e avversario meno precisi"
+            }
+            TUTTOFARE -> {
+                if (su) bonus += "Prato curato: infortuni muscolari ridotti e campo sempre in ordine"
+                if (giu) malus += "Prato rovinato: più infortuni muscolari, buche e zolle che saltano"
+                bonus += "Fa anche piccoli lavori: lampadine, porte, spogliatoi (e il caffè)"
             }
             GIOVANILI -> {
                 if (su) bonus += "Vivaio: giovani con potenziale più alto e giudizi più precisi"

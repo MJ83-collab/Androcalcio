@@ -106,6 +106,7 @@ import it.androcalcio.engine.CalendarioGiorni
 import it.androcalcio.engine.AssistenteLive
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
+import it.androcalcio.engine.Annunci
 import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.Lineup
 import it.androcalcio.engine.LiveMatch
@@ -2265,6 +2266,91 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         _candidates.value = Staffing.candidates(kotlin.random.Random.Default) + Staffing.candidatiOsservatori(kotlin.random.Random.Default)
     }
 
+    // ---- Annunci per lo staff: pubblichi, rispondono gli interessati, le risposte si rinnovano ogni mese ----
+    val annunci: StateFlow<List<Annunci.Annuncio>> = osserva("stato") {
+        val t = selectedTeam.value
+        if (t == null) emptyList() else Annunci.decodeAnnunci(dao.stato(Annunci.KEY_ANNUNCI + t.id))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val candidatiAnnunci: StateFlow<List<Staff>> = osserva("stato") {
+        val t = selectedTeam.value
+        if (t == null) emptyList() else Annunci.decodeCand(dao.stato(Annunci.KEY_CAND + t.id))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Posto da cercare scelto altrove (es. toccando "Allenatore in seconda" nella rosa): la schermata Staff propone l'annuncio. */
+    val staffFocus = MutableStateFlow<Staffing.Posto?>(null)
+
+    private suspend fun meseChiave(): String = (calcolaGiorno()?.oggi ?: java.time.LocalDate.now()).let { "${it.year}-${it.monthValue}" }
+
+    private suspend fun generaRisposte(me: Team, lista: List<Annunci.Annuncio>): List<Staff> {
+        val mese = meseChiave()
+        val media = dao.playersOnce(me.id).map { it.overall }.average().takeIf { !it.isNaN() } ?: 55.0
+        val f = Annunci.fascino(media, me.budget)
+        return lista.flatMap { Annunci.risposte(me.id, it, mese, f) }
+    }
+
+    /** Pubblica un annuncio per un posto: costa poco e le risposte arrivano subito. */
+    fun pubblicaAnnuncio(role: String, spec: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val a = Annunci.Annuncio(role, spec)
+            val att = Annunci.decodeAnnunci(dao.stato(Annunci.KEY_ANNUNCI + me.id))
+            if (att.any { it.chiave == a.chiave }) { _notice.value = "Hai già un annuncio per ${a.nome.lowercase()}."; return@launch }
+            if (me.budget < Annunci.COSTO) { _notice.value = "Budget insufficiente per l'annuncio (${money(Annunci.COSTO)})."; return@launch }
+            dao.updateTeam(me.copy(budget = me.budget - Annunci.COSTO))
+            val nuovi = att + a
+            dao.setStato(Stato(Annunci.KEY_ANNUNCI + me.id, Annunci.encodeAnnunci(nuovi)))
+            val prima = Annunci.decodeCand(dao.stato(Annunci.KEY_CAND + me.id))
+            val rispo = generaRisposte(me, listOf(a))
+            dao.setStato(Stato(Annunci.KEY_CAND + me.id, Annunci.encodeCand(prima + rispo)))
+            dao.setStato(Stato(Annunci.KEY_MESE + me.id, meseChiave()))
+            _notice.value = if (rispo.isEmpty()) "Annuncio pubblicato per ${a.nome.lowercase()}: nessuno ha risposto, riprova il mese prossimo."
+                else "Annuncio pubblicato: ${rispo.size} ${if (rispo.size == 1) "risposta" else "risposte"} per ${a.nome.lowercase()}."
+        }
+    }
+
+    fun ritiraAnnuncio(a: Annunci.Annuncio) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val att = Annunci.decodeAnnunci(dao.stato(Annunci.KEY_ANNUNCI + me.id)).filter { it.chiave != a.chiave }
+            dao.setStato(Stato(Annunci.KEY_ANNUNCI + me.id, Annunci.encodeAnnunci(att)))
+            val cand = Annunci.decodeCand(dao.stato(Annunci.KEY_CAND + me.id)).filter { !(it.role == a.role && it.specialita == a.specialita) }
+            dao.setStato(Stato(Annunci.KEY_CAND + me.id, Annunci.encodeCand(cand)))
+        }
+    }
+
+    /** Ogni nuovo mese i candidati cambiano: chi non è stato assunto se ne va e arrivano nuove risposte. */
+    fun aggiornaCandidatiStaff() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val mese = meseChiave()
+            if (dao.stato(Annunci.KEY_MESE + me.id) == mese) return@launch
+            val att = Annunci.decodeAnnunci(dao.stato(Annunci.KEY_ANNUNCI + me.id))
+            dao.setStato(Stato(Annunci.KEY_CAND + me.id, Annunci.encodeCand(generaRisposte(me, att))))
+            dao.setStato(Stato(Annunci.KEY_MESE + me.id, mese))
+        }
+    }
+
+    private suspend fun consumaCandidato(me: Team, c: Staff) {
+        val cand = Annunci.decodeCand(dao.stato(Annunci.KEY_CAND + me.id))
+        dao.setStato(Stato(Annunci.KEY_CAND + me.id, Annunci.encodeCand(cand.filter { !(it.name == c.name && it.role == c.role && it.specialita == c.specialita) })))
+        if (c.role != Staffing.SCOUT) {
+            val att = Annunci.decodeAnnunci(dao.stato(Annunci.KEY_ANNUNCI + me.id)).filter { !(it.role == c.role && it.specialita == c.specialita) }
+            dao.setStato(Stato(Annunci.KEY_ANNUNCI + me.id, Annunci.encodeAnnunci(att)))
+            val resto = Annunci.decodeCand(dao.stato(Annunci.KEY_CAND + me.id)).filter { !(it.role == c.role && it.specialita == c.specialita) }
+            dao.setStato(Stato(Annunci.KEY_CAND + me.id, Annunci.encodeCand(resto)))
+        }
+    }
+
+    /** Rinnovo del contratto di un membro dello staff: scegli gli anni, l'ingaggio dipende da bravura e durata. */
+    fun rinnovaStaff(s: Staff, anni: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val nuovo = s.copy(contract = anni, salary = Annunci.nuovoIngaggio(s, anni))
+            dao.updateStaffs(listOf(nuovo))
+            _notice.value = "${s.name} rinnova per $anni ${if (anni == 1) "anno" else "anni"}: ${money(nuovo.salary)} l'anno."
+        }
+    }
+
     /** Assume un candidato: sostituisce chi occupava già quel ruolo. Lo stipendio si paga a fine stagione. */
     fun hire(c: Staff) {
         viewModelScope.launch {
@@ -2276,6 +2362,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 dao.addStaff(c.copy(id = 0, teamId = me.id))
                 syncScoutSkill(me.id)
+                consumaCandidato(me, c)
                 _candidates.value = _candidates.value - c
                 _notice.value = "${c.name} ingaggiato come osservatore. Stipendio ${money(c.salary)} l'anno, pagato a fine stagione."
                 return@launch
@@ -2284,6 +2371,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             if (old.isNotEmpty()) dao.deleteStaffs(old)
             dao.addStaff(c.copy(id = 0, teamId = me.id))
             syncTeamSkill(me.id, c.role, c.skill)
+            consumaCandidato(me, c)
             _candidates.value = _candidates.value - c
             val sost = old.firstOrNull()?.let { " Sostituisce ${it.name}." } ?: ""
             _notice.value = "${c.name} ingaggiato come ${Staffing.roleName(c.role, c.specialita).lowercase()}.$sost " +

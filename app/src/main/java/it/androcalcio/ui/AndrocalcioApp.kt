@@ -328,6 +328,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) },
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
+                        onCercaVice = { _ -> vm.staffFocus.value = it.androcalcio.engine.Staffing.Posto(it.androcalcio.engine.Staffing.ASSISTENTE); screen = Screen.STAFF },
                         forme = vm.formeRosa.collectAsStateWithLifecycle().value,
                         mese = vm.giocatoreDelMese.collectAsStateWithLifecycle().value)
                 }
@@ -445,8 +446,16 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         team, staffList, cands,
                         { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() },
                         missioni, { s, area -> vm.inviaOsservatore(s, area) },
-                        allenatore = allenatoreNome
+                        allenatore = allenatoreNome,
+                        annunci = vm.annunci.collectAsStateWithLifecycle().value,
+                        risposte = vm.candidatiAnnunci.collectAsStateWithLifecycle().value,
+                        onPubblica = { r, sp -> vm.pubblicaAnnuncio(r, sp) },
+                        onRitira = { vm.ritiraAnnuncio(it) },
+                        onRinnova = { s, a -> vm.rinnovaStaff(s, a) },
+                        focus = vm.staffFocus.collectAsStateWithLifecycle().value,
+                        onFocusUsato = { vm.staffFocus.value = null }
                     )
+                    androidx.compose.runtime.LaunchedEffect(Unit) { vm.aggiornaCandidatiStaff() }
                 }
                 Screen.TATTICA -> {
                     val modulo by vm.formation.collectAsStateWithLifecycle()
@@ -835,6 +844,7 @@ fun RosaScreen(
     onRole: (Player, String) -> Unit = { _, _ -> },
     advice: it.androcalcio.engine.AssistantCoach.Advice? = null, onApplyXI: () -> Unit = {},
     onApplyTattica: () -> Unit = {},
+    onCercaVice: (Unit) -> Unit = {},
     forme: Map<Long, Double> = emptyMap(), mese: String? = null
 ) {
     if (team == null) return
@@ -866,7 +876,7 @@ fun RosaScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item { MediaSquadraBar(team, players) }
-        item { AssistantCard(advice, onApplyXI, onApplyTattica) }
+        item { AssistantCard(advice, onApplyXI, onApplyTattica, onCerca = { onCercaVice(Unit) }) }
         item {
             // Turnover: titolari stanchi e panchinari in forma dello stesso ruolo
             val stanchi = players.filter { it.starter && it.injuredRounds == 0 && it.condition < 70 }

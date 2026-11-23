@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import it.androcalcio.data.ScoutMission
 import it.androcalcio.data.Staff
 import it.androcalcio.data.Team
+import it.androcalcio.engine.Annunci
 import it.androcalcio.engine.Missioni
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Stile
@@ -63,15 +64,54 @@ fun StaffScreen(
     onRefresh: () -> Unit,
     missioni: List<ScoutMission>,
     onInvia: (Staff, String) -> Unit,
-    allenatore: String? = null
+    allenatore: String? = null,
+    annunci: List<Annunci.Annuncio> = emptyList(),
+    risposte: List<Staff> = emptyList(),
+    onPubblica: (String, String) -> Unit = { _, _ -> },
+    onRitira: (Annunci.Annuncio) -> Unit = {},
+    onRinnova: (Staff, Int) -> Unit = { _, _ -> },
+    focus: Staffing.Posto? = null,
+    onFocusUsato: () -> Unit = {}
 ) {
     if (team == null) return
     var aperto by remember { mutableStateOf<Staff?>(null) }
+    var rinnovo by remember { mutableStateOf<Staff?>(null) }
+    focus?.let { f ->
+        val gia = annunci.any { it.role == f.role && it.specialita == f.specialita }
+        AlertDialog(
+            onDismissRequest = onFocusUsato,
+            title = { Text("Cerca: ${Staffing.roleName(f.role, f.specialita)}") },
+            text = { Text(if (gia) "Hai già un annuncio attivo: guarda le risposte più in basso, in Annunci e candidati."
+                else "Pubblica un annuncio (${money(Annunci.COSTO)}): i professionisti interessati rispondono subito. Le risposte cambiano ogni mese.") },
+            confirmButton = { if (!gia) PcAction(onClick = { onPubblica(f.role, f.specialita); onFocusUsato() }) { Text("Pubblica annuncio") }
+                else TextButton(onClick = onFocusUsato) { Text("Ok") } },
+            dismissButton = { if (!gia) TextButton(onClick = onFocusUsato) { Text("Non ora") } }
+        )
+    }
+    rinnovo?.let { s ->
+        AlertDialog(
+            onDismissRequest = { rinnovo = null },
+            title = { Text("Rinnovo di ${s.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Contratto attuale: ${s.contract} ${if (s.contract == 1) "anno" else "anni"}, ${money(s.salary)} l'anno.", color = AC.TextDim)
+                    Text("Più anni firmi, meno chiede all'anno:", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                    (1..3).forEach { a ->
+                        PcAction(onClick = { onRinnova(s, a); rinnovo = null }, modifier = Modifier.fillMaxWidth()) {
+                            Text("$a ${if (a == 1) "anno" else "anni"} · ${money(Annunci.nuovoIngaggio(s, a))}")
+                        }
+                    }
+                }
+            },
+            confirmButton = {}, dismissButton = { TextButton(onClick = { rinnovo = null }) { Text("Annulla") } }
+        )
+    }
     aperto?.let { s ->
         DettaglioStaff(
             s, candidato = s.teamId == 0L,
             onHire = { onHire(s); aperto = null },
             onFire = { onFire(s); aperto = null },
+            onRinnova = { rinnovo = s; aperto = null },
             onClose = { aperto = null },
             missione = missioni.firstOrNull { it.staffId == s.id },
             onInvia = { area -> onInvia(s, area); aperto = null }
@@ -81,7 +121,8 @@ fun StaffScreen(
     val gruppi = listOf(
         "Staff tecnico" to Staffing.POSTI.filter { it.role in listOf(Staffing.ALLENATORE, Staffing.ASSISTENTE, Staffing.GIOVANILI) },
         "Preparatori atletici (6)" to Staffing.POSTI.filter { it.role == Staffing.PREPARATORE },
-        "Fisioterapisti (2)" to Staffing.POSTI.filter { it.role == Staffing.FISIOTERAPISTA }
+        "Fisioterapisti (2)" to Staffing.POSTI.filter { it.role == Staffing.FISIOTERAPISTA },
+        "Manutenzione" to Staffing.POSTI.filter { it.role == Staffing.TUTTOFARE }
     )
 
     LazyColumn(
@@ -101,7 +142,7 @@ fun StaffScreen(
             item { SectionTitle(titolo) }
             items(posti) { posto ->
                 val s = staff.firstOrNull { Staffing.stessoPosto(it, posto) }
-                GlassCard(Modifier.fillMaxWidth().then(if (s != null) Modifier.clickable { aperto = s } else Modifier)) {
+                GlassCard(Modifier.fillMaxWidth().clickable { if (s != null) aperto = s else onPubblica(posto.role, posto.specialita) }) {
                     Row(Modifier.padding(start = 12.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     val chi = if (posto.role == Staffing.ALLENATORE && allenatore != null) allenatore else s?.name
                     if (chi != null) Avatar(chi, 52.dp)
@@ -115,12 +156,14 @@ fun StaffScreen(
                             Text(allenatore, style = MaterialTheme.typography.bodyMedium, color = AC.Text)
                             Text("Tu · allenatore della squadra", color = AC.Accent, style = MaterialTheme.typography.bodySmall)
                         } else if (s == null) {
-                            Text("vacante", color = AC.Accent, style = MaterialTheme.typography.bodySmall)
+                            Text("vacante · tocca per cercare", color = AC.Accent, style = MaterialTheme.typography.bodySmall)
                         } else {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(stelleTesto(s.skill), color = AC.Accent)
                                 Text("${punteggio(s.skill)} · ${s.name}", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
                             }
+                            Text(if (s.contract <= 1) "⚠ contratto in scadenza: tocca per rinnovare" else "contratto ${s.contract} anni · ${money(s.salary)} l'anno",
+                                color = if (s.contract <= 1) AC.Warn else AC.TextDim, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     }
@@ -154,22 +197,50 @@ fun StaffScreen(
             }
         }
 
-        item { SectionTitle("Candidati") }
+        item { SectionTitle("Annunci e candidati") }
         item {
-            PcAction(
-                onClick = onRefresh, modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
-            ) { Text("Nuovi candidati") }
+            Text("Pubblica un annuncio (${money(Annunci.COSTO)}) per un posto: rispondono i professionisti interessati, " +
+                "più numerosi e bravi se il club è forte. Le risposte cambiano ogni mese.",
+                style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
         }
-        // Niente key: i candidati non assunti hanno tutti id 0 e le chiavi dovrebbero essere uniche.
-        items(candidates) { c ->
-            GlassCard(Modifier.fillMaxWidth().clickable { aperto = c }) {
-                Column(Modifier.padding(12.dp)) {
-                    Text("${Staffing.roleName(c.role, c.specialita)}: ${c.name}", style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        "${stelleTesto(c.skill)} · ${punteggio(c.skill)} · ${money(c.salary)} l'anno · contratto ${c.contract} anni",
-                        style = MaterialTheme.typography.bodySmall, color = AC.TextDim
-                    )
+        val posti = Staffing.POSTI + Staffing.Posto(Staffing.SCOUT)
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Pubblica un nuovo annuncio", style = MaterialTheme.typography.titleSmall)
+                posti.filter { p -> annunci.none { it.role == p.role && it.specialita == p.specialita } }.chunked(2).forEach { riga ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        riga.forEach { p ->
+                            PcAction(onClick = { onPubblica(p.role, p.specialita) }, modifier = Modifier.weight(1f)) {
+                                Text(Staffing.roleName(p.role, p.specialita).replace("Preparatore atletico", "Prep.").replace("Fisioterapista", "Fisio"),
+                                    style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (annunci.isEmpty()) item { Text("Nessun annuncio attivo.", color = AC.TextDim) }
+        annunci.forEach { a ->
+            val r = risposte.filter { it.role == a.role && it.specialita == a.specialita }
+            item {
+                GlassCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("📢 ${a.nome}", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                            TextButton(onClick = { onRitira(a) }) { Text("Ritira") }
+                        }
+                        if (r.isEmpty()) Text("Nessuna risposta questo mese.", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                        r.forEach { c ->
+                            Row(Modifier.fillMaxWidth().clickable { aperto = c }, verticalAlignment = Alignment.CenterVertically) {
+                                Avatar(c.name, 36.dp)
+                                Column(Modifier.padding(start = 10.dp)) {
+                                    Text(c.name, style = MaterialTheme.typography.bodyMedium)
+                                    Text("${stelleTesto(c.skill)} · ${money(c.salary)} l'anno · ${c.contract} anni",
+                                        color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -178,7 +249,7 @@ fun StaffScreen(
 
 @Composable
 private fun DettaglioStaff(
-    s: Staff, candidato: Boolean, onHire: () -> Unit, onFire: () -> Unit, onClose: () -> Unit,
+    s: Staff, candidato: Boolean, onHire: () -> Unit, onFire: () -> Unit, onRinnova: () -> Unit = {}, onClose: () -> Unit,
     missione: ScoutMission?, onInvia: (String) -> Unit
 ) {
     val (bonus, malus) = Staffing.effetti(s)
@@ -212,7 +283,7 @@ private fun DettaglioStaff(
         },
         confirmButton = {
             if (candidato) PcAction(onClick = onHire) { Text("Ingaggia") }
-            else TextButton(onClick = onFire) { Text("Licenzia") }
+            else Row { PcAction(onClick = onRinnova) { Text("Rinnova") }; TextButton(onClick = onFire) { Text("Licenzia") } }
         },
         dismissButton = { TextButton(onClick = onClose) { Text("Chiudi") } }
     )
