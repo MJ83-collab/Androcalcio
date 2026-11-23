@@ -144,6 +144,8 @@ private fun Azione(testo: String, onClick: () -> Unit) {
 private fun pcEventColor(t: EventType): Color = when (t) {
     EventType.GOAL -> AC.ColEn
     EventType.YELLOW -> AC.ColOrange
+    EventType.RED -> Color(0xFFC62828)
+    EventType.INJURY -> AC.ColOrange
     EventType.SAVE -> AC.ColBlue
     EventType.TACTIC -> AC.ColGreen
     else -> AC.PaperText

@@ -87,11 +87,14 @@ private fun Tabella(
             val voto = rep.playerRatings[p.id] ?: 6.0
             val gol = rep.events.count { it.type == EventType.GOAL && it.playerId == p.id }
             val amm = rep.events.any { it.type == EventType.YELLOW && it.playerId == p.id }
+            val ass = rep.events.count { it.type == EventType.GOAL && it.assistId == p.id }
+            val esp = p.id in rep.espulsi
+            val inf = p.id in rep.infortunati
             val e = if (mie) esito[p.id] else null
             PaperRow(i) {
                 Column(Modifier.weight(1f)) {
                     Text("${p.pos.ifEmpty { p.role }}  ${p.name}", color = AC.PaperText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Text(dettagli(gol, amm, minuti(p.id), e, mie && pronta), color = AC.PaperText.copy(alpha = 0.7f), fontSize = 11.sp)
+                    Text(dettagli(gol, ass, amm, esp, inf, minuti(p.id), e, mie && pronta), color = AC.PaperText.copy(alpha = 0.7f), fontSize = 11.sp)
                     e?.miglioramenti?.takeIf { it.isNotEmpty() }?.let {
                         Text("Crescita: " + it.joinToString(" · "), color = Verde, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -105,10 +108,14 @@ private fun Tabella(
     }
 }
 
-private fun dettagli(gol: Int, ammonito: Boolean, minuti: Int, e: AndrocalcioViewModel.EsitoGiocatore?, conEsito: Boolean): String {
+private fun dettagli(gol: Int, assist: Int, ammonito: Boolean, espulso: Boolean, infortunato: Boolean, minuti: Int,
+                     e: AndrocalcioViewModel.EsitoGiocatore?, conEsito: Boolean): String {
     val v = mutableListOf("$minuti'")
     if (gol > 0) v += if (gol == 1) "1 gol" else "$gol gol"
+    if (assist > 0) v += if (assist == 1) "1 assist" else "$assist assist"
     if (ammonito) v += "ammonito"
+    if (espulso) v += "ESPULSO"
+    if (infortunato) v += "uscito per infortunio"
     if (e != null && conEsito) {
         if (e.moraleDelta != 0) v += "morale ${if (e.moraleDelta > 0) "+" else ""}${e.moraleDelta}"
         if (e.infortunioTurni > 0) v += "INFORTUNIO ${e.infortunioTurni} turni"

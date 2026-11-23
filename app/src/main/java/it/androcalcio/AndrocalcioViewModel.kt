@@ -1073,7 +1073,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val beforeP = dao.playersOnce(id)
                 val aggiornati = Medical.afterMatch(beforeP, played, Staffing.cura(staffBy, id), rng,
                     planFor(id, t?.id), Staffing.skill(staffBy, id, Staffing.ALLENATORE)).also { accrueInsurance(id, beforeP, it); registraInfortuni(id, beforeP, it) }
-                val finali = if (id == t?.id) infortunioExtra(beforeP, aggiornati, played, rng) else aggiornati
+                val finali0 = if (id == t?.id) infortunioExtra(beforeP, aggiornati, played, rng) else aggiornati
+                // Chi si è fatto male durante la partita salta qualche turno
+                val finali = finali0.map { p -> if (p.id in r.infortunati && p.injuredRounds == 0) p.copy(injuredRounds = rng.nextInt(2, 6)) else p }
                 dao.updatePlayers(finali.map { p -> if (p.id in played) apprendiRuolo(p) else p })
             }
             // Cosa è cambiato ai miei giocatori, per la schermata di fine partita
@@ -3297,10 +3299,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (inCampo.isEmpty()) return
         val arb = Disciplina.arbitro(dao.statoInt("c_partite"), _season.value.hashCode().toLong())
         val prima = Disciplina.Registro(Disciplina.decode(dao.stato("gialli")), Disciplina.decode(dao.stato("squal")))
-        val sorteggio = Disciplina.sorteggia(inCampo, arb.severita, rng)
         val ids = inCampo.map { it.id }.toSet()
-        val esito = if (live) Disciplina.Esito(
-            r.events.filter { it.type == EventType.YELLOW && it.playerId in ids }.map { it.playerId }, sorteggio.rossi) else sorteggio
+        // Cartellini veri della partita: la doppia ammonizione vale come rosso e non conta come due gialli
+        val esito = Disciplina.Esito(
+            r.events.filter { it.type == EventType.YELLOW && it.playerId in ids && it.playerId !in r.espulsi }.map { it.playerId },
+            r.espulsi.filter { it in ids })
         val dopo = Disciplina.applica(prima, prima.squal.keys, esito, rng)
         dao.setStato(Stato("gialli", Disciplina.encode(dopo.gialli)))
         dao.setStato(Stato("squal", Disciplina.encode(dopo.squal)))

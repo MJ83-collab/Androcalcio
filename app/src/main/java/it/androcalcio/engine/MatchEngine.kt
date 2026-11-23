@@ -5,7 +5,7 @@ import it.androcalcio.data.Team
 import kotlin.math.pow
 import kotlin.random.Random
 
-enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC, SUB, OFFSIDE }
+enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC, SUB, OFFSIDE, RED, INJURY }
 
 data class MatchEvent(
     val minute: Int,
@@ -14,7 +14,8 @@ data class MatchEvent(
     val text: String,
     val x: Float,   // 0..1, la squadra di casa attacca verso destra
     val y: Float,
-    val playerId: Long = 0
+    val playerId: Long = 0,
+    val assistId: Long = 0    // per i gol: chi ha fatto l'assist (0 = nessuno)
 )
 
 data class MatchReport(
@@ -33,7 +34,9 @@ data class MatchReport(
     val homeXI: List<Player> = emptyList(),   // gli 11 in campo a fine partita, per i numeri sul campo
     val awayXI: List<Player> = emptyList(),
     val playedPlayers: List<Player> = emptyList(),  // tutti quelli scesi in campo, titolari e subentrati, per le pagelle
-    val playerRatings: Map<Long, Double> = emptyMap()  // pagella 3..10 per id giocatore
+    val playerRatings: Map<Long, Double> = emptyMap(),  // pagella 3..10 per id giocatore
+    val infortunati: Set<Long> = emptySet(),  // infortunati durante la partita
+    val espulsi: Set<Long> = emptySet()       // espulsi (rosso diretto o doppia ammonizione)
 )
 
 /**

@@ -72,7 +72,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
     val m = info.m
     @Suppress("UNUSED_VARIABLE") val t = info.tick   // ricomposizione a ogni minuto
     val events = m.events.toList()
-    val last = events.lastOrNull { it.type !in setOf(EventType.YELLOW, EventType.SUB, EventType.TACTIC) }
+    val last = events.lastOrNull { it.type !in setOf(EventType.YELLOW, EventType.SUB, EventType.TACTIC, EventType.RED, EventType.INJURY) }
     val lastGoal = events.lastOrNull { it.type == EventType.GOAL }
     val bx by animateFloatAsState(last?.x ?: 0.5f, tween(300), label = "bx")
     val by by animateFloatAsState(last?.y ?: 0.5f, tween(300), label = "by")

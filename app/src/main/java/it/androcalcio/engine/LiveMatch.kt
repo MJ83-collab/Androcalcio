@@ -52,6 +52,10 @@ class LiveMatch(
     private fun bump(p: Player, d: Double) { pRatings[p.id] = (pRatings[p.id] ?: 6.0) + d }
 
     private val energy = HashMap<Long, Double>()
+    // Ammonizioni a testa (la seconda è rosso), espulsi e infortunati durante la partita
+    private val gialli = HashMap<Long, Int>()
+    private val espulsi = mutableSetOf<Long>()
+    private val infortunati = mutableSetOf<Long>()
     // Minuto di ingresso e di uscita di chi ha cambiato, per i minuti giocati a fine partita
     private val minIn = HashMap<Long, Int>()
     private val minOut = HashMap<Long, Int>()
@@ -243,8 +247,11 @@ class LiveMatch(
                     r < pGoal -> {
                         if (homeAtt) hg++ else ag++
                         sh?.let { bump(it, 1.0) }
+                        val ass = assistman(att.players, sh)
+                        ass?.let { bump(it, 0.4) }
                         events += MatchEvent(minute, EventType.GOAL, homeAtt,
-                            "Gol! $who (${team.shortName})", x, y, sh?.id ?: 0L)
+                            "Gol! $who (${team.shortName})" + (ass?.let { ", assist ${it.name}" } ?: ""),
+                            x, y, sh?.id ?: 0L, ass?.id ?: 0L)
                     }
                     r < pGoal + (1 - pGoal) * 0.4 -> events += MatchEvent(
                         minute, EventType.SAVE, homeAtt, "Tiro di $who, para il portiere", x, y)
@@ -262,9 +269,19 @@ class LiveMatch(
                 val p = MatchEngine.aggressive(ps, rng)
                 val t = if (side) home else away
                 bump(p, -0.5)
+                val n = (gialli[p.id] ?: 0) + 1
+                gialli[p.id] = n
                 events += MatchEvent(minute, EventType.YELLOW, side, "Ammonito ${p.name} (${t.shortName})", 0.5f, 0.5f, p.id)
+                if (n >= 2) espelli(side, p, "doppia ammonizione")
             }
         }
+        // Rosso diretto e infortuni in partita: rari
+        if (rng.nextDouble() < 0.0005) {
+            val side = rng.nextBoolean()
+            val ps = (if (side) xiH else xiA).filter { it.role != "P" }
+            if (ps.isNotEmpty()) espelli(side, MatchEngine.aggressive(ps, rng), "gioco violento")
+        }
+        if (rng.nextDouble() < 0.0006) infortunio(rng.nextBoolean())
         if (minute == 45) events += MatchEvent(45, EventType.HALFTIME, true, "Fine primo tempo", 0.5f, 0.5f)
         if (minute == 90) events += MatchEvent(90, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
     }
@@ -297,6 +314,43 @@ class LiveMatch(
         }
     }
 
+    /** Chi fa l'assist a un gol: nel 70% dei casi qualcuno dei compagni, soprattutto centrocampisti con buon passaggio. */
+    private fun assistman(xi: List<Player>, scorer: Player?): Player? {
+        if (rng.nextDouble() > 0.7) return null
+        val c = xi.filter { it.id != scorer?.id && it.role != "P" }
+        if (c.isEmpty()) return null
+        val w = c.map { (it.pa + it.qu) / 2.0 * (if (it.role == "C") 1.6 else if (it.role == "A") 1.2 else 0.6) }
+        var r = rng.nextDouble() * w.sum()
+        for (i in c.indices) { r -= w[i]; if (r <= 0) return c[i] }
+        return c.last()
+    }
+
+    /** Espulsione: la squadra resta in dieci, senza sostituto. */
+    private fun espelli(homeSide: Boolean, p: Player, motivo: String) {
+        val xi = if (homeSide) xiH else xiA
+        if (!xi.remove(p)) return
+        espulsi += p.id
+        bump(p, -1.5)
+        val t = if (homeSide) home else away
+        events += MatchEvent(minute, EventType.RED, homeSide, "Espulso ${p.name} (${t.shortName}): $motivo", 0.5f, 0.5f, p.id)
+        refresh()
+    }
+
+    /** Infortunio in campo: esce subito, entra il miglior panchinaro dello stesso ruolo se ci sono cambi. */
+    private fun infortunio(homeSide: Boolean) {
+        val xi = if (homeSide) xiH else xiA
+        val ps = xi.filter { it.role != "P" }
+        if (ps.isEmpty()) return
+        val p = ps[rng.nextInt(ps.size)]
+        infortunati += p.id
+        val t = if (homeSide) home else away
+        events += MatchEvent(minute, EventType.INJURY, homeSide, "Infortunio per ${p.name} (${t.shortName})", 0.5f, 0.5f, p.id)
+        val bench = if (homeSide) benchH else benchA
+        val sub = bench.filter { it.role == p.role }.maxByOrNull { it.overall } ?: bench.maxByOrNull { it.overall }
+        if ((if (homeSide) subsH else subsA) < MatchEngine.MAX_SUBS && sub != null) doSub(homeSide, p, sub)
+        else { xi.remove(p); refresh() }
+    }
+
     /** Pagelle finali: 3 minimo, 10 massimo, con un decimale. */
     private fun finalRatings(): Map<Long, Double> =
         pRatings.mapValues { (_, v) -> (v.coerceIn(3.0, 10.0) * 10).roundToInt() / 10.0 }
@@ -309,5 +363,5 @@ class LiveMatch(
 
     fun report() = MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events.toList(), homeF, awayF,
         playedH.toSet(), playedA.toSet(), xiH.toList(), xiA.toList(),
-        rated.values.toList(), finalRatings())
+        rated.values.toList(), finalRatings(), infortunati.toSet(), espulsi.toSet())
 }
