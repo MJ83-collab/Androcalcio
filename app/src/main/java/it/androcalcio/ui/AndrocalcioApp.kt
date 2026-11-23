@@ -351,7 +351,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         friendlyMatches = friendlyMatches,
                         onRequestFriendly = { vm.requestFriendly(it) },
                         onPlayFriendlies = { vm.playFriendlies() },
-                        onSimulaFino = { vm.simulaFino(it) })
+                        onSimulaFino = { vm.simulaFino(it) },
+                        giorno = vm.giorno.collectAsStateWithLifecycle().value,
+                        onAttivita = { vm.viviGiorno(it) },
+                        onSalta = { vm.saltaAllaPartita() },
+                        onMercato = { screen = Screen.MERCATO })
                 }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsStateWithLifecycle()

@@ -102,6 +102,7 @@ import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Forma
 import it.androcalcio.engine.Mentori
 import it.androcalcio.engine.Ritmo
+import it.androcalcio.engine.CalendarioGiorni
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Mentality
@@ -525,7 +526,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun playNextRound() = playRounds(false)
+    fun playNextRound() { viewModelScope.launch { if (prontoPerLaPartita()) playRounds(false) } }
 
     /** Simula giornata per giornata fino al turno [fino] compreso (senza eventi a scelta lungo la strada). */
     fun simulaFino(fino: Int) {
@@ -1015,6 +1016,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun playNextRoundLive() {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
+            if (!prontoPerLaPartita()) return@launch
             val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value)
             val round = ms.filter { !it.played }.minOfOrNull { it.round } ?: return@launch
             val mine = ms.firstOrNull { !it.played && it.round == round && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
@@ -3283,6 +3285,91 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val cl = standings(lega, dao.matchesOnce(key(t), _season.value).filter { !Cup.isCup(it.round) })
         cl.indexOfFirst { it.team.id == t.id }.takeIf { it >= 0 }?.plus(1)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /** Calendario a giorni: oggi, data e avversario della prossima giornata, diario delle attività e preparazione. */
+    data class GiornoStato(
+        val oggi: java.time.LocalDate, val prossima: java.time.LocalDate?, val giornata: Int?,
+        val avversario: String?, val casa: Boolean, val diario: Map<Long, CalendarioGiorni.Attivita>, val prep: Int
+    ) {
+        val giornoPartita get() = prossima != null && !oggi.isBefore(prossima)
+        val giorniMancanti get() = prossima?.let { java.time.temporal.ChronoUnit.DAYS.between(oggi, it).toInt() } ?: 0
+    }
+
+    private suspend fun calcolaGiorno(): GiornoStato? {
+        val t = selectedTeam.value ?: return null
+        val s = _season.value
+        val ms = dao.matchesOnce(key(t), s) + dao.matchesOnce(Cup.key(t.nazione), s)
+        val ultima = ms.filter { it.played }.maxOfOrNull { it.round }
+        val r = ms.filter { !it.played }.minOfOrNull { it.round }
+        val oggi = CalendarioGiorni.oggi(s, dao.stato(CalendarioGiorni.KEY_OGGI + s)?.toLongOrNull(), ultima)
+        val mia = r?.let { rr -> ms.firstOrNull { !it.played && it.round == rr && (it.homeTeamId == t.id || it.awayTeamId == t.id) } }
+        val avv = mia?.let { m -> dao.team(if (m.homeTeamId == t.id) m.awayTeamId else m.homeTeamId).name }
+        return GiornoStato(oggi, r?.let { CalendarioGiorni.data(s, it) }, r, avv, mia?.homeTeamId == t.id,
+            CalendarioGiorni.leggiDiario(dao.stato(CalendarioGiorni.KEY_DIARIO + s)), dao.statoInt(CalendarioGiorni.KEY_PREP))
+    }
+
+    val giorno: StateFlow<GiornoStato?> = osserva("stato", "matches") { calcolaGiorno() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /** Salva l'esito dei giorni vissuti: rosa, preparazione, diario e nuovo giorno corrente. */
+    private suspend fun salvaGiorni(rosa: List<Player>, prep: Int, diario: Map<Long, CalendarioGiorni.Attivita>, nuovoOggi: java.time.LocalDate) {
+        val s = _season.value
+        dao.updatePlayers(rosa)
+        dao.setStatoInt(CalendarioGiorni.KEY_PREP, prep)
+        dao.setStato(Stato(CalendarioGiorni.KEY_DIARIO + s, CalendarioGiorni.scriviDiario(diario)))
+        dao.setStato(Stato(CalendarioGiorni.KEY_OGGI + s, nuovoOggi.toEpochDay().toString()))
+    }
+
+    /** Vive il giorno corrente con l'attività scelta e passa al giorno dopo. */
+    fun viviGiorno(a: CalendarioGiorni.Attivita) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val g = calcolaGiorno() ?: return@launch
+            val t = selectedTeam.value ?: return@launch
+            if (g.giornoPartita) { _notice.value = "Oggi si gioca: vai alla partita."; return@launch }
+            val diario = g.diario.toMutableMap().also { it[g.oggi.toEpochDay()] = a }
+            salvaGiorni(dao.playersOnce(t.id).map { CalendarioGiorni.applica(it, a) }, CalendarioGiorni.prep(g.prep, a), diario, g.oggi.plusDays(1))
+            _notice.value = "${a.icona} ${a.label} · ${CalendarioGiorni.nomeGiorno(g.oggi)}"
+        }
+    }
+
+    /** Salta al giorno della partita: allenamento, con riposo ogni tre giorni e il giorno prima. */
+    fun saltaAllaPartita() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val g = calcolaGiorno() ?: return@launch
+            val t = selectedTeam.value ?: return@launch
+            val partita = g.prossima ?: return@launch
+            var rosa = dao.playersOnce(t.id)
+            var prep = g.prep
+            val diario = g.diario.toMutableMap()
+            var d = g.oggi
+            var n = 0
+            while (d.isBefore(partita)) {
+                val a = CalendarioGiorni.automatica(d, partita)
+                rosa = rosa.map { CalendarioGiorni.applica(it, a) }
+                prep = CalendarioGiorni.prep(prep, a)
+                diario[d.toEpochDay()] = a
+                d = d.plusDays(1); n++
+            }
+            if (n == 0) { _notice.value = "Oggi si gioca: vai alla partita."; return@launch }
+            salvaGiorni(rosa, prep, diario, partita)
+            _notice.value = "Giorno della partita: ${CalendarioGiorni.nomeGiorno(partita)} ($n giorni vissuti)."
+        }
+    }
+
+    /** Si gioca solo nel giorno della partita; la preparazione accumulata diventa morale. */
+    private suspend fun prontoPerLaPartita(): Boolean {
+        val g = calcolaGiorno() ?: return true
+        if (g.prossima != null && !g.giornoPartita) {
+            _notice.value = "Mancano ${g.giorniMancanti} giorni alla partita: scegli cosa fare ogni giorno nel calendario."
+            return false
+        }
+        if (g.prep > 0) {
+            val t = selectedTeam.value ?: return true
+            dao.updatePlayers(dao.playersOnce(t.id).map { it.copy(morale = (it.morale + g.prep * 2).coerceAtMost(99)) })
+            dao.setStatoInt(CalendarioGiorni.KEY_PREP, 0)
+        }
+        return true
+    }
 
     val formazioniSalvate: StateFlow<List<FormazioniSalvate.Preset?>> = osserva("stato") { FormazioniSalvate.decode(dao.stato(FormazioniSalvate.KEY)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), List(FormazioniSalvate.POSTI) { null })

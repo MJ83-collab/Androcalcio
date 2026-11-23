@@ -78,7 +78,11 @@ fun CalendarioScreen(
     friendlyMatches: List<MatchResult> = emptyList(),
     onRequestFriendly: (Long) -> Unit = {},
     onPlayFriendlies: () -> Unit = {},
-    onSimulaFino: (Int) -> Unit = {}
+    onSimulaFino: (Int) -> Unit = {},
+    giorno: it.androcalcio.AndrocalcioViewModel.GiornoStato? = null,
+    onAttivita: (it.androcalcio.engine.CalendarioGiorni.Attivita) -> Unit = {},
+    onSalta: () -> Unit = {},
+    onMercato: () -> Unit = {}
 ) {
     var askNext by remember { mutableStateOf(false) }
     var amichevoliAperte by rememberSaveable { mutableStateOf(false) }
@@ -118,12 +122,18 @@ fun CalendarioScreen(
             PcButton("Coppa", { tab = 2 }, Modifier.weight(1f), main = tab == 2)
             PcButton("Tutte", { tab = 3 }, Modifier.weight(1f), main = tab == 3)
         }
+        if (giorno != null) GiornoCard(giorno, { a ->
+            onAttivita(a)
+            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE) amichevoliAperte = true
+            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.MERCATO) onMercato()
+        }, onSalta)
+        val giornoOk = giorno == null || giorno.prossima == null || giorno.giornoPartita
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Chiede 2D o simulazione solo se la tua squadra gioca nella prossima giornata
             PcButton("Prossima giornata", {
                 round = 0
                 if (miaProssima) { askNext = true } else { onNext() }
-            }, Modifier.fillMaxWidth(), main = true, enabled = pending && !bloccoAmichevoli)
+            }, Modifier.fillMaxWidth(), main = true, enabled = pending && !bloccoAmichevoli && giornoOk)
         }
         // Simula fino a: 5 giornate, apertura del mercato invernale, vigilia del prossimo derby
         if (nextRound != null && !bloccoAmichevoli) {
