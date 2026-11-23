@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import it.androcalcio.engine.AvatarGen
@@ -23,12 +26,15 @@ import it.androcalcio.engine.AvatarGen.Spec
 val LocalAvatarModificati = compositionLocalOf<Map<String, Spec>> { emptyMap() }
 val LocalModificaAvatar = compositionLocalOf<((String) -> Unit)?> { null }
 
+/** Colori sociali (maglia, colletto) della squadra di chi viene disegnato: se presenti, il volto indossa la maglia. */
+val LocalMagliaSquadra = compositionLocalOf<Pair<Color, Color>?> { null }
+
 /** Avatar di una persona: volto salvato se modificato, altrimenti generato dal nome. Toccandolo si apre l'editor. */
 @Composable
 fun Avatar(nome: String, size: Dp = 48.dp, modifier: Modifier = Modifier) {
     val spec = AvatarGen.specDi(nome, LocalAvatarModificati.current)
     val modifica = LocalModificaAvatar.current
-    AvatarSpec(spec, size, if (modifica != null) modifier.clickable { modifica(nome) } else modifier)
+    AvatarSpec(spec, size, if (modifica != null) modifier.clickable { modifica(nome) } else modifier, LocalMagliaSquadra.current)
 }
 
 /**
@@ -36,13 +42,19 @@ fun Avatar(nome: String, size: Dp = 48.dp, modifier: Modifier = Modifier) {
  * Ogni campo di [Spec] cambia un elemento del volto (vedi AvatarGen.CAMPI).
  */
 @Composable
-fun AvatarSpec(spec: Spec, size: Dp = 48.dp, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(size)) { disegna(spec, this.size.width) }
+fun AvatarSpec(spec: Spec, size: Dp = 48.dp, modifier: Modifier = Modifier, maglia: Pair<Color, Color>? = null) {
+    Canvas(modifier.size(size)) { disegna(spec, this.size.width, maglia) }
+}
+
+/** Colore dei capelli e della pelle di una persona, per disegnarla anche sul campo. */
+fun coloriPersona(nome: String, mappa: Map<String, Spec>): Pair<Color, Color> {
+    val sp = AvatarGen.specDi(nome, mappa)
+    return col(AvatarGen.COL_CAPELLI, sp[AvatarGen.COL_CAPELLI]) to col(AvatarGen.PELLE, sp[AvatarGen.PELLE])
 }
 
 private fun col(campo: Int, i: Int) = Color(AvatarGen.CAMPI[campo].colori!![i])
 
-private fun DrawScope.disegna(sp: Spec, s: Float) {
+private fun DrawScope.disegna(sp: Spec, s: Float, maglia: Pair<Color, Color>? = null) {
     val ink = Color(0xFF111111)
     val linea = Stroke(width = s * 0.045f, cap = StrokeCap.Round)
     val sottile = Stroke(width = s * 0.03f, cap = StrokeCap.Round)
@@ -60,8 +72,14 @@ private fun DrawScope.disegna(sp: Spec, s: Float) {
         moveTo(s * 0.10f, s); quadraticBezierTo(s * 0.14f, s * 0.74f, s * 0.5f, s * 0.72f)
         quadraticBezierTo(s * 0.86f, s * 0.74f, s * 0.90f, s); close()
     }
-    drawPath(spalle, giacca); drawPath(spalle, ink, style = linea)
-    when (sp[AvatarGen.COLLETTO]) {
+    drawPath(spalle, maglia?.first ?: giacca); drawPath(spalle, ink, style = linea)
+    if (maglia != null) {
+        // Maglia da calcio: colletto a V nel secondo colore e riflesso sulla spalla
+        riempi(Path().apply { moveTo(s * 0.40f, s * 0.73f); lineTo(s * 0.5f, s * 0.86f); lineTo(s * 0.60f, s * 0.73f)
+            lineTo(s * 0.55f, s * 0.73f); lineTo(s * 0.5f, s * 0.80f); lineTo(s * 0.45f, s * 0.73f); close() }, maglia.second)
+        drawArc(Color.White.copy(alpha = 0.35f), 200f, 40f, false, Offset(s * 0.16f, s * 0.78f), Size(s * 0.30f, s * 0.20f),
+            style = Stroke(width = s * 0.03f, cap = StrokeCap.Round))
+    } else when (sp[AvatarGen.COLLETTO]) {
         0 -> { // camicia e cravatta
             riempi(Path().apply { moveTo(s * 0.40f, s * 0.73f); lineTo(s * 0.5f, s * 0.92f); lineTo(s * 0.60f, s * 0.73f); close() }, Color.White)
             drawLine(Color(0xFFC62828), Offset(s * 0.5f, s * 0.76f), Offset(s * 0.5f, s * 0.92f), strokeWidth = s * 0.05f)
@@ -90,13 +108,16 @@ private fun DrawScope.disegna(sp: Spec, s: Float) {
     // Orecchie
     drawCircle(pelle, s * 0.045f, Offset(s * (x0 - 0.005f), s * 0.46f)); drawCircle(ink, s * 0.045f, Offset(s * (x0 - 0.005f), s * 0.46f), style = sottile)
     drawCircle(pelle, s * 0.045f, Offset(s * (x0 + w + 0.005f), s * 0.46f)); drawCircle(ink, s * 0.045f, Offset(s * (x0 + w + 0.005f), s * 0.46f), style = sottile)
-    if (viso == 3) {
-        drawRoundRect(pelle, Offset(s * x0, s * y0), Size(s * w, s * h), CornerRadius(s * 0.10f))
-        drawRoundRect(ink, Offset(s * x0, s * y0), Size(s * w, s * h), CornerRadius(s * 0.10f), style = linea)
-    } else {
-        drawOval(pelle, Offset(s * x0, s * y0), Size(s * w, s * h))
-        drawOval(ink, Offset(s * x0, s * y0), Size(s * w, s * h), style = linea)
+    // Viso con ombra a due toni (cel shading): il lato destro è più scuro
+    val faccia = Path().apply {
+        if (viso == 3) addRoundRect(RoundRect(Rect(Offset(s * x0, s * y0), Size(s * w, s * h)), CornerRadius(s * 0.10f)))
+        else addOval(Rect(Offset(s * x0, s * y0), Size(s * w, s * h)))
     }
+    drawPath(faccia, pelle)
+    clipPath(faccia) {
+        drawOval(Color.Black.copy(alpha = 0.14f), Offset(s * (x0 + w * 0.62f), s * (y0 - 0.02f)), Size(s * w, s * (h + 0.04f)))
+    }
+    drawPath(faccia, ink, style = linea)
     val mento = y0 + h
     val bocY = mento - 0.14f
     val occY = y0 + h * 0.52f
@@ -181,6 +202,10 @@ private fun DrawScope.disegna(sp: Spec, s: Float) {
         }
     }
 
+    // Riflesso lucido sui capelli, tipico dei disegni anime
+    if (sp[AvatarGen.TAGLIO] != 3) drawArc(Color.White.copy(alpha = 0.45f), 205f, 50f, false,
+        Offset(s * (x0 + 0.05f), s * 0.13f), Size(s * (w - 0.10f), s * 0.16f), style = Stroke(width = s * 0.025f, cap = StrokeCap.Round))
+
     // Sopracciglia
     val by = occY - 0.075f
     when (sp[AvatarGen.SOPRACCIGLIA]) {
@@ -193,10 +218,22 @@ private fun DrawScope.disegna(sp: Spec, s: Float) {
 
     // Occhi
     val xs = floatArrayOf(0.5f - dx, 0.5f + dx)
+    // Occhi anime: bianco a mandorla, iride colorata, pupilla, due riflessi e ciglia marcate
+    val iride = listOf(Color(0xFF2F6BD8), Color(0xFF7A4A1E), Color(0xFF2E8B57), Color(0xFFC08A1E))[
+        (sp[AvatarGen.TAGLIO] + sp[AvatarGen.VISO] * 3 + sp[AvatarGen.PELLE]) % 4]
+    fun occhioAnime(cx: Float) {
+        drawOval(Color.White, Offset(s * (cx - 0.055f), s * (occY - 0.04f)), Size(s * 0.11f, s * 0.085f))
+        drawOval(iride, Offset(s * (cx - 0.033f), s * (occY - 0.038f)), Size(s * 0.066f, s * 0.08f))
+        drawCircle(ink, s * 0.018f, Offset(s * cx, s * (occY + 0.002f)))
+        drawCircle(Color.White, s * 0.013f, Offset(s * (cx + 0.013f), s * (occY - 0.018f)))
+        drawCircle(Color.White, s * 0.006f, Offset(s * (cx - 0.014f), s * (occY + 0.02f)))
+        drawArc(ink, 190f, 160f, false, Offset(s * (cx - 0.06f), s * (occY - 0.045f)), Size(s * 0.12f, s * 0.07f),
+            style = Stroke(width = s * 0.03f, cap = StrokeCap.Round))
+    }
     when (sp[AvatarGen.OCCHI]) {
-        0 -> xs.forEach { drawCircle(ink, s * 0.025f, Offset(s * it, s * occY)) }
+        0 -> xs.forEach { occhioAnime(it) }
         1 -> xs.forEach { tratto(it - 0.04f, occY, it + 0.04f, occY, 0.025f) }
-        2 -> xs.forEach { drawCircle(Color.White, s * 0.05f, Offset(s * it, s * occY)); drawCircle(ink, s * 0.05f, Offset(s * it, s * occY), style = sottile); drawCircle(ink, s * 0.022f, Offset(s * it, s * occY)) }
+        2 -> xs.forEach { occhioAnime(it) }
         3 -> xs.forEach { drawArc(ink, 200f, 140f, false, Offset(s * (it - 0.04f), s * (occY - 0.025f)), Size(s * 0.08f, s * 0.06f), style = Stroke(width = s * 0.025f, cap = StrokeCap.Round)) }
         4 -> { tratto(xs[0] - 0.04f, occY - 0.015f, xs[0] + 0.04f, occY + 0.012f, 0.025f); tratto(xs[1] + 0.04f, occY - 0.015f, xs[1] - 0.04f, occY + 0.012f, 0.025f)
             xs.forEach { drawCircle(ink, s * 0.016f, Offset(s * it, s * (occY + 0.008f))) } }

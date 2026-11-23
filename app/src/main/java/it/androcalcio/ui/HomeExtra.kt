@@ -144,10 +144,11 @@ fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit,
             PcChip(selected = risparmio, onClick = { onRisparmio(true) }, label = { Text("Risparmio") })
         }
         SectionTitle("Tema")
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PcChip(selected = temaNero == 0, onClick = { onTemaNero(0) }, label = { Text("Blu") })
             PcChip(selected = temaNero == 1, onClick = { onTemaNero(1) }, label = { Text("Nero (meno batteria)") })
             PcChip(selected = temaNero == 2, onClick = { onTemaNero(2) }, label = { Text("Chiaro") })
+            PcChip(selected = temaNero == 3, onClick = { onTemaNero(3) }, label = { Text("Manga") })
         }
         PcChip(selected = false, onClick = onTutorial, label = { Text("Rivedi il tutorial") })
         SectionTitle("Informazione")

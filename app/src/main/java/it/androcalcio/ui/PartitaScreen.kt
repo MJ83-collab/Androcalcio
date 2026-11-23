@@ -162,7 +162,7 @@ private fun Choice(label: String, selected: Boolean, modifier: Modifier = Modifi
  * Giocatori in campo nell'ordine delle posizioni (1 portiere, poi difensori, centrocampisti, attaccanti).
  * Il primo valore è la posizione; il numero mostrato è quello di maglia, se assegnato.
  */
-private fun numbered(xi: List<Player>): List<Pair<Int, Player>> {
+internal fun numbered(xi: List<Player>): List<Pair<Int, Player>> {
     fun rank(role: String) = when (role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
     return xi.sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }))
         .mapIndexed { i, p -> (i + 1) to p }

@@ -64,6 +64,12 @@ fun Modifier.bevel(raised: Boolean = true, w: Dp = 2.dp): Modifier = this.drawBe
     drawRect(br, topLeft = Offset(size.width - t, 0f), size = Size(t, size.height))
 }
 
+/** Ombra netta da vignetta di fumetto (tema manga): rettangolo nero spostato in basso a destra. */
+fun Modifier.vignetta(d: Dp = 3.dp): Modifier = this.drawBehind {
+    val o = d.toPx()
+    drawRect(Color.Black, Offset(o, o), size)
+}
+
 /** Sfumatura verticale dei pulsanti PC 7. */
 val BtnGradient = Brush.verticalGradient(listOf(Color(0xFF30303C), Color(0xFF07070B)))
 
@@ -125,6 +131,12 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    if (AC.manga) {
+        Box(modifier.vignetta().background(AC.Surface).border(2.dp, Color.White)) {
+            CompositionLocalProvider(LocalContentColor provides AC.Text) { content() }
+        }
+        return
+    }
     if (AC.pc7) {
         Box(
             modifier.clip(RoundedCornerShape(2.dp))
@@ -153,6 +165,20 @@ fun PcButton(
     enabled: Boolean = true,
     compatto: Boolean = false
 ) {
+    if (AC.manga) {
+        Box(
+            modifier.vignetta(2.dp)
+                .background(if (!enabled) AC.SurfaceHi else if (main) AC.Accent else AC.Surface)
+                .border(2.dp, Color.White)
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = if (compatto) 4.dp else 14.dp, vertical = 9.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text.uppercase(Locale.ITALY), color = if (!enabled) AC.TextDim else Color.White,
+                fontWeight = FontWeight.ExtraBold, fontSize = if (compatto) 12.sp else 13.sp, letterSpacing = 0.8.sp, maxLines = 1)
+        }
+        return
+    }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(3.dp))
@@ -179,9 +205,10 @@ fun PcButton(
 fun PaperPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = modifier
+            .then(if (AC.manga) Modifier.vignetta() else Modifier)
             .clip(RoundedCornerShape(2.dp))
             .background(AC.Paper)
-            .border(2.dp, AC.Btn, RoundedCornerShape(2.dp))
+            .border(if (AC.manga) 3.dp else 2.dp, AC.Btn, RoundedCornerShape(2.dp))
             .bevel(w = 1.dp),
         content = content
     )
@@ -225,6 +252,17 @@ fun StatChip(label: String, value: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    if (AC.manga) {
+        Box(modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp)) {
+            Text(
+                text.uppercase(Locale.ITALY),
+                Modifier.vignetta(2.dp).background(AC.Accent).border(2.dp, Color.White).padding(horizontal = 10.dp, vertical = 3.dp),
+                color = Color.White, fontFamily = PcTitle, fontSize = 13.sp, letterSpacing = 1.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+        }
+        return
+    }
     if (AC.pc7) {
         Box(
             modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp)
@@ -259,8 +297,8 @@ fun PcAction(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     colors: ButtonColors = ButtonDefaults.buttonColors(
-        containerColor = AC.Btn,
-        contentColor = AC.Accent,
+        containerColor = if (AC.manga) AC.Accent else AC.Btn,
+        contentColor = if (AC.manga) Color.White else AC.Accent,
         disabledContainerColor = AC.Surface,
         disabledContentColor = AC.BtnBorder
     ),
@@ -268,11 +306,11 @@ fun PcAction(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier,
+        modifier = if (AC.manga) modifier.vignetta(2.dp) else modifier,
         enabled = enabled,
-        shape = RoundedCornerShape(3.dp),
+        shape = RoundedCornerShape(if (AC.manga) 0.dp else 3.dp),
         colors = colors,
-        border = BorderStroke(2.dp, if (enabled) AC.Accent else AC.BtnBorder),
+        border = BorderStroke(2.dp, if (AC.manga) Color.White else if (enabled) AC.Accent else AC.BtnBorder),
         content = content
     )
 }
@@ -285,6 +323,19 @@ fun PcChip(
     label: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (AC.manga) {
+        Box(
+            modifier.then(if (selected) Modifier.vignetta(2.dp) else Modifier)
+                .background(if (selected) AC.Accent else AC.Surface)
+                .border(2.dp, if (selected) Color.White else Color.White.copy(alpha = 0.5f))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            CompositionLocalProvider(LocalContentColor provides Color.White) { label() }
+        }
+        return
+    }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(3.dp))

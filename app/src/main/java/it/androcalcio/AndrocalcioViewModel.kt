@@ -291,7 +291,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val cambioPronto: StateFlow<Int> = _cambioPronto
     fun setCambioPronto(m: Int) { _cambioPronto.value = m; prefs.edit().putInt("cambio_pronto", m).apply() }
 
-    private val _temaNero = MutableStateFlow(prefs.getInt("tema_scelto", if (prefs.getBoolean("tema_nero", false)) 1 else 0))
+    private val _temaNero = MutableStateFlow(prefs.getInt("tema_scelto", if (prefs.getBoolean("tema_nero", false)) 1 else AC.PREFERENZA_PREDEFINITA))
     /** 0 = blu, 1 = nero, 2 = chiaro. */
     val temaNero: StateFlow<Int> = _temaNero
     /** Tema nero: sfondo nero puro, sugli schermi OLED consuma meno batteria. */

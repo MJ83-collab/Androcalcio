@@ -82,6 +82,18 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
     // Fischio finale: prima voti e statistiche di ogni giocatore, poi si passa alla partita successiva
     if (m.finished) { FinePartitaScreen(info, vm, onProssima); return }
 
+    // Momenti chiave a tutto schermo: gol, espulsioni, rigori parati o sbagliati (non a velocità ×20)
+    var momento by remember { mutableStateOf<it.androcalcio.engine.MatchEvent?>(null) }
+    var visti by remember { mutableStateOf(events.size) }
+    androidx.compose.runtime.LaunchedEffect(events.size) {
+        if (events.size > visti) {
+            val nuovi = events.subList(visti, events.size)
+            visti = events.size
+            if (info.speed < 20) nuovi.lastOrNull { titoloMomento(it) != null }?.let { momento = it }
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi))),
         contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -89,7 +101,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         item { Scoreboard(m.home, m.away, m.hg, m.ag, if (m.finished) "Finale" else "${m.minute}'" + if (info.paused) " · pausa" else "") }
         item { PossessoBar(m.possessoCasa) }
         if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
-        item { Pitch(m.home, m.away, bx, by, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList()) }
+        item { MangaPitch(m.home, m.away, bx, by, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), last?.home) }
         if (!m.finished) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -158,6 +170,12 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         }
         item { CronacaPanel(events.reversed()) }
     }
+    momento?.let { ev ->
+        val tutti = m.xiH + m.xiA + m.benchH + m.benchA
+        MomentoChiave(titoloMomento(ev) ?: "", ev.text, if (ev.home) m.home else m.away,
+            tutti.firstOrNull { it.id == ev.playerId }) { momento = null }
+    }
+    }
 
     if (subOpen) SubDialog(
         xi = if (info.userHome) m.xiH.toList() else m.xiA.toList(),
@@ -166,6 +184,18 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         ammoniti = events.filter { it.type == EventType.YELLOW }.map { it.playerId }.toSet(),
         onDone = { out, inP -> if (out != null && inP != null) vm.liveSub(out, inP); subOpen = false }
     )
+}
+
+/** Titolo del momento chiave per un evento, oppure null se l'evento non merita la scena a tutto schermo. */
+private fun titoloMomento(e: it.androcalcio.engine.MatchEvent): String? {
+    val rigore = e.text.contains("rigore", ignoreCase = true)
+    return when {
+        e.type == EventType.GOAL -> if (rigore) "GOL SU RIGORE!" else "GOOOL!"
+        e.type == EventType.RED -> "ESPULSO!"
+        e.type == EventType.SAVE && rigore -> "RIGORE PARATO!"
+        e.type == EventType.MISS && rigore -> "RIGORE SBAGLIATO!"
+        else -> null
+    }
 }
 
 /** Barra del possesso: ciano per la casa, magenta per gli ospiti. */

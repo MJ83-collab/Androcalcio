@@ -884,7 +884,7 @@ fun RosaScreen(
                 Text("⭐ GIOCATORE DEL MESE  " + mese, Modifier.padding(10.dp), fontWeight = FontWeight.ExtraBold, color = AC.PaperText, fontSize = 13.sp)
             }
         }
-        item { RosaTable(players, onToggleStarter, { sheet = it }, onRole, forme) }
+        item { RosaTable(players, onToggleStarter, { sheet = it }, onRole, forme, Color(team.colorPrimary) to Color(team.colorSecondary)) }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
@@ -924,7 +924,8 @@ private fun ruoloTag(r: String) = "[$r]"
 @Composable
 private fun RosaTable(
     players: List<Player>, onToggleStarter: (Player) -> Unit, onOpen: (Player) -> Unit,
-    onRole: (Player, String) -> Unit, forme: Map<Long, Double> = emptyMap()
+    onRole: (Player, String) -> Unit, forme: Map<Long, Double> = emptyMap(),
+    maglia: Pair<Color, Color>? = null
 ) {
     val stats = listOf("EN", "VE", "RE", "AG", "QU", "SF", "MO", "ME")
     val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColOrange)
@@ -985,7 +986,9 @@ private fun RosaTable(
                         textAlign = TextAlign.Center, fontSize = 14.sp)
                     Text(if (p.numero > 0) "${p.numero}" else "-", Modifier.width(26.dp), textAlign = TextAlign.Center,
                         fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
-                    it.androcalcio.ui.components.Avatar(p.name, 22.dp, Modifier.padding(end = 3.dp))
+                    androidx.compose.runtime.CompositionLocalProvider(it.androcalcio.ui.components.LocalMagliaSquadra provides maglia) {
+                        it.androcalcio.ui.components.Avatar(p.name, 22.dp, Modifier.padding(end = 3.dp))
+                    }
                     Text(ruoloTag(p.role) + "  " + it.androcalcio.engine.Forma.icona(forme[p.id]) + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
