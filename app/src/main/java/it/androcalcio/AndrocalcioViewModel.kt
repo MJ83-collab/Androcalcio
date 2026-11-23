@@ -102,7 +102,6 @@ import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Forma
 import it.androcalcio.engine.Mentori
 import it.androcalcio.engine.Ritmo
-import it.androcalcio.data.Stato
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Mentality
