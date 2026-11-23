@@ -2,7 +2,8 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,16 +20,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Test e build
-        run: gradle testDebugUnitTest assembleDebug assembleRelease --no-daemon
-      - name: Rinomina APK
-        run: |
-          cp app/build/outputs/apk/debug/*.apk "androcalcio-${GITHUB_REF_NAME}-debug.apk"
-          cp app/build/outputs/apk/release/*.apk "androcalcio-${GITHUB_REF_NAME}-ottimizzato.apk"
-      - name: Crea la release
+      - name: Versione e release già esistente?
+        id: ver
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --title "Androcalcio $GITHUB_REF_NAME" \
+          V=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          echo "tag=v$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" >/dev/null 2>&1; then echo "esiste=1" >> "$GITHUB_OUTPUT"; else echo "esiste=0" >> "$GITHUB_OUTPUT"; fi
+      - name: Test e build
+        if: steps.ver.outputs.esiste == '0'
+        run: gradle testDebugUnitTest assembleDebug assembleRelease --no-daemon
+      - name: Crea la release
+        if: steps.ver.outputs.esiste == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          cp app/build/outputs/apk/debug/*.apk "androcalcio-$TAG-debug.apk"
+          cp app/build/outputs/apk/release/*.apk "androcalcio-$TAG-ottimizzato.apk"
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "Androcalcio $TAG" \
             --notes "Mutui bancari, risparmio batteria, scheda Analisi, pulizia. Dettagli in report.md. L'APK 'ottimizzato' usa R8 e non è stato provato su telefono: se non parte, usa quello 'debug'." \
-            androcalcio-*-debug.apk androcalcio-*-ottimizzato.apk
+            "androcalcio-$TAG-debug.apk" "androcalcio-$TAG-ottimizzato.apk"
