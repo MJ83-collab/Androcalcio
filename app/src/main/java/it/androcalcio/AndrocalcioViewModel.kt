@@ -99,6 +99,10 @@ import it.androcalcio.engine.Sponsors
 import it.androcalcio.engine.Strutture
 import it.androcalcio.engine.Economia
 import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Forma
+import it.androcalcio.engine.Mentori
+import it.androcalcio.engine.Ritmo
+import it.androcalcio.data.Stato
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Mentality
@@ -1033,6 +1037,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         bump()
     }
     fun liveModulo(f: Formation) { val i = _live.value ?: return; i.m.setModulo(i.userHome, f); bump() }
+    fun liveRitmo(r: Ritmo) { val i = _live.value ?: return; i.m.setRitmo(i.userHome, r); bump() }
     fun livePressing(p: Pressing) { val i = _live.value ?: return; i.m.setPressing(i.userHome, p); bump() }
     fun liveLine(l: DefLine) { val i = _live.value ?: return; i.m.setLine(i.userHome, l); bump() }
 
@@ -1056,6 +1061,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val r = i.m.report()
             val t = selectedTeam.value
             val prima = t?.let { dao.playersOnce(it.id) }.orEmpty().associateBy { it.id }
+            // Forma: si aggiungono i voti dei giocatori della tua squadra (ultimi cinque)
+            if (t != null) for (p in r.playedPlayers) if (p.id in (if (i.userHome) r.homePlayed else r.awayPlayed)) {
+                val k = Forma.key(p.id)
+                dao.setStato(Stato(k, Forma.aggiungi(dao.stato(k), r.playerRatings[p.id] ?: 6.0)))
+            }
             val lg = mr.league
             dao.updateMatch(mr.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
             salvaStatistiche(_season.value, HashMap<Long, PlayerStat>().also { accumulaStat(it, _season.value, mr.homeTeamId, mr.awayTeamId, r) })
@@ -1924,7 +1934,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val x = e.split(":"); if (x.size == 4 && x[1] == p.id.toString()) x[0] to ((x[2].toDoubleOrNull() ?: 0.0) / 10.0 / (x[3].toDoubleOrNull() ?: 1.0).coerceAtLeast(1.0)) else null
             }.toMap(),
             infortuni = StoricoInfortuni.decode(dao.stato(StoricoInfortuni.KEY)).filter { it.playerId == p.id }.map { it.stagione to it.turni },
-            minutiPct = if (fresco.teamId == selectedTeam.value?.id) Minutaggio.percentuale(Minutaggio.decode(dao.stato(Minutaggio.KEY))[p.id] ?: 0, dao.statoInt(Minutaggio.KEY_PARTITE)) else null
+            minutiPct = if (fresco.teamId == selectedTeam.value?.id) Minutaggio.percentuale(Minutaggio.decode(dao.stato(Minutaggio.KEY))[p.id] ?: 0, dao.statoInt(Minutaggio.KEY_PARTITE)) else null,
+            forma = dao.stato(Forma.key(p.id)).orEmpty().split(",").mapNotNull { it.toIntOrNull()?.let { v -> v / 10.0 } }
         )
     }
 
@@ -2713,7 +2724,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
                     val a = Progression.advance(p, rng, Staffing.skill(staffBy, t.id, Staffing.ALLENATORE),
-                        if (t.id == me.id) Strutture.bonusAllenamento(livAll) + effMig.crescitaPct else 0)
+                        if (t.id == me.id) Strutture.bonusAllenamento(livAll) + effMig.crescitaPct else 0,
+                        mentore = Mentori.bonus(p, byTeam[t.id] ?: emptyList()))
                     when {
                         a.age >= Progression.retireAge(a) -> {
                             removed += p

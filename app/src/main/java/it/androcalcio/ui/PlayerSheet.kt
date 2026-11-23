@@ -1,5 +1,7 @@
 package it.androcalcio.ui
 
+import it.androcalcio.engine.Forma
+
 import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
@@ -179,6 +181,11 @@ fun PlayerSheet(
                     if (dettaglio.stagioni.size > 1) Text("Totale: presenze ${dettaglio.stagioni.sumOf { it.presenze }} · gol ${dettaglio.stagioni.sumOf { it.gol }}",
                         fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
                     dettaglio.minutiPct?.let { Text("Minuti giocati in stagione: $it%", fontSize = 12.sp, color = AC.PaperText) }
+                    Titolo("FORMA E PARAMETRI")
+                    Text("Forma recente: ${Forma.simbolo(Forma.media(dettaglio.forma))}" +
+                        (if (dettaglio.forma.isNotEmpty()) " · ultimi voti ${dettaglio.forma.joinToString(" ") { "%.1f".format(it).replace('.', ',') }}" else ""),
+                        fontSize = 12.sp, color = AC.PaperText)
+                    RadarGiocatore(p)
                     Titolo("INFORTUNI")
                     if (dettaglio.infortuni.isEmpty()) Text("Nessun infortunio registrato.", fontSize = 11.sp, color = AC.PaperText)
                     dettaglio.infortuni.takeLast(8).reversed().forEach { (st, t) -> Text("$st: $t turni di stop", fontSize = 12.sp, color = AC.PaperText) }

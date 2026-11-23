@@ -64,6 +64,11 @@ class LiveMatch(
         if (id !in playedH && id !in playedA) 0 else ((minOut[id] ?: minute) - (minIn[id] ?: 0)).coerceAtLeast(0)
     var subsH = 0; private set
     var subsA = 0; private set
+    // Ritmo di squadra (solo la tua squadra lo sceglie in partita)
+    var ritmoH = Ritmo.NORMALE; private set
+    var ritmoA = Ritmo.NORMALE; private set
+    private fun conAttacco(r: MatchEngine.Ratings, k: Double) =
+        MatchEngine.Ratings(r.atk * k, r.mid, r.def, r.gk, r.stamina, r.players)
     private var h = MatchEngine.ratings(xiH, homeF, homeCoach)
     private var a = MatchEngine.ratings(xiA, awayF, awayCoach)
     private val pHome = h.mid * MatchEngine.HOME_BONUS / (h.mid * MatchEngine.HOME_BONUS + a.mid)
@@ -120,6 +125,15 @@ class LiveMatch(
     fun setPressing(homeSide: Boolean, p: Pressing) { if (homeSide) pressH = p else pressA = p }
     fun setLine(homeSide: Boolean, l: DefLine) { if (homeSide) lineH = l else lineA = l }
 
+    /** Cambia il ritmo di una squadra durante la partita. */
+    fun setRitmo(homeSide: Boolean, r: Ritmo) {
+        if (finished) return
+        if (homeSide) ritmoH = r else ritmoA = r
+        refresh()
+        val t = if (homeSide) home else away
+        events += MatchEvent(minute, EventType.TACTIC, homeSide, "${t.shortName} gioca a ritmo ${r.label.lowercase()}", 0.5f, 0.5f)
+    }
+
     /** Cambio di modulo dal vivo: i giocatori restano in campo, cambiano posizioni e peso di ogni reparto. */
     fun setModulo(homeSide: Boolean, f: Formation) {
         if (finished) return
@@ -150,8 +164,8 @@ class LiveMatch(
     }
 
     private fun refresh() {
-        h = MatchEngine.ratings(xiH, homeF, homeCoach, energy)
-        a = MatchEngine.ratings(xiA, awayF, awayCoach, energy)
+        h = conAttacco(MatchEngine.ratings(xiH, homeF, homeCoach, energy), ritmoH.attacco)
+        a = conAttacco(MatchEngine.ratings(xiA, awayF, awayCoach, energy), ritmoA.attacco)
     }
 
     private fun doSub(homeSide: Boolean, out: Player, inP: Player) {
@@ -205,8 +219,8 @@ class LiveMatch(
         if (finished) return
         minute++
         if (minute > 55) {
-            xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressH.drain).coerceAtLeast(0.7) }
-            xiA.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressA.drain).coerceAtLeast(0.7) }
+            xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressH.drain * ritmoH.consumo).coerceAtLeast(0.7) }
+            xiA.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressA.drain * ritmoA.consumo).coerceAtLeast(0.7) }
             if (minute in 56..85) {
                 if (!manualHome && subsH < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(true, hg < ag)
                 if (!manualAway && subsA < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(false, ag < hg)

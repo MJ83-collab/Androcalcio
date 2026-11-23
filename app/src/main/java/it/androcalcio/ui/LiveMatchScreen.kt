@@ -127,6 +127,17 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                         }
                     }
                 }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("RITMO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            val attuale = if (info.userHome) m.ritmoH else m.ritmoA
+                            it.androcalcio.engine.Ritmo.values().forEach { r ->
+                                PcChip(selected = r == attuale, onClick = { vm.liveRitmo(r) }, label = { Text(r.label) })
+                            }
+                        }
+                    }
+                }
                 item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
                 item {
                     Column {
