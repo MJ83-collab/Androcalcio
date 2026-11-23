@@ -3264,6 +3264,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }.toMap()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    /** Giocatore del mese: miglior media delle ultime cinque partite (almeno tre voti). */
+    val giocatoreDelMese: StateFlow<String?> = osserva("stato") {
+        val tid = selectedTeam.value?.id ?: return@osserva null
+        dao.playersOnce(tid).mapNotNull { p ->
+            val v = Forma.leggi(dao.stato(Forma.key(p.id)))
+            if (v.size >= 3) p.name to v.average() else null
+        }.maxByOrNull { it.second }?.let { (nome, m) -> "$nome · media ${"%.1f".format(m).replace('.', ',')} nelle ultime partite" }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val formazioniSalvate: StateFlow<List<FormazioniSalvate.Preset?>> = osserva("stato") { FormazioniSalvate.decode(dao.stato(FormazioniSalvate.KEY)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), List(FormazioniSalvate.POSTI) { null })
     fun salvaFormazione(posto: Int) {
