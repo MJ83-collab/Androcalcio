@@ -2522,7 +2522,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             if (alboPO.isNotEmpty()) dao.insertAlbo(alboPO)
-            spareggiNote.filter { n -> n.contains(me.name) }.forEach { avviso(it) }
+            noteSpareggi = spareggiNote.filter { n -> n.contains(me.name) }
             // Qualificazioni: prima divisione di ogni nazione europea (Champions, Europa, Conference)
             // e di Brasile e Argentina (Copa Sudamericana)
             val europei = HashMap<Long, String>()
@@ -3574,9 +3574,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Fine stagione v0.6: crediti delle cessioni a rate, ammortamenti, rivendite, nuovo stadio, cura del prato. */
+    private var noteSpareggi: List<String> = emptyList()
+
     private suspend fun fineStagioneV06(meId: Long) {
         var t = dao.team(meId)
-        val note = ArrayList<String>()
+        val note = ArrayList<String>(noteSpareggi).also { noteSpareggi = emptyList() }
         val cred = dao.stato(Cartellini.KEY_CREDITI)?.toLongOrNull() ?: 0L
         if (cred > 0L) {
             t = t.copy(budget = t.budget + cred); registra(meId, "Vendita: incasso rata", cred, t.budget)
