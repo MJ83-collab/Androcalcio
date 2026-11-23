@@ -1164,6 +1164,8 @@ fun FinanzeScreen(
             }
         }
 
+        GraficoCassa(movimenti)
+
         // Movimenti di cassa
         SectionTitle("Movimenti di cassa")
         PaperPanel(Modifier.fillMaxWidth()) {

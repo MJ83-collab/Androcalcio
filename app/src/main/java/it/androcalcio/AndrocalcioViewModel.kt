@@ -1402,9 +1402,77 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         dao.setStatoInt(MK.pend(p.id), 0)
         dao.setStatoInt(MK.clubOk(p.id), 0)
         dao.setStatoInt(MK.no(p.id), 0)
+        if (buyer.id == selectedTeam.value?.id) effettiArrivo(p, buyer, wage)
         val durata = "$years ${if (years == 1) "anno" else "anni"}"
         val costo = (if (fee > 0) " e ${money(fee)} al club" + (if (dilazione > 0L) " (${money(dilazione)} a fine stagione)" else "") else "") + (if (comm > 0) ", più ${money(comm)} all'agente" else "")
         return OfferResult.Accepted("${p.name} firma: ${money(wage)} l'anno per $durata$costo.")
+    }
+
+    private fun cambiaMorale(rosa: List<Player>, delta: Map<Long, Int>): List<Player> =
+        rosa.filter { it.id in delta }.map { it.copy(morale = (it.morale + (delta[it.id] ?: 0)).coerceIn(0, 100)) }
+
+    /**
+     * Arrivo di un giocatore nella tua rosa: chi gioca nel suo ruolo teme di perdere il posto, un ingaggio molto alto
+     * fa gelosia, un campione (84+, o più forte di tutti nel ruolo) alza il morale; da 90 in su anche tifosi, clima e sponsor.
+     */
+    private suspend fun effettiArrivo(p: Player, buyer: Team, wage: Long) {
+        val rosa = dao.playersOnce(buyer.id).filter { it.id != p.id }
+        if (rosa.isEmpty()) return
+        val delta = HashMap<Long, Int>()
+        val note = ArrayList<String>()
+        val rivali = rosa.filter { it.role == p.role && it.overall < p.overall }.sortedByDescending { it.overall }.take(2)
+        rivali.forEach { delta[it.id] = (delta[it.id] ?: 0) - 3 }
+        if (rivali.isNotEmpty()) note += "${rivali.joinToString { it.name }} temono di perdere il posto (morale -3)"
+        val media = rosa.map { it.salary }.average()
+        if (wage > media * 2.0) {
+            val gelosi = rosa.filter { it.overall >= p.overall - 5 && it.salary * 2 < wage }.take(5)
+            gelosi.forEach { delta[it.id] = (delta[it.id] ?: 0) - 2 }
+            if (gelosi.isNotEmpty()) note += "${gelosi.size} compagni non gradiscono l'ingaggio di ${money(wage)} (morale -2)"
+        }
+        val migliore = rosa.filter { it.role == p.role }.maxOfOrNull { it.overall } ?: 0
+        val bonus = when {
+            p.overall >= 90 -> 4
+            p.overall >= 84 -> 2
+            p.overall >= migliore + 5 && migliore > 0 -> 1
+            else -> 0
+        }
+        if (bonus > 0) {
+            rosa.forEach { delta[it.id] = (delta[it.id] ?: 0) + bonus }
+            note += "L'arrivo di ${p.name} dà fiducia a tutta la rosa (morale +$bonus)"
+        }
+        if (p.overall >= 90) {
+            dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + 6)
+            dao.setStatoInt(StatoKeys.CLIMA, dao.statoInt(StatoKeys.CLIMA) + 5)
+            val premio = (SponsorDeal.decode(dao.stato("sponsor")).sumOf { it.annual } / 20).coerceAtLeast(100_000L)
+            val tt = dao.team(buyer.id)
+            dao.updateTeam(tt.copy(budget = tt.budget + premio))
+            registra(tt.id, "Sponsor: effetto campione ${p.name}", premio, tt.budget + premio)
+            note += "Tifosi in festa (+6), clima +5 e gli sponsor versano ${money(premio)}"
+        }
+        if (delta.isNotEmpty()) dao.updatePlayers(cambiaMorale(rosa, delta))
+        if (note.isNotEmpty()) avviso(note.joinToString(". ") + ".")
+    }
+
+    /** Cessione: se parte un leader, un amico di qualcuno o un campione (84+), lo spogliatoio ne risente. */
+    private suspend fun effettiPartenza(p: Player, me: Team) {
+        val rosa = dao.playersOnce(me.id).filter { it.id != p.id }
+        if (rosa.isEmpty()) return
+        val delta = HashMap<Long, Int>()
+        val note = ArrayList<String>()
+        if (Leadership.carisma(p) >= 70) {
+            rosa.forEach { delta[it.id] = (delta[it.id] ?: 0) - 3 }
+            note += "${p.name} era un leader: lo spogliatoio lo rimpiange (morale -3)"
+        }
+        val amici = rosa.filter { it.nationality == p.nationality }.take(3)
+        amici.forEach { delta[it.id] = (delta[it.id] ?: 0) - 3 }
+        if (amici.isNotEmpty()) note += "${amici.joinToString { it.name }} perdono un amico (morale -3)"
+        if (p.overall >= 84) {
+            rosa.forEach { delta[it.id] = (delta[it.id] ?: 0) - 2 }
+            dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) - 4)
+            note += "La cessione di un campione delude squadra e tifosi (morale -2, tifosi -4)"
+        }
+        if (delta.isNotEmpty()) dao.updatePlayers(cambiaMorale(rosa, delta))
+        if (note.isNotEmpty()) avviso(note.joinToString(". ") + ".")
     }
 
     /** A ogni giornata il club risponde alle proposte della giornata prima (positiva o negativa). */
@@ -1484,6 +1552,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 Cartellini.decodeR(dao.stato(Cartellini.KEY_RIVENDITE)).filter { it.playerId != p.id } +
                     Cartellini.Rivendita(p.id, Cartellini.PCT_RIVENDITA, p.name))))
             caricaFinExtra()
+            effettiPartenza(p, me)
             _offer.value = OfferResult.Accepted("${p.name} ceduto a ${buyer.name} per ${money(price)}" +
                 (if (dil > 0L) " (${money(dil)} a fine stagione)" else "") +
                 (if (plus >= 0) ". Plusvalenza ${money(plus)}" else ". Minusvalenza ${money(-plus)}") +
