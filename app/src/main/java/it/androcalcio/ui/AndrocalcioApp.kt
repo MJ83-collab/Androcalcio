@@ -154,6 +154,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var menuAperto by rememberSaveable { mutableStateOf(false) }
     val teams by vm.teams.collectAsStateWithLifecycle()
+    // Gli All Star esistono solo per le amichevoli: non compaiono in carriera, vivai, scouting, mercato, squadre e statistiche
+    val teamsReali = remember(teams) { teams.filter { !AllStar.isAllStar(it) } }
     val team by vm.selectedTeam.collectAsStateWithLifecycle()
     val players by vm.players.collectAsStateWithLifecycle()
     val matches by vm.matches.collectAsStateWithLifecycle()
@@ -232,7 +234,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     val started by vm.started.collectAsStateWithLifecycle()
     if (!started && teams.isNotEmpty()) {
         val info by vm.teamInfo.collectAsStateWithLifecycle()
-        NuovaPartitaScreen(teams, info) { t, nome, cognome -> vm.startGame(t, nome, cognome); screen = Screen.HOME }
+        NuovaPartitaScreen(teamsReali, info) { t, nome, cognome -> vm.startGame(t, nome, cognome); screen = Screen.HOME }
         return
     }
 
@@ -329,7 +331,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 }
                 Screen.SQUADRE -> {   // solo consultazione: la panchina cambia con le offerte
                     var scheda by remember { mutableStateOf<Team?>(null) }
-                    TeamList(teams, team?.id) { scheda = it }
+                    TeamList(teamsReali, team?.id) { scheda = it }
                     scheda?.let { t -> SquadraSchedaDialog(t, { x -> vm.infoSquadra(x) }, { scheda = null }) }
                 }
                 Screen.PARTITA -> {
@@ -355,7 +357,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val offer by vm.offerResult.collectAsStateWithLifecycle()
                     val clubOk by vm.clubAccepted.collectAsStateWithLifecycle()
                     MercatoScreen(
-                        team, teams, players, market, role, offer,
+                        team, teamsReali, players, market, role, offer,
                         { vm.setMarketRole(it) }, { p, price, w, y -> vm.offer(p, price, w, y) },
                         { p, y -> vm.wageAsk(p, y) }, vm.wageRoom(),
                         clubOk, { p, y -> vm.consiglioVice(p, y) },
@@ -372,7 +374,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val schedaViv by vm.scheda.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
                     VivaioScreen(
-                        team, teams, players, youths, scouted, reports, notice, season,
+                        team, teamsReali, players, youths, scouted, reports, notice, season,
                         { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
                         { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() },
                         exViv.inPrima, schedaViv, { vm.richiediScheda(it) }, { vm.apparizione(it) }, { vm.chiudiScheda() },
@@ -420,12 +422,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val statAttiva by vm.statSeasonAttiva.collectAsStateWithLifecycle()
                     val statGiocatori by vm.playerStats.collectAsStateWithLifecycle()
                     val clausoleAll by vm.clausole.collectAsStateWithLifecycle()
-                    StatsScreen(team, teams, matches, goals, everyone, season, statGiocatori, statStagioni,
+                    StatsScreen(team, teamsReali, matches, goals, everyone, season, statGiocatori, statStagioni,
                         statAttiva, { vm.pickStatSeason(it) }, clausoleAll)
                 }
                 Screen.DIRIGENZA -> {
                     val c by vm.club.collectAsStateWithLifecycle()
-                    DirigenzaScreen(team, c, teams, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) },
+                    DirigenzaScreen(team, c, teamsReali, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) },
                         { vm.acceptSponsor(it) }, { vm.rejectSponsors() }, { vm.dimettiti() })
                 }
                 Screen.STAFF -> {

@@ -2112,8 +2112,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             .flatMapLatest { (t, s) -> if (t == null) flowOf(emptyList()) else dao.goals(key(t), s) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    // Senza i giocatori All Star: non si possono ingaggiare, cercare né confrontare
     val allPlayers: StateFlow<List<Player>> =
-        dao.allPlayersFlow().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        combine(dao.allPlayersFlow(), teams) { ps, ts ->
+            val asIds = ts.filter { AllStar.isAllStar(it) }.map { it.id }.toSet()
+            ps.filter { it.teamId !in asIds }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     // ---- Staff: allenatore e preparatore della tua squadra ----
     val staff: StateFlow<List<Staff>> =
