@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -341,7 +342,7 @@ fun FormationBoard(xi: List<Player>, formation: Formation, shirt: Color, modifie
             val yf = 0.90f - (c.first - 0.05f) / 0.41f * 0.80f
             val xf = c.second
             Column(
-                Modifier.padding(start = w * xf - 34.dp, top = h * yf - 22.dp).width(68.dp),
+                Modifier.offset(x = w * xf - 34.dp, y = h * yf - 22.dp).width(68.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(Modifier.size(30.dp).background(if (p.role == "P") Color(0xFF29B6F6) else shirt,
