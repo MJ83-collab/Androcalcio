@@ -77,7 +77,8 @@ fun CalendarioScreen(
     cupMatches: List<MatchResult> = emptyList(),
     friendlyMatches: List<MatchResult> = emptyList(),
     onRequestFriendly: (Long) -> Unit = {},
-    onPlayFriendlies: () -> Unit = {}
+    onPlayFriendlies: () -> Unit = {},
+    onSimulaFino: (Int) -> Unit = {}
 ) {
     var askNext by remember { mutableStateOf(false) }
     var amichevoliAperte by rememberSaveable { mutableStateOf(false) }
@@ -123,6 +124,19 @@ fun CalendarioScreen(
                 round = 0
                 if (miaProssima) { askNext = true } else { onNext() }
             }, Modifier.fillMaxWidth(), main = true, enabled = pending && !bloccoAmichevoli)
+        }
+        // Simula fino a: 5 giornate, apertura del mercato invernale, vigilia del prossimo derby
+        if (nextRound != null && !bloccoAmichevoli) {
+            val totali = lastRound
+            val mercato = totali / 2 - 2
+            val derby = matches.filter { !it.played && (it.homeTeamId == team.id || it.awayTeamId == team.id) }.sortedBy { it.round }
+                .firstOrNull { m -> val o = byId[if (m.homeTeamId == team.id) m.awayTeamId else m.homeTeamId]; o != null && it.androcalcio.engine.Rivalita.isDerby(team.name, o.name) }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Simula fino a:", color = AC.Text, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterVertically))
+                PcChip(false, { round = 0; onSimulaFino(nextRound + 4) }, { Text("+5 giornate") })
+                if (nextRound <= mercato) PcChip(false, { round = 0; onSimulaFino(mercato) }, { Text("Mercato invernale") })
+                if (derby != null && derby.round > nextRound) PcChip(false, { round = 0; onSimulaFino(derby.round - 1) }, { Text("Vigilia del derby (g. ${derby.round})") })
+            }
         }
 
         if (bloccoAmichevoli) {
@@ -209,7 +223,18 @@ fun CalendarioScreen(
                 .entries.sortedBy { e -> e.value.minOf { it.id } }.map { it.key }
             val tier = tiers.indexOf(team.campionato)
             val kk = minOf(3, league.size / 4)
-            val rows = standings(league, matches.filter { it.round <= shown })
+            var lato by rememberSaveable { mutableStateOf(0) }   // 0 totale, 1 casa, 2 trasferta
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("Totale", "Casa", "Trasferta").forEachIndexed { i, n -> PcChip(lato == i, { lato = i }, { Text(n) }) }
+            }
+            val fino = matches.filter { it.round <= shown }
+            val rows = when (lato) {
+                1 -> it.androcalcio.engine.ClassificaExtra.lato(league, fino, true)
+                2 -> it.androcalcio.engine.ClassificaExtra.lato(league, fino, false)
+                else -> standings(league, fino)
+            }
+            // Playoff: nelle serie minori l'ultimo posto promozione si gioca tra le 4 successive
+            val dirette = if (kk >= 2 && league.size >= kk + 3) kk - 1 else kk
             val heads = listOf("G", "V", "N", "P", "GF", "GS", "DR", "PT")
             val headColor = listOf(AC.ColBlue, AC.ColGreen, AC.ColBlue, AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColOrange)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -220,18 +245,20 @@ fun CalendarioScreen(
                             HeadCell("N", androidx.compose.ui.graphics.Color.White, Modifier.width(22.dp))
                             HeadCell("SQUADRA", androidx.compose.ui.graphics.Color.White, Modifier.width(128.dp), TextAlign.Start)
                             heads.forEach { h -> HeadCell(h, androidx.compose.ui.graphics.Color(0xFF8FB4FF), Modifier.width(if (h == "DR" || h == "PT") 32.dp else 26.dp)) }
+                            HeadCell("FORMA", androidx.compose.ui.graphics.Color(0xFF8FB4FF), Modifier.width(70.dp))
                         }
                         rows.forEachIndexed { i, r ->
                             val mine = r.team.id == team.id
                             val c = if (mine) AC.ColBlue else AC.PaperText
                             val zone = when {
-                                tier > 0 && i < kk -> "▲"
-                                tier in 0 until tiers.lastIndex && i >= rows.size - kk -> "▼"
+                                lato == 0 && tier > 0 && i < dirette -> "▲"
+                                lato == 0 && tier > 0 && i < dirette + 4 && dirette < kk -> "◆"
+                                lato == 0 && tier in 0 until tiers.lastIndex && i >= rows.size - kk -> "▼"
                                 else -> ""
                             }
                             PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
                                 Text(zone, Modifier.width(14.dp), fontSize = 10.sp,
-                                    color = if (zone == "▲") AC.ColGreen else AC.ColEn)
+                                    color = when (zone) { "▲" -> AC.ColGreen; "◆" -> AC.ColOrange; else -> AC.ColEn })
                                 Text("${i + 1}", Modifier.width(22.dp).background(androidx.compose.ui.graphics.Color(0xFF0A1A6B)),
                                     textAlign = TextAlign.Center, fontSize = 12.sp,
                                     fontWeight = FontWeight.ExtraBold, color = androidx.compose.ui.graphics.Color.White)
@@ -245,6 +272,14 @@ fun CalendarioScreen(
                                     Text("$v", Modifier.width(if (k >= 6) 32.dp else 26.dp), textAlign = TextAlign.Center,
                                         fontSize = 12.sp, color = c,
                                         fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium)
+                                }
+                                val forma = it.androcalcio.engine.ClassificaExtra.forma(r.team.id, fino)
+                                Row(Modifier.width(70.dp), horizontalArrangement = Arrangement.Center) {
+                                    forma.forEach { ch ->
+                                        Text("$ch", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.White,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.padding(1.dp).width(12.dp).background(when (ch) { 'V' -> AC.ColGreen; 'N' -> AC.ColOrange; else -> AC.ColEn }))
+                                    }
                                 }
                             }
                         }

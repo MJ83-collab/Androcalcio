@@ -20,7 +20,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Tema unico: PC Calcio 7 (le preferenze salvate sul tema vengono ignorate).
-        AC.tema = if (getSharedPreferences("androcalcio", 0).getBoolean("tema_nero", false)) 4 else 3
+        val pr = getSharedPreferences("androcalcio", 0)
+        AC.tema = AC.daPreferenza(pr.getInt("tema_scelto", if (pr.getBoolean("tema_nero", false)) 1 else 0))
         setContent {
             AndrocalcioTheme {
                 AndrocalcioApp()

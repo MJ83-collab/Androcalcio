@@ -41,8 +41,12 @@ fun SalvataggiScreen(
     onLoad: (Int) -> Unit,
     onDelete: (Int) -> Unit,
     onEsporta: (Int, android.net.Uri) -> Unit = { _, _ -> },
-    onImporta: (Int, android.net.Uri) -> Unit = { _, _ -> }
+    onImporta: (Int, android.net.Uri) -> Unit = { _, _ -> },
+    onCsv: (android.net.Uri) -> Unit = {}
 ) {
+    val csv = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri -> if (uri != null) onCsv(uri) }
     var slotFile by remember { mutableStateOf(1) }
     val esporta = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip")
@@ -62,6 +66,9 @@ fun SalvataggiScreen(
                 "Ogni slot conserva tutto: rose, calendario, risultati, statistiche, staff, vivaio e infortuni.",
             color = AC.TextDim, style = MaterialTheme.typography.bodySmall
         )
+        PcAction(onClick = { csv.launch("androcalcio_${season.replace('/', '-')}.csv") }) { Text("Esporta riepilogo stagione (CSV)") }
+        Text("Classifica, rosa con presenze e gol, bilancio per categoria. Si apre con Excel o Fogli Google.",
+            color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
         slots.forEach { s ->
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

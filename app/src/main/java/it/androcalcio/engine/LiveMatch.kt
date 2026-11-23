@@ -28,8 +28,11 @@ class LiveMatch(
     homeAmp: Ampiezza = Ampiezza.NORMALE, awayAmp: Ampiezza = Ampiezza.NORMALE,
     homeStile: Stile? = null, awayStile: Stile? = null,
     private val homeTiri: SetPieces = SetPieces.NONE, private val awayTiri: SetPieces = SetPieces.NONE,
-    private val meteoGol: Double = 1.0   // meteo e campo: moltiplicano le azioni pericolose (Meteo.Condizioni.fattoreGol)
+    private val meteoGol: Double = 1.0,  // meteo e campo: moltiplicano le azioni pericolose (Meteo.Condizioni.fattoreGol)
+    var trapH: Boolean = false, var trapA: Boolean = false   // trappola del fuorigioco (vale solo con la linea alta)
 ) {
+    var fuorigiocoH = 0; private set   // fuorigioco fischiati alla squadra di casa
+    var fuorigiocoA = 0; private set
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
         if (bench != null) ps.toMutableList() to bench.toMutableList()
         else Lineup.coachPick(ps, f).let { xi -> xi.toMutableList() to ps.filter { it !in xi }.toMutableList() }
@@ -211,8 +214,17 @@ class LiveMatch(
             val defPen = speedPenalty(lDef, if (homeAtt) xiH else xiA)
             val ampAtt = if (homeAtt) ampH else ampA
             val ampDef = if (homeAtt) ampA else ampH
-            val ratio = att.atk * mAtt.atk * lAtt.atk * ampAtt.atk / (dfn.def * mDef.def * lDef.def * ampDef.def * defPen)
-            if (rng.nextDouble() < (0.45 * ratio).coerceIn(0.2, 0.7)) {
+            var ratio = att.atk * mAtt.atk * lAtt.atk * ampAtt.atk / (dfn.def * mDef.def * lDef.def * ampDef.def * defPen)
+            // Trappola del fuorigioco: spesso ferma l'azione, ma se salta l'attaccante va in porta da solo
+            val trappola = (if (homeAtt) trapA else trapH) && lDef == DefLine.ALTA
+            val rT = rng.nextDouble()
+            if (trappola && rT < 0.16) {
+                if (homeAtt) fuorigiocoH++ else fuorigiocoA++
+                val (x, y) = pos(homeAtt)
+                events += MatchEvent(minute, EventType.OFFSIDE, homeAtt, "Fuorigioco (${team.shortName}): la trappola funziona", x, y)
+                ratio = 0.0
+            } else if (trappola && rT < 0.21) ratio *= 1.8
+            if (ratio > 0.0 && rng.nextDouble() < (0.45 * ratio).coerceIn(0.2, 0.7)) {
                 if (homeAtt) hs++ else asht++
                 val sh = MatchEngine.shooter(att.players, rng)
                 val who = sh?.name ?: "Attaccante"

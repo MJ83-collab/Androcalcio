@@ -37,8 +37,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.ver.outputs.tag }}
         run: |
-          cp app/build/outputs/apk/debug/*.apk "androcalcio-$TAG-debug.apk"
-          cp app/build/outputs/apk/release/*.apk "androcalcio-$TAG-ottimizzato.apk"
+          cp app/build/outputs/apk/release/*.apk "Androcalcio-$TAG.apk"
           gh release create "$TAG" --target "$GITHUB_SHA" --title "Androcalcio $TAG" \
-            --notes "Mutui con rifinanziamento, acquisti a rate, ampiezza e cambio programmato, preferiti, confronto, backup su file, tema nero, voci di mercato e altro. Dettagli in report.md. L'APK 'ottimizzato' usa R8 e non è stato provato su telefono: se non parte, usa quello 'debug'." \
-            "androcalcio-$TAG-debug.apk" "androcalcio-$TAG-ottimizzato.apk"
+            --notes "Un solo file da installare: Androcalcio-$TAG.apk (dati e rose già dentro). Provato in avvio su emulatore. Dettagli in report.md." \
+            "Androcalcio-$TAG.apk"

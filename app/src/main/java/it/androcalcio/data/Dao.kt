@@ -197,6 +197,7 @@ interface AndrocalcioDao {
     @Insert suspend fun insertAlbo(list: List<AlboEntry>)
 
     @Query("DELETE FROM albo WHERE season = :season") suspend fun deleteAlboSeason(season: String)
+    @Query("DELETE FROM albo") suspend fun clearAlbo()
 
     @Query("SELECT * FROM albo ORDER BY season DESC, id")
     fun albo(): Flow<List<AlboEntry>>

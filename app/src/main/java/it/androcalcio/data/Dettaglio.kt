@@ -7,5 +7,9 @@ data class DettaglioGiocatore(
     val clausola: Clausola?,
     val stagioni: List<PlayerStat>,
     val nazionaleStagioni: List<NazionaleStat>,
-    val convocazioni: List<Convocazione>
+    val convocazioni: List<Convocazione>,
+    val squadreStagioni: Map<Long, String> = emptyMap(),
+    val votiStagioni: Map<String, Double> = emptyMap(),   // stagione -> voto medio (solo con la tua squadra)
+    val infortuni: List<Pair<String, Int>> = emptyList(), // stagione, turni di stop
+    val minutiPct: Int? = null
 )

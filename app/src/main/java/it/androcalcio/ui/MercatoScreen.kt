@@ -102,6 +102,7 @@ fun MercatoScreen(
     var posFiltro by rememberSaveable { mutableStateOf("") }
     var prezzoMaxM by remember { mutableStateOf(0f) }        // milioni, 0 = nessun limite
     var onlyFree by rememberSaveable { mutableStateOf(false) }  // solo svincolati
+    var caratt by rememberSaveable { mutableStateOf("") }      // caratteristica (Caratteristica.name)
     var target by remember { mutableStateOf<Player?>(null) }
     var amount by remember { mutableStateOf(0L) }
     var wageOffer by remember { mutableStateOf(0L) }
@@ -154,11 +155,18 @@ fun MercatoScreen(
                         }
                         item { PcChip(selected = onlyFree, onClick = { onlyFree = !onlyFree }, label = { Text("Svincolati") }) }
                     }
+                    Text("Caratteristica (almeno ${it.androcalcio.engine.Caratteristica.SOGLIA})", color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item { PcChip(selected = caratt.isEmpty(), onClick = { caratt = "" }, label = { Text("Qualsiasi") }) }
+                        items(it.androcalcio.engine.Caratteristica.values().toList()) { c ->
+                            PcChip(selected = caratt == c.name, onClick = { caratt = if (caratt == c.name) "" else c.name }, label = { Text(c.etichetta) })
+                        }
+                    }
                 }
             }
             val filtro = FiltroMercato(
                 eta.start.toInt(), eta.endInclusive.toInt(), media.start.toInt(), media.endInclusive.toInt(),
-                contr.start.toInt(), contr.endInclusive.toInt(), posFiltro, (prezzoMaxM * 1_000_000).toLong(), onlyFree
+                contr.start.toInt(), contr.endInclusive.toInt(), posFiltro, (prezzoMaxM * 1_000_000).toLong(), onlyFree, caratt
             )
             val filtrati = market.filter { p -> filtro.accetta(p, Market.value(p), p.teamId == Market.SVINCOLATO_ID) }
             val shown = (if (affordable) filtrati.filter { Market.value(it) <= team.budget } else filtrati)

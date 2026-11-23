@@ -41,7 +41,7 @@ object Club {
 
 object ClubRequests {
     /** Tipi di richiesta fondi alla dirigenza. */
-    val TIPI = listOf("stadio", "allenamento", "vivaio")
+    val TIPI = listOf("stadio", "allenamento", "vivaio", "ingaggi")
     /** Importi base proposti (prima di tipo e prestigio). */
     private val BASE = listOf(2_000_000L, 5_000_000L, 10_000_000L)
 
@@ -50,7 +50,7 @@ object ClubRequests {
      * e sul prestigio della squadra (reputazione e tifosi): da circa 0,7x a 1,6x.
      */
     fun importi(tipo: String, reputazione: Int, tifosi: Int): List<Long> {
-        val fattoreTipo = when (tipo) { "stadio" -> 1.0; "allenamento" -> 0.7; else -> 0.5 }
+        val fattoreTipo = when (tipo) { "stadio" -> 1.0; "allenamento" -> 0.7; "ingaggi" -> 0.3; else -> 0.5 }
         val prestigio = 0.7 + 0.9 * ((reputazione + tifosi) / 200.0).coerceIn(0.0, 1.0)
         return BASE.map { b -> Math.round(b * fattoreTipo * prestigio / 100_000.0) * 100_000L }
     }

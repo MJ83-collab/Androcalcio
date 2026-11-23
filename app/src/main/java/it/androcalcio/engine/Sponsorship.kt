@@ -17,6 +17,6 @@ object Sponsorship {
     /** Compenso annuo dello sponsor attuale. */
     fun annual(sponsor: String): Long = offers.firstOrNull { it.name == sponsor }?.annual ?: DEFAULT_ANNUAL
 
-    /** Merchandising: 15.000 € ogni 1.000 posti dello stadio, a fine stagione. */
-    fun merch(capacity: Int): Long = capacity / 1_000L * 15_000L
+    /** Merchandising: 25.000 € ogni 1.000 posti dello stadio, a fine stagione. */
+    fun merch(capacity: Int): Long = capacity / 1_000L * 25_000L
 }

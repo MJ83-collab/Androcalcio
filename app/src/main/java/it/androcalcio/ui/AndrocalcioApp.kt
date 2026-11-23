@@ -6,6 +6,7 @@ import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.bevel
 import it.androcalcio.ui.components.PcChip
 
+import it.androcalcio.engine.PremioPartita
 import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Pressing
 import it.androcalcio.engine.TacticalRoles
@@ -345,7 +346,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         cupMatches = cupMatches,
                         friendlyMatches = friendlyMatches,
                         onRequestFriendly = { vm.requestFriendly(it) },
-                        onPlayFriendlies = { vm.playFriendlies() })
+                        onPlayFriendlies = { vm.playFriendlies() },
+                        onSimulaFino = { vm.simulaFino(it) })
                 }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsStateWithLifecycle()
@@ -387,12 +389,14 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val stagione by vm.season.collectAsStateWithLifecycle()
                     val assicurazione by vm.insurance.collectAsStateWithLifecycle()
                     val cl by vm.club.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id) { vm.caricaMutui() }
                     FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) },
                         cl.livAllenamento, cl.livVivaio, { vm.upgrade(it) },
                         assicurazione, { vm.setInsurance(it) }, movStagione, stagione,
                         vm.mutui.collectAsStateWithLifecycle().value, { b, i -> vm.chiediMutuo(b, i) }, { vm.estinguiMutuo(it) },
                         vm.rateMercato.collectAsStateWithLifecycle().value, { vm.setRateMercato(it) },
-                        vm.debitoRate.collectAsStateWithLifecycle().value, { d, a -> vm.rifinanziaMutuo(d, a) })
+                        vm.debitoRate.collectAsStateWithLifecycle().value, { d, a -> vm.rifinanziaMutuo(d, a) },
+                        vm.finExtra.collectAsStateWithLifecycle().value, { vm.setRivendita(it) }, { vm.avviaNuovoStadio(it) }, { vm.setCuraPrato(it) })
                 }
                 Screen.NAZIONALI -> {
                     val conv by vm.convocazioniAll.collectAsStateWithLifecycle()
@@ -448,7 +452,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
                         { screen = Screen.AVVERSARIO }, tiriU, { vm.salvaTiri(it) }, { p, c -> vm.setCompito(p, c) },
                         vm.ampiezza.collectAsStateWithLifecycle().value, { vm.setAmpiezza(it) },
-                        vm.cambioPronto.collectAsStateWithLifecycle().value, { vm.setCambioPronto(it) })
+                        vm.cambioPronto.collectAsStateWithLifecycle().value, { vm.setCambioPronto(it) },
+                        vm.trappola.collectAsStateWithLifecycle().value, { vm.setTrappola(it) },
+                        vm.formazioniSalvate.collectAsStateWithLifecycle().value, { vm.salvaFormazione(it) }, { vm.caricaFormazione(it) },
+                        vm.premioPromesso.collectAsStateWithLifecycle().value,
+                        PremioPartita.costo(players.sumOf { p -> p.salary }), { vm.promettiPremio(it) })
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
@@ -463,7 +471,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val slots by vm.slots.collectAsStateWithLifecycle()
                     SalvataggiScreen(slots, team?.name, season,
                         { vm.saveSlot(it) }, { vm.loadSlot(it) }, { vm.deleteSlot(it) },
-                        { n, u -> vm.esportaSlot(n, u) }, { n, u -> vm.importaSlot(n, u) })
+                        { n, u -> vm.esportaSlot(n, u) }, { n, u -> vm.importaSlot(n, u) }, { vm.esportaCsv(it) })
                 }
                 else -> ComingSoon(screen)
             }
@@ -989,7 +997,9 @@ fun FinanzeScreen(
     insurance: Int = 0, onInsurance: (Int) -> Unit = {},
     bilancioStagione: List<Movimento> = emptyList(), stagione: String = "",
     mutui: List<Mutui.Mutuo> = emptyList(), onMutuo: (Int, Long) -> Unit = { _, _ -> }, onEstingui: (Int) -> Unit = {},
-    rateMercato: Boolean = false, onRate: (Boolean) -> Unit = {}, debitoRate: Long = 0L, onRifinanzia: (Int, Int) -> Unit = { _, _ -> }
+    rateMercato: Boolean = false, onRate: (Boolean) -> Unit = {}, debitoRate: Long = 0L, onRifinanzia: (Int, Int) -> Unit = { _, _ -> },
+    extra: it.androcalcio.AndrocalcioViewModel.FinExtra = it.androcalcio.AndrocalcioViewModel.FinExtra(),
+    onRivendita: (Boolean) -> Unit = {}, onNuovoStadio: (Int) -> Unit = {}, onCuraPrato: (Int) -> Unit = {}
 ) {
     if (team == null) return
     val wages = players.sumOf { it.salary }
@@ -1109,6 +1119,8 @@ fun FinanzeScreen(
                 }
             }
         }
+
+        FinanzeV06(team, extra, onRivendita, onNuovoStadio, onCuraPrato)
 
         // Bilancio di stagione
         val righe = remember(bilancioStagione) { Bilancio.riepilogo(bilancioStagione) }
@@ -1255,7 +1267,8 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         LocalAzioni provides AzioniGiocatore(
             vm.selectedTeam.collectAsStateWithLifecycle().value?.id ?: -1L, vm.preferiti.collectAsStateWithLifecycle().value, vm.capitanoScelto.collectAsStateWithLifecycle().value,
             vm.allenamentoInd.collectAsStateWithLifecycle().value,
-            { vm.togglePreferito(it) }, { vm.scegliCapitano(it) }, { p, f -> vm.setAllenamentoInd(p, f) }),
+            { vm.togglePreferito(it) }, { vm.scegliCapitano(it) }, { p, f -> vm.setAllenamentoInd(p, f) },
+            vm.viceScelto.collectAsStateWithLifecycle().value, { vm.scegliVice(it) }),
         LocalApriSquadra provides { squadraAperta = it },
         LocalApriSquadraPerNome provides { n -> squadre.firstOrNull { it.name == n }?.let { squadraAperta = it } },
         LocalApriNazione provides { nazioneAperta = it },
