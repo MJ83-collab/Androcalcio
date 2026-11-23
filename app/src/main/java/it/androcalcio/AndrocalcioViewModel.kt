@@ -17,6 +17,7 @@ import it.androcalcio.engine.Personalita
 import it.androcalcio.engine.Scambi
 import it.androcalcio.engine.FairPlay
 import it.androcalcio.engine.Storia
+import it.androcalcio.engine.Mutui
 import it.androcalcio.engine.Giornale
 import it.androcalcio.engine.Meteo
 import it.androcalcio.engine.Obiettivi
@@ -118,7 +119,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.channels.awaitClose
+import androidx.room.InvalidationTracker
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.delay
@@ -1036,14 +1043,24 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         fun clubOk(id: Long) = "clubok_$id"         // 1 = il club ha accettato: si tratta con il giocatore
     }
 
-    /** Giocatori per cui il club ha già accettato (si tratta con il giocatore). Aggiornato ogni 1,5 s. */
-    val clubAccepted: StateFlow<Set<Long>> = flow {
-        while (true) {
-            emit(dao.pendingClubOffers().mapNotNull { s ->
-                s.chiave.removePrefix("pend_").toLongOrNull()?.takeIf { dao.statoInt(MK.clubOk(it)) == 1 }
-            }.toSet())
-            delay(1500)
+    /**
+     * Rilegge i dati solo quando le tabelle indicate cambiano (niente polling: meno CPU e batteria).
+     * Emette subito il valore iniziale; le notifiche ravvicinate vengono unite.
+     */
+    private fun <T> osserva(vararg tabelle: String, carica: suspend () -> T): Flow<T> = callbackFlow {
+        val obs = object : InvalidationTracker.Observer(arrayOf(*tabelle)) {
+            override fun onInvalidated(tables: Set<String>) { trySend(Unit) }
         }
+        trySend(Unit)
+        db.invalidationTracker.addObserver(obs)
+        awaitClose { db.invalidationTracker.removeObserver(obs) }
+    }.conflate().map { carica() }.flowOn(Dispatchers.IO)
+
+    /** Giocatori per cui il club ha già accettato (si tratta con il giocatore). */
+    val clubAccepted: StateFlow<Set<Long>> = osserva("stato") {
+        dao.pendingClubOffers().mapNotNull { s ->
+            s.chiave.removePrefix("pend_").toLongOrNull()?.takeIf { dao.statoInt(MK.clubOk(it)) == 1 }
+        }.toSet()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     /** Stagione mostrata nella scheda statistiche (null = stagione in corso). */
@@ -1051,27 +1068,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val statSeasonAttiva: StateFlow<String> = combine(_statSeason, _season) { a, b -> a ?: b }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _season.value)
     val playerStats: StateFlow<List<PlayerStat>> = statSeasonAttiva.flatMapLatest { s ->
-        flow { while (true) { emit(dao.statsOf(s)); delay(1500) } }
+        osserva("player_stats") { dao.statsOf(s) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val statSeasons: StateFlow<List<String>> = flow {
-        while (true) { emit(dao.statsSeasons()); delay(3000) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val clausole: StateFlow<List<Clausola>> = flow {
-        while (true) { emit(dao.clausoleOnce()); delay(1500) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val scoutMissions: StateFlow<List<ScoutMission>> = flow {
-        while (true) { emit(dao.missionsOnce()); delay(1500) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val statSeasons: StateFlow<List<String>> = osserva("player_stats") { dao.statsSeasons() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val clausole: StateFlow<List<Clausola>> = osserva("clausole") { dao.clausoleOnce() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val scoutMissions: StateFlow<List<ScoutMission>> = osserva("scout_missions") { dao.missionsOnce() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun pickStatSeason(s: String) { _statSeason.value = s }
 
     /** Convocazioni e presenze in nazionale, per la schermata Nazionali. */
-    val convocazioniAll: StateFlow<List<Convocazione>> = flow {
-        while (true) { emit(dao.allConvocazioni()); delay(1500) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val nazionaleAll: StateFlow<List<NazionaleStat>> = flow {
-        while (true) { emit(dao.allNazionaleStats()); delay(1500) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val convocazioniAll: StateFlow<List<Convocazione>> = osserva("convocazioni") { dao.allConvocazioni() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val nazionaleAll: StateFlow<List<NazionaleStat>> = osserva("nazionale_stats") { dao.allNazionaleStats() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val _nazStagione = MutableStateFlow<String?>(null)
     val nazStagione: StateFlow<String> = combine(_nazStagione, _season) { a, b -> a ?: b }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _season.value)
@@ -1096,7 +1103,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     val tiriUser: StateFlow<SetPieces> = selectedTeam.flatMapLatest { t ->
-        flow { while (true) { emit(if (t == null) SetPieces.NONE else tiriDi(t.id)); delay(1500) } }
+        osserva("stato") { if (t == null) SetPieces.NONE else tiriDi(t.id) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetPieces.NONE)
 
     /** Un ruolo diverso dal naturale si impara giocandoci: dopo [PARTITE_PER_RUOLO] partite rende al 100%. */
@@ -1118,26 +1125,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Nazionale allenata dall'utente ("" = nessuna), offerta pendente e rosa convocabile. */
-    val nazioneAllenata: StateFlow<String> = flow {
-        while (true) { emit(dao.stato("nazione_allenata").orEmpty()); delay(1500) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
-    val offertaNazionale: StateFlow<String> = flow {
-        while (true) { emit(dao.stato("offerta_nazionale").orEmpty()); delay(1500) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
-    val rosaNazionale: StateFlow<List<Player>> = flow {
-        while (true) {
-            val ids = dao.rosaNazionale().map { it.playerId }.toSet()
-            emit(dao.allPlayers().filter { it.id in ids }); delay(1500)
-        }
+    val nazioneAllenata: StateFlow<String> = osserva("stato") { dao.stato("nazione_allenata").orEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    val offertaNazionale: StateFlow<String> = osserva("stato") { dao.stato("offerta_nazionale").orEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    val rosaNazionale: StateFlow<List<Player>> = osserva("rosa_nazionale", "players") {
+        val ids = dao.rosaNazionale().map { it.playerId }.toSet()
+        dao.allPlayers().filter { it.id in ids }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     /** Tutti i giocatori con la nazionalità della nazionale allenata: candidati alla convocazione. */
     val giocatoriNazionalita: StateFlow<List<Player>> = nazioneAllenata.flatMapLatest { n ->
-        flow {
-            while (true) {
-                val asIds = dao.allTeams().filter { AllStar.isAllStar(it) }.map { it.id }.toSet()
-                emit(if (n.isEmpty()) emptyList() else dao.allPlayers().filter { it.nationality == n && it.teamId !in asIds })
-                delay(3000)
-            }
+        osserva("players", "teams") {
+            val asIds = dao.allTeams().filter { AllStar.isAllStar(it) }.map { it.id }.toSet()
+            if (n.isEmpty()) emptyList() else dao.allPlayers().filter { it.nationality == n && it.teamId !in asIds }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -2718,6 +2716,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val club: StateFlow<ClubState> = _club
 
     private suspend fun refreshClub() {
+        _mutui.value = Mutui.decode(dao.stato("mutui"))
         val year = prefs.getInt("season_year", 2026).toString()
         _club.value = ClubState(
             dao.statoInt(StatoKeys.FIDUCIA), dao.statoInt(StatoKeys.TIFOSI),
@@ -3002,8 +3001,74 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Mutui bancari ----
+    private val _mutui = MutableStateFlow<List<Mutui.Mutuo>>(emptyList())
+    val mutui: StateFlow<List<Mutui.Mutuo>> = _mutui
+
+    fun caricaMutui() { viewModelScope.launch(Dispatchers.IO) { _mutui.value = Mutui.decode(dao.stato("mutui")) } }
+
+    /** Chiede un mutuo: l'importo entra subito nel budget mercato. */
+    fun chiediMutuo(bancaId: Int, importo: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val attivi = Mutui.decode(dao.stato("mutui"))
+            when (val e = Mutui.richiedi(attivi, bancaId, importo)) {
+                is Mutui.Esito.No -> _notice.value = e.msg
+                is Mutui.Esito.Ok -> {
+                    val t = dao.team(me.id)
+                    dao.updateTeam(t.copy(budget = t.budget + importo))
+                    registra(t.id, "Mutuo ${Mutui.banca(bancaId)?.nome.orEmpty()}: erogazione", importo, t.budget + importo)
+                    dao.setStato(Stato("mutui", Mutui.encode(e.lista)))
+                    _mutui.value = e.lista
+                    _notice.value = "Mutuo di ${money(importo)} firmato. Rata annuale ${money(e.mutuo.rata)} per ${e.mutuo.anni} anni."
+                }
+            }
+        }
+    }
+
+    /** Estingue in anticipo un mutuo (residuo più penale del 2%). */
+    fun estinguiMutuo(bancaId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val attivi = Mutui.decode(dao.stato("mutui"))
+            val m = attivi.firstOrNull { it.banca == bancaId } ?: return@launch
+            val t = dao.team(me.id)
+            val costo = Mutui.costoEstinzione(m)
+            if (costo > t.budget) { _notice.value = "Budget insufficiente per estinguere: servono ${money(costo)}."; return@launch }
+            dao.updateTeam(t.copy(budget = t.budget - costo))
+            registra(t.id, "Estinzione mutuo ${Mutui.banca(bancaId)?.nome.orEmpty()}", -costo, t.budget - costo)
+            val resto = attivi.filter { it.banca != bancaId }
+            dao.setStato(Stato("mutui", Mutui.encode(resto)))
+            _mutui.value = resto
+            _notice.value = "Mutuo estinto (${money(costo)}, penale inclusa)."
+        }
+    }
+
+    /** Rate di fine stagione: si pagano dal budget; se non basta c'è la mora. */
+    private suspend fun pagaMutui(meId: Long) {
+        val attivi = Mutui.decode(dao.stato("mutui"))
+        if (attivi.isEmpty()) return
+        var t = dao.team(meId)
+        val nuovi = ArrayList<Mutui.Mutuo>()
+        val note = ArrayList<String>()
+        for (m in attivi) {
+            val nome = Mutui.banca(m.banca)?.nome.orEmpty()
+            val r = Mutui.paga(m, t.budget)
+            if (r.interessi > 0) { t = t.copy(budget = t.budget - r.interessi); registra(meId, "Interessi mutuo $nome", -r.interessi, t.budget) }
+            if (r.capitale > 0) { t = t.copy(budget = t.budget - r.capitale); registra(meId, "Rimborso mutuo $nome", -r.capitale, t.budget) }
+            if (r.mora > 0) note += "$nome: budget insufficiente, mora ${money(r.mora)}."
+            else if (r.nuovo == null) note += "Mutuo $nome estinto."
+            r.nuovo?.let { nuovi += it }
+        }
+        dao.updateTeam(t)
+        dao.setStato(Stato("mutui", Mutui.encode(nuovi)))
+        _mutui.value = nuovi
+        note.forEach { avviso(it) }
+    }
+
     /** A fine stagione: fair play finanziario, record, Hall of Fame. `vecchia` è il nome della stagione appena chiusa. */
     private suspend fun chiudiStagioneSocieta(meId: Long, vecchia: String) {
+        pagaMutui(meId)
         // Fair play: perdita operativa degli ultimi tre anni
         val t0 = dao.team(meId)
         val ops = (FairPlay.decode(dao.stato("ffp_perdite")).filter { it.first != vecchia } +

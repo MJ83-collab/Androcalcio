@@ -3,7 +3,7 @@ package it.androcalcio.engine
 import it.androcalcio.data.Movimento
 
 /**
- * Fair play finanziario: conta la perdita operativa degli ultimi tre anni (mercato e stadio non contano,
+ * Fair play finanziario: conta la perdita operativa degli ultimi tre anni (mercato, stadio e capitale dei mutui non contano; gli interessi sì,
  * come nelle regole vere). Sopra la soglia: multa e blocco del mercato in entrata per la stagione dopo.
  */
 object FairPlay {
@@ -21,7 +21,7 @@ object FairPlay {
 
     /** Risultato operativo di una stagione: movimenti esclusi mercato e stadio. Negativo = perdita. */
     fun operativo(mov: List<Movimento>): Long =
-        mov.filter { Bilancio.categoria(it.label) !in setOf("Mercato", "Stadio") && !it.label.startsWith("Multa fair play") }.sumOf { it.importo }
+        mov.filter { Bilancio.categoria(it.label) !in setOf("Mercato", "Stadio", "Mutui") && !it.label.startsWith("Multa fair play") }.sumOf { it.importo }
 
     fun valuta(perditeStagioni: List<Long>, budget: Long): Esito {
         val perdita = perditeStagioni.takeLast(ANNI).sum().coerceAtLeast(0L)

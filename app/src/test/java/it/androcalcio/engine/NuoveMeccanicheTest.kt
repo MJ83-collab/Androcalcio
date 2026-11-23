@@ -155,3 +155,44 @@ class NuoveMeccanicheTest {
         assertEquals(ScoutingGiovani.RAGAZZI_PER_CLUB * 2, sc.size)
     }
 }
+
+class MutuiTest {
+    private val b = Mutui.banche[1]
+
+    @org.junit.Test fun rataChiudeIlDebito() {
+        var m = Mutui.Mutuo(b.id, 5_000_000L, b.anni, b.tasso, Mutui.rata(5_000_000L, b.tasso, b.anni))
+        var anni = 0
+        while (true) {
+            val r = Mutui.paga(m, Long.MAX_VALUE / 4)
+            anni++
+            m = r.nuovo ?: break
+            org.junit.Assert.assertTrue(anni < 20)
+        }
+        org.junit.Assert.assertEquals(b.anni, anni)
+    }
+
+    @org.junit.Test fun unSoloMutuoPerBancaETetto() {
+        val Ok = Mutui.richiedi(emptyList(), b.id, 2_000_000L) as Mutui.Esito.Ok
+        org.junit.Assert.assertTrue(Mutui.richiedi(Ok.lista, b.id, 1_000_000L) is Mutui.Esito.No)
+        org.junit.Assert.assertTrue(Mutui.richiedi(emptyList(), b.id, b.tetto + 100_000L) is Mutui.Esito.No)
+        org.junit.Assert.assertTrue(Mutui.richiedi(emptyList(), b.id, 100_000L) is Mutui.Esito.No)
+    }
+
+    @org.junit.Test fun moraSeNonCiSonoSoldi() {
+        val m = Mutui.Mutuo(b.id, 4_000_000L, 3, b.tasso, Mutui.rata(4_000_000L, b.tasso, 3))
+        val r = Mutui.paga(m, 0L)
+        org.junit.Assert.assertTrue(r.mora > 0L)
+        org.junit.Assert.assertTrue(r.nuovo!!.residuo > m.residuo)
+    }
+
+    @org.junit.Test fun codificaERientro() {
+        val l = listOf(Mutui.Mutuo(0, 1_500_000L, 2, 0.04, 800_000L), Mutui.Mutuo(5, 9_000_000L, 1, 0.18, 10_620_000L))
+        org.junit.Assert.assertEquals(l, Mutui.decode(Mutui.encode(l)))
+    }
+
+    @org.junit.Test fun interessiContanoNelFairPlayCapitaleNo() {
+        fun mv(l: String, i: Long) = it.androcalcio.data.Movimento(teamId = 1, season = "s", label = l, importo = i, saldo = 0)
+        val op = FairPlay.operativo(listOf(mv("Mutuo X: erogazione", 5_000_000L), mv("Interessi mutuo X", -300_000L), mv("Rimborso mutuo X", -1_000_000L)))
+        org.junit.Assert.assertEquals(-300_000L, op)
+    }
+}
