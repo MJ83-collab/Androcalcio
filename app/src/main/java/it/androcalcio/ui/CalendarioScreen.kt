@@ -113,7 +113,7 @@ fun CalendarioScreen(
     }
     // Prima del campionato servono almeno cinque amichevoli fissate e giocate
     val amichevoliPronte = friendlyMatches.size >= Friendlies.MIN && friendlyMatches.all { it.played }
-    val bloccoAmichevoli = matches.none { it.played } && !amichevoliPronte
+    val bloccoAmichevoli = false   // le amichevoli non sono obbligatorie
 
     Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -149,10 +149,6 @@ fun CalendarioScreen(
             }
         }
 
-        if (bloccoAmichevoli) {
-            Text("Prima del campionato servono almeno ${Friendlies.MIN} amichevoli fissate e giocate.",
-                color = AC.Text, style = MaterialTheme.typography.bodySmall)
-        }
 
         if (!pending && matches.isNotEmpty()) {
             PcButton("Chiudi stagione e passa alla successiva", { round = 0; onClose() }, Modifier.fillMaxWidth(), main = true)

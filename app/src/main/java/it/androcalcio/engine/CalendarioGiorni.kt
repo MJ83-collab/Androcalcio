@@ -27,19 +27,8 @@ object CalendarioGiorni {
     /** Primo giorno della stagione: 1 luglio, inizio del ritiro. */
     fun inizio(stagione: String): LocalDate = LocalDate.of(anno(stagione), 7, 1)
 
-    /** Prima domenica dal 23 agosto: prima giornata. */
-    private fun primaGiornata(stagione: String): LocalDate {
-        var d = LocalDate.of(anno(stagione), 8, 23)
-        while (d.dayOfWeek != DayOfWeek.SUNDAY) d = d.plusDays(1)
-        return d
-    }
-
-    /** Data della giornata (1 = prima): una a settimana, con due settimane di sosta a Natale. */
-    fun data(stagione: String, giornata: Int): LocalDate {
-        var d = primaGiornata(stagione).plusWeeks((giornata - 1).coerceAtLeast(0).toLong())
-        if (!d.isBefore(LocalDate.of(anno(stagione), 12, 22))) d = d.plusWeeks(2)
-        return d
-    }
+    /** Data della giornata: la stessa fonte della lista partite, così scheda e calendario concordano. */
+    fun data(stagione: String, giornata: Int): LocalDate = DateGiornate.data(anno(stagione), giornata)
 
     /** Giorno corrente: quello salvato, ma mai prima del giorno dopo l'ultima giornata giocata. */
     fun oggi(stagione: String, salvato: Long?, ultimaGiocata: Int?): LocalDate {

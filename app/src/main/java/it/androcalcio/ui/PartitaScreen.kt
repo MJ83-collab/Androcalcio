@@ -100,7 +100,7 @@ fun ProssimaPartitaScreen(
     }
     val avversario = mia?.let { m -> teams.firstOrNull { it.id == if (m.homeTeamId == team.id) m.awayTeamId else m.homeTeamId } }
     // Prima del campionato servono le amichevoli, che si giocano dal calendario
-    val bloccoAmichevoli = matches.none { it.played } && !(friendlyMatches.size >= Friendlies.MIN && friendlyMatches.all { it.played })
+    val bloccoAmichevoli = false   // le amichevoli non sono obbligatorie
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
