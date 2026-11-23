@@ -118,11 +118,22 @@ fun MercatoScreen(
             StatChip("Rosa", "${mySquad.size} / ${Market.MAX_SQUAD}", Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Acquista") })
-            PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Vendi") })
+            PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Acquisti") })
+            PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Vendite") })
+            PcChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Trattative") })
         }
 
-        if (tab == 0) {
+        if (tab == 2) {
+            // Trattative: giocatori per cui il club ha già detto sì; si chiude l'accordo con il giocatore
+            val inTrattativa = market.filter { it.id in clubAccepted }
+            if (inTrattativa.isEmpty()) {
+                Text("Nessuna trattativa aperta. Un club deve prima accettare la tua offerta.", color = AC.TextDim)
+            } else {
+                MarketTable(inTrattativa, { byId[it.teamId]?.name ?: "" }, { Market.value(it) }, Modifier.weight(1f)) {
+                    target = it; amount = Market.value(it); years = 3; wageOffer = wageAsk(it, 3); tab = 0
+                }
+            }
+        } else if (tab == 0) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(roleFilters) { (code, label) ->
                     PcChip(selected = role == code, onClick = { onRole(code) }, label = { Text(label) })
