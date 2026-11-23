@@ -229,3 +229,57 @@ class AnalisiTest {
         org.junit.Assert.assertTrue(c.first().contains("titolari"))
     }
 }
+
+class NovitaTest {
+    private fun pl(id: Long, role: String, ov: Int, cond: Int, starter: Boolean) =
+        it.androcalcio.data.Player(id = id, teamId = 1, name = "G$id", role = role, age = 25, nationality = "ITA",
+            ve = ov, re = ov, ag = ov, qu = ov, fo = 50, gm = ov, pa = ov, dr = ov, fi = ov, en = ov, ti = ov, ri = ov,
+            potential = ov, salary = 100_000L, contract = 3, condition = cond, starter = starter)
+
+    @org.junit.Test fun rifinanziaSoloSeIlTassoScende() {
+        val caro = Mutui.Mutuo(5, 5_000_000L, 2, 0.18, Mutui.rata(5_000_000L, 0.18, 2))
+        val ok = Mutui.rifinanzia(listOf(caro), 5, 1)
+        org.junit.Assert.assertTrue(ok is Mutui.Esito.Ok)
+        org.junit.Assert.assertEquals(0.065, (ok as Mutui.Esito.Ok).mutuo.tasso, 1e-9)
+        org.junit.Assert.assertTrue(Mutui.rifinanzia(listOf(caro), 5, 5) is Mutui.Esito.No)
+        val economico = Mutui.Mutuo(0, 2_000_000L, 2, 0.04, 1_000_000L)
+        org.junit.Assert.assertTrue(Mutui.rifinanzia(listOf(economico), 0, 5) is Mutui.Esito.No)
+    }
+
+    @org.junit.Test fun taglioEFiducia() {
+        org.junit.Assert.assertEquals(0L, Mutui.taglio(10_000_000L))
+        org.junit.Assert.assertEquals(300_000L, Mutui.taglio(25_000_000L))
+        org.junit.Assert.assertEquals(100, Mutui.fiducia(0L))
+        org.junit.Assert.assertEquals(40, Mutui.fiducia(Mutui.TETTO_DEBITO))
+    }
+
+    @org.junit.Test fun previsione() {
+        org.junit.Assert.assertEquals(1_000_000L + 100_000L * 10 - 200_000L, Analisi.previsione(1_000_000L, 500_000L, 5, 10, 200_000L))
+        org.junit.Assert.assertEquals(1_000_000L, Analisi.previsione(1_000_000L, 0L, 0, 10, 0L))
+    }
+
+    @org.junit.Test fun riposoSostituisceSoloConChiHaRiposato() {
+        val rosa = listOf(pl(1, "C", 70, 40, true), pl(2, "C", 65, 90, false), pl(3, "C", 60, 50, false), pl(4, "A", 80, 30, true))
+        val c = Analisi.riposo(rosa, emptySet())
+        org.junit.Assert.assertEquals(1, c.size)
+        org.junit.Assert.assertEquals(1L to 2L, c[0].first.id to c[0].second.id)
+        org.junit.Assert.assertTrue(Analisi.riposo(rosa, setOf(2L)).isEmpty())
+    }
+
+    @org.junit.Test fun allenamentoIndividualeCodifica() {
+        val m = mapOf(7L to TrainFocus.FISICO, 9L to TrainFocus.RIPOSO)
+        org.junit.Assert.assertEquals(m, Training.decodeInd(Training.encodeInd(m)))
+        org.junit.Assert.assertTrue(Training.decodeInd("").isEmpty())
+    }
+
+    @org.junit.Test fun capitanoScelto() {
+        val a = pl(1, "D", 60, 90, true); val b = pl(2, "C", 80, 90, true)
+        Leadership.scelto = 0L
+        org.junit.Assert.assertEquals(2L, Leadership.capitano(listOf(a, b))!!.id)
+        Leadership.scelto = 1L
+        org.junit.Assert.assertEquals(1L, Leadership.capitano(listOf(a, b))!!.id)
+        Leadership.scelto = 99L
+        org.junit.Assert.assertEquals(2L, Leadership.capitano(listOf(a, b))!!.id)
+        Leadership.scelto = 0L
+    }
+}

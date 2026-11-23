@@ -42,6 +42,13 @@ enum class Pressing(val label: String, val poss: Double, val drain: Double) {
     ALTO("Alto", 1.06, 1.3)
 }
 
+/** Ampiezza: stretta = più possesso e più solidità; larga = più occasioni dalle fasce ma più spazi dietro. */
+enum class Ampiezza(val label: String, val poss: Double, val def: Double, val atk: Double) {
+    STRETTA("Stretta", 1.03, 1.03, 0.97),
+    NORMALE("Normale", 1.0, 1.0, 1.0),
+    LARGA("Larga", 0.98, 0.97, 1.04)
+}
+
 /** Linea difensiva: alta = squadra corta e più spinta, ma soffre gli attaccanti veloci. */
 enum class DefLine(val label: String, val poss: Double, val def: Double, val atk: Double) {
     BASSA("Bassa", 0.97, 1.05, 0.97),

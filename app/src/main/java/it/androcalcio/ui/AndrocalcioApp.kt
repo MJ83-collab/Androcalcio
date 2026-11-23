@@ -270,7 +270,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val soc by vm.societa.collectAsStateWithLifecycle()
                     val tuttiG by vm.allPlayers.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id, players.size) { vm.aggiornaSocieta() }
-                    SocietaScreen(team, teams, players, tuttiG, soc, { r, ok -> vm.rispondiRichiesta(r, ok) }, { m, l, c -> vm.proponiScambio(m, l, c) })
+                    SocietaScreen(team, teams, players, tuttiG, soc, { r, ok -> vm.rispondiRichiesta(r, ok) }, { m, l, c -> vm.proponiScambio(m, l, c) }, { vm.riposoAutomatico() })
                 }
                 Screen.OPZIONI -> {
                     val op by vm.opzioni.collectAsStateWithLifecycle()
@@ -278,7 +278,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val testo by vm.testoPct.collectAsStateWithLifecycle()
                     OpzioniScreen(op, { vm.setDifficolta(it) }, { vm.setVelocita(it) }, prof, { vm.setProfilo(it) },
                         testo, { vm.setTesto(it) }, { vm.apriTutorial() },
-                        vm.risparmio.collectAsStateWithLifecycle().value, { vm.setRisparmio(it) })
+                        vm.risparmio.collectAsStateWithLifecycle().value, { vm.setRisparmio(it) },
+                        vm.temaNero.collectAsStateWithLifecycle().value, { vm.setTemaNero(it) })
                 }
                 Screen.RELAZIONI -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
@@ -389,7 +390,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     FinanzeScreen(team, players, movimenti, { vm.expandStadium() }, { vm.setSponsor(it) },
                         cl.livAllenamento, cl.livVivaio, { vm.upgrade(it) },
                         assicurazione, { vm.setInsurance(it) }, movStagione, stagione,
-                        vm.mutui.collectAsStateWithLifecycle().value, { b, i -> vm.chiediMutuo(b, i) }, { vm.estinguiMutuo(it) })
+                        vm.mutui.collectAsStateWithLifecycle().value, { b, i -> vm.chiediMutuo(b, i) }, { vm.estinguiMutuo(it) },
+                        vm.rateMercato.collectAsStateWithLifecycle().value, { vm.setRateMercato(it) },
+                        vm.debitoRate.collectAsStateWithLifecycle().value, { d, a -> vm.rifinanziaMutuo(d, a) })
                 }
                 Screen.NAZIONALI -> {
                     val conv by vm.convocazioniAll.collectAsStateWithLifecycle()
@@ -443,7 +446,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         { p, r -> vm.setRuoloPartita(p, r) },
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
-                        { screen = Screen.AVVERSARIO }, tiriU, { vm.salvaTiri(it) }, { p, c -> vm.setCompito(p, c) })
+                        { screen = Screen.AVVERSARIO }, tiriU, { vm.salvaTiri(it) }, { p, c -> vm.setCompito(p, c) },
+                        vm.ampiezza.collectAsStateWithLifecycle().value, { vm.setAmpiezza(it) },
+                        vm.cambioPronto.collectAsStateWithLifecycle().value, { vm.setCambioPronto(it) })
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
@@ -457,7 +462,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 Screen.SALVATAGGI -> {
                     val slots by vm.slots.collectAsStateWithLifecycle()
                     SalvataggiScreen(slots, team?.name, season,
-                        { vm.saveSlot(it) }, { vm.loadSlot(it) }, { vm.deleteSlot(it) })
+                        { vm.saveSlot(it) }, { vm.loadSlot(it) }, { vm.deleteSlot(it) },
+                        { n, u -> vm.esportaSlot(n, u) }, { n, u -> vm.importaSlot(n, u) })
                 }
                 else -> ComingSoon(screen)
             }
@@ -982,7 +988,8 @@ fun FinanzeScreen(
     livAllenamento: Int = 1, livVivaio: Int = 1, onUpgrade: (String) -> Unit = {},
     insurance: Int = 0, onInsurance: (Int) -> Unit = {},
     bilancioStagione: List<Movimento> = emptyList(), stagione: String = "",
-    mutui: List<Mutui.Mutuo> = emptyList(), onMutuo: (Int, Long) -> Unit = { _, _ -> }, onEstingui: (Int) -> Unit = {}
+    mutui: List<Mutui.Mutuo> = emptyList(), onMutuo: (Int, Long) -> Unit = { _, _ -> }, onEstingui: (Int) -> Unit = {},
+    rateMercato: Boolean = false, onRate: (Boolean) -> Unit = {}, debitoRate: Long = 0L, onRifinanzia: (Int, Int) -> Unit = { _, _ -> }
 ) {
     if (team == null) return
     val wages = players.sumOf { it.salary }
@@ -1061,6 +1068,15 @@ fun FinanzeScreen(
                         "Se a fine stagione non c'è budget, scatta la mora del ${(Mutui.MORA * 100).toInt()}%. Debito attuale: ${money(Mutui.debitoTotale(mutui))}.",
                     color = AC.TextDim, style = MaterialTheme.typography.bodySmall
                 )
+                val deb = Mutui.debitoTotale(mutui)
+                Text("Fiducia del presidente: ${Mutui.fiducia(deb)}%" + if (Mutui.taglio(deb) > 0) " · taglio previsto ${money(Mutui.taglio(deb))}" else "",
+                    color = if (Mutui.fiducia(deb) < 60) AC.ColEn else AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                Text("Acquisti a rate: metà del prezzo subito, metà a fine stagione." + if (debitoRate > 0) " Da saldare: ${money(debitoRate)}." else "",
+                    color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PcChip(!rateMercato, { onRate(false) }, { Text("Pago tutto") })
+                    PcChip(rateMercato, { onRate(true) }, { Text("A rate") })
+                }
                 Mutui.banche.forEach { b ->
                     val attivo = mutui.firstOrNull { it.banca == b.id }
                     Text(b.nome, color = AC.Text, style = MaterialTheme.typography.titleSmall)
@@ -1072,6 +1088,13 @@ fun FinanzeScreen(
                             color = AC.ColOrange, style = MaterialTheme.typography.bodySmall)
                         PcButton("Estingui · ${money(Mutui.costoEstinzione(attivo))}", { onEstingui(b.id) },
                             enabled = team.budget >= Mutui.costoEstinzione(attivo))
+                        val piuEconomiche = Mutui.banche.filter { x -> x.tasso < attivo.tasso && mutui.none { it.banca == x.id } && attivo.residuo <= x.tetto }
+                        if (piuEconomiche.isNotEmpty()) {
+                            Text("Rifinanzia (penale ${money(Mutui.penaleRifinanziamento(attivo))}):", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                piuEconomiche.forEach { x -> PcChip(false, { onRifinanzia(b.id, x.id) }, { Text("${x.nome.take(18)}… ${"%.1f".format(x.tasso * 100)}%") }) }
+                            }
+                        }
                     } else {
                         val max = Mutui.massimo(b, mutui)
                         val importi = listOf(1_000_000L, max / 2, max).map { (it / 100_000L) * 100_000L }
@@ -1229,6 +1252,10 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
         androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * testoPct / 100f),
         LocalApriGiocatore provides { schedaAperta = it },
         LocalCaricaGiocatore provides { vm.dettaglioGiocatore(it) },
+        LocalAzioni provides AzioniGiocatore(
+            team?.id ?: -1L, vm.preferiti.collectAsStateWithLifecycle().value, vm.capitanoScelto.collectAsStateWithLifecycle().value,
+            vm.allenamentoInd.collectAsStateWithLifecycle().value,
+            { vm.togglePreferito(it) }, { vm.scegliCapitano(it) }, { p, f -> vm.setAllenamentoInd(p, f) }),
         LocalApriSquadra provides { squadraAperta = it },
         LocalApriSquadraPerNome provides { n -> squadre.firstOrNull { it.name == n }?.let { squadraAperta = it } },
         LocalApriNazione provides { nazioneAperta = it },

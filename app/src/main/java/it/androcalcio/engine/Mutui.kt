@@ -21,6 +21,12 @@ object Mutui {
         Banca(5, "Banca dei Fratelli Strozzi", "Nessuna domanda. Nessuna pietà.", 0.180, 25_000_000L, 2)
     )
 
+    /** Sopra questo debito il presidente taglia il budget a fine stagione (3% dell'eccedenza). */
+    const val SOGLIA_FIDUCIA = 15_000_000L
+    fun taglio(debito: Long): Long = ((debito - SOGLIA_FIDUCIA) * 3 / 100).coerceAtLeast(0L)
+    /** Fiducia del presidente 0..100: scende con il debito. */
+    fun fiducia(debito: Long): Int = (100 - debito * 60 / TETTO_DEBITO).toInt().coerceIn(0, 100)
+
     fun banca(id: Int): Banca? = banche.firstOrNull { it.id == id }
 
     /** Un mutuo in corso. `tasso` è fissato alla firma; `anni` sono le rate ancora da pagare. */
@@ -54,6 +60,19 @@ object Mutui {
         if (importo > max) return Esito.No("${b.nome} ti presta al massimo $max €.")
         val m = Mutuo(b.id, importo, b.anni, b.tasso, rata(importo, b.tasso, b.anni))
         return Esito.Ok(attivi + m, m)
+    }
+
+    fun penaleRifinanziamento(m: Mutuo): Long = Math.round(m.residuo * PENALE_ESTINZIONE)
+
+    /** Sposta il debito residuo su un'altra banca con tasso più basso. Costo: penale del 2% sul residuo. */
+    fun rifinanzia(attivi: List<Mutuo>, da: Int, a: Int): Esito {
+        val m = attivi.firstOrNull { it.banca == da } ?: return Esito.No("Mutuo non trovato.")
+        val b = banca(a) ?: return Esito.No("Banca sconosciuta.")
+        if (a == da || attivi.any { it.banca == a }) return Esito.No("${b.nome} ti ha già prestato dei soldi.")
+        if (b.tasso >= m.tasso) return Esito.No("Il tasso di ${b.nome} non è più basso.")
+        if (m.residuo > b.tetto) return Esito.No("${b.nome} presta al massimo ${b.tetto} €.")
+        val nuovo = Mutuo(b.id, m.residuo, b.anni, b.tasso, rata(m.residuo, b.tasso, b.anni))
+        return Esito.Ok(attivi.filter { it.banca != da } + nuovo, nuovo)
     }
 
     /** Quota interessi della prossima rata. */

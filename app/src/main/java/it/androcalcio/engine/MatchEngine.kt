@@ -123,6 +123,7 @@ object MatchEngine {
         awayBench: List<Player>? = null,
         homePress: Pressing? = null, awayPress: Pressing? = null,
         homeLine: DefLine? = null, awayLine: DefLine? = null,
+        homeAmp: Ampiezza = Ampiezza.NORMALE, awayAmp: Ampiezza = Ampiezza.NORMALE,
         homeStile: Stile? = null, awayStile: Stile? = null,   // tattica di base dell'allenatore (squadre AI)
         homeTiri: SetPieces = SetPieces.NONE, awayTiri: SetPieces = SetPieces.NONE,
         rng: Random = Random.Default,
@@ -130,7 +131,7 @@ object MatchEngine {
     ): MatchReport = LiveMatch(
         home, homePlayers, away, awayPlayers, homeF, awayF, homeCoach, awayCoach,
         homeMent, awayMent, homeBench, awayBench, rng,
-        homePress = homePress, awayPress = awayPress, homeLine = homeLine, awayLine = awayLine,
+        homePress = homePress, awayPress = awayPress, homeLine = homeLine, awayLine = awayLine, homeAmp = homeAmp, awayAmp = awayAmp,
         homeStile = homeStile, awayStile = awayStile, homeTiri = homeTiri, awayTiri = awayTiri, meteoGol = meteoGol
     ).also { it.runToEnd() }.report()
 }

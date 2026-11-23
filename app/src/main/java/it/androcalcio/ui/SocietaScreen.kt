@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -76,7 +77,8 @@ private fun RigaGiocatore(p: Player, nota: String, modifier: Modifier = Modifier
 fun SocietaScreen(
     team: Team?, teams: List<Team>, rosa: List<Player>, tutti: List<Player>, s: SocietaStato,
     onRichiesta: (Personalita.Richiesta, Boolean) -> Unit,
-    onScambio: (Player, Player, Long) -> Unit
+    onScambio: (Player, Player, Long) -> Unit,
+    onRiposo: () -> Unit = {}
 ) {
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -94,7 +96,7 @@ fun SocietaScreen(
                 2 -> TabScambi(team, teams, rosa, tutti, onScambio)
                 3 -> TabFairPlay(s)
                 4 -> TabStoria(s)
-                5 -> TabAnalisi(team, rosa, s)
+                5 -> TabAnalisi(team, rosa, s, onRiposo)
                 else -> TabCerca(teams, tutti, nomiSquadra)
             }
         }
@@ -298,13 +300,35 @@ fun TutorialDialog(onChiudi: () -> Unit) {
 }
 
 @Composable
-private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato) {
+private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato, onRiposo: () -> Unit) {
     val avvisiMutui = Analisi.rataInArrivo(s.mutui)
+    s.prossima?.let { nome ->
+        SectionTitle("Prossima partita")
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
+                RigaDato("Avversario", nome)
+                val pr = s.precedenti
+                if (pr == null || pr.partite == 0) Text("Mai incontrata: nessun precedente.", color = AC.TextDim, fontSize = 12.sp)
+                else RigaDato("Precedenti", "${pr.v}V ${pr.n}N ${pr.p}S · reti ${pr.gf}-${pr.gs}")
+            }
+        }
+    }
     SectionTitle("Consigli del vice")
     GlassCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Analisi.consigli(rosa, s.squal.keys, Disciplina.diffidati(Disciplina.Registro(s.gialli, s.squal)).toSet())
                 .forEach { Text("• $it", color = AC.Text, fontSize = 13.sp) }
+        }
+    }
+
+    PcChip(false, onRiposo, { Text("Riposo automatico: sostituisci i titolari stanchi") })
+    val prev = Analisi.previsione(team.budget, s.netto, s.partite.size, s.rimanenti, avvisiMutui + s.debitoRate)
+    SectionTitle("Bilancio previsto")
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp)) {
+            RigaDato("Budget adesso", money(team.budget))
+            RigaDato("Previsto a fine stagione", money(prev), if (prev < 0) AC.ColEn else AC.Text)
+            Text("Stima: media netta per partita × partite rimaste, meno rate di mutui e acquisti.", color = AC.TextDim, fontSize = 11.sp)
         }
     }
 
@@ -367,6 +391,16 @@ private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato) {
         sco.forEach { RigaGiocatore(it, "morale ${it.morale}") }
     }
 
+    if (s.voci.isNotEmpty()) {
+        SectionTitle("Voci di mercato")
+        s.voci.forEach { Text("• $it", color = AC.Text, fontSize = 12.sp) }
+    }
+    if (s.seguiti.isNotEmpty()) {
+        SectionTitle("Giocatori seguiti")
+        s.seguiti.forEach { RigaGiocatore(it, "${it.overall} · ${money(it.salary)}") }
+    }
+    ConfrontoGiocatori(rosa + s.seguiti.filter { x -> rosa.none { it.id == x.id } })
+
     val pr = Analisi.promesse(rosa)
     if (pr.isNotEmpty()) {
         SectionTitle("Giovani promesse")
@@ -380,6 +414,55 @@ private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato) {
                 RigaDato("Debito", money(Mutui.debitoTotale(s.mutui)))
                 RigaDato("Rate a fine stagione", money(avvisiMutui), if (avvisiMutui > team.budget) AC.ColEn else AC.Text)
                 if (avvisiMutui > team.budget) Text("Il budget attuale non copre le rate: rischi la mora.", color = AC.ColEn, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+/** Confronto tra due giocatori scelti dalla tua rosa e dai seguiti. Il valore migliore è in evidenza. */
+@Composable
+private fun ConfrontoGiocatori(candidati: List<Player>) {
+    var a by rememberSaveable { mutableStateOf<Long?>(null) }
+    var b by rememberSaveable { mutableStateOf<Long?>(null) }
+    SectionTitle("Confronto giocatori")
+    Text("Scegli il primo e il secondo.", color = AC.TextDim, fontSize = 12.sp)
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        candidati.sortedByDescending { it.overall }.forEach { p ->
+            PcChip(a == p.id, { a = if (a == p.id) null else p.id }, { Text(p.name.substringAfterLast(' ')) })
+        }
+    }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        candidati.sortedByDescending { it.overall }.forEach { p ->
+            PcChip(b == p.id, { b = if (b == p.id) null else p.id }, { Text(p.name.substringAfterLast(' ')) })
+        }
+    }
+    val pa = candidati.firstOrNull { it.id == a }; val pb = candidati.firstOrNull { it.id == b }
+    if (pa != null && pb != null) {
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
+                Row(Modifier.fillMaxWidth()) {
+                    Text(pa.name, Modifier.weight(1f), color = AC.Accent2, fontSize = 12.sp)
+                    Text(pb.name, Modifier.weight(1f), color = AC.Accent2, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                }
+                listOf<Triple<String, Int, Int>>(
+                    Triple("Media", pa.overall, pb.overall), Triple("Potenziale", pa.potential, pb.potential),
+                    Triple("Morale", pa.morale, pb.morale), Triple("Velocità", pa.ve, pb.ve), Triple("Resistenza", pa.re, pb.re),
+                    Triple("Qualità", pa.qu, pb.qu), Triple("Passaggio", pa.pa, pb.pa), Triple("Dribbling", pa.dr, pb.dr),
+                    Triple("Finalizzazione", pa.fi, pb.fi), Triple("Entrate", pa.en, pb.en), Triple("Tiro", pa.ti, pb.ti),
+                    Triple("Portiere", pa.gm, pb.gm)
+                ).forEach { (n, x, y) ->
+                    Row(Modifier.fillMaxWidth()) {
+                        Text("$x", Modifier.weight(1f), color = if (x > y) AC.Ok else AC.Text, fontSize = 13.sp)
+                        Text(n, color = AC.TextDim, fontSize = 12.sp)
+                        Text("$y", Modifier.weight(1f), color = if (y > x) AC.Ok else AC.Text, fontSize = 13.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                    }
+                }
+                Row(Modifier.fillMaxWidth()) {
+                    Text("${pa.age} anni · ${money(pa.salary)}", Modifier.weight(1f), color = AC.TextDim, fontSize = 11.sp)
+                    Text("${pb.age} anni · ${money(pb.salary)}", Modifier.weight(1f), color = AC.TextDim, fontSize = 11.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                }
             }
         }
     }

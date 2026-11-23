@@ -27,6 +27,16 @@ data class TrainingPlan(val focus: TrainFocus, val intensity: TrainIntensity) {
 }
 
 object Training {
+    /** Allenamento individuale della tua squadra: id giocatore -> focus. Letto da apply(). */
+    @Volatile var individuali: Map<Long, TrainFocus> = emptyMap()
+
+    fun encodeInd(m: Map<Long, TrainFocus>): String = m.entries.joinToString(";") { "${it.key}:${it.value.ordinal}" }
+    fun decodeInd(s: String?): Map<Long, TrainFocus> = s.orEmpty().split(";").mapNotNull {
+        val x = it.split(":"); val id = x.getOrNull(0)?.toLongOrNull() ?: return@mapNotNull null
+        val f = TrainFocus.values().getOrNull(x.getOrNull(1)?.toIntOrNull() ?: -1) ?: return@mapNotNull null
+        id to f
+    }.toMap()
+
     private const val BASE = 0.035   // probabilità per turno di +1 a un parametro (intensità media, 20-28 anni)
 
     private fun ageFactor(age: Int) = when {
@@ -61,8 +71,9 @@ object Training {
      * Gli infortunati non si allenano. Un parametro non supera il livello + 12 né 99.
      * L'allenatore (coach 1..99) rende la crescita da 0,5× a 1,5×.
      */
-    fun apply(p: Player, plan: TrainingPlan, coach: Int, rng: Random): Player {
+    fun apply(p: Player, plan0: TrainingPlan, coach: Int, rng: Random): Player {
         if (p.injuredRounds > 0) return p
+        val plan = individuali[p.id]?.let { plan0.copy(focus = it) } ?: plan0
         var out = p.copy(condition = (p.condition + plan.condDelta()).coerceIn(35, 100))
         val list = attrs(plan.focus, p.role)
         if (list.isEmpty()) return out

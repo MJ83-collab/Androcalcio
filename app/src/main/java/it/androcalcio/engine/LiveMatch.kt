@@ -25,6 +25,7 @@ class LiveMatch(
     var manualAway: Boolean = false,
     homePress: Pressing? = null, awayPress: Pressing? = null,   // null = sceglie l'AI
     homeLine: DefLine? = null, awayLine: DefLine? = null,
+    homeAmp: Ampiezza = Ampiezza.NORMALE, awayAmp: Ampiezza = Ampiezza.NORMALE,
     homeStile: Stile? = null, awayStile: Stile? = null,
     private val homeTiri: SetPieces = SetPieces.NONE, private val awayTiri: SetPieces = SetPieces.NONE,
     private val meteoGol: Double = 1.0   // meteo e campo: moltiplicano le azioni pericolose (Meteo.Condizioni.fattoreGol)
@@ -94,6 +95,14 @@ class LiveMatch(
     var pressA = awayPress ?: awayStile?.pressing ?: aiPress(xiA, xiH); private set
     var lineH = homeLine ?: homeStile?.linea ?: aiLine(xiH, xiA); private set
     var lineA = awayLine ?: awayStile?.linea ?: aiLine(xiA, xiH); private set
+
+    var ampH = homeAmp; private set
+    var ampA = awayAmp; private set
+    fun setAmpiezza(homeSide: Boolean, a: Ampiezza) { if (homeSide) ampH = a else ampA = a }
+
+    /** Cambio programmato dall'allenatore: usa la logica del cambio automatico. Restituisce true se ha cambiato. */
+    fun cambioProgrammato(homeSide: Boolean): Boolean =
+        autoSub(homeSide, if (homeSide) hg < ag else ag < hg)
 
     fun setPressing(homeSide: Boolean, p: Pressing) { if (homeSide) pressH = p else pressA = p }
     fun setLine(homeSide: Boolean, l: DefLine) { if (homeSide) lineH = l else lineA = l }
@@ -189,8 +198,8 @@ class LiveMatch(
             "${away.shortName} passa a mentalità ${nA.label.lowercase()}", 0.5f, 0.5f)
         mH = nH; mA = nA
         if (rng.nextDouble() < MatchEngine.ATTACK_PER_MINUTE * meteoGol * (mH.tempo + mA.tempo) / 2) {
-            val ph = h.mid * MatchEngine.HOME_BONUS * pressH.poss * lineH.poss
-            val pNow = ph / (ph + a.mid * pressA.poss * lineA.poss)
+            val ph = h.mid * MatchEngine.HOME_BONUS * pressH.poss * lineH.poss * ampH.poss
+            val pNow = ph / (ph + a.mid * pressA.poss * lineA.poss * ampA.poss)
             val homeAtt = rng.nextDouble() < pNow
             val att = if (homeAtt) h else a
             val dfn = if (homeAtt) a else h
@@ -200,7 +209,9 @@ class LiveMatch(
             val lAtt = if (homeAtt) lineH else lineA
             val lDef = if (homeAtt) lineA else lineH
             val defPen = speedPenalty(lDef, if (homeAtt) xiH else xiA)
-            val ratio = att.atk * mAtt.atk * lAtt.atk / (dfn.def * mDef.def * lDef.def * defPen)
+            val ampAtt = if (homeAtt) ampH else ampA
+            val ampDef = if (homeAtt) ampA else ampH
+            val ratio = att.atk * mAtt.atk * lAtt.atk * ampAtt.atk / (dfn.def * mDef.def * lDef.def * ampDef.def * defPen)
             if (rng.nextDouble() < (0.45 * ratio).coerceIn(0.2, 0.7)) {
                 if (homeAtt) hs++ else asht++
                 val sh = MatchEngine.shooter(att.players, rng)
