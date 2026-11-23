@@ -200,7 +200,7 @@ fun CommercialeScreen(
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun ObiettiviScreen(ex: ExtraStato, c: ClubState) {
+fun ObiettiviScreen(ex: ExtraStato, c: ClubState, posizione: Int? = null) {
     Pagina {
         SectionTitle("Obiettivo della dirigenza")
         GlassCard(Modifier.fillMaxWidth()) {
@@ -212,6 +212,14 @@ fun ObiettiviScreen(ex: ExtraStato, c: ClubState) {
                     Text("Chiudere almeno ${o.posizioneMax}º (posizione attesa per la tua forza: ${ex.posizioneAttesa}º).", color = AC.Text, fontSize = 13.sp)
                     Text("Se riesci: bonus ${money(o.bonus)} e più fiducia. Se manchi: la fiducia scende di ${o.penale}.", color = AC.TextDim, fontSize = 12.sp)
                     Text("Fiducia attuale della dirigenza: ${c.fiducia}", color = AC.TextDim, fontSize = 12.sp)
+                    if (posizione != null) {
+                        val ok = posizione <= o.posizioneMax
+                        Text(
+                            if (ok) "In linea: sei ${posizione}º in classifica, obiettivo ${o.posizioneMax}º o meglio."
+                            else "Fuori obiettivo: sei ${posizione}º, serve almeno il ${o.posizioneMax}º posto.",
+                            color = if (ok) AC.Accent else AC.ColEn, fontSize = 13.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

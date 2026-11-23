@@ -3276,6 +3276,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }.maxByOrNull { it.second }?.let { (nome, m) -> "$nome · media ${"%.1f".format(m).replace('.', ',')} nelle ultime partite" }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    /** Posizione attuale in classifica della tua squadra nel campionato in corso (null se non disponibile). */
+    val posizioneOggi: StateFlow<Int?> = osserva("matches", "teams") {
+        val t = selectedTeam.value ?: return@osserva null
+        val lega = dao.allTeams().filter { it.nazione == t.nazione && it.campionato == t.campionato }
+        val cl = standings(lega, dao.matchesOnce(key(t), _season.value).filter { !Cup.isCup(it.round) })
+        cl.indexOfFirst { it.team.id == t.id }.takeIf { it >= 0 }?.plus(1)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val formazioniSalvate: StateFlow<List<FormazioniSalvate.Preset?>> = osserva("stato") { FormazioniSalvate.decode(dao.stato(FormazioniSalvate.KEY)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), List(FormazioniSalvate.POSTI) { null })
     fun salvaFormazione(posto: Int) {

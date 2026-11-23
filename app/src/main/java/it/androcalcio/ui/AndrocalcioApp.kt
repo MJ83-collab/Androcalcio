@@ -298,7 +298,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val ex by vm.extra.collectAsStateWithLifecycle()
                     val cl by vm.club.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
-                    ObiettiviScreen(ex, cl)
+                    ObiettiviScreen(ex, cl, vm.posizioneOggi.collectAsStateWithLifecycle().value)
                 }
                 Screen.GIORNALE -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
