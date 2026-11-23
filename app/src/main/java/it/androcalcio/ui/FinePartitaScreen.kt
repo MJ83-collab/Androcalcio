@@ -50,6 +50,8 @@ fun FinePartitaScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMo
         ) {
             item { Scoreboard(m.home, m.away, m.hg, m.ag, "Finale") }
             item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
+            item { Titolo("Analisi e statistiche") }
+            item { AnalisiPartita(rep, info.userHome) }
             item { Titolo("Le tue pagelle · ${mia.shortName}") }
             item { Tabella(rep, info.userHome, m::minutiGiocati, info.esito, mie = true, pronta = pronta) }
             item { Titolo("Avversario · ${altra.shortName}") }
