@@ -51,7 +51,7 @@ fun FinanzeV06(team: Team, e: FinExtra, onRivendita: (Boolean) -> Unit, onNuovoS
             e.cartellini.sortedByDescending { it.second.residuo }.forEach { (n, c) ->
                 piccolo("• $n: ${money(c.quota)} l'anno · a bilancio ${money(c.residuo)} (${c.anni - c.fatti} anni)", AC.Text)
             }
-            if (e.cartellini.isNotEmpty()) piccolo("Ammortamento annuo totale: ${money(Cartellini.ammortamentoAnnuo(e.cartellini))}", AC.Text)
+            if (e.cartellini.isNotEmpty()) piccolo("Ammortamento annuo totale: ${money(Cartellini.ammortamentoAnnuo(e.cartellini.map { it.second }))}", AC.Text)
 
             SectionTitle("Nuovo stadio")
             val pr = e.stadio

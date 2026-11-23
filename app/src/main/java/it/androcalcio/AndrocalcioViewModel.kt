@@ -738,9 +738,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         // Voti per stagione: stagione:id:somma×10:partite
-        val voti = dao.stato("voti").orEmpty().split(";").filter { it.isNotBlank() }.associate { e ->
-            val p = e.split(":"); (p.getOrElse(0) { "" } + ":" + p.getOrElse(1) { "" }) to (p.getOrElse(2) { "0" }.toIntOrNull() ?: 0 to (p.getOrElse(3) { "0" }.toIntOrNull() ?: 0))
-        }.toMutableMap()
+        val voti = LinkedHashMap<String, Pair<Int, Int>>()
+        dao.stato("voti").orEmpty().split(";").forEach { e ->
+            val x = e.split(":")
+            if (x.size == 4) voti[x[0] + ":" + x[1]] = Pair(x[2].toIntOrNull() ?: 0, x[3].toIntOrNull() ?: 0)
+        }
         r.playedPlayers.filter { it.teamId == me.id }.forEach { p ->
             val v = r.playerRatings[p.id] ?: return@forEach
             val k = "${_season.value}:${p.id}"; val (s0, n0) = voti[k] ?: (0 to 0)
