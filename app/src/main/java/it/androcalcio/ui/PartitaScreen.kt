@@ -342,35 +342,7 @@ fun TrainingPicker(plan: TrainingPlan, onChange: (TrainingPlan) -> Unit) {
 /** Tabellone notturno: stemmi e nomi ai lati, punteggio grande in ciano, minuto in una pillola luminosa. */
 @Composable
 fun Scoreboard(home: Team, away: Team, hg: Int, ag: Int, status: String) {
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-    val glow = androidx.compose.ui.graphics.Shadow(AC.Neon, blurRadius = 18f)
-    Row(
-        Modifier.fillMaxWidth()
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.NightHi, AC.Night)), shape)
-            .border(1.5.dp, AC.Neon.copy(alpha = 0.55f), shape)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Crest(home, 46.dp)
-            Text(home.name.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp,
-                maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("$hg  $ag", color = AC.Neon, fontWeight = FontWeight.Black, fontSize = 36.sp,
-                fontFamily = it.androcalcio.ui.theme.PcTitle,
-                style = MaterialTheme.typography.headlineMedium.copy(shadow = glow))
-            Text(status, Modifier.padding(top = 2.dp)
-                .border(1.5.dp, AC.Neon, androidx.compose.foundation.shape.RoundedCornerShape(50))
-                .padding(horizontal = 14.dp, vertical = 2.dp),
-                color = AC.Neon, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
-        }
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Crest(away, 46.dp)
-            Text(away.name.uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp,
-                maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
-        }
-    }
+    it.androcalcio.ui.components.TabelloneTV(home, away, hg, ag, status)
 }
 
 /** Cronaca su carta bianca, dall'evento più recente, con il minuto in colonna. */

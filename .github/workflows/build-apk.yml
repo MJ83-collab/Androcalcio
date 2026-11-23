@@ -30,11 +30,21 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
 
+      - name: Build release APK (R8)
+        run: gradle assembleRelease --no-daemon
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: androcalcio-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload APK ottimizzato
+        uses: actions/upload-artifact@v4
+        with:
+          name: androcalcio-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
       - name: Upload rose fisse generate

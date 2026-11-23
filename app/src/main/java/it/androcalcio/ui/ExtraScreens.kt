@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import it.androcalcio.ui.components.Avatar
 import androidx.compose.ui.unit.sp
 import it.androcalcio.AndrocalcioViewModel.ClubState
 import it.androcalcio.AndrocalcioViewModel.ExtraStato
@@ -342,6 +343,7 @@ fun PrestitiScreen(
         rosa.filter { p -> ex.prestiti.none { it.playerId == p.id } }.sortedBy { it.overall }.take(12).forEach { p ->
             GlassCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Avatar(p.name, 32.dp, Modifier.padding(end = 8.dp))
                     Column(Modifier.weight(1f)) {
                         Text("${p.name} (${p.role}, ${p.age}a, ${p.overall})", color = AC.Text, fontSize = 13.sp)
                         Text("Incassi ${money(Prestiti.costo(p))}", color = AC.TextDim, fontSize = 11.sp)
@@ -355,6 +357,7 @@ fun PrestitiScreen(
         altri.take(15).forEach { p ->
             GlassCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Avatar(p.name, 32.dp, Modifier.padding(end = 8.dp))
                     Column(Modifier.weight(1f)) {
                         Text("${p.name} (${p.role}, ${p.age}a, ${p.overall})", color = AC.Text, fontSize = 13.sp)
                         Text("${nomiClub[p.teamId] ?: "—"} · prestito ${money(Prestiti.costo(p))} · riscatto ${money(Prestiti.riscatto(p))}" +

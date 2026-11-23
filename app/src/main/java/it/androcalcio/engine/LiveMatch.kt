@@ -232,7 +232,7 @@ class LiveMatch(
                 val p = MatchEngine.aggressive(ps, rng)
                 val t = if (side) home else away
                 bump(p, -0.5)
-                events += MatchEvent(minute, EventType.YELLOW, side, "Ammonito ${p.name} (${t.shortName})", 0.5f, 0.5f)
+                events += MatchEvent(minute, EventType.YELLOW, side, "Ammonito ${p.name} (${t.shortName})", 0.5f, 0.5f, p.id)
             }
         }
         if (minute == 45) events += MatchEvent(45, EventType.HALFTIME, true, "Fine primo tempo", 0.5f, 0.5f)

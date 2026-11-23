@@ -107,7 +107,9 @@ fun ProssimaPartitaCard(me: Team, avversario: Team, m: MatchResult, onGioca: () 
 /** Opzioni come in PC Calcio 7: difficoltà (vale per la prossima carriera) e velocità della partita dal vivo. */
 @Composable
 fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit, onVelocita: (Int) -> Unit,
-                  profilo: Difficolta.Profilo = Difficolta.PROFILI[Difficolta.NORMALE], onProfilo: (Difficolta.Profilo) -> Unit = {}) {
+                  profilo: Difficolta.Profilo = Difficolta.PROFILI[Difficolta.NORMALE], onProfilo: (Difficolta.Profilo) -> Unit = {},
+                  testoPct: Int = 100, onTesto: (Int) -> Unit = {}, onTutorial: () -> Unit = {},
+                  risparmio: Boolean = false, onRisparmio: (Boolean) -> Unit = {}) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -131,6 +133,16 @@ fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit,
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(1, 2, 4, 20).forEach { x -> PcChip(selected = op.velocita == x, onClick = { onVelocita(x) }, label = { Text("×$x") }) }
         }
+        SectionTitle("Dimensione del testo")
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(85, 100, 115, 130).forEach { p -> PcChip(selected = testoPct == p, onClick = { onTesto(p) }, label = { Text("$p%") }) }
+        }
+        SectionTitle("Risparmio batteria")
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PcChip(selected = !risparmio, onClick = { onRisparmio(false) }, label = { Text("Normale") })
+            PcChip(selected = risparmio, onClick = { onRisparmio(true) }, label = { Text("Risparmio") })
+        }
+        PcChip(selected = false, onClick = onTutorial, label = { Text("Rivedi il tutorial") })
         SectionTitle("Informazione")
         PaperPanel(Modifier.fillMaxWidth()) {
             listOf(

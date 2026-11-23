@@ -80,6 +80,18 @@ interface AndrocalcioDao {
     @Query("SELECT p.* FROM players p JOIN scout_reports r ON r.playerId = p.id WHERE r.teamId = :teamId")
     fun scouted(teamId: Long): Flow<List<Player>>
 
+    @Query("SELECT y.* FROM youths y JOIN scout_reports r ON r.playerId = -y.id WHERE r.teamId = :teamId")
+    fun scoutedYouths(teamId: Long): Flow<List<Youth>>
+
+    @Query("DELETE FROM scout_reports WHERE teamId = :teamId AND playerId = :playerId")
+    suspend fun deleteReport(teamId: Long, playerId: Long)
+
+    @Query("DELETE FROM scout_reports WHERE playerId < 0 AND -playerId NOT IN (SELECT id FROM youths)")
+    suspend fun cleanReportsGiovani()
+
+    @Query("SELECT * FROM teams WHERE nazione = :nazione AND campionato = :campionato AND id != :me")
+    suspend fun clubsOfLeague(nazione: String, campionato: String, me: Long): List<Team>
+
     @Query("SELECT * FROM scout_reports WHERE teamId = :teamId AND playerId = :playerId")
     suspend fun report(teamId: Long, playerId: Long): ScoutReport?
 
@@ -188,6 +200,9 @@ interface AndrocalcioDao {
 
     @Query("SELECT * FROM albo ORDER BY season DESC, id")
     fun albo(): Flow<List<AlboEntry>>
+
+    @Query("SELECT * FROM movimenti WHERE teamId = :teamId AND season = :season")
+    suspend fun movimentiStagioneOnce(teamId: Long, season: String): List<Movimento>
 
     @Query("SELECT * FROM movimenti WHERE teamId = :teamId AND season = :season ORDER BY id")
     fun movimentiStagione(teamId: Long, season: String): Flow<List<Movimento>>

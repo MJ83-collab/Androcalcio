@@ -254,6 +254,7 @@ fun TatticaScreen(
             }
         }
         item { FormationBoard(xi, formation, Color(0xFFC62828)) }
+        item { it.androcalcio.ui.components.FormazioneAvatar(xi, formation, titolo = "Formazione ufficiale") }
         item { Box(Modifier.fillMaxWidth().border2()) { TacticPitch(xi, formation) } }
         item {
             SectionTitle("Tattiche predefinite")

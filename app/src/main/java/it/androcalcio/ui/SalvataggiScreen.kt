@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import it.androcalcio.data.SaveSlots
 import it.androcalcio.data.SlotInfo
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.theme.AC
@@ -54,11 +55,11 @@ fun SalvataggiScreen(
         slots.forEach { s ->
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Slot ${s.n}", color = AC.Accent, style = MaterialTheme.typography.titleMedium)
+                    Text(if (s.n == SaveSlots.AUTO) "Autosalvataggio (ogni 4 partite)" else "Slot ${s.n}", color = AC.Accent, style = MaterialTheme.typography.titleMedium)
                     if (s.empty) Text("Vuoto", color = AC.TextDim)
                     else Text("${s.teamName} · ${s.season}\nSalvato il ${s.date}")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PcAction(onClick = {
+                        if (s.n != SaveSlots.AUTO) PcAction(onClick = {
                             if (s.empty) onSave(s.n) else pending = SlotAction.SALVA to s
                         }) { Text("Salva") }
                         if (!s.empty) {
