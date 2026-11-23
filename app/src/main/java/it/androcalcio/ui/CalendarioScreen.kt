@@ -344,6 +344,7 @@ private fun Bandiera(nazione: String) {
         "Francia" -> listOf(Color(0xFF002395), Color.White, Color(0xFFED2939))
         "Brasile" -> listOf(Color(0xFF009C3B), Color(0xFFFFDF00), Color(0xFF009C3B))
         "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF))
+        "Giappone" -> listOf(Color.White, Color(0xFFBC002D), Color.White)
         else -> listOf(Color.Gray, Color.LightGray, Color.Gray)
     }
     Row(Modifier.width(18.dp).height(12.dp).clip(RoundedCornerShape(2.dp))) {

@@ -274,6 +274,14 @@ fun GiornaleScreen(ex: ExtraStato) {
             }
         }
 
+        SectionTitle("Il social del club")
+        if (ex.social.isEmpty()) Text("Dopo la prossima partita tifosi, giornalisti e presidente dicono la loro.", color = AC.TextDim, fontSize = 12.sp)
+        else GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ex.social.forEach { Text(it, color = AC.Text, fontSize = 13.sp) }
+            }
+        }
+
         SectionTitle("Statistiche avanzate")
         val a = ex.avanzate
         if (a.partite == 0) Text("Si compilano partita dopo partita.", color = AC.TextDim, fontSize = 12.sp)

@@ -107,6 +107,7 @@ import it.androcalcio.engine.AssistenteLive
 import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Annunci
+import it.androcalcio.engine.Social
 import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.Lineup
 import it.androcalcio.engine.LiveMatch
@@ -188,6 +189,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private fun avvio1() {
         viewModelScope.launch {
             if (dao.teamCount() == 0) SeedData.insertInto(ctx, dao)
+            if (dao.allTeams().none { it.nazione == "Giappone" }) SeedData.insertGiappone(ctx, dao)
             withContext(Dispatchers.IO) { assicuraAllStar() }
         }
     }
@@ -616,7 +618,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val colloquiFatti: Set<Long> = emptySet(),
         val obiettivo: Obiettivi.Obiettivo? = null, val posizioneAttesa: Int = 0,
         val prezzi: Map<String, Int> = emptyMap(), val abbonatiPct: Int = 0,
-        val premi: List<Premi.Premio> = emptyList(), val giornale: Giornale.Edizione? = null,
+        val premi: List<Premi.Premio> = emptyList(), val giornale: Giornale.Edizione? = null, val social: List<String> = emptyList(),
         val trofei: Set<String> = emptySet(), val avanzate: Avanzate.Totali = Avanzate.Totali(),
         val finestra: Finestre.Stato = Finestre.Stato.ESTIVA, val ultimoGiorno: Boolean = false,
         val prestiti: List<Prestiti.Prestito> = emptyList(),
@@ -669,7 +671,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             obiettivo = Obiettivi.decode(dao.stato("obiettivo")), posizioneAttesa = dao.statoInt("obiettivo_pos"),
             prezzi = prezzi,
             abbonatiPct = Abbonamenti.abbonatiPct(dao.statoInt(StatoKeys.TIFOSI), prezzi.values.average().toInt()),
-            premi = Premi.decode(dao.stato("premi")), giornale = Giornale.decode(dao.stato("giornale")),
+            premi = Premi.decode(dao.stato("premi")), giornale = Giornale.decode(dao.stato("giornale")), social = Social.decode(dao.stato("social")),
             trofei = Achievement.decode(dao.stato("achievement")), avanzate = Avanzate.decode(dao.stato("avanzate")),
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
@@ -711,6 +713,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             r.playerRatings[p.id]?.let { p.name to (Math.round(it * 2) / 2.0) }
         }
         dao.setStato(Stato("giornale", Giornale.encode(Giornale.crea(me.name, opp.name, gf, gs, derby, voti))))
+        dao.setStato(Stato("social", Social.encode(Social.post(me.name, opp.name, gf, gs, derby, voti.maxByOrNull { it.second }?.first, null, kotlin.random.Random.Default))))
         societaDopoPartita(me, opp, gf, gs, r, live)
         dopoPartitaV06(me, mioHome, gf, gs, r)
         aggiornaTrofei()
@@ -2170,6 +2173,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putInt("season_year", 2026).apply()
         _season.value = seasonName(2026)
         SeedData.insertInto(ctx, dao)
+        SeedData.insertGiappone(ctx, dao)
         assicuraAllStar()
         assegnaNumeri(0L)
     }

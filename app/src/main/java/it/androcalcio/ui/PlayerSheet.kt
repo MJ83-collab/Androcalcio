@@ -44,7 +44,7 @@ import it.androcalcio.ui.theme.AC
 /** Bandiera come emoji a partire dal nome della nazione del campionato. */
 fun flagOf(nazione: String): String = when (nazione) {
     "Italia" -> "🇮🇹"; "Spagna" -> "🇪🇸"; "Inghilterra" -> "🏴󠁧󠁢󠁥󠁮󠁧󠁿"; "Germania" -> "🇩🇪"
-    "Francia" -> "🇫🇷"; "Brasile" -> "🇧🇷"; "Argentina" -> "🇦🇷"; else -> "⚽"
+    "Francia" -> "🇫🇷"; "Brasile" -> "🇧🇷"; "Argentina" -> "🇦🇷"; "Giappone" -> "🇯🇵"; else -> "⚽"
 }
 
 /** Stelle 0..5 da un valore 1..99 (una stella ogni 20 punti). */

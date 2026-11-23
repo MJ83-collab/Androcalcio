@@ -81,6 +81,55 @@ object SeedData {
         })
     }
 
+    private val COGNOMI_GIAPPONE = listOf("Tanaka", "Sato", "Suzuki", "Takahashi", "Watanabe", "Ito", "Yamamoto", "Nakamura", "Kobayashi",
+        "Kato", "Yoshida", "Yamada", "Sasaki", "Matsumoto", "Inoue", "Kimura", "Hayashi", "Shimizu", "Mori", "Ikeda", "Hashimoto",
+        "Abe", "Ogawa", "Fujita", "Okada", "Goto", "Nishimura", "Fukuda", "Ota", "Miura")
+    private val INIZIALI_GIAPPONE = "HKMRSTYAN"
+
+    /** Campionato giapponese (J1 e J2, squadre inventate): aggiunto anche ai salvataggi esistenti. */
+    suspend fun insertGiappone(context: Context, dao: AndrocalcioDao) {
+        val arr = JSONArray(context.assets.open("squadre_giappone.json").bufferedReader().use { it.readText() })
+        val squadre = (0 until arr.length()).map { i ->
+            arr.getJSONObject(i).let { o -> RoseFisse.Squadra(o.getString("nazione"), o.getString("campionato"), o.getString("squadra")) }
+        }
+        val tierOf = RoseFisse.livelli(squadre)
+        val sizes = squadre.map { it.nazione + "|" + it.campionato }.groupingBy { it }.eachCount()
+        val posSeen = mutableMapOf<String, Int>()
+        val teams = (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            val n = o.getString("nazione"); val camp = o.getString("campionato"); val name = o.getString("squadra")
+            val tier = tierOf[n + "|" + camp] ?: 0
+            val rng = Random(name.hashCode())
+            val key = n + "|" + camp
+            val pos = posSeen.getOrDefault(key, 0).also { posSeen[key] = it + 1 }
+            val (top, bottom) = RoseFisse.leagueRange(n, tier)
+            val forza = top - (top - bottom) * pos / (sizes.getValue(key) - 1).coerceAtLeast(1)
+            val budget = (3.0 * Market.valueAt(forza)).toLong()
+            Team(
+                name = name, shortName = o.getString("sigla"),
+                colorPrimary = Color.parseColor(o.getString("colore1")).toLong() and 0xFFFFFFFFL,
+                colorSecondary = Color.parseColor(o.getString("colore2")).toLong() and 0xFFFFFFFFL,
+                budget = (budget + rng.nextLong(0, budget / 10 + 1)) / 100_000L * 100_000L,
+                stadiumCapacity = (50_000 - tier * 9_000).coerceAtLeast(3_000) + rng.nextInt(0, 4_000),
+                ticketPrice = Economia.prezzoBiglietto(n, tier), sponsor = o.getString("sponsor"),
+                nazione = n, campionato = camp,
+                youthCoachSkill = (70 - tier * 6 + rng.nextInt(-8, 9)).coerceIn(30, 95),
+                scoutSkill = (70 - tier * 6 + rng.nextInt(-8, 9)).coerceIn(30, 95)
+            )
+        }
+        val ids = dao.insertTeams(teams)
+        val idPerSquadra = teams.mapIndexed { i, t -> t.name to ids[i] }.toMap()
+        val giocatori = RoseFisse.genera(squadre).filter { it.squadra.isNotEmpty() }.map { r ->
+            val h = (r.giocatore.name + r.squadra).hashCode()
+            val nome = "${INIZIALI_GIAPPONE[Math.floorMod(h, INIZIALI_GIAPPONE.length)]}. " +
+                COGNOMI_GIAPPONE[Math.floorMod(h / 7, COGNOMI_GIAPPONE.size)]
+            r.giocatore.copy(teamId = idPerSquadra.getValue(r.squadra), name = nome, nationality = "Giappone")
+        }
+        dao.insertPlayers(giocatori)
+        val wages = giocatori.groupBy { it.teamId }.mapValues { e -> e.value.sumOf { it.salary } }
+        dao.updateTeams(teams.mapIndexed { i, t -> t.copy(id = ids[i], wageBudget = (1.2 * (wages[ids[i]] ?: 0L)).toLong()) })
+    }
+
     private val RICH_CLUBS = setOf(
         "Como", "Parigi SG", "Manchester Citt SB", "Chelsfield BL", "Newcastel MG", "Royal Madril",
         "Baviera MO", "Lipsia RB2", "Aston Villan VL", "Flamengo MG", "Botafogo FG"

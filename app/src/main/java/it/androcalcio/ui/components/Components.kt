@@ -384,6 +384,7 @@ fun FlagBox(nazione: String, modifier: Modifier = Modifier) {
         "Germania" -> listOf(Color.Black, Color(0xFFDD0000), Color(0xFFFFCE00))
         "Spagna" -> listOf(Color(0xFFAA151B), Color(0xFFF1BF00), Color(0xFFF1BF00), Color(0xFFAA151B))
         "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF))
+        "Giappone" -> listOf(Color.White, Color(0xFFBC002D), Color.White)
         else -> null
     }
     val apriNazione = it.androcalcio.ui.LocalApriNazione.current

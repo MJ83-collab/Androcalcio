@@ -255,6 +255,16 @@ fun MomentoChiave(titolo: String, testo: String, squadra: Team, giocatore: Playe
                 AvatarSpec(AvatarGen.specDi(giocatore.name, mappa), 150.dp,
                     Modifier.background(Color.White, androidx.compose.foundation.shape.CircleShape), maglia = c1 to c2)
             }
+            val onomatopea = if (scenaVar) "BIP BIP..." else when {
+                titolo.contains("GOOOL") || titolo.contains("RIGORE") -> listOf("ZUUUM!", "BAAAM!", "SHOOT!", "DOOON!")[Math.floorMod(testo.hashCode(), 4)]
+                titolo.contains("ESPULSO") -> "FIIIISCHIO!"
+                else -> "..."
+            }
+            Box(Modifier.graphicsLayer { rotationZ = 8f }) {
+                val os = TextStyle(fontFamily = PcTitle, fontSize = 30.sp)
+                Text(onomatopea, style = os.copy(color = Inchiostro, drawStyle = Stroke(width = 9f)))
+                Text(onomatopea, style = os.copy(color = c2))
+            }
             Box(Modifier.graphicsLayer { rotationZ = -6f }) {
                 val base = TextStyle(fontFamily = PcTitle, fontSize = 48.sp, textAlign = TextAlign.Center)
                 Text(titolo, style = base.copy(color = Inchiostro, drawStyle = Stroke(width = 14f)))
