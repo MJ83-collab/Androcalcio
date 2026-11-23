@@ -17,13 +17,27 @@ android {
         versionName = "0.6.0"
     }
 
+    // Chiave fissa nel repository: ogni build si installa sopra la precedente senza disinstallare.
+    // (Prima ogni build su GitHub usava una chiave di debug nuova e l'aggiornamento falliva.)
+    signingConfigs {
+        create("fissa") {
+            storeFile = file("androcalcio.keystore")
+            storePassword = "androcalcio"
+            keyAlias = "androcalcio"
+            keyPassword = "androcalcio"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("fissa")
+        }
         release {
             // R8: codice e risorse inutilizzati tolti, APK più piccolo e avvio più rapido
             isMinifyEnabled = true
             isShrinkResources = true
-            // Firmato con la chiave di debug: installabile subito (nessun Play Store in gioco)
-            signingConfig = signingConfigs.getByName("debug")
+            // Firmato con la chiave fissa: installabile subito (nessun Play Store in gioco)
+            signingConfig = signingConfigs.getByName("fissa")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

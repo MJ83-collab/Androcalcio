@@ -33,23 +33,38 @@ jobs:
       - name: Build release APK (R8)
         run: gradle assembleRelease --no-daemon
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: androcalcio-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+      - name: Prova di avvio su emulatore (abilita KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
-      - name: Upload APK ottimizzato
-        uses: actions/upload-artifact@v4
+      - name: Prova di avvio su emulatore (avvio + 1500 tocchi casuali)
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          name: androcalcio-release-apk
-          path: app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
+          api-level: 30
+          arch: x86_64
+          disable-animations: true
+          script: bash .github/smoke.sh
 
-      - name: Upload rose fisse generate
+      - name: Registro della prova
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rose-fisse
-          path: app/build/rose_fisse.csv
+          name: prova-avvio-log
+          path: smoke-log.txt
           if-no-files-found: ignore
+
+      - name: Prepara un unico file
+        run: |
+          V=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          mkdir -p consegna
+          cp app/build/outputs/apk/release/*.apk "consegna/Androcalcio-$V.apk"
+          echo "V=$V" >> "$GITHUB_ENV"
+
+      - name: Upload APK (unico file)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Androcalcio-${{ env.V }}
+          path: consegna/*.apk
+          if-no-files-found: error
