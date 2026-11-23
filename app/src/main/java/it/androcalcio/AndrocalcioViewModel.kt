@@ -194,7 +194,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun avvio1() {
         viewModelScope.launch {
-            if (dao.teamCount() == 0) SeedData.insertInto(app, dao)
+            if (dao.teamCount() == 0) SeedData.insertInto(ctx, dao)
             withContext(Dispatchers.IO) { assicuraAllStar() }
         }
     }
