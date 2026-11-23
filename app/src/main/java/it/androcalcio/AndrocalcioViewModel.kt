@@ -1399,12 +1399,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         // Acquisto a rate: metà subito, metà a fine stagione (nessun interesse)
         val dilazione = if (_rateMercato.value && fee >= 1_000_000L) fee / 2 else 0L
         val subito = fee - dilazione
-        if (subito + comm > buyer.budget) return OfferResult.Rejected("Budget insufficiente: prezzo ${money(fee)} più commissione agente ${money(comm)}.")
+        // Bonus firma: solo per i giocatori svincolati, un decimo dell'ingaggio annuo, pagato una volta alla firma
+        val bonusFirma = if (svincolato) wage / 10 else 0L
+        if (subito + comm + bonusFirma > buyer.budget) return OfferResult.Rejected("Budget insufficiente: prezzo ${money(fee)}, commissione agente ${money(comm)}, bonus firma ${money(bonusFirma)}.")
         if (!svincolato) {
             val seller = dao.team(p.teamId)
             dao.updateTeam(seller.copy(budget = seller.budget + fee))
         }
-        dao.updateTeam(buyer.copy(budget = buyer.budget - subito - comm))
+        dao.updateTeam(buyer.copy(budget = buyer.budget - subito - comm - bonusFirma))
         if (dilazione > 0L) dao.setStato(Stato("rate_mercato", ((dao.stato("rate_mercato")?.toLongOrNull() ?: 0L) + dilazione).toString()))
         dao.updatePlayer(p.copy(teamId = buyer.id, salary = wage, contract = years))
         dao.upsertClausole(listOf(Clausola(playerId = p.id, teamId = buyer.id,
@@ -1413,13 +1415,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val cart = Cartellini.decode(dao.stato(Cartellini.KEY)).filter { it.playerId != p.id }
         dao.setStato(Stato(Cartellini.KEY, Cartellini.encode(if (fee > 0L) cart + Cartellini.Cartellino(p.id, fee, years.coerceAtLeast(1)) else cart)))
         if (comm > 0) registra(buyer.id, "Commissione agente (${Agenti.nomeAgente(p)})", -comm, buyer.budget - subito - comm)
+        if (bonusFirma > 0) registra(buyer.id, "Bonus firma ${p.name}", -bonusFirma, buyer.budget - subito - comm - bonusFirma)
         dao.setStatoInt(MK.pend(p.id), 0)
         dao.setStatoInt(MK.clubOk(p.id), 0)
         dao.setStatoInt(MK.no(p.id), 0)
         if (buyer.id == selectedTeam.value?.id) effettiArrivo(p, buyer, wage)
         val durata = "$years ${if (years == 1) "anno" else "anni"}"
         val costo = (if (fee > 0) " e ${money(fee)} al club" + (if (dilazione > 0L) " (${money(dilazione)} a fine stagione)" else "") else "") + (if (comm > 0) ", più ${money(comm)} all'agente" else "")
-        return OfferResult.Accepted("${p.name} firma: ${money(wage)} l'anno per $durata$costo.")
+        return OfferResult.Accepted("${p.name} firma: ${money(wage)} l'anno per $durata$costo" + (if (bonusFirma > 0) ", bonus firma ${money(bonusFirma)}." else "."))
     }
 
     private fun cambiaMorale(rosa: List<Player>, delta: Map<Long, Int>): List<Player> =
