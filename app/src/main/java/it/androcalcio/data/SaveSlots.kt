@@ -67,7 +67,7 @@ object SaveSlots {
     }
 
     /** Legge un file zip esportato e lo mette nello slot indicato. Restituisce false se il file non è valido. */
-    fun importa(ctx: Context, n: Int, input: java.io.InputStream): Boolean {
+    fun importa(ctx: Context, n: Int, input: java.io.InputStream, versioneDb: Int): Boolean {
         var db: ByteArray? = null; var meta: ByteArray? = null
         java.util.zip.ZipInputStream(input.buffered()).use { z ->
             var e = z.nextEntry
@@ -79,6 +79,8 @@ object SaveSlots {
         val d = db ?: return false; val m = meta ?: return false
         // Controlli minimi: intestazione SQLite e meta con i campi attesi
         if (d.size < 16 || String(d, 0, 15, Charsets.US_ASCII) != "SQLite format 3") return false
+        // La versione dello schema (user_version, byte 60-63) deve essere quella dell'app: altrimenti il database non si apre
+        if (d.size < 64 || java.nio.ByteBuffer.wrap(d, 60, 4).int != versioneDb) return false
         try { JSONObject(String(m)).also { it.getString("team"); it.getString("season"); it.getInt("year"); it.getLong("teamId") } } catch (e: Exception) { return false }
         dbFile(ctx, n).writeBytes(d)
         metaFile(ctx, n).writeBytes(m)

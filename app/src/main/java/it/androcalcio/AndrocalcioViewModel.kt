@@ -3047,9 +3047,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun importaSlot(n: Int, uri: android.net.Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            val ok = try { ctx.contentResolver.openInputStream(uri)?.use { SaveSlots.importa(ctx, n, it) } ?: false } catch (e: Exception) { false }
+            val ok = try { ctx.contentResolver.openInputStream(uri)?.use { SaveSlots.importa(ctx, n, it, db.openHelper.readableDatabase.version) } ?: false } catch (e: Exception) { false }
             _slots.value = SaveSlots.list(ctx)
-            _notice.value = if (ok) "File importato nello slot $n. Premi Carica per giocarlo." else "File non valido: non è un backup di Androcalcio."
+            _notice.value = if (ok) "File importato nello slot $n. Premi Carica per giocarlo." else "File non valido o di un'altra versione dell'app: non posso importarlo."
         }
     }
 
