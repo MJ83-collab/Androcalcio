@@ -133,7 +133,7 @@ fun CalendarioScreen(
             PcButton("Prossima giornata", {
                 round = 0
                 if (miaProssima) { askNext = true } else { onNext() }
-            }, Modifier.fillMaxWidth(), main = true, enabled = pending && !bloccoAmichevoli && giornoOk)
+            }, Modifier.fillMaxWidth(), main = true, enabled = pending && !bloccoAmichevoli)
         }
         // Simula fino a: 5 giornate, apertura del mercato invernale, vigilia del prossimo derby
         if (nextRound != null && !bloccoAmichevoli) {

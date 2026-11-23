@@ -110,11 +110,6 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         ) {
             item { Scoreboard(m.home, m.away, m.hg, m.ag, "${m.minute}'" + if (info.paused) " · pausa" else "") }
             item { PossessoBar(m.possessoCasa) }
-            item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + if (m.varAttivo) " · VAR" else "",
-                color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
-            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco ?: last?.home) }
-            item { TelecronacaBubble(events, m.minute) }
             consiglio?.let { c ->
                 item {
                     AssistenteBubble(c, onApplica = {
@@ -123,6 +118,11 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                     }, onChiudi = { vm.chiudiConsiglio() })
                 }
             }
+            item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + if (m.varAttivo) " · VAR" else "",
+                color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
+            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco ?: last?.home) }
+            item { TelecronacaBubble(events, m.minute) }
             when (panel) {
                 LivePanel.TATTICA -> {
                     item {

@@ -1015,7 +1015,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (_consiglio.value != null) return
         val c = AssistenteLive.consiglia(i.m, i.userHome, AssistenteLive.Livello.values()[_assistLiv.value], assistVisti, assistUltimo) ?: return
         _consiglio.value = c; assistVisti += c.id; assistUltimo = c.minuto
-        if (c.urgenza >= 3) setLivePaused(true)   // un consiglio urgente ferma la partita per lasciarti decidere
+        if (c.urgenza >= 3 && i.m.minute > 3) setLivePaused(true)   // un consiglio urgente ferma la partita per lasciarti decidere
     }
 
     fun chiudiConsiglio() { _consiglio.value = null; setLivePaused(false) }
@@ -3376,10 +3376,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Salta al giorno della partita: allenamento, con riposo ogni tre giorni e il giorno prima. */
     fun saltaAllaPartita() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val g = calcolaGiorno() ?: return@launch
-            val t = selectedTeam.value ?: return@launch
-            val partita = g.prossima ?: return@launch
+        viewModelScope.launch(Dispatchers.IO) { portaAlGiornoPartita(true) }
+    }
+
+    /** Vive in automatico i giorni che mancano alla partita. Restituisce quanti ne ha vissuti. */
+    private suspend fun portaAlGiornoPartita(avvisa: Boolean): Int {
+        run {
+            val g = calcolaGiorno() ?: return 0
+            val t = selectedTeam.value ?: return 0
+            val partita = g.prossima ?: return 0
             var rosa = dao.playersOnce(t.id)
             var prep = g.prep
             val diario = g.diario.toMutableMap()
@@ -3392,18 +3397,21 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 diario[d.toEpochDay()] = a
                 d = d.plusDays(1); n++
             }
-            if (n == 0) { _notice.value = "Oggi si gioca: vai alla partita."; return@launch }
+            if (n == 0) { if (avvisa) _notice.value = "Oggi si gioca: vai alla partita."; return 0 }
             salvaGiorni(rosa, prep, diario, partita)
-            _notice.value = "Giorno della partita: ${CalendarioGiorni.nomeGiorno(partita)} ($n giorni vissuti)."
+            if (avvisa) _notice.value = "Giorno della partita: ${CalendarioGiorni.nomeGiorno(partita)} ($n giorni vissuti)."
+            return n
         }
     }
 
     /** Si gioca solo nel giorno della partita; la preparazione accumulata diventa morale. */
     private suspend fun prontoPerLaPartita(): Boolean {
-        val g = calcolaGiorno() ?: return true
+        var g = calcolaGiorno() ?: return true
         if (g.prossima != null && !g.giornoPartita) {
-            _notice.value = "Mancano ${g.giorniMancanti} giorni alla partita: scegli cosa fare ogni giorno nel calendario."
-            return false
+            // Mai bloccare il gioco: i giorni che mancano passano in automatico (allenamento e riposo)
+            val n = portaAlGiornoPartita(false)
+            _notice.value = "Sono passati $n giorni di preparazione automatica."
+            g = calcolaGiorno() ?: return true
         }
         if (g.prep > 0) {
             val t = selectedTeam.value ?: return true
