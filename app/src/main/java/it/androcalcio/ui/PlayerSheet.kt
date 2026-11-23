@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -49,6 +50,13 @@ private fun stars(v: Int): String { val n = (v / 20).coerceIn(0, 5); return "★
 
 /** Apre la scheda di un giocatore da qualunque schermo: il root dell'app la mostra. */
 val LocalApriGiocatore = compositionLocalOf<(Player) -> Unit> { {} }
+
+/** Azioni sulla scheda: preferito, capitano, allenamento individuale. Null = nascoste. */
+data class AzioniGiocatore(
+    val mioClub: Long, val preferiti: Set<Long>, val capitano: Long, val allenamento: Map<Long, Int>,
+    val onPreferito: (Player) -> Unit, val onCapitano: (Player?) -> Unit, val onAllenamento: (Player, Int?) -> Unit
+)
+val LocalAzioni = compositionLocalOf<AzioniGiocatore?> { null }
 
 /** Carica i dati completi di un giocatore (squadra, nazionale, convocazioni, stagioni). */
 val LocalCaricaGiocatore = compositionLocalOf<(suspend (Player) -> DettaglioGiocatore)?> { null }
@@ -125,6 +133,25 @@ fun PlayerSheet(
                     Column(horizontalAlignment = Alignment.End) {
                         Text("ANNI DI CONTRATTO", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
                         Text("${p.contract}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
+                    }
+                }
+                LocalAzioni.current?.let { az ->
+                    Titolo("AZIONI")
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        it.androcalcio.ui.components.PcChip(p.id in az.preferiti, { az.onPreferito(p) },
+                            { Text(if (p.id in az.preferiti) "★ Seguito" else "☆ Segui") })
+                        if (p.teamId == az.mioClub) it.androcalcio.ui.components.PcChip(p.id == az.capitano, { az.onCapitano(if (p.id == az.capitano) null else p) },
+                            { Text(if (p.id == az.capitano) "© Capitano" else "Fai capitano") })
+                    }
+                    if (p.teamId == az.mioClub) {
+                        Text("Allenamento individuale", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            val cur = az.allenamento[p.id]
+                            it.androcalcio.ui.components.PcChip(cur == null, { az.onAllenamento(p, null) }, { Text("Come la squadra") })
+                            it.androcalcio.engine.TrainFocus.values().forEachIndexed { i, f ->
+                                it.androcalcio.ui.components.PcChip(cur == i, { az.onAllenamento(p, i) }, { Text(f.label) })
+                            }
+                        }
                     }
                 }
                 Titolo("NAZIONALE")

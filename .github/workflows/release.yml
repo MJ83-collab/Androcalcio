@@ -40,5 +40,5 @@ jobs:
           cp app/build/outputs/apk/debug/*.apk "androcalcio-$TAG-debug.apk"
           cp app/build/outputs/apk/release/*.apk "androcalcio-$TAG-ottimizzato.apk"
           gh release create "$TAG" --target "$GITHUB_SHA" --title "Androcalcio $TAG" \
-            --notes "Mutui bancari, risparmio batteria, scheda Analisi, pulizia. Dettagli in report.md. L'APK 'ottimizzato' usa R8 e non è stato provato su telefono: se non parte, usa quello 'debug'." \
+            --notes "Mutui con rifinanziamento, acquisti a rate, ampiezza e cambio programmato, preferiti, confronto, backup su file, tema nero, voci di mercato e altro. Dettagli in report.md. L'APK 'ottimizzato' usa R8 e non è stato provato su telefono: se non parte, usa quello 'debug'." \
             "androcalcio-$TAG-debug.apk" "androcalcio-$TAG-ottimizzato.apk"

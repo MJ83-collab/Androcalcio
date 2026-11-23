@@ -22,13 +22,13 @@ object AC {
     var tema by mutableIntStateOf(0)
 
     /** Il tema "PC Calcio 7" ha forme squadrate, pulsanti neri e tabelle su carta bianca. */
-    val pc7 get() = tema == 3
+    val pc7 get() = tema == 3 || tema == 4
 
-    private fun pick(a: Long, b: Long, c: Long, d: Long = c) = Color(when (tema) { 1 -> b; 2 -> c; 3 -> d; else -> a })
+    private fun pick(a: Long, b: Long, c: Long, d: Long = c, e: Long = d) = Color(when (tema) { 1 -> b; 2 -> c; 3 -> d; 4 -> e; else -> a })
 
-    val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740, 0xFF2A3A8C)
-    val Surface get() = pick(0xFF131A22, 0xFF0C5A60, 0xFF14307A, 0xFF27358A)
-    val SurfaceHi get() = pick(0xFF1B2530, 0xFF14787D, 0xFF2243A0, 0xFF3B4FA6)
+    val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740, 0xFF2A3A8C, 0xFF000000)
+    val Surface get() = pick(0xFF131A22, 0xFF0C5A60, 0xFF14307A, 0xFF27358A, 0xFF0A0A0F)
+    val SurfaceHi get() = pick(0xFF1B2530, 0xFF14787D, 0xFF2243A0, 0xFF3B4FA6, 0xFF171A2B)
     val Border get() = pick(0x1FFFFFFF, 0x80A5F2EC, 0x80B4C8FF, 0xFFA9B9EA)
     val Accent get() = pick(0xFFB6FF3C, 0xFFFFE14A, 0xFFFFD21F, 0xFFFFE23D)
     val Accent2 get() = pick(0xFF4FD1FF, 0xFF5FF5E6, 0xFF7FC4FF, 0xFF9CCBFF)

@@ -117,6 +117,22 @@ object Analisi {
     fun pesoIngaggi(rosa: List<Player>, budgetIngaggi: Long): Int =
         if (budgetIngaggi <= 0L) 100 else (rosa.sumOf { it.salary } * 100L / budgetIngaggi).toInt()
 
+    // 4. Bilancio previsto a fine stagione: budget + media netta per partita × partite rimaste − rate
+    fun previsione(budget: Long, netto: Long, giocate: Int, rimanenti: Int, rate: Long): Long =
+        budget + (if (giocate <= 0) 0L else netto / giocate * rimanenti) - rate
+
+    /** Riposo automatico: coppie (esce, entra) per i titolari sotto il 60% con un sostituto riposato dello stesso ruolo. */
+    fun riposo(rosa: List<Player>, squal: Set<Long>): List<Pair<Player, Player>> {
+        val usati = HashSet<Long>()
+        val out = ArrayList<Pair<Player, Player>>()
+        for (t in rosa.filter { it.starter && it.injuredRounds == 0 && it.condition < 60 }.sortedBy { it.condition }) {
+            val c = rosa.filter { !it.starter && it.injuredRounds == 0 && it.id !in squal && it.id !in usati && it.role == t.role && it.condition >= 70 }
+                .maxByOrNull { it.overall } ?: continue
+            usati += c.id; out += t to c
+        }
+        return out
+    }
+
     // 13. Prossima rata dei mutui rispetto al budget
     fun rataInArrivo(mutui: List<Mutui.Mutuo>): Long = mutui.sumOf { minOf(it.rata, it.residuo + Mutui.interessi(it)) }
 }

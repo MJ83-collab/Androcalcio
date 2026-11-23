@@ -200,7 +200,10 @@ fun TatticaScreen(
     onOpenAvversario: () -> Unit,
     tiri: it.androcalcio.engine.SetPieces = it.androcalcio.engine.SetPieces.NONE,
     onSalvaTiri: (it.androcalcio.engine.SetPieces) -> Unit = {},
-    onCompito: (Player, String) -> Unit = { _, _ -> }
+    onCompito: (Player, String) -> Unit = { _, _ -> },
+    ampiezza: it.androcalcio.engine.Ampiezza = it.androcalcio.engine.Ampiezza.NORMALE,
+    onAmpiezza: (it.androcalcio.engine.Ampiezza) -> Unit = {},
+    cambioPronto: Int = 0, onCambioPronto: (Int) -> Unit = {}
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi)
     var roleFor by remember { mutableStateOf<Player?>(null) }
@@ -270,6 +273,14 @@ fun TatticaScreen(
             SectionTitle("Linea difensiva")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 DefLine.values().forEach { l -> PcChip(line == l, { onLine(l) }, { Text(l.label) }) }
+            }
+            SectionTitle("Ampiezza")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                it.androcalcio.engine.Ampiezza.values().forEach { a -> PcChip(ampiezza == a, { onAmpiezza(a) }, { Text(a.label) }) }
+            }
+            SectionTitle("Cambio programmato")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(0 to "Spento", 60 to "60'", 70 to "70'", 80 to "80'").forEach { (m, l) -> PcChip(cambioPronto == m, { onCambioPronto(m) }, { Text(l) }) }
             }
         }
     }

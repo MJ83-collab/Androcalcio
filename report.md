@@ -1,49 +1,52 @@
-# Androcalcio — report (23/11/2026) · v0.4.0
+# Androcalcio — report (23/11/2026) · v0.5.0
 
-Kotlin 2.0 / Compose / Room (DB v24, **nessuna migrazione**: gli extra stanno come testo nella tabella Stato).
-**Test motore e build GitHub Actions: verdi** (anche APK release con R8).
-⚠️ Non ho potuto provare l'app su un telefono: grafica e comportamento in release (R8) sono verificati solo da compilazione e test.
+Kotlin 2.0 / Compose / Room (DB v24, **nessuna migrazione**; extra in tabella Stato).
+Test e build GitHub Actions verdi (debug e release R8). ⚠️ Non provato su telefono.
 
-## 1. Mutui bancari (Finanze → "Mutui bancari")
-6 banche con tasso, tetto e durata propri; soldi subito nel budget, rata fissa a fine stagione (capitale + interessi).
-| Banca | Tasso | Fino a | Anni |
+## Le 20 migliorie approvate: 16 nuove, 4 già presenti
+| # | Miglioria | Dove | Stato |
 |---|---|---|---|
-| Cassa Rurale del Cugino Gigi | 4,0% | 3M | 3 |
-| Banca Popolare dello Zio Gaetano | 6,5% | 8M | 5 |
-| Credito Cooperativo Pantofola d'Oro | 9,0% | 15M | 4 |
-| Monte dei Pegni Svelti | 12,0% | 10M | 3 |
-| Istituto Sogni d'Oro & Figli | 7,5% | 20M | 8 |
-| Banca dei Fratelli Strozzi | 18,0% | 25M | 2 |
-Regole: un mutuo per banca, debito massimo 40M, minimo 500k; estinzione anticipata con penale 2%; se a fine stagione manca il budget si paga il possibile e il resto resta in debito con mora 5%. Gli **interessi** pesano sul fair play, il capitale no. Compaiono nel bilancio di stagione (categorie "Mutui" e "Interessi"). Salvati in Stato (chiave `mutui`), inclusi in export/reset.
+| 1 | Debito → fiducia del presidente: sopra 15M taglia il 3% dell'eccedenza a fine stagione | Finanze | nuova |
+| 2 | Rifinanziamento: sposti un mutuo su una banca più economica (penale 2%) | Finanze | nuova |
+| 3 | Premio sponsor: +40k a vittoria, +50k senza subire gol | automatico | nuova |
+| 4 | Bilancio previsto a fine stagione | Società → Analisi | nuova |
+| 5 | Acquisti a rate: metà subito, metà a fine stagione | Finanze | nuova |
+| 6 | Ampiezza (stretta/normale/larga) nel motore di gioco | Tattica | nuova |
+| 7 | Rigoristi e piazzati | Tattica | **già presente** |
+| 8 | Cambio programmato al 60', 70' o 80' | Tattica | nuova |
+| 9 | Statistiche di fine partita | Partita | **già presenti** |
+| 10 | Precedenti con la prossima avversaria | Analisi | nuova |
+| 11 | Capitano scelto da te | scheda giocatore | nuova |
+| 12 | Allenamento individuale | scheda giocatore | nuova |
+| 13 | Riposo automatico (cambia i titolari stanchi) | Analisi | nuova |
+| 14 | Preferiti (seguiti) | scheda giocatore, Analisi | nuova |
+| 15 | Confronto tra due giocatori | Analisi | nuova |
+| 16 | Obiettivi del presidente | — | **già presente** |
+| 17 | Tifosi e incassi | — | **già presente** |
+| 18 | Voci di mercato (club che seguono i tuoi giocatori) | Analisi | nuova |
+| 19 | Backup su file (esporta/importa slot in .zip) | Salvataggi | nuova |
+| 20 | Tema nero puro (meno batteria su OLED) | Opzioni | nuova |
+Totale: **16 nuove** e **4 già presenti** (7, 9, 16, 17: verificati nel codice). Ammetto che avrei dovuto controllarlo prima di proporle.
 
-## 2. Prestazioni e batteria
-- **Eliminato il polling**: 12 flussi interrogavano il database ogni 1,5–3 s anche con l'app ferma. Ora si rileggono solo quando la tabella cambia (`osserva(...)` con `InvalidationTracker`).
-- Le schermate smettono di aggiornarsi in background (`collectAsStateWithLifecycle`).
-- La partita dal vivo si mette in **pausa** quando l'app va in background.
-- **Opzione "Risparmio batteria"** (Opzioni): la partita avanza al massimo 8 volte al secondo.
-- **R8 + riduzione risorse** nell'APK release (firmato con chiave di debug: installabile subito).
+## Dettagli utili
+- **Backup su file**: l'importazione controlla che sia un backup di Androcalcio e della stessa versione dello schema; poi premi "Carica" sullo slot.
+- **Ampiezza**: stretta = più possesso e difesa solida; larga = più occasioni ma più spazi dietro.
+- **Cambio programmato**: usa la logica del cambio automatico (esce il più stanco, entra il migliore dello stesso ruolo).
+- **Allenamento individuale** e **capitano** sono letti dal motore tramite valori globali (`Training.individuali`, `Leadership.scelto`), riletti all'avvio.
 
-## 3. Le 20 migliorie (scheda Società → "Analisi", più opzioni)
-1 Contratti in scadenza · 2 Infermeria · 3 Giocatori stanchi · 4 Ingaggi per reparto · 5 Età media/media/valore per reparto · 6 Giovani promesse · 7 Forma ultime 5 · 8 Serie (vittorie, imbattibilità, porta inviolata, senza vincere) · 9 Rendimento casa/trasferta · 10 Marcatori del club · 11 Consigli del vice per la prossima partita · 12 Peso ingaggi sul budget ingaggi · 13 Avviso rate dei mutui vs budget · 14 Risparmio batteria · 15 Gol fatti/subiti a partita · 16 Capitano suggerito · 17 Scontenti · 18 Attaccanti a secco · 19 Valore della rosa · 20 Rinnovi consigliati.
-Controllato che non esistessero già (a differenza del giro precedente).
+## Limiti noti
+- Non provato su telefono; l'APK ottimizzato (R8) non è stato avviato.
+- Nuovi tassi/penali/premi (3%, 2%, 40k) non tarati con partite lunghe.
+- Il confronto mostra solo giocatori della tua rosa e dei seguiti.
+- La vendita a rate vale solo per gli acquisti, non per le cessioni.
+- Tema: il vero chiaro non c'è; c'è il nero.
+- Restano: `Insurance.ROUNDS=38`, `wipe` non svuota l'albo, avatar disegnati in codice.
 
-## 4. Pulizia
-Tolti dalla radice e dal repository: `androcalcio.zip` e la cartella `.gradle/` (cache di build tracciata per errore). `.gitignore` esteso (`.idea`, `local.properties`, `*.apk`, `*.zip`). README riscritto.
-
-## 5. Bug-check
-Nuovo codice riletto; la CI compila e passa tutti i test (nuovi: `MutuiTest`, `AnalisiTest`). Corretto durante il lavoro: ramo morto in `Mutui.paga`. Verificato che i nomi tabella usati da `osserva` esistano (un nome errato farebbe crashare).
-
-## 6. Limiti noti
-- Non provato su telefono; l'APK release (R8) non è stato avviato: se crasha, usare l'APK debug e segnalarmelo.
-- Tassi, tetti e soglie fair play non tarati con partite lunghe.
-- Il debito non influisce su fiducia/dirigenza (solo mora e fair play).
-- Alcune migliorie sono sola lettura (Analisi mostra, non agisce).
-- Avatar ancora disegnati in codice. Restano: `Insurance.ROUNDS=38`, `wipe` non svuota l'albo.
-
-**Modello:** basta Sonnet; Opus solo per tarare l'economia (tassi/soglie) o nuove meccaniche.
+**Modello:** Sonnet basta; Opus solo per tarare l'economia.
 
 ---
 ## Cronologia
 - v0.3.0 (22/11): 20 migliorie approvate (conferenze, sponsor, vivaio 10–16, nazionali U21, All Star, difficoltà, prestiti, giornale, meteo, achievement…).
 - 23/11 (ramo `feat/pc7-vivai-extra`): avatar ovunque, tabellone TV, formazione con volti, scouting nei vivai, Società (disciplina, personalità, scambi, fair play, storia, ricerca), tutorial, autosalvataggio.
-- v0.4.0 (questo report): mutui, batteria/prestazioni, Analisi, pulizia.
+- v0.4.0: mutui, batteria/prestazioni, Analisi, pulizia.
+- v0.5.0 (questo report): 16 nuove migliorie (vedi tabella).

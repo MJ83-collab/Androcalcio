@@ -18,7 +18,7 @@ object DataIO {
         "prestiti", "achievement", "avanzate", "giornale", "premi", "conf_g", "giornata_mercato",
         "c_stagioni", "c_titoli", "c_coppe", "c_prom", "c_vittorie", "c_gol", "c_derby", "c_obiettivi", "c_giovani",
         "c_colloqui", "c_conferenze", "c_prestiti", "c_partite", "apparizioni", "avatar",
-        "scontri", "storia_rec", "storia_hall", "ffp_perdite", "ffp_blocco", "auto_ultimo", "mutui")
+        "scontri", "storia_rec", "storia_hall", "ffp_perdite", "ffp_blocco", "auto_ultimo", "mutui", "rate_mercato", "capitano", "preferiti", "allen_ind")
 
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()

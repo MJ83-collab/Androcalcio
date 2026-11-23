@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -38,8 +39,17 @@ fun SalvataggiScreen(
     season: String,
     onSave: (Int) -> Unit,
     onLoad: (Int) -> Unit,
-    onDelete: (Int) -> Unit
+    onDelete: (Int) -> Unit,
+    onEsporta: (Int, android.net.Uri) -> Unit = { _, _ -> },
+    onImporta: (Int, android.net.Uri) -> Unit = { _, _ -> }
 ) {
+    var slotFile by remember { mutableStateOf(1) }
+    val esporta = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri -> if (uri != null) onEsporta(slotFile, uri) }
+    val importa = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) onImporta(slotFile, uri) }
     var pending by remember { mutableStateOf<Pair<SlotAction, SlotInfo>?>(null) }
 
     Column(
@@ -58,12 +68,14 @@ fun SalvataggiScreen(
                     Text(if (s.n == SaveSlots.AUTO) "Autosalvataggio (ogni 4 partite)" else "Slot ${s.n}", color = AC.Accent, style = MaterialTheme.typography.titleMedium)
                     if (s.empty) Text("Vuoto", color = AC.TextDim)
                     else Text("${s.teamName} · ${s.season}\nSalvato il ${s.date}")
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (s.n != SaveSlots.AUTO) PcAction(onClick = {
                             if (s.empty) onSave(s.n) else pending = SlotAction.SALVA to s
                         }) { Text("Salva") }
+                        if (s.n != SaveSlots.AUTO) PcAction(onClick = { slotFile = s.n; importa.launch(arrayOf("application/zip", "application/octet-stream")) }) { Text("Importa") }
                         if (!s.empty) {
                             PcAction(onClick = { pending = SlotAction.CARICA to s }) { Text("Carica") }
+                            PcAction(onClick = { slotFile = s.n; esporta.launch("androcalcio-slot${s.n}.zip") }) { Text("Esporta") }
                             TextButton(onClick = { pending = SlotAction.CANCELLA to s }) {
                                 Text("Cancella", color = AC.Danger)
                             }
