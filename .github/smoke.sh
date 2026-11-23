@@ -6,9 +6,12 @@ adb install -r "$APK" || exit 1
 adb logcat -c
 adb shell am start -W -n it.androcalcio/.MainActivity
 sleep 15
+mkdir -p schermate
+adb exec-out screencap -p > schermate/00-avvio.png
 : > monkey.txt
 for SEED in 42 7 99 2026 5 11; do
   adb shell monkey -p it.androcalcio -s $SEED --throttle 80 --pct-syskeys 0 --pct-appswitch 0 --ignore-security-exceptions --ignore-crashes --pct-nav 0 --pct-majornav 0 -v 1500 >> monkey.txt 2>&1
+  adb exec-out screencap -p > "schermate/seme-$SEED.png"
   if grep -q "// CRASH: it.androcalcio" monkey.txt; then break; fi
 done
 sleep 3

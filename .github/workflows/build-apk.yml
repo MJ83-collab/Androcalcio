@@ -47,6 +47,14 @@ jobs:
           disable-animations: true
           script: bash .github/smoke.sh
 
+      - name: Schermate della prova su emulatore
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schermate
+          path: schermate/*.png
+          if-no-files-found: ignore
+
       - name: Registro della prova (solo se c'è un crash)
         if: failure()
         uses: actions/upload-artifact@v4
