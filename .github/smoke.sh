@@ -6,10 +6,14 @@ adb install -r "$APK" || exit 1
 adb logcat -c
 adb shell am start -W -n it.androcalcio/.MainActivity
 sleep 15
-adb shell monkey -p it.androcalcio -s 42 --throttle 120 --pct-syskeys 0 --pct-appswitch 0 --ignore-security-exceptions -v 1500 > monkey.txt 2>&1
+: > monkey.txt
+for SEED in 42 7 99 2026 5 11; do
+  adb shell monkey -p it.androcalcio -s $SEED --throttle 80 --pct-syskeys 0 --pct-appswitch 0 --ignore-security-exceptions -v 1500 >> monkey.txt 2>&1
+  if grep -q "// CRASH" monkey.txt; then break; fi
+done
 sleep 3
 adb logcat -d > logcat.txt
-{ echo "=== MONKEY ==="; tail -40 monkey.txt; echo "=== CRASH ==="; grep -A40 "FATAL EXCEPTION\|AndroidRuntime" logcat.txt | head -200; } > smoke-log.txt
+{ echo "=== MONKEY ==="; tail -40 monkey.txt; echo "=== CRASH ==="; grep "E AndroidRuntime" logcat.txt | head -80; } > smoke-log.txt
 cat smoke-log.txt
 if grep -q "FATAL EXCEPTION" logcat.txt || grep -q "// CRASH" monkey.txt; then echo "CRASH TROVATO"; exit 1; fi
 echo "Nessun crash."
