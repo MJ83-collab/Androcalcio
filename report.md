@@ -1,3 +1,61 @@
+# Androcalcio — report (23/11/2026) · ramo `feat/pc7-vivai-extra`
+
+Kotlin 2.0 / Compose / Room (DB v24, **nessuna migrazione nuova**: gli extra stanno come testo nella tabella Stato).
+**Test motore: tutti verdi in CI (92+ e i nuovi di `NuoveMeccanicheTest`). Build GitHub Actions: verde** (commit `de9148f`, run 45086065823).
+⚠️ Non ho potuto provare l'app su un telefono: grafica e schermate sono verificate solo dalla compilazione.
+
+## 1. Avatar nel vivaio e in tutte le schede
+Avatar con volto ora in: vivaio (lista e scheda), scouting, mercato, statistiche, nazionali, prestiti, rosa. Il volto nasce dal nome, come per i giocatori.
+
+## 2. Grafica dai 3 screenshot
+- **Tabellone TV** (`TabelloneTV`): punteggio in stile telecronaca blu, al posto del vecchio tabellone nella schermata Partita.
+- **Formazione sul campo** (`FormazioneAvatar`): campo verticale con volto e cognome di ogni titolare, nella schermata Tattica.
+- **Tabelle a stelle (stile PC Calcio 6.0)** → scouting: stelle per livello e potenziale (stimato, con margine d'errore).
+
+## 3. Scouting anche nei vivai
+Nuova scheda **Vivai** in Vivaio: missione dell'osservatore su 4 club × 2 giovani, filtro per ruolo, stelle, "Segui" e "Ingaggia" (prezzo = livello × potenziale × 110, tra 80k e 2,5M; massimo 30 giovani nel tuo vivaio). I vivai delle IA hanno minimo 8 giovani e si rigenerano da soli.
+
+## 4. Le "20 migliorie" — verità
+Ammetto un errore: **circa 8 delle 20 che avevo proposto esistevano già** (es. conferenze, psicologo, derby, meteo, prestiti, agenti, giornale, achievement). Ho implementato solo quelle davvero mancanti, nuova schermata **Società**:
+| Cosa | Dettaglio |
+|---|---|
+| Disciplina | Diffida a 4 gialli, squalifica al 5°; rossi 1–3 turni; severità arbitro 1–3; squalificati esclusi dalla formazione |
+| Spogliatoio/personalità | 6 tipi (Leader, Professionista, Ambizioso, Mercenario, Sensibile, Fedele); richieste di aumento/cessione (max 3) |
+| Scambi | Giocatore + conguaglio; l'IA vuole valore ≥ 105% del tuo; niente scambi di portieri |
+| Fair play finanziario | Perdita operativa su 3 anni (esclusi mercato, stadio, multe); soglia 8M + 30% budget; multa 10% dell'eccesso; blocco mercato se eccesso > soglia/4 |
+| Storia | Scontri diretti, record di stagione, Hall of Fame (dopo 5 anni, media ≥ 78 o 50 gol), maglia ritirata dopo 8 anni |
+| Cerca | Ricerca nella società |
+| Autosalvataggio | Slot 4, ogni 4 partite tue; gli slot manuali non lo toccano |
+| Dimensione testo | 85/100/115/130% in Opzioni |
+| Tutorial | Alla prima apertura e da Opzioni ("Rivedi il tutorial") |
+
+## 5. Controllo bug ("big")
+Rilettura del codice + CI. Corretti prima del push finale:
+- multa fair play contata due volte nell'operativo dell'anno dopo;
+- giocatori "Ambiziosi" che chiedevano la cessione senza che tu avessi scelto i titolari;
+- conteggio errato dei squalificati nell'avviso;
+- errori di compilazione (`matchParentSize`, `sumOf` ambiguo) e import mancanti.
+Morale/personalità sono aggiornati in `dopoMiaPartita` perché `runRounds` sovrascrive i giocatori con una cache.
+
+## 6. Limiti noti
+- Non provato su telefono; possibile ritocco di spaziature/dimensioni.
+- Soglie fair play e prezzi giovani **non tarati**: serve giocare qualche stagione.
+- Non aggiunti: tattica "ampiezza/stile" (pressing, linea, mentalità già presenti), consigli trasferte/turnover.
+- L'autosave può fotografare a metà giornata.
+- Salvataggi vecchi: gli extra ripartono da zero (meglio nuova carriera).
+- Avatar ancora disegnati in codice, non in stile Sakamoto Days.
+- Rimasti da prima: `Insurance.ROUNDS=38`, `wipe` non svuota l'albo, `androcalcio.zip` nella radice, README minimo.
+
+## 7. Prossimi passi (decidi tu)
+1. Aprire PR di `feat/pc7-vivai-extra` verso `main` e fare merge.
+2. Provare l'APK e segnalarmi problemi grafici.
+3. Tarare economia/fair play dopo qualche stagione.
+
+**Modello:** basta Sonnet (default). Opus solo per bilanciare l'economia o progettare nuove meccaniche.
+
+---
+# Report precedente (22/11/2026, v0.3.0)
+
 # Androcalcio — report (22/11/2026) · versione 0.3.0
 
 Repo `MJ83-collab/Androcalcio`, ramo `feat/pc7-meccaniche` = `main`. Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione nuova: gli extra stanno nella tabella Stato).
