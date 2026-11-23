@@ -192,7 +192,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun resetMatch() { _report.value = null }
 
-    init {
+    private fun avvio1() {
         viewModelScope.launch {
             if (dao.teamCount() == 0) SeedData.insertInto(app, dao)
             withContext(Dispatchers.IO) { assicuraAllStar() }
@@ -397,7 +397,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    init {
+    private fun avvio2() {
         viewModelScope.launch {
             combine(selectedTeam.filterNotNull(), _season) { t, s -> t to s }.collect { (t, s) ->
                 val k = key(t)
@@ -608,7 +608,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Avatar modificati dall'utente (nome -> volto), salvati in Stato "avatar" ----
     private val _avatar = MutableStateFlow<Map<String, AvatarGen.Spec>>(emptyMap())
     val avatar: StateFlow<Map<String, AvatarGen.Spec>> = _avatar
-    init { viewModelScope.launch(Dispatchers.IO) { _avatar.value = AvatarGen.decodeMappa(dao.stato("avatar")) } }
+    private fun avvio3() { viewModelScope.launch(Dispatchers.IO) { _avatar.value = AvatarGen.decodeMappa(dao.stato("avatar")) } }
     /** Salva il volto di [nome]; con [spec] nullo ripristina quello generato dal nome. */
     fun salvaAvatar(nome: String, spec: AvatarGen.Spec?) {
         val nuova = if (spec == null) _avatar.value - nome else _avatar.value + (nome to spec)
@@ -2849,7 +2849,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private val _classificaAllenatori = MutableStateFlow<List<Allenatori.Riga>>(emptyList())
     val classificaAllenatori: StateFlow<List<Allenatori.Riga>> = _classificaAllenatori
 
-    init { viewModelScope.launch(Dispatchers.IO) { aggiornaClassifica() } }
+    private fun avvio4() { viewModelScope.launch(Dispatchers.IO) { aggiornaClassifica() } }
 
     private suspend fun aggiornaClassifica() {
         val squadre = dao.allTeams().associateBy { it.id }
@@ -2908,7 +2908,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             coachSalary(), dao.statoInt(Strutture.ALLENAMENTO), dao.statoInt(Strutture.VIVAIO))
     }
 
-    init {
+    private fun avvio5() {
         viewModelScope.launch(Dispatchers.IO) {
             // Partite già in corso: prime offerte sponsor se non ne sono mai arrivate
             val tid = prefs.getLong("team_id", -1L)
@@ -3206,7 +3206,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             Training.individuali = Training.decodeInd(dao.stato("allen_ind"))
         }
     }
-    init { ripristinaScelte() }
+    private fun avvio6() { ripristinaScelte() }
 
     /** Riposo automatico: i titolari stanchi cedono il posto a un sostituto riposato dello stesso ruolo. */
     fun riposoAutomatico() {
@@ -3790,4 +3790,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             Runtime.getRuntime().exit(0)
         }
     }
+
+    // Avvio: tutte le operazioni iniziali partono SOLO quando ogni proprietà è già creata.
+    // Prima alcune partivano a metà costruzione e trovavano stati ancora nulli (crash all'avvio, v0.4-v0.6).
+    init { avvio1(); avvio2(); avvio3(); avvio4(); avvio5(); avvio6() }
 }
