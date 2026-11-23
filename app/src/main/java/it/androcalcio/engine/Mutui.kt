@@ -21,9 +21,9 @@ object Mutui {
         Banca(5, "Banca dei Fratelli Strozzi", "Nessuna domanda. Nessuna pietà.", 0.180, 25_000_000L, 2)
     )
 
-    /** Sopra questo debito il presidente taglia il budget a fine stagione (3% dell'eccedenza). */
-    const val SOGLIA_FIDUCIA = 15_000_000L
-    fun taglio(debito: Long): Long = ((debito - SOGLIA_FIDUCIA) * 3 / 100).coerceAtLeast(0L)
+    /** Sopra questo debito il presidente taglia il budget a fine stagione (2% dell'eccedenza). */
+    const val SOGLIA_FIDUCIA = 25_000_000L
+    fun taglio(debito: Long): Long = ((debito - SOGLIA_FIDUCIA) * 2 / 100).coerceAtLeast(0L)
     /** Fiducia del presidente 0..100: scende con il debito. */
     fun fiducia(debito: Long): Int = (100 - debito * 60 / TETTO_DEBITO).toInt().coerceIn(0, 100)
 
@@ -62,9 +62,10 @@ object Mutui {
         return Esito.Ok(attivi + m, m)
     }
 
-    fun penaleRifinanziamento(m: Mutuo): Long = Math.round(m.residuo * PENALE_ESTINZIONE)
+    const val PENALE_RIFINANZIAMENTO = 0.01
+    fun penaleRifinanziamento(m: Mutuo): Long = Math.round(m.residuo * PENALE_RIFINANZIAMENTO)
 
-    /** Sposta il debito residuo su un'altra banca con tasso più basso. Costo: penale del 2% sul residuo. */
+    /** Sposta il debito residuo su un'altra banca con tasso più basso. Costo: penale dell'1% sul residuo. */
     fun rifinanzia(attivi: List<Mutuo>, da: Int, a: Int): Esito {
         val m = attivi.firstOrNull { it.banca == da } ?: return Esito.No("Mutuo non trovato.")
         val b = banca(a) ?: return Esito.No("Banca sconosciuta.")

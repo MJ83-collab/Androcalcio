@@ -18,6 +18,7 @@ import it.androcalcio.engine.Scambi
 import it.androcalcio.engine.FairPlay
 import it.androcalcio.engine.Storia
 import it.androcalcio.engine.Mutui
+import it.androcalcio.engine.NuovoProprietario
 import it.androcalcio.engine.Analisi
 import it.androcalcio.engine.Leadership
 import it.androcalcio.engine.Bilancio
@@ -3057,7 +3058,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun societaDopoPartita(me: Team, opp: Team, gf: Int, gs: Int, r: MatchReport, live: Boolean) {
         dao.setStato(Stato("scontri", Storia.encodeScontri(Storia.aggiornaScontro(Storia.decodeScontri(dao.stato("scontri")), opp.name, gf, gs))))
         if (gf > gs) {
-            val premio = if (gs == 0) 50_000L else 40_000L
+            val premio = Sponsors.premioVittoria(SponsorDeal.decode(dao.stato("sponsor")).sumOf { it.annual }, gs == 0)
             val tt = dao.team(me.id)
             dao.updateTeam(tt.copy(budget = tt.budget + premio))
             registra(tt.id, "Sponsor: premio vittoria", premio, tt.budget + premio)
@@ -3284,6 +3285,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             avviso("Fair play finanziario: perdita di ${money(e.perdita)} in tre anni, oltre la soglia di ${money(e.soglia)}. Multa ${money(multa)}" +
                 (if (e.blocco) " e mercato in entrata bloccato per la nuova stagione." else "."))
         } else if (dao.stato("ffp_blocco") == vecchia) dao.setStato(Stato("ffp_blocco", ""))
+        salvaDallaBancarotta(meId)
         // Record di stagione
         val ms = dao.matchesOnce(key(dao.team(meId)), vecchia).filter { it.played && !Cup.isCup(it.round) }.sortedBy { it.round }
         val ris = ms.map { m -> if (m.homeTeamId == meId) m.homeGoals to m.awayGoals else m.awayGoals to m.homeGoals }
@@ -3308,6 +3310,31 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
         dao.setStato(Stato("storia_hall", Storia.encodeBandiere(hall)))
         if (nuovi.isNotEmpty()) avviso("Entrano nella Hall of Fame del club: ${nuovi.joinToString(", ")}.")
+    }
+
+    /** Bancarotta: se la cassa è finita e ci sono debiti, un nuovo proprietario salva la società (come nella realtà). */
+    private suspend fun salvaDallaBancarotta(meId: Long) {
+        val t = dao.team(meId)
+        val mutui = Mutui.decode(dao.stato("mutui"))
+        val rate = dao.stato("rate_mercato")?.toLongOrNull() ?: 0L
+        val debiti = Mutui.debitoTotale(mutui) + rate
+        val ingaggi = dao.playersOnce(meId).sumOf { it.salary } + dao.staffOnce(meId).sumOf { it.salary }
+        if (!NuovoProprietario.inCrisi(t.budget, debiti, ingaggi)) return
+        val div = dao.allTeams().filter { it.nazione == t.nazione }.map { it.campionato }.distinct()
+            .let { l -> if (t.campionato.startsWith("Serie C")) 2 else l.indexOf(t.campionato).coerceAtLeast(0) }
+        val capitale = NuovoProprietario.ricapitalizzazione(ingaggi, div)
+        val nome = NuovoProprietario.nome(kotlin.random.Random.Default, dao.stato(NuovoProprietario.KEY))
+        val nuovo = t.budget.coerceAtLeast(0L) + capitale
+        dao.updateTeam(t.copy(budget = nuovo))
+        registra(meId, "Nuovo proprietario: ricapitalizzazione", capitale, nuovo)
+        dao.setStato(Stato("mutui", "")); _mutui.value = emptyList()
+        dao.setStato(Stato("rate_mercato", "")); _debitoRate.value = 0L
+        dao.setStato(Stato("ffp_perdite", "")); dao.setStato(Stato("ffp_blocco", ""))
+        dao.setStato(Stato(NuovoProprietario.KEY, nome))
+        dao.setStatoInt(NuovoProprietario.KEY_SALVATAGGI, dao.statoInt(NuovoProprietario.KEY_SALVATAGGI) + 1, 0, 999)
+        dao.setStatoInt(StatoKeys.FIDUCIA, NuovoProprietario.FIDUCIA_NUOVA)
+        dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + 5)
+        avviso(NuovoProprietario.messaggio(nome, debiti, capitale, ::money))
     }
 
     /** Autosalvataggio: ogni 4 partite tue, nello slot dedicato. */

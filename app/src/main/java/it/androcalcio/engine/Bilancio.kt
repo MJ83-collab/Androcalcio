@@ -6,7 +6,7 @@ import it.androcalcio.data.Movimento
 object Bilancio {
     data class Riga(val categoria: String, val entrate: Long, val uscite: Long)
 
-    private val ordine = listOf("Gare e ingaggi", "Sponsor", "Merchandising", "Premi", "Assicurazione", "Stadio", "Mercato", "Scouting", "Mutui", "Interessi", "Altro")
+    private val ordine = listOf("Gare e ingaggi", "Sponsor", "Merchandising", "Premi", "Assicurazione", "Stadio", "Mercato", "Scouting", "Mutui", "Interessi", "Proprietà", "Altro")
 
     /** Categoria ricavata dall'etichetta del movimento (le etichette le scrive l'app stessa). */
     fun categoria(label: String): String = when {
@@ -19,6 +19,7 @@ object Bilancio {
         label.startsWith("Acquisto") || label.startsWith("Vendita") -> "Mercato"
         label.startsWith("Interessi mutuo") -> "Interessi"
         label.startsWith("Mutuo") || label.startsWith("Rimborso mutuo") || label.startsWith("Estinzione mutuo") -> "Mutui"
+        label.startsWith("Nuovo proprietario") -> "Proprietà"
         label.startsWith("Scouting") || label.startsWith("Osservazione") -> "Scouting"
         else -> "Altro"
     }

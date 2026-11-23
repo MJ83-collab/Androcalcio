@@ -17,10 +17,18 @@ data class SponsorDeal(val name: String, val annual: Long, val years: Int, val t
 /**
  * Sponsor alla PC Calcio / FM: fino a 5 contratti insieme (maglia, tecnico, secondari).
  * Il compenso segue la forza della squadra (scala Market.valueAt) e la fama (tifosi + reputazione).
- * Esempio con fama media: forza 85 → maglia ~7 M l'anno, forza 70 → ~0,5 M, Serie C ~0,1 M.
+ * Esempio con fama media: forza 85 → maglia ~10 M l'anno, forza 70 → ~0,7 M, Serie C ~0,15 M.
  */
 object Sponsors {
     const val MAX_ATTIVI = 10
+    /** Quota del valore di un titolare (scala Market.valueAt) pagata dallo sponsor di maglia. v0.6: 0,12 -> 0,18. */
+    const val QUOTA_SPONSOR = 0.18
+
+    /** Premio sponsor per ogni vittoria: 2% dei compensi annui (minimo 60.000 €); +25% senza subire gol. */
+    fun premioVittoria(sponsorAnnui: Long, senzaGol: Boolean): Long {
+        val base = maxOf(60_000L, sponsorAnnui * 2 / 100)
+        return (if (senzaGol) base * 5 / 4 else base) / 1_000L * 1_000L
+    }
     /** Peso dello slot: il primo contratto (maglia) vale di più, poi a scendere. */
     private val SLOT = listOf(1.0, 0.5, 0.35, 0.25, 0.15, 0.12, 0.10, 0.08, 0.06, 0.05)
 
@@ -54,7 +62,7 @@ object Sponsors {
 
     /** Compenso annuo per lo slot n (0 = maglia), anni di durata: contratti lunghi = un po' meno all'anno. */
     fun annual(strength: Int, slot: Int, fama: Double, years: Int): Long {
-        val base = 0.12 * Market.valueAt(strength) * fama * SLOT[slot.coerceIn(0, SLOT.size - 1)]
+        val base = QUOTA_SPONSOR * Market.valueAt(strength) * fama * SLOT[slot.coerceIn(0, SLOT.size - 1)]
         val v = base * (1.1 - 0.05 * years)
         return (v / 10_000).toLong() * 10_000L
     }
@@ -69,7 +77,7 @@ object Sponsors {
         return tipiLiberi.shuffled(rng).take(numeroOfferte(marketing)).mapIndexed { i, t ->
             val y = rng.nextInt(1, 6)
             val noise = (0.85 + rng.nextDouble() * 0.3) * (1.0 + bonusMarketingPct(marketing) / 100.0)
-            val base = 0.12 * Market.valueAt(strength) * fama * t.peso * (1.1 - 0.05 * y)
+            val base = QUOTA_SPONSOR * Market.valueAt(strength) * fama * t.peso * (1.1 - 0.05 * y)
             SponsorDeal(nomi[i % nomi.size], (base * noise).toLong() / 10_000 * 10_000, y, t.id)
         }
     }

@@ -246,8 +246,8 @@ class NovitaTest {
     }
 
     @org.junit.Test fun taglioEFiducia() {
-        org.junit.Assert.assertEquals(0L, Mutui.taglio(10_000_000L))
-        org.junit.Assert.assertEquals(300_000L, Mutui.taglio(25_000_000L))
+        org.junit.Assert.assertEquals(0L, Mutui.taglio(20_000_000L))
+        org.junit.Assert.assertEquals(300_000L, Mutui.taglio(40_000_000L))
         org.junit.Assert.assertEquals(100, Mutui.fiducia(0L))
         org.junit.Assert.assertEquals(40, Mutui.fiducia(Mutui.TETTO_DEBITO))
     }
