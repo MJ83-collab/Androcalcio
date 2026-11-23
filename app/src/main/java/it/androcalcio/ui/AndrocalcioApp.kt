@@ -863,6 +863,22 @@ fun RosaScreen(
     ) {
         item { MediaSquadraBar(team, players) }
         item { AssistantCard(advice, onApplyXI, onApplyTattica) }
+        item {
+            // Turnover: titolari stanchi e panchinari in forma dello stesso ruolo
+            val stanchi = players.filter { it.starter && it.injuredRounds == 0 && it.condition < 70 }
+            if (stanchi.isNotEmpty()) {
+                val suggerimenti = stanchi.mapNotNull { s ->
+                    players.filter { !it.starter && it.injuredRounds == 0 && it.condition >= 85 && it.role == s.role }
+                        .maxByOrNull { it.overall }?.let { "${s.name} → ${it.name}" }
+                }
+                PaperPanel(Modifier.fillMaxWidth()) {
+                    Text("🔄 TURNOVER CONSIGLIATO  " + stanchi.joinToString(", ") { "${it.name} (${it.condition}%)" },
+                        Modifier.padding(10.dp), fontWeight = FontWeight.ExtraBold, color = AC.PaperText, fontSize = 12.sp)
+                    if (suggerimenti.isNotEmpty()) Text("Possibili cambi: " + suggerimenti.joinToString("; "),
+                        Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), color = AC.PaperText, fontSize = 12.sp)
+                }
+            }
+        }
         if (mese != null) item {
             PaperPanel(Modifier.fillMaxWidth()) {
                 Text("⭐ GIOCATORE DEL MESE  " + mese, Modifier.padding(10.dp), fontWeight = FontWeight.ExtraBold, color = AC.PaperText, fontSize = 13.sp)

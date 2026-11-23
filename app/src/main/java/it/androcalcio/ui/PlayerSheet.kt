@@ -186,6 +186,7 @@ fun PlayerSheet(
                         (if (dettaglio.forma.isNotEmpty()) " · ultimi voti ${dettaglio.forma.joinToString(" ") { "%.1f".format(it).replace('.', ',') }}" else ""),
                         fontSize = 12.sp, color = AC.PaperText)
                     RadarGiocatore(p)
+                    Text("Rischio infortunio: ${Forma.rischio(p)} (indicativo, dipende da età, condizione e tenuta fisica)", fontSize = 12.sp, color = AC.PaperText)
                     Titolo("INFORTUNI")
                     if (dettaglio.infortuni.isEmpty()) Text("Nessun infortunio registrato.", fontSize = 11.sp, color = AC.PaperText)
                     dettaglio.infortuni.takeLast(8).reversed().forEach { (st, t) -> Text("$st: $t turni di stop", fontSize = 12.sp, color = AC.PaperText) }

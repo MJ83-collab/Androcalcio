@@ -25,6 +25,16 @@ object Forma {
         else -> ""
     }
 
+    /** Rischio infortunio indicativo: più alto con l'età, la stanchezza e la poca tenuta fisica. */
+    fun rischio(p: it.androcalcio.data.Player): String {
+        val punti = (p.age - 28).coerceAtLeast(0) * 2 + (100 - p.condition) / 5 + (100 - p.fo) / 10
+        return when {
+            punti >= 14 -> "alto"
+            punti >= 7 -> "medio"
+            else -> "basso"
+        }
+    }
+
     fun simbolo(m: Double?): String = when {
         m == null -> "nessuna partita"
         m >= 7.0 -> "↑ in forma"
