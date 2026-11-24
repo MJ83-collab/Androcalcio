@@ -77,8 +77,12 @@ private fun maglie(home: Team, away: Team): Pair<Pair<Color, Color>, Pair<Color,
 fun MangaPitch(
     home: Team, away: Team, bx: Float, by: Float, hf: Formation, af: Formation,
     homeXI: List<Player>, awayXI: List<Player>, attaccoCasa: Boolean?,
-    scia: List<Offset> = emptyList()   // percorso della palla nell'azione, in coordinate 0..1 (traiettoria blu tratteggiata)
+    scia: List<Offset> = emptyList(),   // percorso della palla nell'azione, in coordinate 0..1 (traiettoria blu tratteggiata)
+    quota: Float = 0f,                  // altezza della palla 0..1 (0 = rasoterra)
+    inMoto: Boolean = true              // la palla sta viaggiando (linee di velocità)
 ) {
+    val spinta = androidx.compose.animation.core.animateFloatAsState(
+        when (attaccoCasa) { null -> 0f; true -> 1f; false -> -1f }, tween(350), label = "spinta")
     val mappa = LocalAvatarModificati.current
     val (mH, mA) = remember(home.id, away.id) { maglie(home, away) }
     val homeNums = numbered(homeXI)
@@ -135,7 +139,7 @@ fun MangaPitch(
         // Giocatori
         val shift = (bx - 0.5f) * 0.2f
         val r = ph * 0.042f
-        val piede = Offset(0f, r * 0.85f)   // la palla sta ai piedi della figurina
+        val piede = Offset(r * 0.95f, r * 0.45f)   // la palla sta accanto al pallino di chi la gioca
 
         // Traiettoria blu tratteggiata dell'azione (sotto giocatori e pallone)
         if (scia.size >= 2) {
@@ -149,38 +153,42 @@ fun MangaPitch(
             drawPath(percorso, Color(0xFF1E5BFF), style = Stroke(width = r * 0.2f, cap = StrokeCap.Round, pathEffect = tratteggio))
         }
 
-        // I giocatori vicini alla palla le vanno incontro (fino al 45% della distanza)
-        fun verso(nx: Float, ny: Float): Offset {
-            val d = hypot(bx - nx, (by - ny) * 0.55f)
-            val k = (0.45f * (1f - d / 0.2f)).coerceAtLeast(0f)
-            return p(nx + (bx - nx) * k, ny + (by - ny) * k)
+        // Giocatori come pallini numerati (stile Football Manager). Si muovono con l'azione: chi attacca sale,
+        // chi difende arretra e si stringe verso la palla, e i vicini alla palla le vanno incontro.
+        val s = spinta.value
+        val bTerra = p(bx, by)
+        fun dove(base: Float, ny: Float, casa: Boolean, portiere: Boolean): Offset {
+            val segno = if (casa) 1f else -1f
+            val att = kotlin.math.max(segno * s, 0f)
+            val dif = kotlin.math.max(-segno * s, 0f)
+            val dx = if (portiere) 0f else segno * ((0.04f + 0.35f * base) * att - 0.15f * base * dif)
+            val x0 = (base + dx + shift).coerceIn(0.03f, 0.97f)
+            val y0 = ny + (by - ny) * (0.18f * abs(s))
+            val d = hypot(bx - x0, (by - y0) * 0.55f)
+            val k = 0.8f * (1f - d / 0.18f).coerceAtLeast(0f).let { it * it }
+            return p(x0 + (bx - x0) * k, y0 + (by - y0) * k)
         }
-        fun figurina(pl: Player, c: Offset, maglia: Pair<Color, Color>, numero: Int, casa: Boolean) {
+        fun pallino(pl: Player, c: Offset, maglia: Pair<Color, Color>, numero: Int, casa: Boolean) {
             val portiere = pl.role == "P"
             val col = if (portiere) (if (casa) Color(0xFFF4D03F) else Color(0xFF7CD957)) else maglia.first
-            val (capelli, pelle) = colori[pl.id] ?: (Color(0xFF3A2A1A) to Color(0xFFF1C9A0))
-            drawOval(Color.Black.copy(alpha = 0.32f), Offset(c.x - r * 0.95f, c.y + r * 0.95f), Size(r * 1.9f, r * 0.6f))
-            val corpo = Offset(c.x - r * 0.75f, c.y - r * 0.15f)
-            val cs = Size(r * 1.5f, r * 1.3f)
-            drawRoundRect(col, corpo, cs, CornerRadius(r * 0.45f))
-            if (!portiere) drawRect(maglia.second, Offset(c.x - r * 0.16f, corpo.y + r * 0.05f), Size(r * 0.32f, cs.height - r * 0.1f))
-            drawRoundRect(Inchiostro, corpo, cs, CornerRadius(r * 0.45f), style = Stroke(width = r * 0.18f))
-            val testa = Offset(c.x, c.y - r * 0.62f)
-            drawCircle(pelle, r * 0.55f, testa)
-            drawArc(capelli, 180f, 180f, true, Offset(testa.x - r * 0.58f, testa.y - r * 0.62f), Size(r * 1.16f, r * 1.0f))
-            drawCircle(Inchiostro, r * 0.55f, testa, style = Stroke(width = r * 0.16f))
-            val stile = TextStyle(color = if (luminanza(col) > 0.6f) Inchiostro else Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+            val rp = r * 0.95f
+            drawCircle(Color.Black.copy(alpha = 0.3f), rp, Offset(c.x + r * 0.15f, c.y + r * 0.22f))
+            drawCircle(col, rp, c)
+            drawCircle(if (portiere) Inchiostro else maglia.second, rp, c, style = Stroke(width = r * 0.2f))
+            // Chi ha la palla ha un anello giallo
+            if (hypot(c.x - bTerra.x, c.y - bTerra.y) < rp * 1.4f) drawCircle(Color(0xFFFFE23D), rp * 1.28f, c, style = Stroke(width = r * 0.16f))
+            val stile = TextStyle(color = if (luminanza(col) > 0.6f) Inchiostro else Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
             val mm = textMeasurer.measure(numero.toString(), stile)
-            drawText(textMeasurer, numero.toString(), topLeft = Offset(c.x - mm.size.width / 2f, corpo.y + cs.height / 2 - mm.size.height / 2f), style = stile)
+            drawText(textMeasurer, numero.toString(), topLeft = Offset(c.x - mm.size.width / 2f, c.y - mm.size.height / 2f), style = stile)
         }
         hf.coords().forEachIndexed { i, (fx, fy) ->
             homeNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                figurina(pl, verso((fx + shift).coerceIn(0.03f, 0.97f), fy + (by - fy) * 0.08f), mH, if (pl.numero > 0) pl.numero else pos, true)
+                pallino(pl, dove(fx, fy + (by - fy) * 0.08f, true, i == 0), mH, if (pl.numero > 0) pl.numero else pos, true)
             }
         }
         af.coords().forEachIndexed { i, (fx, fy) ->
             awayNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                figurina(pl, verso(((1f - fx) + shift).coerceIn(0.03f, 0.97f), fy + (by - fy) * 0.08f), mA, if (pl.numero > 0) pl.numero else pos, false)
+                pallino(pl, dove(1f - fx, fy + (by - fy) * 0.08f, false, i == 0), mA, if (pl.numero > 0) pl.numero else pos, false)
             }
         }
 
@@ -192,21 +200,32 @@ fun MangaPitch(
         drawCircle(Color(0xFFF1C9A0), r * 0.48f, Offset(arb.x, arb.y - r * 0.55f))
         drawCircle(Inchiostro, r * 0.48f, Offset(arb.x, arb.y - r * 0.55f), style = Stroke(width = r * 0.14f))
 
-        // Pallone con linee di velocità verso la porta attaccata
-        val ball = p(bx, by) + piede
-        if (attaccoCasa != null) {
+        // Pallone: gira mentre rotola; se è alto (pallonetto, lancio, tiro alto) si ingrandisce e l'ombra resta a terra
+        val ball = bTerra + piede
+        val q = quota.coerceIn(0f, 1f)
+        val bc = Offset(ball.x, ball.y - q * r * 1.6f)
+        val rb = r * 0.55f * (1f + 0.5f * q)
+        if (attaccoCasa != null && inMoto) {
             val dir = if (attaccoCasa) 1f else -1f
             for (i in 0..4) {
                 val dy = (i - 2) * r * 0.35f
                 val lung = r * (2.4f + (i % 2) * 1.3f)
-                drawLine(Color.White.copy(alpha = 0.75f), Offset(ball.x - dir * r * 0.9f, ball.y + dy),
-                    Offset(ball.x - dir * (r * 0.9f + lung), ball.y + dy), 2.5f, StrokeCap.Round)
+                drawLine(Color.White.copy(alpha = 0.75f), Offset(bc.x - dir * r * 0.9f, bc.y + dy),
+                    Offset(bc.x - dir * (r * 0.9f + lung), bc.y + dy), 2.5f, StrokeCap.Round)
             }
         }
-        drawOval(Color.Black.copy(alpha = 0.3f), Offset(ball.x - r * 0.5f, ball.y + r * 0.45f), Size(r, r * 0.35f))
-        drawCircle(Color.White, r * 0.55f, ball)
-        drawCircle(Inchiostro, r * 0.2f, ball)
-        drawCircle(Inchiostro, r * 0.55f, ball, style = Stroke(width = 2f))
+        val om = 1f - 0.3f * q
+        drawOval(Color.Black.copy(alpha = 0.3f * (1f - 0.4f * q)), Offset(ball.x - r * 0.5f * om, ball.y + r * 0.45f), Size(r * om, r * 0.35f * om))
+        drawCircle(Color.White, rb, bc)
+        rotate(bx * 1800f + by * 900f, bc) {
+            for (k in 0..2) {
+                val an = (k * 120.0 + 20.0) * PI / 180.0
+                drawCircle(Inchiostro, rb * 0.28f, Offset(bc.x + (cos(an) * rb * 0.58).toFloat(), bc.y + (sin(an) * rb * 0.58).toFloat()))
+            }
+            drawCircle(Inchiostro, rb * 0.22f, bc)
+            drawLine(Inchiostro, bc, Offset(bc.x + rb, bc.y), 2f)
+        }
+        drawCircle(Inchiostro, rb, bc, style = Stroke(width = 2f))
     }
 }
 
@@ -301,18 +320,24 @@ fun MomentoChiave(titolo: String, testo: String, squadra: Team, giocatore: Playe
 
 /**
  * Posizione animata della palla: passa da giocatore a giocatore lungo il percorso degli episodi e, negli altri
- * minuti, con un passaggio verso un compagno della squadra che ha il possesso. `scia` è il tragitto da disegnare.
+ * minuti, con un passaggio verso un compagno della squadra che ha il possesso. `scia` è il tragitto da disegnare,
+ * `quota` l'altezza (0 rasoterra, 1 palla alta) e `inVolo` dice se la palla sta viaggiando.
  */
-class PallaAnimata(val x: Float, val y: Float, val attacco: Boolean?, val scia: List<Offset> = emptyList())
+class PallaAnimata(
+    val x: Float, val y: Float, val attacco: Boolean?, val scia: List<Offset> = emptyList(),
+    val quota: Float = 0f, val inVolo: Boolean = false
+)
 
 /**
  * Posti dei giocatori di movimento (portiere escluso) dove la palla "sta ai piedi": è il punto fisso della posizione
- * disegnata in MangaPitch, che sposta la squadra di (x - 0.5) * 0.2 al muoversi della palla.
+ * disegnata in MangaPitch (spostamento della squadra con la palla e salita di chi attacca).
  */
-private fun postiGiocatori(f: it.androcalcio.engine.Formation, casa: Boolean): List<Pair<Float, Float>> =
+private fun postiGiocatori(f: it.androcalcio.engine.Formation, casa: Boolean, azione: Boolean): List<Pair<Float, Float>> =
     f.coords().drop(1).map { (fx, fy) ->
         val base = if (casa) fx else 1f - fx
-        ((base - 0.1f) / 0.8f).coerceIn(0.03f, 0.97f) to fy
+        val segno = if (casa) 1f else -1f
+        val salita = if (azione) segno * (0.04f + 0.35f * base) else 0f
+        ((base + salita - 0.1f) / 0.8f).coerceIn(0.03f, 0.97f) to fy
     }
 
 /** Il giocatore più vicino al punto indicato (diverso da `escludi`, per non passarsi la palla da soli). */
@@ -322,10 +347,19 @@ private fun alPiedeDi(posti: List<Pair<Float, Float>>, da: Pair<Float, Float>, e
     return ord.firstOrNull { it != escludi } ?: ord.first()
 }
 
-private suspend fun muoviPalla(ax: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>, ay: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>, px: Float, py: Float, ms: Int) {
+/** Muove la palla; con `picco` > 0 sale e scende lungo il tragitto (lancio, pallonetto, tiro alto). */
+private suspend fun muoviPalla(
+    ax: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    ay: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    az: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    px: Float, py: Float, ms: Int, picco: Float
+) {
     kotlinx.coroutines.coroutineScope {
         launch { ax.animateTo(px, tween(ms)) }
         launch { ay.animateTo(py, tween(ms)) }
+        launch {
+            if (picco > 0f) { az.animateTo(picco, tween(ms / 2)); az.animateTo(0f, tween(ms - ms / 2)) } else az.snapTo(0f)
+        }
     }
 }
 
@@ -336,6 +370,7 @@ fun rememberPalla(
 ): PallaAnimata {
     val ax = remember { Animatable(0.5f) }
     val ay = remember { Animatable(0.5f) }
+    val az = remember { Animatable(0f) }
     val scia = remember { androidx.compose.runtime.mutableStateListOf<Offset>() }
     var attacco by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
     var inAzione by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -347,21 +382,27 @@ fun rememberPalla(
     LaunchedEffect(idx) {
         val e = ultimo ?: return@LaunchedEffect
         inAzione = true; attacco = e.home
-        val posti = postiGiocatori(if (e.home) hf else af, e.home)
+        val posti = postiGiocatori(if (e.home) hf else af, e.home, true)
         // Le tappe intermedie diventano passaggi a un compagno; l'ultima resta il punto del tiro
         var prec: Pair<Float, Float>? = null
         val tappe = e.percorso.mapIndexed { i, pt ->
             if (i == e.percorso.lastIndex) pt else alPiedeDi(posti, pt, prec).also { prec = it }
         }
+        val rnd = java.util.Random(e.minute * 17L + idx)
         scia.clear(); scia.add(Offset(ax.value, ay.value))
         inVolo = true
-        for ((px, py) in tappe) {
-            muoviPalla(ax, ay, px, py, durata)
-            scia.add(Offset(px, py))
+        var da = Offset(ax.value, ay.value)
+        tappe.forEachIndexed { i, (px, py) ->
+            val dist = hypot(px - da.x, (py - da.y) * 0.55f)
+            // Palla alta: lanci lunghi e, ogni tanto, il tiro finale
+            val picco = if (dist > 0.30f) 1f else if (i == tappe.lastIndex && rnd.nextFloat() < 0.35f) 0.8f else 0f
+            muoviPalla(ax, ay, az, px, py, durata, picco)
+            scia.add(Offset(px, py)); da = Offset(px, py)
         }
-        inVolo = false; attacco = null
-        delay(if (veloce) 300L else 1500L)   // la traiettoria resta visibile un attimo dopo il tiro
+        inVolo = false
+        delay(if (veloce) 300L else 1500L)   // la traiettoria resta visibile un attimo dopo il tiro; la squadra resta alta
         scia.clear()
+        attacco = null
         inAzione = false
     }
     LaunchedEffect(minuto) {
@@ -370,15 +411,16 @@ fun rememberPalla(
         val casaPalla = rnd.nextInt(100) < possessoCasa
         val mira = (0.5f + (possessoCasa - 50) / 100f * 0.5f + (rnd.nextFloat() - 0.5f) * 0.5f).coerceIn(0.1f, 0.9f) to
             (0.15f + rnd.nextFloat() * 0.7f)
-        val (tx, ty) = alPiedeDi(postiGiocatori(if (casaPalla) hf else af, casaPalla), mira, null)
+        val (tx, ty) = alPiedeDi(postiGiocatori(if (casaPalla) hf else af, casaPalla, false), mira, null)
         scia.clear(); scia.add(Offset(ax.value, ay.value))
         inVolo = true
-        muoviPalla(ax, ay, tx, ty, if (veloce) 30 else 700)
+        val dist = hypot(tx - ax.value, (ty - ay.value) * 0.55f)
+        muoviPalla(ax, ay, az, tx, ty, if (veloce) 30 else 700, if (dist > 0.30f) 0.6f else 0f)
         scia.add(Offset(tx, ty))
         inVolo = false
         delay(if (veloce) 100L else 500L)
         if (!inAzione) scia.clear()
     }
     val tragitto = if (inVolo) scia.toList() + Offset(ax.value, ay.value) else scia.toList()
-    return PallaAnimata(ax.value, ay.value, attacco, tragitto)
+    return PallaAnimata(ax.value, ay.value, attacco, tragitto, az.value, inVolo)
 }

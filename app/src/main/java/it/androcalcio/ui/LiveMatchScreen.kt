@@ -122,7 +122,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 (if (info.atmosfera.isNotEmpty()) " · Stadio ${info.atmosfera}" else ""),
                 color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
-            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco ?: last?.home, palla.scia) }
+            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco, palla.scia, palla.quota, palla.inVolo) }
             item { TelecronacaBubble(events, m.minute) }
             when (panel) {
                 LivePanel.TATTICA -> {
