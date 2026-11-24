@@ -11,6 +11,9 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Vendite delle maglie** (sostituiscono il vecchio merchandising): tifosi, piazzamento, giocatori 84+, novità (+20%), bellezza, negozi e sito, prezzo scelto dall'utente. Prezzo standard A 90 €, B 65 €, minori 45-50 €. Costo 45% dello standard. Sensibilità al prezzo: A 1,6, B 2,0, minori 2,6. Con valori medi il guadagno è uguale al vecchio merchandising, quindi il test economico non cambia. Voce "Maglie e merchandising" nel bilancio. Test: `MaglieTest`.
 - Stato nuovo (nell'export): "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo".
 
+## Sessione 24/11 sera (7): maglie delle nazionali (ramo feat/stadio)
+- Prima le nazionali usavano i colori di un club a caso (`Nazionali.squadra` copiava la prima squadra del database). Ora ognuna ha la maglia tipica da casa e da trasferta (`Nazionali.colori`, 26 nazioni; le altre bianco in casa e nero fuori). La squadra di casa (indice pari) indossa la maglia da casa, l'ospite quella da trasferta. Se le due maglie si somigliano, l'ospite scambia i due colori. Valgono anche per le Under 21. Test: `NazionaliColoriTest`.
+
 ## Sessione 24/11 sera (6): ritorno allo stile PC Calcio 7 (ramo feat/stadio, non provato sul telefono)
 - **Perché non si vedeva:** il tema di partenza era manga (blu notte e rosso). Il tema "Blu PC Calcio 7" esisteva ma andava scelto in Opzioni. Partita e Calendario non erano mai stati rifatti a parte: usano i componenti del tema.
 - **Tema predefinito = PC Calcio 7**, anche per chi aveva manga: una sola volta all'avvio (`tema_v07`) la scelta torna a PC Calcio 7. In Opzioni → Tema manga resta scegliibile.

@@ -45,12 +45,62 @@ object Nazionali {
     fun forza(rosa: List<Player>): Double = convoca(rosa).map { it.overall }.ifEmpty { listOf(0) }.average()
 
     /** Squadra fittizia per la partita: parametri di un club, con id e nome della nazionale. */
-    fun squadra(base: Team, nazione: String, indice: Int): Team = base.copy(
-        id = -(indice + 1L), name = nazione, shortName = nazione.take(3).uppercase(),
-        nazione = nazione, campionato = "Nazionale"
+    fun squadra(base: Team, nazione: String, indice: Int): Team {
+        // Indice pari = squadra di casa (maglia da casa), dispari = ospite (maglia da trasferta)
+        val (c1, c2) = colori(senzaU21(nazione), trasferta = indice % 2 == 1)
+        return base.copy(
+            id = -(indice + 1L), name = nazione, shortName = nazione.take(3).uppercase(),
+            nazione = nazione, campionato = "Nazionale", colorPrimary = c1, colorSecondary = c2
+        )
+    }
+
+    /** Maglie tipiche: (colore principale, secondo colore) da casa e da trasferta. */
+    private val KIT: Map<String, Pair<Pair<Long, Long>, Pair<Long, Long>>> = mapOf(
+        "Italia" to ((0xFF1F5FBFL to 0xFFFFFFFFL) to (0xFFF5F5F5L to 0xFF1F5FBFL)),
+        "Spagna" to ((0xFFC8102EL to 0xFFFFC400L) to (0xFFF5F5F5L to 0xFFC8102EL)),
+        "Inghilterra" to ((0xFFF5F5F5L to 0xFF14215CL) to (0xFFC8102EL to 0xFFF5F5F5L)),
+        "Germania" to ((0xFFF5F5F5L to 0xFF1A1A1AL) to (0xFF1A1A1AL to 0xFFDD0000L)),
+        "Francia" to ((0xFF1B3C8CL to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFF1B3C8CL)),
+        "Brasile" to ((0xFFFFDC02L to 0xFF009C3BL) to (0xFF1D3F94L to 0xFFF5F5F5L)),
+        "Argentina" to ((0xFF75AADBL to 0xFFF5F5F5L) to (0xFF1B2A6BL to 0xFF75AADBL)),
+        "Portogallo" to ((0xFFC8102EL to 0xFF006600L) to (0xFFF5F5F5L to 0xFFC8102EL)),
+        "Olanda" to ((0xFFFF6600L to 0xFFF5F5F5L) to (0xFF1B3C8CL to 0xFFFF6600L)),
+        "Belgio" to ((0xFFC8102EL to 0xFF1A1A1AL) to (0xFFF5F5F5L to 0xFFC8102EL)),
+        "Croazia" to ((0xFFC8102EL to 0xFFF5F5F5L) to (0xFF1B2A6BL to 0xFFF5F5F5L)),
+        "Polonia" to ((0xFFF5F5F5L to 0xFFC8102EL) to (0xFFC8102EL to 0xFFF5F5F5L)),
+        "Serbia" to ((0xFFC6363CL to 0xFF0C4076L) to (0xFFF5F5F5L to 0xFF0C4076L)),
+        "Stati Uniti" to ((0xFFF5F5F5L to 0xFF14215CL) to (0xFF14215CL to 0xFFC8102EL)),
+        "Giappone" to ((0xFF1F3C88L to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFF1F3C88L)),
+        "Marocco" to ((0xFFC1272DL to 0xFF006233L) to (0xFFF5F5F5L to 0xFF006233L)),
+        "Scozia" to ((0xFF0B2A5BL to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFF0B2A5BL)),
+        "Turchia" to ((0xFFE30A17L to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFFE30A17L)),
+        "Grecia" to ((0xFF0D5EAFL to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFF0D5EAFL)),
+        "Nigeria" to ((0xFF008751L to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFF008751L)),
+        "Senegal" to ((0xFFF5F5F5L to 0xFF00853FL) to (0xFF00853FL to 0xFFFDEF42L)),
+        "Egitto" to ((0xFFCE1126L to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFFCE1126L)),
+        "Messico" to ((0xFF006847L to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFF006847L)),
+        "Canada" to ((0xFFD52B1EL to 0xFFF5F5F5L) to (0xFFF5F5F5L to 0xFFD52B1EL)),
+        "Corea del Sud" to ((0xFFCD2E3AL to 0xFF0047A0L) to (0xFFF5F5F5L to 0xFFCD2E3AL)),
+        "Australia" to ((0xFFFFCD00L to 0xFF00843DL) to (0xFF00843DL to 0xFFFFCD00L))
     )
 
+    /** Colori di maglia di una nazionale; per nazioni senza maglia tipica: bianco in casa, nero in trasferta. */
+    fun colori(nazione: String, trasferta: Boolean): Pair<Long, Long> {
+        val k = KIT[nazione] ?: return if (trasferta) 0xFF1A1A1AL to 0xFFF5F5F5L else 0xFFF5F5F5L to 0xFF1A1A1AL
+        return if (trasferta) k.second else k.first
+    }
+
+    private fun simili(a: Long, b: Long): Boolean {
+        fun ch(c: Long, s: Int) = ((c shr s) and 0xFF).toInt()
+        val d = Math.abs(ch(a, 16) - ch(b, 16)) + Math.abs(ch(a, 8) - ch(b, 8)) + Math.abs(ch(a, 0) - ch(b, 0))
+        return d < 150
+    }
+
     /** Partita tra due nazionali: l'IA sceglie l'undici tra i convocati. */
-    fun gioca(casa: Team, convCasa: List<Player>, trasf: Team, convTrasf: List<Player>, rng: Random): MatchReport =
-        MatchEngine.simulate(casa, convCasa, trasf, convTrasf, rng = rng)
+    fun gioca(casa: Team, convCasa: List<Player>, trasf: Team, convTrasf: List<Player>, rng: Random): MatchReport {
+        // Se le due maglie si somigliano, l'ospite scambia i due colori della sua maglia da trasferta
+        val ospite = if (simili(casa.colorPrimary, trasf.colorPrimary))
+            trasf.copy(colorPrimary = trasf.colorSecondary, colorSecondary = trasf.colorPrimary) else trasf
+        return MatchEngine.simulate(casa, convCasa, ospite, convTrasf, rng = rng)
+    }
 }
