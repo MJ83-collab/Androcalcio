@@ -18,7 +18,7 @@ object DataIO {
         "prestiti", "achievement", "avanzate", "giornale", "premi", "conf_g", "giornata_mercato",
         "c_stagioni", "c_titoli", "c_coppe", "c_prom", "c_vittorie", "c_gol", "c_derby", "c_obiettivi", "c_giovani",
         "c_colloqui", "c_conferenze", "c_prestiti", "c_partite", "apparizioni", "avatar",
-        "scontri", "storia_rec", "storia_hall", "ffp_perdite", "ffp_blocco", "auto_ultimo", "mutui", "rate_mercato", "capitano", "preferiti", "allen_ind",
+        "scontri", "storia_rec", "storia_hall", "ffp_perdite", "ffp_blocco", "auto_ultimo", "mutui", "rate_mercato", "capitano", "preferiti", "allen_ind", "tratti",
         "proprietario", "salvataggi", "cartellini", "rivendite", "crediti_mercato", "plusvalenze", "nuovo_stadio", "prato", "prato_cura",
         "minuti", "minuti_partite", "voti", "storia_inf", "formazioni_salvate", "vicecapitano", "premio_partita", "fedelta", "sfide_offerte", "sfide_serie", "sfida",
         "stadio_nome", "stadio_colore", "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo")
@@ -26,6 +26,8 @@ object DataIO {
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()
         dao.clearStaff(); dao.clearGoals(); dao.clearStats(); dao.clearClausole(); dao.clearMissions(); dao.clearConvocazioni(); dao.clearNazionaleStats(); dao.clearRosaNazionale(); dao.clearPlayers(); dao.clearTeams(); dao.clearMovimenti(); dao.clearStato(); dao.clearAlbo()
+        // le scelte tenute in memoria appartengono alla carriera cancellata
+        it.androcalcio.engine.Tratti.decode(null); it.androcalcio.engine.Training.individuali = emptyMap()
     }
 
     suspend fun export(dao: AndrocalcioDao): String {
@@ -243,6 +245,8 @@ object DataIO {
         root.optJSONObject("stato")?.let { o ->
             CHIAVI_STATO.forEach { k -> if (o.has(k)) dao.setStato(Stato(k, o.optString(k))) }
         }
+        it.androcalcio.engine.Tratti.decode(dao.stato("tratti"))
+        it.androcalcio.engine.Training.individuali = it.androcalcio.engine.Training.decodeInd(dao.stato("allen_ind"))
         root.optString("nazioneAllenata", "").takeIf { it.isNotEmpty() }?.let { dao.setStato(Stato("nazione_allenata", it)) }
         root.optJSONArray("nazionaleStats")?.let { a ->
             dao.upsertNazionaleStats((0 until a.length()).mapNotNull { k ->

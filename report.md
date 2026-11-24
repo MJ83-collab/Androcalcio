@@ -1,8 +1,43 @@
-# Androcalcio — report (aggiornato 24/11/2026, sera 4)
+# Androcalcio — report (aggiornato 24/11/2026, sera 10)
 
-Ramo attuale: `feat/stadio` (nato da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee).
-Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato).
-Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul telefono.
+Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/stadio` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
+Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
+Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato sul telefono.
+
+## COMANDO PER RIPARTIRE (da incollare nella nuova chat insieme a questo file)
+> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/stadio`. Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+
+## Regole permanenti (valgono per ogni report futuro)
+1. Ricontrollare la repo e cercare bug a ogni ripartenza; correggere i bug certi, chiedere per i dubbi.
+2. Le decisioni di progetto le prende Marco: in caso di dubbio chiedere sempre.
+3. Aggiornare Marco con lo stato dei compiti ("sono al N di M"), sia durante il lavoro sia nel report.
+4. Italiano educato e preciso, poche parole; dire se basta un modello più piccolo (Sonnet basta per UI e merge; Opus solo per nuove tarature).
+5. Dopo 5 domande su un argomento: nuovo report.md e nuova chat. Il report deve sempre avere: comando di ripartenza, cosa manca, decisioni aperte.
+6. Il merge su `main` / release v0.7.0 solo dopo la prova di Marco sul telefono (prima: esportare i salvataggi, disinstallare la vecchia versione una volta).
+
+## Stato dei compiti (24/11 sera)
+Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, icone staff, centro sportivo, movimento giocatori per fotogramma, ruoli FD/FS/AD/AS, allenamento ruoli/piede/Cinico, cronaca sincronizzata, importazione JSON con id, lettura giocatori a pagine, correzioni dei bug sotto.
+
+## Cosa manca
+- **Prova sul telefono** di tutto il ramo `feat/stadio` (x1 fluido? Cinico bilanciato? icone staff leggibili?).
+- **Palla del 2D:** i giocatori ora si muovono per fotogramma, la palla no: ancora a tratti tra punti. Passo successivo: palla portata e passata da un giocatore (stile FM 26). Da decidere con Marco.
+- **Nuovi ruoli in formazione:** FD/FS/AD/AS si imparano e si scelgono dalle affinità, ma nessuno schema li usa in automatico.
+- **Cinico:** peso +20% sui tiri non tarato (serve Opus per tarare).
+- **Coppe europee a metà settimana** (oggi dopo campionato e coppa nazionale).
+- **Merge su `main` e release v0.7.0** (dopo il via di Marco).
+- **Bug da tenere d'occhio:** crash "Couldn't read row 1444 … CursorWindow" nella prova su emulatore (2 volte). Causa probabile: lettura di tutti i giocatori in un colpo; ora letti a pagine da 500 e le letture dei flussi si riprovano una volta. Se ricompare, cercare un'altra lettura grande.
+
+## Decisioni aperte (chiedere a Marco)
+- Come far muovere la palla in 2D: portata dal giocatore e passata (come FM) oppure solo più morbida?
+- Gli schemi (4-3-3, ecc.) devono usare in automatico ali ed esterni destro/sinistro?
+- Il Cinico deve contare anche nei rigori e nei finali di partita?
+
+## Sessione 24/11 sera (10): staff, movimento, id, bug
+- **Staff (Home):** colonna con 8 tessere (ALL lavagna, ASS cartellina, GIO figura con stella, PRE bilanciere, FIS croce, SCO lente, GIA erba, ANA schermo con grafico), sigla sotto ciascuna.
+- **2D:** ogni giocatore ha una posizione propria che si aggiorna a ogni fotogramma (accelerazione e velocità massima, `Manga.kt`).
+- **Stile:** sfondo marmo (`fondoApp`) anche in Nuova partita, partita dal vivo, fine partita, fine stagione.
+- **Editor, importazione JSON:** mantiene gli id di squadre, giocatori e staff del file (se validi e non doppi; altrimenti li assegna il database). L'esportazione li scriveva già.
+- **Bug corretti nel controllo della repo:** (1) i tratti "Cinico" acquisiti e gli allenamenti individuali restavano in memoria dopo "nuova carriera" o importazione e non finivano nei salvataggi: ora "tratti" è tra le chiavi salvate e la memoria si azzera; (2) grafico andamento in Società andava in errore senza giornate giocate; (3) Nuova partita andava in errore se la lista squadre era vuota; (4) lettura di tutti i giocatori a pagine.
 
 ## Sessione 24/11 sera (4): tarature, maglie e merchandising (ramo feat/stadio, non provato sul telefono)
 - **Premi dei campionati nuovi** (`Economia.PREMI_ESTERI`): premio della prima 1,6 M, diritti TV base Olanda 9, Portogallo 9, Belgio 9,5, Turchia 6,5, Grecia 8,5, Scozia 12 M. Motivo: ingaggi minimi alti e stadi piccoli. Replica Python (40 estrazioni): mediana +3..+4 M, peggiore tipica circa -1,5 M. Prima la Scozia aveva mediana +1,3 M e peggiore -4,8 M. Test: `EconomiaTest.campionatiNuoviPiuPiatti`.

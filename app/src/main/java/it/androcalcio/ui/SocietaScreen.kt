@@ -492,6 +492,7 @@ private fun ConfrontoGiocatori(base: List<Player>, tutti: List<Player> = emptyLi
 /** Grafico della posizione giornata per giornata: in alto il primo posto. */
 @Composable
 private fun GraficoAndamento(pos: List<Int>, squadre: Int) {
+    if (pos.isEmpty()) return   // nessuna giornata giocata: niente grafico
     val n = squadre.coerceAtLeast(pos.maxOrNull() ?: 1)
     val linea = AC.Accent2; val griglia = AC.Border
     GlassCard(Modifier.fillMaxWidth()) {
