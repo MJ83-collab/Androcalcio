@@ -37,6 +37,96 @@ object Spareggi {
     /** Playout: la meglio piazzata [alto] contro [basso]; restituisce chi retrocede. */
     fun playout(alto: Long, basso: Long, forza: Map<Long, Double>, rng: Random): Long =
         if (passa(alto, basso, forza, rng) == alto) basso else alto
+
+    // ---- Regole reali (regolamenti Lega B e Lega Pro 2025/26) ----
+
+    /** Come si decide una parità alla fine del turno. */
+    enum class Regola(val testo: String) {
+        PIAZZATA("in parità passa la meglio piazzata, senza supplementari"),
+        SUPPL_PIAZZATA("in parità supplementari, poi passa la meglio piazzata (niente rigori)"),
+        SUPPL_RIGORI("in parità supplementari e rigori")
+    }
+
+    /** Turno a una o due gare; [seParimerito] vale se le due squadre hanno chiuso il campionato a pari punti. */
+    data class Turno(val nome: String, val gare: Int, val regola: Regola, val seParimerito: Regola? = null) {
+        fun regolaPer(parimerito: Boolean) = if (parimerito && seParimerito != null) seParimerito else regola
+    }
+
+    // Serie B: turno preliminare secco (5ª-8ª, 6ª-7ª), semifinali e finale andata e ritorno; playout andata e ritorno
+    val B_PRELIMINARE = Turno("Turno preliminare", 1, Regola.SUPPL_PIAZZATA)
+    val B_SEMIFINALE = Turno("Semifinale", 2, Regola.PIAZZATA)
+    val B_FINALE = Turno("Finale", 2, Regola.PIAZZATA, seParimerito = Regola.SUPPL_RIGORI)
+    val B_PLAYOUT = Turno("Playout", 2, Regola.PIAZZATA)
+    // Serie C (fase finale): semifinali a parità meglio piazzata, finale con supplementari e rigori
+    val C_SEMIFINALE = Turno("Semifinale", 2, Regola.PIAZZATA)
+    val C_FINALE = Turno("Finale", 2, Regola.SUPPL_RIGORI)
+    // Inghilterra: semifinali andata e ritorno, finale secca; sempre supplementari e rigori
+    val ENG_SEMIFINALE = Turno("Semifinale", 2, Regola.SUPPL_RIGORI)
+    val ENG_FINALE = Turno("Finale", 1, Regola.SUPPL_RIGORI)
+    // Spagna: andata e ritorno, in parità supplementari e poi la meglio piazzata
+    val ESP_TURNO = Turno("Semifinale", 2, Regola.SUPPL_PIAZZATA)
+    val ESP_FINALE = Turno("Finale", 2, Regola.SUPPL_PIAZZATA)
+
+    const val ET_LAMBDA = 0.35
+
+    fun poisson(l: Double, rng: Random): Int {
+        val limite = Math.exp(-l); var k = 0; var p = 1.0
+        do { k++; p *= rng.nextDouble() } while (p > limite && k < 10)
+        return k - 1
+    }
+
+    /** Chi passa: [golAlto]/[golBasso] sono i totali (supplementari compresi), rigori -1 se non tirati. */
+    fun passaTurno(alto: Long, basso: Long, golAlto: Int, golBasso: Int, rigAlto: Int = -1, rigBasso: Int = -1): Long = when {
+        golAlto > golBasso -> alto
+        golBasso > golAlto -> basso
+        rigAlto >= 0 && rigBasso >= 0 -> if (rigBasso > rigAlto) basso else alto
+        else -> alto
+    }
+
+    /** Gol di una gara simulata: chi gioca in casa ha un piccolo vantaggio. */
+    fun golGara(fCasa: Double, fOspite: Double, rng: Random): Pair<Int, Int> {
+        val d = (fCasa - fOspite) * 0.04
+        return poisson((1.35 + d).coerceIn(0.3, 3.0), rng) to poisson((1.05 - d).coerceIn(0.3, 3.0), rng)
+    }
+
+    /** Turno intero simulato con le regole reali (andata in casa della peggio piazzata, ritorno della meglio piazzata). */
+    fun simulaTurno(alto: Long, basso: Long, gare: Int, regola: Regola, forza: Map<Long, Double>, rng: Random): Long {
+        val fa = forza[alto] ?: 60.0; val fb = forza[basso] ?: 60.0
+        var ga = 0; var gb = 0
+        if (gare == 2) { val (c, o) = golGara(fb, fa, rng); gb += c; ga += o }
+        val (c, o) = golGara(fa, fb, rng); ga += c; gb += o
+        if (ga == gb && regola != Regola.PIAZZATA) { ga += poisson(ET_LAMBDA, rng); gb += poisson(ET_LAMBDA, rng) }
+        if (ga == gb && regola == Regola.SUPPL_RIGORI) return if (rng.nextDouble() < 0.5) alto else basso
+        return passaTurno(alto, basso, ga, gb)
+    }
+
+    /** Playoff di Serie B a 6 (in ordine di classifica): preliminari 5ª-8ª e 6ª-7ª, poi semifinali con 3ª e 4ª, poi finale. */
+    inline fun tabelloneB(seeds: List<Long>, gioca: (Long, Long, Turno) -> Long): Pair<Long, Long>? {
+        if (seeds.size < 6) return tabellone4(seeds, B_SEMIFINALE, B_FINALE, gioca)
+        val p1 = gioca(seeds[2], seeds[5], B_PRELIMINARE)
+        val p2 = gioca(seeds[3], seeds[4], B_PRELIMINARE)
+        val (pAlto, pBasso) = if (seeds.indexOf(p1) < seeds.indexOf(p2)) p1 to p2 else p2 to p1
+        return tabellone4(listOf(seeds[0], seeds[1], pAlto, pBasso), B_SEMIFINALE, B_FINALE, gioca)
+    }
+
+    /** Playoff a 4: semifinali 1ª-4ª e 2ª-3ª, poi finale; la meglio piazzata è sempre il primo argomento. */
+    inline fun tabellone4(seeds: List<Long>, semi: Turno, finale: Turno, gioca: (Long, Long, Turno) -> Long): Pair<Long, Long>? {
+        if (seeds.size < 2) return null
+        if (seeds.size < 4) return gioca(seeds[0], seeds[1], finale).let { w -> w to (if (w == seeds[0]) seeds[1] else seeds[0]) }
+        val s1 = gioca(seeds[0], seeds[3], semi)
+        val s2 = gioca(seeds[1], seeds[2], semi)
+        val alto = if (seeds.indexOf(s1) < seeds.indexOf(s2)) s1 else s2
+        val basso = if (alto == s1) s2 else s1
+        val w = gioca(alto, basso, finale)
+        return w to (if (w == alto) basso else alto)
+    }
+
+    /** Tabellone dei playoff di promozione secondo la nazione. */
+    inline fun playoffNazione(nazione: String, seeds: List<Long>, gioca: (Long, Long, Turno) -> Long): Pair<Long, Long>? = when (nazione) {
+        "Italia" -> tabelloneB(seeds, gioca)
+        "Spagna" -> tabellone4(seeds, ESP_TURNO, ESP_FINALE, gioca)
+        else -> tabellone4(seeds, ENG_SEMIFINALE, ENG_FINALE, gioca)
+    }
 }
 
 /** Classifica solo casa o solo trasferta e forma delle ultime partite. */

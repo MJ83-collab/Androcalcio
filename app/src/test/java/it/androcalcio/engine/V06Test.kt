@@ -38,6 +38,25 @@ class V06Test {
         assertEquals(null, Spareggi.playoffCon(listOf(1L)) { a, _, _ -> a })
     }
 
+    @Test fun regoleRealiPlayoff() {
+        // Parità: passa la meglio piazzata, salvo rigori
+        assertEquals(1L, Spareggi.passaTurno(1L, 2L, 2, 2))
+        assertEquals(2L, Spareggi.passaTurno(1L, 2L, 2, 2, 3, 4))
+        assertEquals(2L, Spareggi.passaTurno(1L, 2L, 1, 3))
+        // Finale di B: a pari punti supplementari e rigori
+        assertEquals(Spareggi.Regola.SUPPL_RIGORI, Spareggi.B_FINALE.regolaPer(true))
+        assertEquals(Spareggi.Regola.PIAZZATA, Spareggi.B_FINALE.regolaPer(false))
+        // Tabellone B a 6: preliminari 5-8 e 6-7, poi semifinali con 3ª e 4ª
+        val gare = ArrayList<String>()
+        val r = Spareggi.tabelloneB(listOf(3L, 4L, 5L, 6L, 7L, 8L)) { a, b, t -> gare += "${t.nome}:$a-$b"; a }!!
+        assertEquals(listOf("Turno preliminare:5-8", "Turno preliminare:6-7", "Semifinale:3-6", "Semifinale:4-5", "Finale:3-4"), gare)
+        assertEquals(3L to 4L, r)
+        val forza = mapOf(1L to 75.0, 2L to 60.0)
+        var vinceAlto = 0
+        repeat(1000) { if (Spareggi.simulaTurno(1L, 2L, 2, Spareggi.Regola.PIAZZATA, forza, Random(it)) == 1L) vinceAlto++ }
+        assertTrue("la più forte e meglio piazzata passa più spesso: $vinceAlto", vinceAlto > 600)
+    }
+
     @Test fun classificaCasaTrasfertaEForma() {
         val ts = listOf(team(1), team(2))
         val ms = listOf(m(1, 1, 2, 2, 0), m(2, 2, 1, 1, 1), m(3, 1, 2, 0, 1))

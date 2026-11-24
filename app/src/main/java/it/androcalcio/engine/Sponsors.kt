@@ -23,6 +23,9 @@ object Sponsors {
     const val MAX_ATTIVI = 10
     /** Quota del valore di un titolare (scala Market.valueAt) pagata dallo sponsor di maglia. v0.6: 0,12 -> 0,18. */
     const val QUOTA_SPONSOR = 0.18
+    /** 24/11: valore minimo su cui si calcola il compenso (sponsor di maglia almeno ~0,8 M con fama media). */
+    const val VALORE_MINIMO = 4_440_000.0
+    fun valoreBase(strength: Int): Double = maxOf(Market.valueAt(strength), VALORE_MINIMO)
 
     /** Premio sponsor per ogni vittoria: 2% dei compensi annui (minimo 60.000 €); +25% senza subire gol. */
     fun premioVittoria(sponsorAnnui: Long, senzaGol: Boolean): Long {
@@ -62,7 +65,7 @@ object Sponsors {
 
     /** Compenso annuo per lo slot n (0 = maglia), anni di durata: contratti lunghi = un po' meno all'anno. */
     fun annual(strength: Int, slot: Int, fama: Double, years: Int): Long {
-        val base = QUOTA_SPONSOR * Market.valueAt(strength) * fama * SLOT[slot.coerceIn(0, SLOT.size - 1)]
+        val base = QUOTA_SPONSOR * valoreBase(strength) * fama * SLOT[slot.coerceIn(0, SLOT.size - 1)]
         val v = base * (1.1 - 0.05 * years)
         return (v / 10_000).toLong() * 10_000L
     }
@@ -77,7 +80,7 @@ object Sponsors {
         return tipiLiberi.shuffled(rng).take(numeroOfferte(marketing)).mapIndexed { i, t ->
             val y = rng.nextInt(1, 6)
             val noise = (0.85 + rng.nextDouble() * 0.3) * (1.0 + bonusMarketingPct(marketing) / 100.0)
-            val base = QUOTA_SPONSOR * Market.valueAt(strength) * fama * t.peso * (1.1 - 0.05 * y)
+            val base = QUOTA_SPONSOR * valoreBase(strength) * fama * t.peso * (1.1 - 0.05 * y)
             SponsorDeal(nomi[i % nomi.size], (base * noise).toLong() / 10_000 * 10_000, y, t.id)
         }
     }

@@ -23,7 +23,7 @@ class EconomiaV06Test {
             val premio = Economia.premioStagione(divisione, rel)
             val ingaggi = righe.filter { it[0] == n }.sumOf { it[5].toLong() }
             val staff = 10L * ((55 - divisione * 6 - 30).coerceAtLeast(5) * 12_000L)
-            val sponsor = listOf(1.0, 0.6, 0.45).sumOf { Sponsors.QUOTA_SPONSOR * Market.valueAt(forza.getValue(n).toInt()) * it * 0.95 }.toLong()
+            val sponsor = listOf(1.0, 0.6, 0.45).sumOf { Sponsors.QUOTA_SPONSOR * Sponsors.valoreBase(forza.getValue(n).toInt()) * it * 0.95 }.toLong()
             gate + premio + sponsor + Sponsorship.merch(cap) - ingaggi - staff - 800_000L
         }
     }
@@ -31,12 +31,12 @@ class EconomiaV06Test {
     @Test fun squadraMediaInPariOUtile() {
         val a = saldi("Serie A", 0).sorted(); val b = saldi("Serie B", 1).sorted()
         val c = listOf("Serie C Girone A", "Serie C Girone B", "Serie C Girone C").flatMap { saldi(it, 3) }.sorted()
-        // Valori misurati il 24/11/2026: A mediana +5,6 M (min -2,8 M), B mediana +2,2 M, C mediana -2,9 M (min -5,1 M)
+        // Taratura 24/11/2026: A mediana circa +5,6 M, B circa +3,4 M, C circa in pari (-0,1 M)
         assertTrue("Serie A mediana ${a[a.size / 2]}", a[a.size / 2] in 4_000_000L..7_500_000L)
-        assertTrue("Serie B mediana ${b[b.size / 2]}", b[b.size / 2] in 1_000_000L..3_500_000L)
+        assertTrue("Serie B mediana ${b[b.size / 2]}", b[b.size / 2] in 2_500_000L..4_500_000L)
         assertTrue("Nessuna di A perde più di 8 M: ${a.first()}", a.first() > -8_000_000L)
-        assertTrue("Serie C mediana ${c[c.size / 2]} (oggi in perdita: da ritarare)", c[c.size / 2] > -4_000_000L)
-        assertTrue("Serie C peggiore ${c.first()}", c.first() > -6_000_000L)
+        assertTrue("Serie C mediana ${c[c.size / 2]}", c[c.size / 2] in -1_000_000L..1_000_000L)
+        assertTrue("Serie C peggiore ${c.first()}", c.first() > -3_000_000L)
     }
 
     @Test fun premioVittoriaSponsor() {
