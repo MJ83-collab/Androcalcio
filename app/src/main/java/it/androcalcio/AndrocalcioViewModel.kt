@@ -2977,7 +2977,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         // Promozioni: le prime kk-1 dirette, l'ultimo posto con i playoff tra le 4 successive
                         val dirette = if (kk >= 2 && low.size >= kk + 3) kk - 1 else kk
                         low.take(dirette).forEach { moves[it.team.id] = k.second; promoted += it.team.id }
-                        if (dirette < kk) Spareggi.playoffNazione(k.first, low.drop(dirette).take(if (k.first == "Italia") 6 else 4).map { it.team.id }) { a, bb, tr ->
+                        val candPO = low.drop(dirette).take(if (k.first == "Italia") 6 else 4)
+                        // Regole Serie B: terza promossa direttamente con più di 14 punti sulla quarta; ai playoff solo chi è entro 14 punti dalla terza
+                        val terzaDiretta = dirette < kk && k.first == "Italia" && candPO.size >= 2 && candPO[0].pts - candPO[1].pts > 14
+                        if (terzaDiretta) {
+                            moves[candPO[0].team.id] = k.second; promoted += candPO[0].team.id
+                            spareggiNote += "Playoff ${lk.second} non disputati: ${candPO[0].team.name} ha più di 14 punti sulla quarta e sale in ${k.second}."
+                        }
+                        val inGaraPO = if (k.first == "Italia") candPO.filter { candPO[0].pts - it.pts <= 14 } else candPO
+                        if (dirette < kk && !terzaDiretta) Spareggi.playoffNazione(k.first, inGaraPO.map { it.team.id }) { a, bb, tr ->
                             giocaTurno(a, bb, "Playoff ${lk.second}", tr, me, forzaPO, puntiPO, rng) }?.let { (w, f) ->
                             moves[w] = k.second; promoted += w
                             spareggiNote += "Playoff ${lk.second}: ${nomePO(w)} batte ${nomePO(f)} in finale e sale in ${k.second}."
@@ -2993,7 +3001,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val stB = finals.getValue(b)
                     val nGiu = minOf(4, stB.size / 4)
                     // Playout: le ultime 3 scendono, la quart'ultima e la quint'ultima si giocano la salvezza
-                    val giu = if (nGiu == 4 && stB.size >= 10) {
+                    val giu = if (nGiu == 4 && stB.size >= 10 && stB[stB.size - 5].pts - stB[stB.size - 4].pts > 4) {
+                        spareggiNote += "Playout ${b.second} non disputato: più di 4 punti di distacco, ${stB[stB.size - 4].team.name} retrocede."
+                        stB.takeLast(4)
+                    } else if (nGiu == 4 && stB.size >= 10) {
                         val alto = stB[stB.size - 5].team.id; val basso = stB[stB.size - 4].team.id
                         val perde = if (giocaTurno(alto, basso, "Playout ${b.second}", Spareggi.B_PLAYOUT, me, forzaPO, puntiPO, rng) == alto) basso else alto
                         spareggiNote += "Playout ${b.second}: retrocede ${nomePO(perde)}, si salva ${nomePO(if (perde == alto) basso else alto)}."
