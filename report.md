@@ -4,6 +4,13 @@ Ramo attuale: `feat/fine-partita` (v0.6.0 + blocchi 1–6 + tablet).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato).
 Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul telefono.
 
+## Sessione 24/11 sera (3): campionati nuovi (ramo feat/stadio, build verde, non provato sul telefono)
+- `assets/squadre_europa.json`: 100 squadre inventate, solo massima serie: Olanda 18, Portogallo 18, Belgio 18, Scozia 10, Turchia 18, Grecia 18. Giocatori generati (`SeedData.insertEuropa`), cognomi comuni con iniziali casuali.
+- **Solo carriere nuove** (primo avvio e "nuova carriera"); i salvataggi esistenti non li ricevono. Chi usa "predefinito utente" non li vede finché non ne crea uno nuovo.
+- Nessuna promozione/retrocessione in questi paesi (una sola serie). Premi e diritti TV sono quelli della massima serie: **da tarare** (Opus). Stadi più piccoli con `FATTORE_STADIO`.
+- Forza per paese in `RoseFisse.leagueRange`. Scozia, Turchia e Grecia aggiunte a `Nazionali.EUROPA`. Bandiere aggiunte (FlagBox, Calendario, scheda giocatore). Test: `SquadreEuropaTest`.
+- Esistono già le qualificazioni europee come etichette (`engine/Societa.kt`, oggetto `Europa`: Champions/Europa/Conference League, nomi reali) e `primeDivisioni` nel ViewModel (~riga 3101) ha solo i 5 paesi maggiori + Brasile e Argentina. Il passo 3 le sostituisce con le coppe di fantasia.
+
 ## Sessione 24/11 sera (2): Home, trofei e piano coppe europee (ramo feat/stadio, build verde)
 - Messaggio del presidente: pulsanti "Fissa le amichevoli" (apre il Calendario) e "Salta le amichevoli".
 - Home: al centro scudetto con i colori della nazione (campionato), coppa o supercoppa (coppe), stretta di mano (amichevole). Prima della 1ª giornata la prossima partita è l'amichevole, se ce n'è una.
