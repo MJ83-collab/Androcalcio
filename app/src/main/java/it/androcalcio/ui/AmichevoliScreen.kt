@@ -37,7 +37,9 @@ fun AmichevoliScreen(
     amichevoli: List<MatchResult>,
     onRichiedi: (Long) -> Unit,
     onGioca: () -> Unit,
-    onChiudi: () -> Unit
+    onChiudi: () -> Unit,
+    inviti: List<Long> = emptyList(),
+    onInvito: (Long) -> Unit = {}
 ) {
     val nazioni = teams.map { it.nazione }.distinct()
     var nazione by rememberSaveable { mutableStateOf(team.nazione) }
@@ -66,6 +68,11 @@ fun AmichevoliScreen(
                 style = MaterialTheme.typography.bodySmall, color = AC.Text)
         }
         if (amichevoli.any { !it.played }) PcButton("Gioca le amichevoli fissate", onGioca, Modifier.fillMaxWidth())
+        val daInvito = inviti.mapNotNull { id -> teams.firstOrNull { it.id == id } }.filter { o -> amichevoli.none { it.homeTeamId == o.id || it.awayTeamId == o.id } }
+        if (daInvito.isNotEmpty()) {
+            Text("Inviti ricevuti questo mese", style = MaterialTheme.typography.labelLarge, color = AC.Text)
+            daInvito.forEach { o -> PcButton("Accetta l'invito di ${o.name}", { onInvito(o.id) }, Modifier.fillMaxWidth()) }
+        }
 
         Text("1. Nazione", style = MaterialTheme.typography.labelLarge, color = AC.Text)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

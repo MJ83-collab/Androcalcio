@@ -80,7 +80,7 @@ object PreparatoreCapo {
 
     /** Il report mensile del preparatore capo. */
     fun report(nome: String, mese: String, rosa: List<Player>, prima: Map<Long, Int>, viv: List<Youth>, vivPrima: Map<Long, Int>,
-               allenamenti: Int, riposi: Int, pianoReparti: String): String {
+               allenamenti: Int, riposi: Int, pianoReparti: String, squadraB: String = ""): String {
         val salita = rosa.mapNotNull { p -> prima[p.id]?.let { p to (p.overall - it) } }
         val migliori = salita.filter { it.second > 0 }.sortedByDescending { it.second }.take(3)
         val calati = salita.filter { it.second < 0 }.sortedBy { it.second }.take(2)
@@ -98,6 +98,7 @@ object PreparatoreCapo {
             append(if (crescitiViv.isEmpty()) "Vivaio: nessun progresso rilevante.\n"
                 else "Vivaio: " + crescitiViv.size + " ragazzi migliorati (" +
                     crescitiViv.take(3).joinToString(", ") { "${it.first.name} +${it.second}" } + ").\n")
+            if (squadraB.isNotEmpty()) append(squadraB).append('\n')
             if (pianoReparti.isNotEmpty()) append("Piano del mese: $pianoReparti.")
         }.trim()
     }

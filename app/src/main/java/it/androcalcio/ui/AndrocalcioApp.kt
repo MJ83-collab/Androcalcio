@@ -338,7 +338,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         capoAuto = vm.extra.collectAsStateWithLifecycle().value.prepAuto,
                         capoAssunto = vm.extra.collectAsStateWithLifecycle().value.prepAssunto,
                         capoReport = vm.extra.collectAsStateWithLifecycle().value.prepReport,
-                        onCapoAuto = { vm.setPrepAuto(it) })
+                        onCapoAuto = { vm.setPrepAuto(it) },
+                        squadraB = vm.extra.collectAsStateWithLifecycle().value.squadraB,
+                        onSquadraB = { p, l -> vm.setSquadraB(p, l) })
                 }
                 Screen.SQUADRE -> {   // solo consultazione: la panchina cambia con le offerte
                     var scheda by remember { mutableStateOf<Team?>(null) }
@@ -360,6 +362,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         friendlyMatches = friendlyMatches,
                         onRequestFriendly = { vm.requestFriendly(it) },
                         onPlayFriendlies = { vm.playFriendlies() },
+                        inviti = vm.extra.collectAsStateWithLifecycle().value.inviti,
+                        onInvito = { vm.accettaInvito(it) },
                         onSimulaFino = { vm.simulaFino(it) },
                         giorno = vm.giorno.collectAsStateWithLifecycle().value,
                         onAttivita = { vm.viviGiorno(it) },
@@ -860,7 +864,8 @@ fun RosaScreen(
     onApplyTattica: () -> Unit = {},
     onCercaVice: (Unit) -> Unit = {},
     forme: Map<Long, Double> = emptyMap(), mese: String? = null,
-    capoAuto: Boolean = true, capoAssunto: Boolean = false, capoReport: List<String> = emptyList(), onCapoAuto: (Boolean) -> Unit = {}
+    capoAuto: Boolean = true, capoAssunto: Boolean = false, capoReport: List<String> = emptyList(), onCapoAuto: (Boolean) -> Unit = {},
+    squadraB: Map<Long, Int> = emptyMap(), onSquadraB: (Player, Int?) -> Unit = { _, _ -> }
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -922,6 +927,7 @@ fun RosaScreen(
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
         item { PreparatoreCapoCard(capoAuto, capoAssunto, capoReport, onCapoAuto) }
+        item { SquadraBCard(players, squadraB, onSquadraB) }
     }
 }
 

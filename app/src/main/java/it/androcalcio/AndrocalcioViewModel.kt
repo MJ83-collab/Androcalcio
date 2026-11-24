@@ -2,6 +2,7 @@ package it.androcalcio
 
 import it.androcalcio.engine.AvatarGen
 import it.androcalcio.engine.PreparatoreCapo
+import it.androcalcio.engine.SquadraB
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
 import it.androcalcio.engine.Migliorie
@@ -645,7 +646,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val prestiti: List<Prestiti.Prestito> = emptyList(),
         val meteo: Meteo.Condizioni? = null, val budget: Long = 0L, val giornata: Int = 1,
         val inPrima: Set<Long> = emptySet(),
-        val analista: Int = -1, val ultras: Int = 60, val coreo: Boolean = false, val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
+        val analista: Int = -1, val squadraB: Map<Long, Int> = emptyMap(), val inviti: List<Long> = emptyList(), val ultras: Int = 60, val coreo: Boolean = false, val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
     )
     private val _extra = MutableStateFlow(ExtraStato())
     val extra: StateFlow<ExtraStato> = _extra
@@ -700,6 +701,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
             ultras = dao.stato("ultras")?.toIntOrNull() ?: 60, coreo = dao.stato("coreo") == "1",
+            squadraB = SquadraB.decode(dao.stato(SquadraB.KEY)),
+            inviti = dao.stato(SquadraB.KEY_INVITI).orEmpty().split(",").mapNotNull { it.toLongOrNull() },
             analista = dao.allStaff().firstOrNull { it.teamId == t.id && it.role == Staffing.ANALISTA }?.skill ?: -1,
             prepAuto = dao.stato(PreparatoreCapo.KEY_AUTO) != "0",
             prepAssunto = dao.allStaff().any { it.teamId == t.id && it.role == Staffing.PREPARATORE && it.specialita == Staffing.GENERALE },
@@ -3196,6 +3199,36 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Assegna un giovane (max 23 anni) alla squadra B, al satellite (livello 1) o lo toglie (null). */
+    fun setSquadraB(p: Player, livello: Int?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val m = SquadraB.decode(dao.stato(SquadraB.KEY)).toMutableMap()
+            if (livello == null) m.remove(p.id) else {
+                if (p.age > SquadraB.ETA_MAX) { _notice.value = "${p.name} ha più di ${SquadraB.ETA_MAX} anni."; return@launch }
+                if (p.id !in m && m.size >= SquadraB.MAX) { _notice.value = "Squadra B al completo (${SquadraB.MAX})."; return@launch }
+                m[p.id] = livello
+            }
+            dao.setStato(Stato(SquadraB.KEY, SquadraB.encode(m)))
+            aggiornaExtra()
+        }
+    }
+
+    /** Accetta un invito: amichevole fissata subito, anche in stagione. */
+    fun accettaInvito(opponentId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val s = _season.value
+            val booked = dao.matchesOnce(Friendlies.key(me.id), s)
+            if (booked.any { it.homeTeamId == opponentId || it.awayTeamId == opponentId }) { _notice.value = "Squadra già impegnata in un'amichevole."; return@launch }
+            val opp = dao.allTeams().firstOrNull { it.id == opponentId } ?: return@launch
+            dao.insertMatches(listOf(Friendlies.fixture(me.id, opp.id, booked.size, s)))
+            val resto = dao.stato(SquadraB.KEY_INVITI).orEmpty().split(",").filter { it != opponentId.toString() && it.isNotBlank() }
+            dao.setStato(Stato(SquadraB.KEY_INVITI, resto.joinToString(",")))
+            aggiornaExtra()
+            _notice.value = "Invito accettato: amichevole con ${opp.name}."
+        }
+    }
+
     /** Gioca le amichevoli di precampionato fissate e ancora da giocare. */
     fun playFriendlies() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -3631,8 +3664,20 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val t = selectedTeam.value ?: return
         val mese = PreparatoreCapo.meseDi(oggi)
         val ultimo = dao.stato(PreparatoreCapo.KEY_MESE)
-        val rosa = dao.playersOnce(t.id)
+        var rosa = dao.playersOnce(t.id)
         var viv = dao.youthsOnce(t.id)
+        // Squadra B e satellite: crescita mensile (più forte con un buon preparatore capo)
+        val membriB = SquadraB.decode(dao.stato(SquadraB.KEY)).filterKeys { id -> rosa.any { it.id == id } }
+        var cresB = 0
+        if (ultimo != null && ultimo != mese && membriB.isNotEmpty()) {
+            val rngB = kotlin.random.Random.Default
+            val skB = capoAttivo()?.first ?: 50
+            rosa = rosa.map { p ->
+                val lv = membriB[p.id]
+                if (lv != null && p.overall < p.potential && rngB.nextDouble() < SquadraB.probabilita(lv, skB)) { cresB++; p.copy(overall = p.overall + 1) } else p
+            }
+            dao.updatePlayers(rosa.filter { it.id in membriB })
+        }
         if (ultimo != null && ultimo != mese) {
             val capo = capoAttivo()
             if (capo != null) {
@@ -3648,10 +3693,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val giorniMese = diario.filter { PreparatoreCapo.meseDi(java.time.LocalDate.ofEpochDay(it.key)) == mesePrec }.values
                 val rep = PreparatoreCapo.report(capo.second, mesePrec, rosa, prima, viv, vivPrima,
                     giorniMese.count { it == CalendarioGiorni.Attivita.ALLENAMENTO || it == CalendarioGiorni.Attivita.RITIRO },
-                    giorniMese.count { it == CalendarioGiorni.Attivita.RIPOSO }, descr)
+                    giorniMese.count { it == CalendarioGiorni.Attivita.RIPOSO }, descr,
+                    if (membriB.isEmpty()) "" else "Squadra B/U23: ${membriB.size} giocatori (${membriB.count { it.value == 1 }} al satellite), $cresB miglioramenti.")
                 dao.setStato(Stato(PreparatoreCapo.KEY_REPORT, PreparatoreCapo.aggiungi(dao.stato(PreparatoreCapo.KEY_REPORT), rep)))
                 _notice.value = "📋 Report mensile del preparatore capo disponibile (scheda Rosa)."
             }
+        }
+        if (ultimo != null && ultimo != mese) {
+            // Amichevoli su invito: due club della tua nazione ti propongono una partita
+            val rngI = kotlin.random.Random.Default
+            val candidati = dao.allTeams().filter { it.id != t.id && it.nazione == t.nazione && !AllStar.isAllStar(it) }
+            dao.setStato(Stato(SquadraB.KEY_INVITI, candidati.shuffled(rngI).take(2).joinToString(",") { it.id.toString() }))
         }
         if (ultimo != mese) {
             dao.setStato(Stato(PreparatoreCapo.KEY_SNAP, PreparatoreCapo.codifica(rosa.associate { it.id to it.overall })))
@@ -4163,6 +4215,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         // Rivendite: il club che lo ha comprato può cederlo a un altro club della stessa nazione
         val rng = kotlin.random.Random.Default
         t = t.copy(budget = t.budget + rescissorie(meId, t.budget, rng, note))
+        if (SquadraB.decode(dao.stato(SquadraB.KEY)).any { it.value == 1 }) {
+            t = t.copy(budget = t.budget - SquadraB.COSTO_SATELLITE)
+            registra(meId, "Squadra satellite", -SquadraB.COSTO_SATELLITE, t.budget)
+            note += "Squadra satellite: costo annuo ${money(SquadraB.COSTO_SATELLITE)}."
+        }
         val rimaste = ArrayList<Cartellini.Rivendita>()
         for (r in Cartellini.decodeR(dao.stato(Cartellini.KEY_RIVENDITE))) {
             val p = dao.playerById(r.playerId) ?: continue

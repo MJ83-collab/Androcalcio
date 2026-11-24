@@ -78,6 +78,7 @@ fun CalendarioScreen(
     friendlyMatches: List<MatchResult> = emptyList(),
     onRequestFriendly: (Long) -> Unit = {},
     onPlayFriendlies: () -> Unit = {},
+    inviti: List<Long> = emptyList(), onInvito: (Long) -> Unit = {},
     onSimulaFino: (Int) -> Unit = {},
     giorno: it.androcalcio.AndrocalcioViewModel.GiornoStato? = null,
     onAttivita: (it.androcalcio.engine.CalendarioGiorni.Attivita) -> Unit = {},
@@ -95,7 +96,7 @@ fun CalendarioScreen(
     )
     if (team == null) return
     if (amichevoliAperte) {
-        AmichevoliScreen(team, teams, friendlyMatches, { onRequestFriendly(it) }, onPlayFriendlies) { amichevoliAperte = false }
+        AmichevoliScreen(team, teams, friendlyMatches, { onRequestFriendly(it) }, onPlayFriendlies, { amichevoliAperte = false }, inviti, onInvito)
         return
     }
     val byId = teams.associateBy { it.id }
