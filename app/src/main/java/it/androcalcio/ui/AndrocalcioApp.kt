@@ -488,7 +488,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
-                    AvversarioScreen(consigli)
+                    AvversarioScreen(consigli, vm.extra.collectAsStateWithLifecycle().value.analista)
                 }
                 Screen.ALBO -> {
                     val albo by vm.albo.collectAsStateWithLifecycle()

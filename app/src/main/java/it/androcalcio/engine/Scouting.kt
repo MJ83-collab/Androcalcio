@@ -69,7 +69,7 @@ object Youths {
 
 /** Aree del mondo in cui gli osservatori possono essere mandati a cercare giocatori svincolati. */
 object Missioni {
-    data class Area(val nome: String, val nazioni: List<String>, val min: Int, val max: Int)
+    data class Area(val nome: String, val nazioni: List<String>, val min: Int, val max: Int, val giovani: Boolean = false)
 
     val AREE = listOf(
         Area("Europa occidentale", listOf("Francia", "Spagna", "Inghilterra", "Germania"), 62, 80),
@@ -78,7 +78,9 @@ object Missioni {
         Area("Africa", listOf("Nigeria", "Senegal", "Marocco", "Egitto"), 52, 72),
         Area("Nord America", listOf("Stati Uniti", "Messico", "Canada"), 55, 72),
         Area("Asia e Oceania", listOf("Giappone", "Corea del Sud", "Australia"), 50, 70)
-    )
+    ) + listOf("Brasile", "Argentina", "Francia", "Nigeria", "Giappone", "Polonia").map {
+        Area("Promesse: $it", listOf(it), 45, 62, giovani = true)   // giovani 16-20 anni con potenziale alto
+    }
 
     /** Giornate di missione: un osservatore bravo rientra prima. */
     fun durata(skill: Int): Int = (3 - skill / 45).coerceIn(1, 3)
@@ -89,17 +91,18 @@ object Missioni {
         val n = skill / 40 + rng.nextInt(0, 3)
         return List(n) {
             val ovr = (rng.nextInt(a.min, a.max + 1) + (skill - 50) / 10).coerceIn(40, 90)
+            val pot = if (a.giovani) (rng.nextInt(72, 90) + (skill - 50) / 8).coerceIn(65, 96) else (ovr + rng.nextInt(0, 9)).coerceAtMost(95)
             Player(
                 teamId = Market.SVINCOLATO_ID,
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
                 role = listOf("P", "D", "C", "A")[rng.nextInt(4)],
-                age = rng.nextInt(18, 32),
+                age = if (a.giovani) rng.nextInt(16, 21) else rng.nextInt(18, 32),
                 overall = ovr,
                 morale = 60,
                 salary = 0L,
                 nationality = a.nazioni[rng.nextInt(a.nazioni.size)],
-                potential = (ovr + rng.nextInt(0, 9)).coerceAtMost(95),
+                potential = pot,
                 contract = 1
             )
         }

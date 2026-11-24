@@ -17,6 +17,7 @@ object Staffing {
     const val PREPARATORE = "PRE"
     const val FISIOTERAPISTA = "FIS"
     const val TUTTOFARE = "GIA"      // giardiniere e tuttofare: cura il manto erboso e lo stadio
+    const val ANALISTA = "ANA"       // analista video: report dettagliato sull'avversario
     const val SCOUT = "SCO"          // osservatori: più di uno, fino a MAX_OSSERVATORI, fuori dai POSTI
     const val MAX_OSSERVATORI = 5
     const val NEUTRAL = 50          // squadre AI e posti vuoti: effetto nullo
@@ -33,7 +34,7 @@ object Staffing {
     const val RECUPERO = "REC"
     const val PREVENZIONE = "PRV"
 
-    val ROLES = listOf(ALLENATORE, ASSISTENTE, GIOVANILI, PREPARATORE, FISIOTERAPISTA, SCOUT, TUTTOFARE)
+    val ROLES = listOf(ALLENATORE, ASSISTENTE, GIOVANILI, PREPARATORE, FISIOTERAPISTA, SCOUT, TUTTOFARE, ANALISTA)
     private val SPEC_PREPARATORI = listOf(GENERALE, FORMA, PORTIERI, ATTACCANTI, CENTROCAMPISTI, DIFENSORI)
     private val SPEC_FISIO = listOf(RECUPERO, PREVENZIONE)
 
@@ -41,7 +42,7 @@ object Staffing {
     data class Posto(val role: String, val specialita: String = "")
 
     val POSTI: List<Posto> = listOf(Posto(ALLENATORE), Posto(ASSISTENTE), Posto(GIOVANILI)) +
-        SPEC_PREPARATORI.map { Posto(PREPARATORE, it) } + SPEC_FISIO.map { Posto(FISIOTERAPISTA, it) } + Posto(TUTTOFARE)
+        SPEC_PREPARATORI.map { Posto(PREPARATORE, it) } + SPEC_FISIO.map { Posto(FISIOTERAPISTA, it) } + Posto(TUTTOFARE) + Posto(ANALISTA)
 
     fun roleName(role: String, specialita: String = ""): String = when (role) {
         ALLENATORE -> "Allenatore"
@@ -51,6 +52,7 @@ object Staffing {
         FISIOTERAPISTA -> "Fisioterapista · ${specialitaNome(specialita)}"
         SCOUT -> "Osservatore"
         TUTTOFARE -> "Giardiniere e tuttofare"
+        ANALISTA -> "Analista video"
         else -> ""
     }
 
@@ -178,6 +180,10 @@ object Staffing {
             ASSISTENTE -> {
                 if (su) bonus += "Consigli tattici sull'avversario e sull'undici più affidabili"
                 if (giu) malus += "Consigli tattici incerti: undici e avversario meno precisi"
+            }
+            ANALISTA -> {
+                if (su) bonus += "Report sull'avversario più ricco e preciso"
+                if (giu) malus += "Report sull'avversario scarno e poco affidabile"
             }
             TUTTOFARE -> {
                 if (su) bonus += "Prato curato: infortuni muscolari ridotti e campo sempre in ordine"

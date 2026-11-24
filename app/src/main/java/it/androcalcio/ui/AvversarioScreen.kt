@@ -30,7 +30,7 @@ fun stelle(media: Int): String {
 
 /** Schermata Avversario: undici previsto, schema abituale, media squadra e consigli dell'assistente. */
 @Composable
-fun AvversarioScreen(advice: AssistantCoach.Advice?) {
+fun AvversarioScreen(advice: AssistantCoach.Advice?, analista: Int = -1) {
     LazyColumn(contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         val a = advice
         if (a == null || a.opponent == null) {
@@ -59,6 +59,14 @@ fun AvversarioScreen(advice: AssistantCoach.Advice?) {
         if (a.opponentXI.isNotEmpty()) {
             item { LineupTable(orderedXI(a.opponentXI)) }
             a.opponentSchema?.let { f -> item { FormationBoard(a.opponentXI, f, androidx.compose.ui.graphics.Color(0xFF1E3FA0)) } }
+        }
+        item {
+            SectionTitle("Report dell'analista video")
+            if (analista < 0) Text("Assumi un analista video dallo staff (Analisi) per avere il report dettagliato.",
+                color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+            else it.androcalcio.engine.ReportAvversario.righe(a.opponentXI, analista).forEach {
+                Text("• $it", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+            }
         }
         item {
             SectionTitle("Notizie dell'allenatore in seconda")

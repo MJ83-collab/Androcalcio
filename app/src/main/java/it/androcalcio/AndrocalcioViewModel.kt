@@ -645,7 +645,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val prestiti: List<Prestiti.Prestito> = emptyList(),
         val meteo: Meteo.Condizioni? = null, val budget: Long = 0L, val giornata: Int = 1,
         val inPrima: Set<Long> = emptySet(),
-        val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
+        val analista: Int = -1, val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
     )
     private val _extra = MutableStateFlow(ExtraStato())
     val extra: StateFlow<ExtraStato> = _extra
@@ -699,6 +699,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             trofei = Achievement.decode(dao.stato("achievement")), avanzate = Avanzate.decode(dao.stato("avanzate")),
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
+            analista = dao.allStaff().firstOrNull { it.teamId == t.id && it.role == Staffing.ANALISTA }?.skill ?: -1,
             prepAuto = dao.stato(PreparatoreCapo.KEY_AUTO) != "0",
             prepAssunto = dao.allStaff().any { it.teamId == t.id && it.role == Staffing.PREPARATORE && it.specialita == Staffing.GENERALE },
             prepReport = dao.stato(PreparatoreCapo.KEY_REPORT).orEmpty().split("§").filter { it.isNotBlank() }.reversed(),
