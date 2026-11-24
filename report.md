@@ -11,6 +11,12 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Vendite delle maglie** (sostituiscono il vecchio merchandising): tifosi, piazzamento, giocatori 84+, novità (+20%), bellezza, negozi e sito, prezzo scelto dall'utente. Prezzo standard A 90 €, B 65 €, minori 45-50 €. Costo 45% dello standard. Sensibilità al prezzo: A 1,6, B 2,0, minori 2,6. Con valori medi il guadagno è uguale al vecchio merchandising, quindi il test economico non cambia. Voce "Maglie e merchandising" nel bilancio. Test: `MaglieTest`.
 - Stato nuovo (nell'export): "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo".
 
+## Sessione 24/11 sera (8): Partita e Calendario in stile PC Calcio 7 (ramo feat/stadio, build verde, non provato sul telefono)
+- **Prossima partita:** banner come nel menu originale (stemma e nome a sinistra, riquadro bianco con "Giornata N", nome e stemma a destra): `BannerPartita` in `ui/GraficaV07.kt`.
+- **Calendario, "Cosa fai oggi":** le attività (Allenamento, Riposo, Amichevole, Mercato, Ritiro) sono nastri colorati con titolo e spiegazione (`NastroTesto`).
+- Le altre schermate usano già i componenti del tema (titoli a nastro, pulsanti neri, tabelle su carta): con PC Calcio 7 come tema di partenza prendono quell'aspetto. Non ho riscritto ognuna a mano, e senza screenshot non so quali sembrino ancora fuori posto.
+- **Da tenere d'occhio:** una build (14a74be) è fallita nella prova su emulatore con "Couldn't read row 1444 from CursorWindow" (lettura del database mentre i dati cambiano). La build successiva, con lo stesso codice, è passata: sembra un caso raro. Se si ripresenta sul telefono (crash dopo "nuova carriera" o caricamento di un salvataggio), da indagare.
+
 ## Sessione 24/11 sera (7): maglie delle nazionali (ramo feat/stadio)
 - Prima le nazionali usavano i colori di un club a caso (`Nazionali.squadra` copiava la prima squadra del database). Ora ognuna ha la maglia tipica da casa e da trasferta (`Nazionali.colori`, 26 nazioni; le altre bianco in casa e nero fuori). La squadra di casa (indice pari) indossa la maglia da casa, l'ospite quella da trasferta. Se le due maglie si somigliano, l'ospite scambia i due colori. Valgono anche per le Under 21. Test: `NazionaliColoriTest`.
 
