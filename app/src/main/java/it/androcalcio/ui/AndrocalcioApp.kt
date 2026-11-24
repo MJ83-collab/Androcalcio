@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -153,6 +154,8 @@ private val bottomTabs = listOf(
 private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var menuAperto by rememberSaveable { mutableStateOf(false) }
+    // Tablet e schermi larghi: menu sempre visibile e contenuto centrato
+    val larga = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 720
     val teams by vm.teams.collectAsStateWithLifecycle()
     // Gli All Star esistono solo per le amichevoli: non compaiono in carriera, vivai, scouting, mercato, squadre e statistiche
     val teamsReali = remember(teams) { teams.filter { !AllStar.isAllStar(it) } }
@@ -252,7 +255,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
         ) {
         HeaderBar(team, season, screen)
         Row(Modifier.weight(1f)) {
-        Box(Modifier.weight(1f).fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.widthIn(max = 1400.dp).fillMaxSize()) {
             val liveInfo by vm.live.collectAsStateWithLifecycle()
             val li = liveInfo
             if (li != null) LiveMatchScreen(li, vm) { screen = Screen.PARTITA } else when (screen) {
@@ -500,9 +504,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 else -> ComingSoon(screen)
             }
         }
+        }
         // Menu laterale a scomparsa: chiuso resta solo una linguetta, così le schermate hanno tutto lo spazio
-        MenuLinguetta(menuAperto) { menuAperto = !menuAperto }
-        if (menuAperto) SideMenu(screen) { screen = it; menuAperto = false }
+        if (larga) SideMenu(screen) { screen = it } else {
+            MenuLinguetta(menuAperto) { menuAperto = !menuAperto }
+            if (menuAperto) SideMenu(screen) { screen = it; menuAperto = false }
+        }
         }
         }
     }

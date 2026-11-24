@@ -107,12 +107,12 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi)))) {
     Column(Modifier.fillMaxSize()) {
-        LazyColumn(
-            Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        val larga = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 720
+        val colA: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
             item { Scoreboard(m.home, m.away, m.hg, m.ag, "${it.androcalcio.engine.etichettaMinuto(m.minute)}'" + if (info.paused) " · pausa" else "") }
             item { PossessoBar(m.possessoCasa) }
+        }
+        val colB: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
             consiglio?.let { c ->
                 item {
                     AssistenteBubble(c, onApplica = {
@@ -128,9 +128,13 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
                 item { PcChip(selected = false, onClick = { vm.setLivePaused(true); replay = lastGoal }, label = { Text("▶ Replay del gol") }) }
             }
+        }
+        val colC: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
             item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco, palla.scia, palla.quota, palla.inVolo,
                 info.tempo, info.prato, m.lineH, m.lineA) }
             item { TelecronacaBubble(events, m.minute) }
+        }
+        val colD: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
             when (panel) {
                 LivePanel.TATTICA -> {
                     item {
@@ -188,6 +192,12 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 LivePanel.NESSUNO -> item { CronacaPanel(events.filter { it.type != EventType.COMMENTO }.reversed().take(12)) }
             }
             item { PcAction(onClick = { vm.liveSkip() }, modifier = Modifier.fillMaxWidth()) { Text("Termina partita") } }
+        }
+        if (larga) Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.weight(1.2f).fillMaxHeight(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { colA(); colC() }
+            LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { colB(); colD() }
+        } else LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            colA(); colB(); colC(); colD()
         }
         // Fascia comandi fissa in basso
         Column(Modifier.fillMaxWidth().background(AC.Night).padding(horizontal = 8.dp, vertical = 6.dp),
