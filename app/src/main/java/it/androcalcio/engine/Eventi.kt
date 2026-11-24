@@ -143,7 +143,7 @@ object Spogliatoio {
         22 -> Evento("Invito a un'amichevole", "Una squadra importante chiede un'amichevole con grande incasso. In piena stagione.", emptyList(), listOf(
             Scelta("Accetto", tifosi = 4, fiducia = 3, condizione = -6, esito = "Casa piena, gambe pesanti."),
             Scelta("Declino", condizione = 2, fiducia = -2, tifosi = -1, esito = "Il presidente borbotta, i giocatori recuperano.")))
-        else -> Evento("Il senatore dello spogliatoio", "Il veterano chiede di riunire il gruppo prima del match: \"Parlo io, mister\".", emptyList(), listOf(
+        23 -> Evento("Il senatore dello spogliatoio", "Il veterano chiede di riunire il gruppo prima del match: \"Parlo io, mister\".", emptyList(), listOf(
             Scelta("Lascialo parlare", morale = 4, clima = 5, esito = "Discorso emozionante. Qualcuno piange."),
             Scelta("Parlo io", clima = 2, fiducia = 1, esito = "Rispetto, ma meno trasporto."),
             Scelta("Nessuno parla", clima = -1, esito = "Silenzio teso: cinque minuti di nulla.")))
