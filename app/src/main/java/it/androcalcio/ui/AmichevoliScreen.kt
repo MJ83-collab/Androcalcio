@@ -22,6 +22,18 @@ import androidx.compose.ui.unit.dp
 import it.androcalcio.data.MatchResult
 import it.androcalcio.data.Team
 import it.androcalcio.engine.Friendlies
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import it.androcalcio.ui.components.FlagBox
+import it.androcalcio.ui.components.HeadCell
+import it.androcalcio.ui.components.PaperPanel
+import it.androcalcio.ui.components.PaperRow
 import it.androcalcio.ui.components.PcButton
 import it.androcalcio.ui.components.PcChip
 import it.androcalcio.ui.theme.AC
@@ -55,17 +67,32 @@ fun AmichevoliScreen(
 
     Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PcButton("Torna al calendario", onChiudi, Modifier.fillMaxWidth())
-        Text("Amichevoli di precampionato", style = MaterialTheme.typography.titleMedium, color = AC.Text)
-        Text(
-            "Fissate ${amichevoli.size} su ${Friendlies.COUNT} · servono almeno 5 per entrare in forma",
-            style = MaterialTheme.typography.bodySmall, color = AC.TextDim
-        )
+        Text("PRESTAGIONE · AMICHEVOLI", color = AC.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+        val giocate = amichevoli.count { it.played }
+        val colore = if (amichevoli.size >= 5) AC.ColGreen else if (amichevoli.size >= 3) AC.ColOrange else AC.ColEn
+        Text("Fissate ${amichevoli.size} su ${Friendlies.COUNT} (giocate $giocate) · servono almeno 5 per entrare in forma",
+            fontSize = 12.sp, color = colore, fontWeight = FontWeight.Bold)
         val nomi = teams.associateBy { it.id }
-        amichevoli.sortedBy { it.round }.forEach { m ->
-            val casa = m.homeTeamId == team.id
-            val avversario = nomi[if (casa) m.awayTeamId else m.homeTeamId]?.name.orEmpty()
-            Text("${if (casa) "in casa" else "in trasferta"} · $avversario${if (m.played) " · giocata" else ""}",
-                style = MaterialTheme.typography.bodySmall, color = AC.Text)
+        PaperPanel(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp)) {
+                HeadCell("N°", AC.PaperText, Modifier.width(24.dp))
+                HeadCell("AVVERSARIO", AC.PaperText, Modifier.weight(1f), TextAlign.Start)
+                HeadCell("DOVE", AC.ColBlue, Modifier.width(62.dp))
+                HeadCell("STATO", AC.ColGreen, Modifier.width(62.dp))
+            }
+            if (amichevoli.isEmpty()) PaperRow(0) { Text("Nessuna amichevole fissata.", color = AC.PaperText, fontSize = 12.sp) }
+            amichevoli.sortedBy { it.round }.forEachIndexed { i, m ->
+                val casa = m.homeTeamId == team.id
+                val avv = nomi[if (casa) m.awayTeamId else m.homeTeamId]
+                PaperRow(i) {
+                    Text("${i + 1}", Modifier.width(24.dp), textAlign = TextAlign.Center, fontSize = 12.sp, color = AC.PaperText, fontWeight = FontWeight.ExtraBold)
+                    if (avv != null) FlagBox(avv.nazione, Modifier.size(width = 20.dp, height = 13.dp))
+                    Text("  " + (avv?.name.orEmpty()), Modifier.weight(1f), maxLines = 1, fontSize = 12.sp, color = AC.PaperText, fontWeight = FontWeight.Bold)
+                    Text(if (casa) "in casa" else "trasferta", Modifier.width(62.dp), textAlign = TextAlign.Center, fontSize = 11.sp, color = AC.ColBlue)
+                    Text(if (m.played) "${m.homeGoals}-${m.awayGoals}" else "da giocare", Modifier.width(62.dp), textAlign = TextAlign.Center,
+                        fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = if (m.played) AC.ColGreen else AC.ColOrange)
+                }
+            }
         }
         if (amichevoli.any { !it.played }) PcButton("Gioca le amichevoli fissate", onGioca, Modifier.fillMaxWidth())
         val daInvito = inviti.mapNotNull { id -> teams.firstOrNull { it.id == id } }.filter { o -> amichevoli.none { it.homeTeamId == o.id || it.awayTeamId == o.id } }
@@ -85,18 +112,26 @@ fun AmichevoliScreen(
         }
 
         Text("3. Squadra · $liberi posto/i libero/i", style = MaterialTheme.typography.labelLarge, color = AC.Text)
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(squadre, key = { it.id }) { t ->
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(t.name, color = AC.Text, style = MaterialTheme.typography.bodyMedium)
-                    when {
-                        t.id in prenotate -> Text("fissata", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
-                        liberi <= 0 -> Text("posti esauriti", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
-                        else -> PcButton("Chiedi", { onRichiedi(t.id) })
+        PaperPanel(Modifier.weight(1f).fillMaxWidth()) {
+            Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp)) {
+                HeadCell("SQUADRA", AC.PaperText, Modifier.weight(1f), TextAlign.Start)
+                HeadCell("STADIO", AC.ColBlue, Modifier.width(60.dp))
+                HeadCell("", AC.PaperText, Modifier.width(76.dp))
+            }
+            LazyColumn(Modifier.fillMaxWidth()) {
+                items(squadre, key = { it.id }) { t ->
+                    PaperRow(squadre.indexOf(t)) {
+                        FlagBox(t.nazione, Modifier.size(width = 20.dp, height = 13.dp))
+                        Text("  " + t.name, Modifier.weight(1f), maxLines = 1, fontSize = 12.sp, color = AC.PaperText, fontWeight = FontWeight.Bold)
+                        Text("%,d".format(t.stadiumCapacity).replace(',', '.'), Modifier.width(60.dp), textAlign = TextAlign.Center,
+                            fontSize = 11.sp, color = AC.ColBlue)
+                        Box(Modifier.width(76.dp), contentAlignment = Alignment.Center) {
+                            when {
+                                t.id in prenotate -> Text("fissata", color = AC.ColGreen, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                                liberi <= 0 -> Text("esauriti", color = AC.PaperLine, fontSize = 11.sp)
+                                else -> PcButton("Chiedi", { onRichiedi(t.id) }, compatto = true)
+                            }
+                        }
                     }
                 }
             }

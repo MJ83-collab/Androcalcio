@@ -133,16 +133,7 @@ fun PlayerSheet(
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth().background(AC.PaperAlt).padding(6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column {
-                        Text("INGAGGIO ANNUO", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
-                        Text(money(p.salary), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("ANNI DI CONTRATTO", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
-                        Text("${p.contract}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
-                    }
-                }
+                ContrattoBlock(p)
                 LocalAzioni.current?.let { az ->
                     Titolo("AZIONI")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -1027,6 +1027,7 @@ private fun RosaTable(
                 HeadCell("GIOCATORE", AC.PaperText, Modifier.width(118.dp), TextAlign.Start)
                 HeadCell("", AC.PaperText, Modifier.width(62.dp))
                 stats.forEachIndexed { i, h -> HeadCell(h, statColor[i], Modifier.width(30.dp)) }
+                HeadCell("CT", AC.ColGreen, Modifier.width(28.dp))
                 HeadCell("RUOLO", AC.PaperText, Modifier.width(74.dp))
             }
             // Sezioni come nell'originale: titolari, convocati (panchina), non convocati (infortunati)
@@ -1065,8 +1066,12 @@ private fun RosaTable(
                     values.forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
                             fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (k == 0 && v < 60) AC.ColEn else if (k == 0 && v < 80) AC.ColOrange else AC.PaperText)
+                            color = if (k == 0) (if (v < 60) AC.ColEn else if (v < 80) AC.ColOrange else AC.PaperText)
+                                    else if (k == 6) (if (v < 50) AC.ColEn else if (v < 65) AC.ColOrange else AC.PaperText)
+                                    else coloreValore(v))
                     }
+                    Text("${p.contract}", Modifier.width(28.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold, color = coloreContratto(p.contract))
                     // Ruolo in campo con l'affinità: tocca per passare al ruolo affine successivo
                     val opts = TacticalRoles.options(p)
                     val cur = TacticalRoles.assigned(p)
