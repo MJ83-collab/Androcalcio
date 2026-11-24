@@ -1717,7 +1717,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         trySend(Unit)
         db.invalidationTracker.addObserver(obs)
         awaitClose { db.invalidationTracker.removeObserver(obs) }
-    }.conflate().map { carica() }.flowOn(Dispatchers.IO)
+    }.conflate().map {
+        // Se una scrittura (nuova carriera, importazione) chiude la lettura a metà, si riprova una volta invece di chiudere l'app
+        try { carica() } catch (e: IllegalStateException) { kotlinx.coroutines.delay(200); carica() }
+    }.flowOn(Dispatchers.IO)
 
     /** Giocatori per cui il club ha già accettato (si tratta con il giocatore). */
     val clubAccepted: StateFlow<Set<Long>> = osserva("stato") {
