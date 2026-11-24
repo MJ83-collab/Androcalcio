@@ -1,6 +1,7 @@
 package it.androcalcio
 
 import it.androcalcio.engine.AvatarGen
+import it.androcalcio.engine.CoppeEuropee
 import it.androcalcio.engine.PreparatoreCapo
 import it.androcalcio.engine.SquadraB
 import it.androcalcio.engine.Difficolta
@@ -411,7 +412,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         combine(selectedTeam, _season) { t, s -> t to s }
             .flatMapLatest { (t, s) ->
                 if (t == null) flowOf(emptyList())
-                else combine(dao.matches(Cup.key(t.nazione), s), dao.matches(Cup.superKey(t.nazione), s)) { c, sc -> c + sc }
+                else combine(listOf(dao.matches(Cup.key(t.nazione), s), dao.matches(Cup.superKey(t.nazione), s)) +
+                    CoppeEuropee.Coppa.values().map { dao.matches(CoppeEuropee.key(it), s) }) { v ->
+                    v[0] + v[1] + v.drop(2).flatMap { l -> l.filter { it.homeTeamId == t.id || it.awayTeamId == t.id } }
+                }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -428,8 +432,70 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val nation = dao.allTeams().filter { it.nazione == t.nazione }.map { it.id }
                     dao.insertMatches(Cup.firstStage(nation, s, ck, kotlin.random.Random.Default, t.nazione))
                 }
+                assicuraCoppeEuropee(s)
             }
         }
+    }
+
+    // ---- Coppe europee ----------------------------------------------------------------------------
+
+    /** Qualificate e sorteggi della stagione: se mancano, li crea (alla prima stagione per forza delle squadre). */
+    private suspend fun assicuraCoppeEuropee(s: String) {
+        val teams = dao.allTeams().filter { !AllStar.isAllStar(it) }
+        val forza = strengthOf()
+        var q = dao.stato("eu_q_$s")
+        if (q == null) {
+            q = CoppeEuropee.encodeQualificate(CoppeEuropee.qualificateIniziali(teams, forza))
+            dao.setStato(Stato("eu_q_$s", q))
+        }
+        val dec = CoppeEuropee.decodeQualificate(q)
+        val byId = teams.associateBy { it.id }
+        val naz = teams.associate { it.id to it.nazione }
+        val rng = kotlin.random.Random.Default
+        CoppeEuropee.Coppa.values().forEach { c ->
+            val key = CoppeEuropee.key(c)
+            if (dao.fixtureCount(key, s) != 0) return@forEach
+            val ids = dec[c].orEmpty().filter { it in byId }
+            if (ids.size < 4) return@forEach
+            if (c.conGironi) {
+                val g = CoppeEuropee.sorteggiaGironi(ids, naz, forza, rng)
+                dao.setStato(Stato("eu_gironi_${s}_${c.sigla}", CoppeEuropee.encodeGironi(g)))
+                dao.insertMatches(CoppeEuropee.partiteGironi(g, s, key))
+            } else dao.insertMatches(CoppeEuropee.primoTurno(ids, forza, s, key, rng))
+        }
+    }
+
+    /** Supplementari e rigori dei turni a eliminazione, poi sorteggia il turno successivo. */
+    private suspend fun avanzaEuropa(s: String) {
+        val teams = dao.allTeams().associateBy { it.id }
+        val forza = strengthOf()
+        val rng = kotlin.random.Random.Default
+        CoppeEuropee.Coppa.values().forEach { c ->
+            val key = CoppeEuropee.key(c)
+            var tutte = dao.matchesOnce(key, s)
+            if (tutte.isEmpty()) return@forEach
+            val ch = tutte.filter { it.played && it.homePens < 0 }.mapNotNull { m ->
+                CoppeEuropee.finalizza(m, tutte, rng).takeIf { it != m }
+            }
+            if (ch.isNotEmpty()) { dao.updateMatches(ch); tutte = dao.matchesOnce(key, s) }
+            val gironi = CoppeEuropee.decodeGironi(dao.stato("eu_gironi_${s}_${c.sigla}"))
+            val nx = CoppeEuropee.prossimoTurno(c, tutte, gironi, teams, forza, s, rng)
+            if (nx.isNotEmpty()) dao.insertMatches(nx)
+        }
+    }
+
+    /** Partite della coppa europea della tua squadra, finché ne ha ancora da giocare (altrimenti vuoto). */
+    private suspend fun europaMia(t: Team, s: String): List<MatchResult> {
+        val q = CoppeEuropee.decodeQualificate(dao.stato("eu_q_$s"))
+        val c = CoppeEuropee.Coppa.values().firstOrNull { t.id in q[it].orEmpty() } ?: return emptyList()
+        val tutte = dao.matchesOnce(CoppeEuropee.key(c), s)
+        return if (tutte.any { !it.played && (it.homeTeamId == t.id || it.awayTeamId == t.id) }) tutte else emptyList()
+    }
+
+    /** Le squadre della tua nazione più gli avversari europei delle partite indicate. */
+    private suspend fun squadreInGioco(t: Team, ms: List<MatchResult>): Map<Long, Team> {
+        val ids = ms.flatMap { listOf(it.homeTeamId, it.awayTeamId) }.toSet()
+        return dao.allTeams().filter { it.nazione == t.nazione || it.id in ids }.associateBy { it.id }
     }
 
     /** Forza di ogni squadra: media dei valori dei giocatori (usata solo per le parità di coppa). */
@@ -462,8 +528,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         run {
             val t = selectedTeam.value ?: return
             ensureAiStaff(t.id)
-            val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value)
-            val teamsById = dao.allTeams().filter { it.nazione == t.nazione }.associateBy { it.id }
+            val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value) +
+                europaMia(t, _season.value)
+            val teamsById = squadreInGioco(t, ms)
             val staffBy = dao.allStaff().groupBy { it.teamId }
             var playedNow = 0
             val cache = HashMap<Long, List<Player>>()   // rose complete, aggiornate dopo ogni partita
@@ -548,6 +615,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val ck = Cup.key(t.nazione)
             dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), teamsById.values.toList(),
                 strengthOf(), _season.value, ck, t.nazione, kotlin.random.Random.Default))
+            avanzaEuropa(_season.value)
             // Con "Fine stagione" si gioca fino in fondo, anche i turni di coppa sorteggiati adesso
             if (all && playedNow > 0) runRounds(true, skipId)
         }
@@ -1214,12 +1282,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
             if (!prontoPerLaPartita()) return@launch
-            val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value)
+            val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value) +
+                europaMia(t, _season.value)
             val round = ms.filter { !it.played }.minOfOrNull { it.round } ?: return@launch
             val mine = ms.firstOrNull { !it.played && it.round == round && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
             runRounds(false, mine?.id)
             if (mine == null) { _notice.value = "In questa giornata la tua squadra riposa."; return@launch }
-            val teamsById = dao.allTeams().filter { it.nazione == t.nazione }.associateBy { it.id }
+            val teamsById = squadreInGioco(t, listOf(mine))
             val h = teamsById[mine.homeTeamId] ?: return@launch
             val a = teamsById[mine.awayTeamId] ?: return@launch
             _live.value = buildLive(h, a, h.id == t.id, mine)
@@ -1308,9 +1377,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (mr != null && Cup.isCup(mr.round)) {
             // Partita di coppa: supplementari e rigori se in parità (i rigori li scegli tu), poi il turno successivo
             selectedTeam.value?.let { t ->
-                val tutte = dao.matchesOnce(Cup.key(t.nazione), _season.value)
+                val europea = CoppeEuropee.isEuropea(mr.league)
+                val tutte = dao.matchesOnce(if (europea) mr.league else Cup.key(t.nazione), _season.value)
                 val partita = tutte.find { it.id == mr.id }
-                val prov = partita?.let { Cup.finalize(it, tutte, kotlin.random.Random.Default) }
+                val prov = partita?.let {
+                    if (europea) CoppeEuropee.finalizza(it, tutte, kotlin.random.Random.Default)
+                    else Cup.finalize(it, tutte, kotlin.random.Random.Default)
+                }
                 if (prov != null && prov.homePens >= 0) {
                     pendingCup = prov.copy(homePens = -1, awayPens = -1)
                     serie = it.androcalcio.engine.SerieRigori(i.userHome)
@@ -1353,6 +1426,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val nation = dao.allTeams().filter { it.nazione == t.nazione }
         dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), nation, strengthOf(),
             _season.value, ck, t.nazione, kotlin.random.Random.Default))
+        avanzaEuropa(_season.value)
     }
 
     fun scegliRigore(lato: Int) { _live.value?.rigori?.scegli(lato); bump() }
@@ -2942,6 +3016,30 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
 
+            // 1c2) Coppe europee: tutte le partite rimaste, anche le tue, poi i premi
+            assicuraCoppeEuropee(s)
+            val euByTeam = teamsNow.associateBy { it.id }
+            for (giro in 0 until 40) {
+                val pending = CoppeEuropee.Coppa.values().flatMap { c -> dao.matchesOnce(CoppeEuropee.key(c), s) }
+                    .filter { !it.played }.sortedBy { it.round }
+                if (pending.isEmpty()) break
+                val done = pending.mapNotNull { m ->
+                    val h = euByTeam[m.homeTeamId] ?: return@mapNotNull null
+                    val a = euByTeam[m.awayTeamId] ?: return@mapNotNull null
+                    val r = simCupMatch(h, a, me, cache, staffBy, rng)
+                    accumulaStat(statAcc, s, h.id, a.id, r)
+                    m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
+                }
+                if (done.isEmpty()) break
+                dao.updateMatches(done)
+                avanzaEuropa(s)
+            }
+            val euPartite = CoppeEuropee.Coppa.values().associateWith { dao.matchesOnce(CoppeEuropee.key(it), s) }
+            val premioEu = euPartite.entries.sumOf { (c, p) -> CoppeEuropee.premio(c, p, me.id, strength) }
+            val euFase = euPartite.entries.firstNotNullOfOrNull { (c, p) ->
+                CoppeEuropee.faseRaggiunta(p, me.id, strength).takeIf { it.isNotEmpty() }?.let { "${c.nome}: $it" }
+            }
+
             salvaStatistiche(s, statAcc)
 
             // 1d) Albo d'oro: campioni di ogni divisione, coppa e supercoppa della stagione
@@ -2960,6 +3058,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val w = Cup.winnerOfTie(listOf(fin), strength)
                     teamById[w]?.let { alboRows += AlboEntry(season = s, nazione = nazione, competizione = label, vincitore = it.name) }
                     if (label == "Coppa") coppeVinte += w
+                }
+            }
+            euPartite.forEach { (c, p) ->
+                CoppeEuropee.finale(p, strength)?.let { (w, _) ->
+                    teamById[w]?.let { alboRows += AlboEntry(season = s, nazione = "Europa", competizione = c.nome, vincitore = it.name) }
                 }
             }
             dao.deleteAlboSeason(s)
@@ -3101,20 +3204,22 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             // Qualificazioni: prima divisione di ogni nazione europea (Champions, Europa, Conference)
             // e di Brasile e Argentina (Copa Sudamericana)
             val europei = HashMap<Long, String>()
-            val primeDivisioni = mapOf("Italia" to "Serie A", "Spagna" to "Primera", "Inghilterra" to "Premier",
-                "Germania" to "Bundesliga", "Francia" to "Ligue 1", "Brasile" to "Serie A", "Argentina" to "Primera")
+            val primeDivisioni = CoppeEuropee.PRIME_DIVISIONI + mapOf("Brasile" to "Serie A", "Argentina" to "Primera")
+            val euQ = LinkedHashMap<Long, CoppeEuropee.Coppa>()
             primeDivisioni.forEach { (nazione, camp) ->
                 val st = finals[nazione to camp] ?: return@forEach
                 val ids = st.map { it.team.id }
-                val posti = Europa.POSTI[nazione]
-                if (posti != null) {
-                    val vincitriceCoppa = Cup.finalMatch(dao.matchesOnce(Cup.key(nazione), s))
-                        ?.let { Cup.winnerOfTie(listOf(it), strength) }
-                    europei.putAll(Europa.assegna(ids, vincitriceCoppa, posti))
+                if (nazione in CoppeEuropee.PRIME_DIVISIONI) {
+                    val fin = Cup.finalMatch(dao.matchesOnce(Cup.key(nazione), s))
+                    val vinc = fin?.let { Cup.winnerOfTie(listOf(it), strength) }
+                    val perso = fin?.let { if (vinc == it.homeTeamId) it.awayTeamId else it.homeTeamId }
+                    euQ.putAll(CoppeEuropee.qualificate(nazione, ids, vinc, perso))
                 } else {
                     europei.putAll(Sudamericana.assegna(ids))
                 }
             }
+            europei.putAll(euQ.mapValues { it.value.nome })
+            dao.setStato(Stato("eu_q_${seasonName(prefs.getInt("season_year", 2026) + 1)}", CoppeEuropee.encodeQualificate(euQ)))
             // Classifiche di fine stagione della tua nazione, con l'esito di ogni squadra
             _fine.value = FineStagione(
                 stagione = s,
@@ -3255,14 +3360,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     costoPsico = Relazioni.costoPsicologo(dao.statoInt("psicologo"))
                     costoMkt = Sponsors.costoMarketing(dao.statoInt("marketing"))
                     difAdj = Difficolta.incassi(gate + meSp + meMc, livDif, profDif) - (gate + meSp + meMc)
-                    extraTotale = extraIncasso + effMig.merchAnno - effMig.manutenzione + extraPrezzi + obBonus - costoPsico - costoMkt + difAdj
+                    extraTotale = extraIncasso + effMig.merchAnno - effMig.manutenzione + extraPrezzi + obBonus - costoPsico - costoMkt + difAdj + premioEu
                     val fate = when {
                         t.id in promoted -> "Promossa in $newLeague!"
                         t.id in relegated -> "Retrocessa in $newLeague."
                         else -> ""
                     }
                     report = "${posInfo[t.id] ?: ""}. $fate Premio ${money(prizes[t.id] ?: 0L)}, " +
-                        "bilancio ${money(net)}."
+                        "bilancio ${money(net)}." +
+                        (euFase?.let { " $it, premi ${money(premioEu)}." } ?: "")
                 }
                 t.copy(
                     budget = (t.budget + net + (prizes[t.id] ?: 0L) +
@@ -3284,6 +3390,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val lines = buildList {
                     add("Bilancio di fine stagione (incassi, ingaggi)" to meNet)
                     if (pr != 0L) add("Premio piazzamento" to pr)
+                    if (premioEu > 0L) add("Coppe europee: premi" to premioEu)
                     if (meSp > 0) add("Sponsor (${deals.size} contratti)" to meSp)
                     add("Ingaggio allenatore" to -coach)
                     if (clausePay > 0) add("Clausole giocatori" to -clausePay)
@@ -3808,7 +3915,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun calcolaGiorno(): GiornoStato? {
         val t = selectedTeam.value ?: return null
         val s = _season.value
-        val ms = dao.matchesOnce(key(t), s) + dao.matchesOnce(Cup.key(t.nazione), s)
+        val ms = dao.matchesOnce(key(t), s) + dao.matchesOnce(Cup.key(t.nazione), s) + europaMia(t, s)
         val ultima = ms.filter { it.played }.maxOfOrNull { it.round }
         val r = ms.filter { !it.played }.minOfOrNull { it.round }
         val oggi = CalendarioGiorni.oggi(s, dao.stato(CalendarioGiorni.KEY_OGGI + s)?.toLongOrNull(), ultima)

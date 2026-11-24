@@ -187,12 +187,20 @@ private fun Trofeo(prossima: MatchResult?, team: Team) {
         Text(when {
             tipo == TipoGara.AMICHEVOLE -> "Precampionato"
             tipo == TipoGara.COPPA && prossima!!.league.startsWith("SUPERCOPPA") -> "Supercoppa"
+            tipo == TipoGara.COPPA && prossima!!.league.startsWith("EUROPA|") ->
+                it.androcalcio.engine.CoppeEuropee.Coppa.values().firstOrNull { c -> "EUROPA|${c.sigla}" == prossima.league }?.nome ?: "Coppa europea"
             tipo == TipoGara.COPPA -> "Coppa nazionale"
             else -> team.campionato
         }, Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.End)
         Canvas(Modifier.width(70.dp).fillMaxHeight()) {
             when {
                 tipo == TipoGara.COPPA && prossima!!.league.startsWith("SUPERCOPPA") -> disegnaTrofeo(TipoTrofeo.SUPERCOPPA)
+                tipo == TipoGara.COPPA && prossima!!.league.startsWith("EUROPA|") ->
+                    disegnaTrofeo(when (prossima.league) {
+                        "EUROPA|CAMPIONI" -> TipoTrofeo.CAMPIONI
+                        "EUROPA|EUROPA" -> TipoTrofeo.EUROPA
+                        else -> TipoTrofeo.COPPE
+                    })
                 tipo == TipoGara.COPPA -> disegnaTrofeo(TipoTrofeo.COPPA_NAZIONALE)
                 tipo == TipoGara.AMICHEVOLE -> disegnaTrofeo(TipoTrofeo.AMICHEVOLE, manica = Color(team.colorPrimary))
                 else -> disegnaTrofeo(TipoTrofeo.SCUDETTO, team.nazione)

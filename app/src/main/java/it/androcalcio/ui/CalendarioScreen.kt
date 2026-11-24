@@ -165,9 +165,14 @@ fun CalendarioScreen(
                 if (cupMatches.isEmpty()) {
                     Text("Coppa non ancora sorteggiata.", color = AC.Text)
                 }
-                cupMatches.groupBy { Cup.stageOf(it.round) }.toSortedMap().forEach { (stage, ms) ->
+                cupMatches.groupBy { it.league.startsWith("EUROPA|") to Cup.stageOf(it.round) }
+                    .toSortedMap(compareBy({ it.first }, { it.second })).forEach { (chiave, ms) ->
+                    val stage = chiave.second
                     val teamsIn = ms.flatMap { listOf(it.homeTeamId, it.awayTeamId) }.toSet().size
-                    SectionTitle(Cup.stageName(stage, teamsIn))
+                    SectionTitle(if (chiave.first) {
+                        val c = it.androcalcio.engine.CoppeEuropee.Coppa.values().firstOrNull { c -> "EUROPA|${c.sigla}" == ms.first().league }
+                        "${c?.nome ?: "Coppa europea"} · ${it.androcalcio.engine.CoppeEuropee.nomeTurno(stage)}"
+                    } else Cup.stageName(stage, teamsIn))
                     PaperPanel(Modifier.fillMaxWidth()) {
                         ms.sortedBy { it.round }.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
                     }
