@@ -1,15 +1,22 @@
-# Androcalcio — report (aggiornato 24/11/2026)
+# Androcalcio — report (aggiornato 24/11/2026, sera 4)
 
-Ramo attuale: `feat/fine-partita` (v0.6.0 + blocchi 1–6 + tablet).
+Ramo attuale: `feat/stadio` (nato da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato).
 Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul telefono.
+
+## Sessione 24/11 sera (4): tarature, maglie e merchandising (ramo feat/stadio, non provato sul telefono)
+- **Premi dei campionati nuovi** (`Economia.PREMI_ESTERI`): premio della prima 1,6 M, diritti TV base Olanda 9, Portogallo 9, Belgio 9,5, Turchia 6,5, Grecia 8,5, Scozia 12 M. Motivo: ingaggi minimi alti e stadi piccoli. Replica Python (40 estrazioni): mediana +3..+4 M, peggiore tipica circa -1,5 M. Prima la Scozia aveva mediana +1,3 M e peggiore -4,8 M. Test: `EconomiaTest.campionatiNuoviPiuPiatti`.
+- **Coppa dei Campioni più bassa:** partecipazione 3 M, vittoria nel girone 0,6 M, pareggio 0,2 M, turni 1/1,5/2,5/3,5 M, titolo 6 M. Vincitrice circa 21 M (prima 29 M). Coppa Europa e Coppa delle Coppe invariate.
+- **Maglie** (`engine/Maglie.kt`, `ui/MaglieScreen.kt`, menu "Maglie" e Home): 8 marchi di fantasia (Fulmia, Korvo, Ardena, Taurex, Velka, Montano Sport, Zefiro, Gryp), 14 stili, 3 colletti, bordino. Casa, trasferta e terza. Lo sponsor tecnico è sempre uno degli 8 marchi; senza sponsor tecnico le fa il club. A ogni stagione: tieni o scegli tra 3 proposte, una volta sola. Con un marchio nuovo si cambiano per forza. Salvataggi vecchi: il nome dello sponsor tecnico diventa un marchio fisso.
+- **Vendite delle maglie** (sostituiscono il vecchio merchandising): tifosi, piazzamento, giocatori 84+, novità (+20%), bellezza, negozi e sito, prezzo scelto dall'utente. Prezzo standard A 90 €, B 65 €, minori 45-50 €. Costo 45% dello standard. Sensibilità al prezzo: A 1,6, B 2,0, minori 2,6. Con valori medi il guadagno è uguale al vecchio merchandising, quindi il test economico non cambia. Voce "Maglie e merchandising" nel bilancio. Test: `MaglieTest`.
+- Stato nuovo (nell'export): "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo".
 
 ## Sessione 24/11 sera (3): campionati nuovi (ramo feat/stadio, build verde, non provato sul telefono)
 - `assets/squadre_europa.json`: 100 squadre inventate, solo massima serie: Olanda 18, Portogallo 18, Belgio 18, Scozia 10, Turchia 18, Grecia 18. Giocatori generati (`SeedData.insertEuropa`), cognomi comuni con iniziali casuali.
 - **Solo carriere nuove** (primo avvio e "nuova carriera"); i salvataggi esistenti non li ricevono. Chi usa "predefinito utente" non li vede finché non ne crea uno nuovo.
-- Nessuna promozione/retrocessione in questi paesi (una sola serie). Premi e diritti TV sono quelli della massima serie: **da tarare** (Opus). Stadi più piccoli con `FATTORE_STADIO`.
+- Nessuna promozione/retrocessione in questi paesi (una sola serie). Premi e diritti TV tarati nella sessione 4. Stadi più piccoli con `FATTORE_STADIO`.
 - Forza per paese in `RoseFisse.leagueRange`. Scozia, Turchia e Grecia aggiunte a `Nazionali.EUROPA`. Bandiere aggiunte (FlagBox, Calendario, scheda giocatore). Test: `SquadreEuropaTest`.
-- Esistono già le qualificazioni europee come etichette (`engine/Societa.kt`, oggetto `Europa`: Champions/Europa/Conference League, nomi reali) e `primeDivisioni` nel ViewModel (~riga 3101) ha solo i 5 paesi maggiori + Brasile e Argentina. Il passo 3 le sostituisce con le coppe di fantasia.
+- Esistono già le qualificazioni europee come etichette (`engine/Societa.kt`, oggetto `Europa`: Champions/Europa/Conference League, nomi reali) e `primeDivisioni` nel ViewModel (~riga 3101) ha solo i 5 paesi maggiori + Brasile e Argentina. Il passo 3 (coppe di fantasia) è fatto: vedi "Coppe europee" più sotto.
 
 ## Sessione 24/11 sera (2): Home, trofei e piano coppe europee (ramo feat/stadio, build verde)
 - Messaggio del presidente: pulsanti "Fissa le amichevoli" (apre il Calendario) e "Salta le amichevoli".
@@ -38,11 +45,9 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Telecronisti** di fantasia (`engine/Telecronisti.kt`): prime voci Ferrandi (sobrio), Strepponi (urlatore), Bucchetti (immaginifico), Lanfranchi (enciclopedico); seconde voci Contrafatti (poeta tattico), Sbaraglia (ex attaccante schietto, dialetto), Percentini (statistico), Marcolin (ex difensore tecnico), Spuntazzo (ironico). Coppia casuale a ogni partita.
 - **Squadra B** con partita mensile simulata dal vice; prelazione sul satellite; fedeltà per id; rivendita anche all'estero.
 
-## Prossimi lavori decisi con Marco (non iniziati)
-1. **Maglie legate allo sponsor tecnico:** marchi di fantasia con stili propri; casa, trasferta e terza; molti stili e combinazioni; a ogni stagione si possono tenere o cambiare (con un nuovo marchio si cambiano per forza); 3 proposte tra cui scegliere.
-2. **Merchandising delle maglie:** vendite secondo tifosi, risultati, giocatori famosi, novità e bellezza della maglia; prezzo scelto dall'utente; prezzo esagerato = pochi acquirenti, soprattutto nelle serie minori.
-3. **Stadio personalizzabile, tutto:** settori (curva, distinti, tribuna, VIP) con prezzi propri, nome, colore dei seggiolini, copertura, illuminazione, maxischermo, negozio del club; effetti su incassi, atmosfera e costi.
-4. Grafica delle altre schermate ispirata alle foto (tabella giocatori a colonne colorate, scheda giocatore con contratto, prestagione con amichevoli).
+## Prossimi lavori decisi con Marco
+- Maglie, merchandising e stadio personalizzabile: **fatti** (sessioni 24/11 sera).
+- Da fare: grafica delle altre schermate ispirata alle foto (tabella giocatori a colonne colorate, scheda giocatore con contratto, prestagione con amichevoli).
 
 ## Da provare
 - **v0.6.0 e ramo feat/fine-partita:** mai provati sul telefono. La v0.6.0 è stata provata solo su emulatore (Android 11).
@@ -50,15 +55,15 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Tema Chiaro:** controllare contrasto e grafico (i pannelli navy restano scuri).
 
 ## Da decidere o da fare
-- **Merge su `main` e v0.7.0:** da decidere con Marco.
+- **Merge su `main` e v0.7.0:** deciso il 24/11: solo dopo la prova sul telefono.
 - **Installazione:** la chiave di firma è fissa, ma questa volta bisogna disinstallare la vecchia versione una volta. Esportare prima i salvataggi.
 
 ## Da verificare
-- **Verifica economica con le rose vere:** il test c'è ma le soglie sono larghe (vedi note di controllo); da stringere (Serie A, B, C e tetto di 8 M). Valori attesi: Serie A mediana circa +5 M, Serie B circa +2 M, Serie C circa in pari; nessuna squadra di A perde più di 8 M. Non ancora eseguita.
+- **Verifica economica:** fatta. Il test `EconomiaV06Test` ha soglie strette: A mediana 4..7,5 M, B 3..5,5 M, C 0,8..2,5 M, nessuna di C in passivo, nessuna di A sotto -8 M.
 
 ## Limiti noti
 - La squadra B gioca una partita al mese simulata (nessuna partita 2D).
-- Playoff e playout: giocati dal vivo solo se c'è la tua squadra; in parità passa la meglio piazzata.
+- Playoff e playout: giocati dal vivo solo se c'è la tua squadra. In parità passa la meglio piazzata, tranne nelle finali (supplementari e rigori) e nel preliminare di B (supplementari, poi meglio piazzata).
 - Avatar ancora disegnati in codice.
 
 ## Blocchi del ramo feat/fine-partita
@@ -79,23 +84,22 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Blocco 17 – Ritiro, fedeltà, sfide** (`engine/Fedelta.kt`, `engine/Sfide.kt`): ritiro precampionato (luglio-agosto, 20.000 €/giorno); bonus fedeltà a fine stagione (3+ stagioni, 3% dell'ingaggio, morale +3); sfide a scelta facile/media/difficile.
 
 ## Da fare (priorità)
-1. **Playoff e playout giocabili: fatto (24/11), da provare.** Se c'è la squadra dell'utente si gioca dal vivo (gara secca, meglio piazzata in casa), le altre gare si simulano (`giocaSpareggio` in `AndrocalcioViewModel`, `Spareggi.playoffCon`). In parità passa la meglio piazzata: mancano supplementari e rigori. Il salvataggio automatico è sospeso durante la gara. Da verificare: uscita dall'app a metà gara.
-2. Provare tutto su telefono e tablet.
-3. Ritarare l'economia della Serie C (mediana −2,9 M): decisione aperta.
+1. Provare tutto su telefono e tablet (playoff con supplementari e rigori, stadio, maglie, coppe europee, nuovi campionati). Da verificare: uscita dall'app a metà gara di playoff.
+2. Merge su `main` e v0.7.0, dopo la prova.
+3. Grafica delle altre schermate.
 4. Avatar: da decidere cosa si vuole (oggi disegnati in codice).
-5. Merge su `main` e v0.7.0 (da decidere con Marco).
+5. Coppe europee a metà settimana (oggi si giocano dopo campionato e coppa).
 
 ## Fatto il 24/11 (dopo i playoff)
 - **Squadra B con partite proprie:** una al mese contro un club della tua nazione, simulata dall'allenatore in seconda (senza vice non si gioca). Vittoria +4% e pareggio +2% alla crescita del mese; ultimi risultati nella scheda Rosa.
 - **Prelazione sul satellite:** i giovani (max 23 anni) del satellite con contratto in scadenza restano 3 anni allo stesso ingaggio.
 - **Bonus fedeltà per id:** gli omonimi non si confondono più (le vecchie chiavi a nome valgono una volta).
 - **Rivendita:** 25% delle volte verso un club di un'altra nazione.
-- **Test economico misurato in CI:** Serie A mediana +5,6 M (peggiore −2,8 M), Serie B +2,2 M. **Serie C mediana −2,9 M, peggiore −5,1 M: NON in pari come scritto nel report v0.6.0.** Da ritarare (decisione aperta).
+- **Test economico misurato in CI:** Serie A mediana +5,6 M (peggiore −2,8 M), Serie B +2,2 M. Serie C mediana −2,9 M: ritarata nel pomeriggio (ora circa +1,5 M, nessuna in passivo).
 
 ## Note di controllo del 24/11 (lettura del codice)
-- La verifica economica **esiste come test** (`EconomiaV06Test.squadraMediaInPariOUtile`) e gira in CI. Le soglie sono più larghe dei valori attesi nel report: A mediana > 0, B mediana > -0,5 M, nessuna di A sotto -8 M. I valori "A circa +5 M, B circa +2 M" non sono verificati dal test.
+- La verifica economica è il test `EconomiaV06Test.squadraMediaInPariOUtile` e gira in CI. Soglie strette dal pomeriggio del 24/11 (vedi "Da verificare").
 - La prova su emulatore in CI usa **1.500 tocchi** (`.github/smoke.sh`), non 9.000 come scritto sopra.
-- La Serie C non ha un controllo nel test economico.
 
 ## Versione v0.6.0 (23/11/2026)
 ### Economia — meno punitiva
@@ -160,10 +164,10 @@ Nota: nel primo report avevo scritto che le 20 non c'erano nel codice. Due esist
 - **Qualificate:** dalla classifica e dalla coppa nazionale. I posti non presi scendono in classifica. Una squadra gioca una sola coppa.
 - **Sorteggio:** 4 urne per forza, mai due squadre della stessa nazione nello stesso girone. Si crea a inizio stagione.
 - **Partite:** le tue le decidi tu (Gioca dal vivo o Simula). Le altre si simulano da sole. Nei gironi i pareggi restano; supplementari e rigori solo a eliminazione.
-- **Premi fissi:** Campioni 4 M di partecipazione, 0,8 M per vittoria nel girone, 0,3 M per pareggio, turni 1,5/2,5/3,5/5 M, titolo 8 M. Europa e Coppe più bassi. Finiscono nel bilancio di fine stagione e nell'albo d'oro (nazione "Europa").
+- **Premi fissi (tarati il 24/11 sera):** Campioni 3 M di partecipazione, 0,6 M per vittoria nel girone, 0,2 M per pareggio, turni 1/1,5/2,5/3,5 M, titolo 6 M. Europa e Coppe più bassi. Finiscono nel bilancio di fine stagione e nell'albo d'oro (nazione "Europa").
 - **Schermata** "Coppe europee" nel menu: urna, gironi con maglie e bandiere, tabellone.
 - **Limite:** le partite europee si giocano dopo campionato e coppa nazionale, non a metà settimana. Servirebbe rifare l'ordine del calendario.
-- **Da fare:** tarare i premi (Opus); gestire la finale dal vivo con rigori scelti da te nei turni europei (già previsto, da provare); provare tutto su telefono e tablet.
+- **Da fare:** gestire la finale dal vivo con rigori scelti da te nei turni europei (già previsto, da provare); provare tutto su telefono e tablet.
 - File nuovi: `engine/CoppeEuropee.kt`, `ui/EuropaScreen.kt`, test `CoppeEuropeeTest`.
 
 ## Cronologia
@@ -172,7 +176,7 @@ Nota: nel primo report avevo scritto che le 20 non c'erano nel codice. Due esist
 - v0.5.0: 16 migliorie (rifinanziamento, rate, ampiezza, backup .zip, tema nero…).
 - v0.6.0 (23/11): economia più generosa, nuovo proprietario, 20 migliorie, B–F.
 - feat/fine-partita (24/11): blocchi 1–6 e tablet, non ancora una release.
-- feat/stadio (24/11): stadio personale, trofei, sei nuovi campionati, coppe europee. Non ancora una release.
+- feat/stadio (24/11): stadio personale, trofei, sei nuovi campionati, coppe europee, maglie e vendite, tarature. Non ancora una release.
 
 ## Modello
-Sonnet basta per altre migliorie; Opus solo per nuove tarature.
+Sonnet basta per la prova, il merge e la grafica; Opus solo per nuove tarature.
