@@ -473,7 +473,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         vm.trappola.collectAsStateWithLifecycle().value, { vm.setTrappola(it) },
                         vm.formazioniSalvate.collectAsStateWithLifecycle().value, { vm.salvaFormazione(it) }, { vm.caricaFormazione(it) },
                         vm.premioPromesso.collectAsStateWithLifecycle().value,
-                        PremioPartita.costo(players.sumOf { p -> p.salary }), { vm.promettiPremio(it) })
+                        PremioPartita.costo(players.sumOf { p -> p.salary }), { vm.promettiPremio(it) },
+                        cambioCond = vm.cambioCond.collectAsStateWithLifecycle().value, onCambioCond = { vm.setCambioCond(it) })
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()

@@ -208,7 +208,8 @@ fun TatticaScreen(
     trappola: Boolean = false, onTrappola: (Boolean) -> Unit = {},
     formazioni: List<it.androcalcio.engine.FormazioniSalvate.Preset?> = emptyList(),
     onSalvaFormazione: (Int) -> Unit = {}, onCaricaFormazione: (Int) -> Unit = {},
-    premio: Boolean = false, costoPremio: Long = 0L, onPremio: (Boolean) -> Unit = {}
+    premio: Boolean = false, costoPremio: Long = 0L, onPremio: (Boolean) -> Unit = {},
+    cambioCond: Int = 0, onCambioCond: (Int) -> Unit = {}
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi)
     var roleFor by remember { mutableStateOf<Player?>(null) }
@@ -286,6 +287,14 @@ fun TatticaScreen(
             SectionTitle("Cambio programmato")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(0 to "Spento", 60 to "60'", 70 to "70'", 80 to "80'").forEach { (m, l) -> PcChip(cambioPronto == m, { onCambioPronto(m) }, { Text(l) }) }
+            }
+            SectionTitle("Cambi con condizioni")
+            Text("Un cambio ogni 5 minuti al massimo, dal 30'. Puoi sceglierne più di una.", color = AC.TextDim, fontSize = 12.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                it.androcalcio.engine.CambiCondizioni.TUTTE.forEach { (bit, l) ->
+                    val on = cambioCond and bit != 0
+                    PcChip(on, { onCambioCond(if (on) cambioCond and bit.inv() else cambioCond or bit) }, { Text(l) }, Modifier.fillMaxWidth())
+                }
             }
             SectionTitle("Trappola del fuorigioco")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

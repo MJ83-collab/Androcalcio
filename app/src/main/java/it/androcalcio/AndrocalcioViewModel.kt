@@ -297,6 +297,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val cambioPronto: StateFlow<Int> = _cambioPronto
     fun setCambioPronto(m: Int) { _cambioPronto.value = m; prefs.edit().putInt("cambio_pronto", m).apply() }
 
+    /** Cambi con condizioni (stanco, ammonito, sotto, sopra): maschera di bit di CambiCondizioni, 0 = spento. */
+    private val _cambioCond = MutableStateFlow(prefs.getInt("cambio_cond", 0))
+    val cambioCond: StateFlow<Int> = _cambioCond
+    fun setCambioCond(c: Int) { _cambioCond.value = c; prefs.edit().putInt("cambio_cond", c).apply() }
+
     private val _temaNero = MutableStateFlow(prefs.getInt("tema_scelto", if (prefs.getBoolean("tema_nero", false)) 1 else AC.PREFERENZA_PREDEFINITA))
     /** 0 = blu, 1 = nero, 2 = chiaro. */
     val temaNero: StateFlow<Int> = _temaNero
@@ -1057,6 +1062,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         liveJob?.cancel()
         liveJob = viewModelScope.launch {
             var cambioFatto = false
+            var ultimoCond = -10
             while (true) {
                 val i = _live.value ?: return@launch
                 if (i.m.finished) break
@@ -1065,6 +1071,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     aggiornaAssistente(i)
                     val c = _cambioPronto.value
                     if (c > 0 && !cambioFatto && i.m.minute >= c) { cambioFatto = true; i.m.cambioProgrammato(i.userHome) }
+                    val cc = _cambioCond.value
+                    if (cc != 0 && i.m.minute - ultimoCond >= 5 && i.m.cambioCondizionato(i.userHome, cc)) ultimoCond = i.m.minute
                     bump()
                 }
                 kotlinx.coroutines.delay((if (i.speed >= 20) 50L else 1000L / i.speed).let { if (_risparmio.value) maxOf(it, 125L) else it })

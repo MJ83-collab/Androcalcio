@@ -176,6 +176,43 @@ class LiveMatch(
     fun cambioProgrammato(homeSide: Boolean): Boolean =
         autoSub(homeSide, if (homeSide) hg < ag else ag < hg)
 
+    /**
+     * Cambio con condizioni scelte dall'allenatore (maschera di bit, vedi CambiCondizioni). Fa al massimo un cambio
+     * per chiamata. Restituisce true se ha cambiato.
+     */
+    fun cambioCondizionato(homeSide: Boolean, cond: Int): Boolean {
+        if (finished || cond == 0 || minute < 30) return false
+        val xi = if (homeSide) xiH else xiA
+        val bench = if (homeSide) benchH else benchA
+        if ((if (homeSide) subsH else subsA) >= MatchEngine.MAX_SUBS || bench.isEmpty()) return false
+        val mio = if (homeSide) hg else ag
+        val loro = if (homeSide) ag else hg
+        val gioc = xi.filter { it.role != "P" }
+        fun migliore(ruolo: String) = bench.filter { it.role == ruolo }.maxByOrNull { it.overall }
+        if (cond and CambiCondizioni.AMMONITO != 0) {
+            val g = gioc.filter { (gialli[it.id] ?: 0) >= 1 }.minByOrNull { energyOf(it) }
+            val inP = g?.let { migliore(it.role) }
+            if (g != null && inP != null) { doSub(homeSide, g, inP); return true }
+        }
+        if (cond and CambiCondizioni.STANCO != 0) {
+            val g = gioc.filter { energyOf(it) < 0.88 }.minByOrNull { energyOf(it) }
+            val inP = g?.let { migliore(it.role) }
+            if (g != null && inP != null) { doSub(homeSide, g, inP); return true }
+        }
+        if (cond and CambiCondizioni.SOTTO != 0 && minute >= 60 && mio < loro) {
+            val g = gioc.filter { it.role != "A" }.minByOrNull { energyOf(it) }
+            val inP = migliore("A")
+            if (g != null && inP != null) { doSub(homeSide, g, inP); return true }
+        }
+        if (cond and CambiCondizioni.SOPRA != 0 && minute >= 75 && mio > loro) {
+            val g = gioc.filter { it.role == "A" }.minByOrNull { energyOf(it) }
+                ?: gioc.filter { it.role == "C" }.minByOrNull { energyOf(it) }
+            val inP = migliore("D") ?: migliore("C")
+            if (g != null && inP != null) { doSub(homeSide, g, inP); return true }
+        }
+        return false
+    }
+
     fun setPressing(homeSide: Boolean, p: Pressing) { if (homeSide) pressH = p else pressA = p }
     fun setLine(homeSide: Boolean, l: DefLine) { if (homeSide) lineH = l else lineA = l }
 
