@@ -4,6 +4,23 @@ Ramo attuale: `feat/fine-partita` (v0.6.0 + blocchi 1–6 + tablet).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato).
 Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul telefono.
 
+## Sessione 24/11 pomeriggio (ramo feat/fine-partita, non ancora provato sul telefono)
+- **Economia:** Serie C mai in passivo (TV B 4 M, C 3,8 M; premio piazzamento serie minori 2,5 M; sponsor di maglia minimo circa 0,8 M). Test: A mediana +5,6 M, B +4,2 M, C +1,5 M, nessuna di C sotto zero (replica Python del test).
+- **Playoff/playout reali:** B a 6 squadre (preliminare secco 5-8 e 6-7, supplementari poi meglio piazzata; semifinali e finale andata/ritorno, meglio piazzata; finale a pari punti supplementari e rigori), terza diretta con più di 14 punti sulla quarta, perimetro playoff entro 14 punti, playout andata/ritorno e non disputato con più di 4 punti di distacco. Serie C: semifinali meglio piazzata, finale supplementari e rigori. Inghilterra e Spagna con regole proprie. Dal vivo se c'è la tua squadra (rigori scelti da te), simulati altrimenti. `Spareggi` in `engine/V06.kt`, `giocaTurno` nel ViewModel.
+- **Stemmi:** 8 sagome, 14 motivi, 15 simboli o monogramma, stelle, corona, alloro, doppio bordo, oro (`ui/components/Components.kt`, `StileStemma`).
+- **Volti manga:** collo, ombre, capelli con ciocche, iride sfumata, guance. Modificabili solo nell'editor (`LocalEditorAttivo`).
+- **Editor:** "Usa come predefinito" salva squadre, giocatori, staff e volti in `predefinito_utente.json`: li usa ogni nuova carriera e "Ripristina". "Torna all'originale" lo cancella.
+- **Home** in stile PC Calcio 7 (`ui/HomePc.kt`): intestazione partita, blocchi Campionato/Allenatore/Mercato/Finanze, trofeo, barra Salva/Notizie/Continua.
+- **Grafica:** tabellone con luci, campo formazioni in prospettiva.
+- **Telecronisti** di fantasia (`engine/Telecronisti.kt`): prime voci Ferrandi (sobrio), Strepponi (urlatore), Bucchetti (immaginifico), Lanfranchi (enciclopedico); seconde voci Contrafatti (poeta tattico), Sbaraglia (ex attaccante schietto, dialetto), Percentini (statistico), Marcolin (ex difensore tecnico), Spuntazzo (ironico). Coppia casuale a ogni partita.
+- **Squadra B** con partita mensile simulata dal vice; prelazione sul satellite; fedeltà per id; rivendita anche all'estero.
+
+## Prossimi lavori decisi con Marco (non iniziati)
+1. **Maglie legate allo sponsor tecnico:** marchi di fantasia con stili propri; casa, trasferta e terza; molti stili e combinazioni; a ogni stagione si possono tenere o cambiare (con un nuovo marchio si cambiano per forza); 3 proposte tra cui scegliere.
+2. **Merchandising delle maglie:** vendite secondo tifosi, risultati, giocatori famosi, novità e bellezza della maglia; prezzo scelto dall'utente; prezzo esagerato = pochi acquirenti, soprattutto nelle serie minori.
+3. **Stadio personalizzabile, tutto:** settori (curva, distinti, tribuna, VIP) con prezzi propri, nome, colore dei seggiolini, copertura, illuminazione, maxischermo, negozio del club; effetti su incassi, atmosfera e costi.
+4. Grafica delle altre schermate ispirata alle foto (tabella giocatori a colonne colorate, scheda giocatore con contratto, prestagione con amichevoli).
+
 ## Da provare
 - **v0.6.0 e ramo feat/fine-partita:** mai provati sul telefono. La v0.6.0 è stata provata solo su emulatore (Android 11).
 - **Blocchi 1–6 e tablet:** da provare sul telefono e sul tablet.
