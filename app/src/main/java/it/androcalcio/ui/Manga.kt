@@ -83,7 +83,8 @@ fun MangaPitch(
     quota: Float = 0f,                  // altezza della palla 0..1 (0 = rasoterra)
     inMoto: Boolean = true,             // la palla sta viaggiando (linee di velocità)
     meteo: it.androcalcio.engine.Meteo.Tempo? = null, prato: it.androcalcio.engine.Meteo.Campo? = null,
-    lineaCasa: it.androcalcio.engine.DefLine? = null, lineaOspiti: it.androcalcio.engine.DefLine? = null
+    lineaCasa: it.androcalcio.engine.DefLine? = null, lineaOspiti: it.androcalcio.engine.DefLine? = null,
+    sim: PallonePista? = null           // se presente, la palla è simulata sui giocatori (portata e passata) invece di essere disegnata dove dice bx,by
 ) {
     val animato = meteo == it.androcalcio.engine.Meteo.Tempo.PIOGGIA || meteo == it.androcalcio.engine.Meteo.Tempo.NEVE ||
         meteo == it.androcalcio.engine.Meteo.Tempo.VENTO
@@ -137,7 +138,7 @@ fun MangaPitch(
             prima = ns
             val tg = bersagliOra.value
             for (i in 0 until 22) {
-                val g = tg[i] ?: continue
+                val g = sim?.forzato(i) ?: tg[i] ?: continue
                 if (!partiti[i]) { posiz[i] = g; partiti[i] = true; continue }
                 val c = posiz[i]
                 var vx = (g.x - c.x) * 2.4f; var vy = (g.y - c.y) * 2.4f
@@ -148,6 +149,7 @@ fun MangaPitch(
                 velocita[2 * i + 1] += (vy - velocita[2 * i + 1]) * a
                 posiz[i] = Offset(c.x + velocita[2 * i] * dt, c.y + velocita[2 * i + 1] * dt)
             }
+            sim?.avanza(dt, posiz)
         }
     }
 
@@ -402,51 +404,109 @@ fun MomentoChiave(titolo: String, testo: String, squadra: Team, giocatore: Playe
         }
     }
 }
-
 /**
- * Posizione animata della palla: passa da giocatore a giocatore lungo il percorso degli episodi e, negli altri
- * minuti, con un passaggio verso un compagno della squadra che ha il possesso. `scia` è il tragitto da disegnare,
- * `quota` l'altezza (0 rasoterra, 1 palla alta) e `inVolo` dice se la palla sta viaggiando.
+ * Pallone con fisica semplice: sta ai piedi di un giocatore (che lo porta correndo), oppure viaggia da un
+ * compagno all'altro a velocità costante verso la posizione ATTUALE del ricevente, oppure è libero dopo un tiro.
+ * Le posizioni sono quelle disegnate dei 22 giocatori (0..10 casa, 11..21 ospiti; 0 e 11 portieri).
+ * I comandi `passa`, `porta` e `tira` sono sospesi finché il gesto non è finito.
  */
-class PallaAnimata(
-    val x: Float, val y: Float, val attacco: Boolean?, val scia: List<Offset> = emptyList(),
-    val quota: Float = 0f, val inVolo: Boolean = false
-)
+class PallonePista {
+    var x by androidx.compose.runtime.mutableFloatStateOf(0.5f)
+    var y by androidx.compose.runtime.mutableFloatStateOf(0.5f)
+    var z by androidx.compose.runtime.mutableFloatStateOf(0f)
+    var possessore = -1
+        private set
+    private var pos: List<Offset> = emptyList()
+    private var volo = false
+    private var ricevente = -1
+    private var mira = Offset.Zero
+    private var vel = 1f
+    private var picco = 0f
+    private var dist0 = 1f
+    private var portando = false
+    private var raggio = 0.05f
+    private var scadenza = 0f
+    private var tempo = 0f
+    private var fine: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
-/**
- * Posti dei giocatori di movimento (portiere escluso) dove la palla "sta ai piedi": è il punto fisso della posizione
- * disegnata in MangaPitch (spostamento della squadra con la palla e salita di chi attacca).
- */
-private fun postiGiocatori(f: it.androcalcio.engine.Formation, casa: Boolean, azione: Boolean): List<Pair<Float, Float>> =
-    f.coords().drop(1).map { (fx, fy) ->
-        val base = if (casa) fx else 1f - fx
-        val segno = if (casa) 1f else -1f
-        val salita = if (azione) segno * (0.04f + 0.35f * base) else 0f
-        ((base + salita - 0.1f) / 0.8f).coerceIn(0.03f, 0.97f) to fy
+    private fun nuovo(): kotlinx.coroutines.CompletableDeferred<Unit> {
+        fine?.cancel()
+        return kotlinx.coroutines.CompletableDeferred<Unit>().also { fine = it }
+    }
+    private fun chiudi() { fine?.complete(Unit); fine = null }
+    private fun distanza(a: Offset, b: Offset) = hypot(a.x - b.x, (a.y - b.y) * 0.55f)
+
+    /** Se il giocatore `i` deve andare in un punto preciso (chi porta palla, chi sta per ricevere). */
+    fun forzato(i: Int): Offset? = when {
+        portando && i == possessore -> mira
+        volo && i == ricevente -> mira
+        else -> null
     }
 
-/** Il giocatore più vicino al punto indicato (diverso da `escludi`, per non passarsi la palla da soli). */
-private fun alPiedeDi(posti: List<Pair<Float, Float>>, da: Pair<Float, Float>, escludi: Pair<Float, Float>?): Pair<Float, Float> {
-    if (posti.isEmpty()) return da
-    val ord = posti.sortedBy { hypot(it.first - da.first, (it.second - da.second) * 0.55f) }
-    return ord.firstOrNull { it != escludi } ?: ord.first()
-}
+    /** Passaggio al compagno di `squadra` più vicino al punto `verso`; `picco` > 0 = palla alta. */
+    suspend fun passa(squadra: IntRange, verso: Offset, velocita: Float, alto: Float = 0f) {
+        val r = squadra.filter { it % 11 != 0 && it != possessore && it < pos.size }
+            .minByOrNull { distanza(pos[it], verso) }
+        if (r == null) { x = verso.x; y = verso.y; z = 0f; return }
+        val att = nuovo()
+        portando = false; possessore = -1; ricevente = r; mira = verso
+        vel = velocita; picco = alto; dist0 = maxOf(distanza(pos[r], Offset(x, y)), 0.01f); volo = true
+        att.await()
+    }
 
-/** Muove la palla; con `picco` > 0 sale e scende lungo il tragitto (lancio, pallonetto, tiro alto). */
-private suspend fun muoviPalla(
-    ax: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
-    ay: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
-    az: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
-    px: Float, py: Float, ms: Int, picco: Float
-) {
-    kotlinx.coroutines.coroutineScope {
-        launch { ax.animateTo(px, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
-        launch { ay.animateTo(py, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
-        launch {
-            if (picco > 0f) { az.animateTo(picco, tween(ms / 2, easing = androidx.compose.animation.core.FastOutSlowInEasing)); az.animateTo(0f, tween(ms - ms / 2, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) } else az.snapTo(0f)
+    /** Il giocatore con la palla corre verso `meta` (si ferma entro `r` o dopo `massimo` secondi). */
+    suspend fun porta(meta: Offset, r: Float, massimo: Float) {
+        if (possessore < 0 || volo) return
+        val att = nuovo()
+        mira = meta; raggio = r; scadenza = massimo; tempo = 0f; portando = true
+        att.await()
+    }
+
+    /** Tiro: la palla parte dal punto in cui si trova e resta libera nel punto `verso`. */
+    suspend fun tira(verso: Offset, velocita: Float, alto: Float = 0f) {
+        val att = nuovo()
+        portando = false; possessore = -1; ricevente = -1; mira = verso
+        vel = velocita; picco = alto; dist0 = maxOf(distanza(verso, Offset(x, y)), 0.01f); volo = true
+        att.await()
+    }
+
+    /** Un passo di simulazione, chiamato a ogni fotogramma dopo il movimento dei giocatori. */
+    fun avanza(dt: Float, p: List<Offset>) {
+        pos = p
+        if (volo) {
+            val d = p.getOrNull(ricevente) ?: mira
+            val dd = distanza(d, Offset(x, y))
+            val passo = vel * dt
+            val t = (1f - dd / dist0).coerceIn(0f, 1f)
+            z = picco * 4f * t * (1f - t)
+            if (dd <= passo) {
+                x = d.x; y = d.y; z = 0f; volo = false
+                possessore = ricevente; ricevente = -1
+                chiudi()
+            } else {
+                val f = passo / dd
+                x += (d.x - x) * f; y += (d.y - y) * f
+            }
+        } else if (possessore >= 0) {
+            val h = p.getOrNull(possessore) ?: return
+            x = h.x; y = h.y; z = 0f
+            if (portando) {
+                tempo += dt
+                if (distanza(h, mira) < raggio || tempo >= scadenza) { portando = false; chiudi() }
+            }
         }
     }
 }
+
+/**
+ * Palla animata: la porta e se la passa la squadra in possesso. Negli episodi segue il percorso dell'azione
+ * (passaggi ai compagni, conduzione, tiro); negli altri minuti c'è una conduzione e un passaggio.
+ * `scia` è il tragitto da disegnare, `quota` l'altezza (0 rasoterra, 1 alta), `inVolo` dice se la palla sta viaggiando.
+ */
+class PallaAnimata(
+    val x: Float, val y: Float, val attacco: Boolean?, val scia: List<Offset> = emptyList(),
+    val quota: Float = 0f, val inVolo: Boolean = false, val sim: PallonePista? = null
+)
 
 @Composable
 fun rememberPalla(
@@ -454,36 +514,33 @@ fun rememberPalla(
     hf: it.androcalcio.engine.Formation, af: it.androcalcio.engine.Formation,
     fattoreTempo: Float = 1f   // > 1 con pioggia, neve o prato pesante: la palla corre meno
 ): PallaAnimata {
-    val ax = remember { Animatable(0.5f) }
-    val ay = remember { Animatable(0.5f) }
-    val az = remember { Animatable(0f) }
+    val sim = remember { PallonePista() }
     val scia = remember { androidx.compose.runtime.mutableStateListOf<Offset>() }
     var attacco by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
     var inAzione by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var inVolo by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }   // la palla sta viaggiando: la scia arriva fino a lei
     val idx = events.indexOfLast { it.percorso.isNotEmpty() }
     val ultimo = events.getOrNull(idx)
-    val durata = if (veloce) 30 else (260 * fattoreTempo).toInt()
+    val ritmo = if (veloce) 10f else 1f / fattoreTempo
 
     LaunchedEffect(idx) {
         val e = ultimo ?: return@LaunchedEffect
         inAzione = true; attacco = e.home
-        val posti = postiGiocatori(if (e.home) hf else af, e.home, true)
-        // Le tappe intermedie diventano passaggi a un compagno; l'ultima resta il punto del tiro
-        var prec: Pair<Float, Float>? = null
-        val tappe = e.percorso.mapIndexed { i, pt ->
-            if (i == e.percorso.lastIndex) pt else alPiedeDi(posti, pt, prec).also { prec = it }
-        }
+        val sq = if (e.home) 0..10 else 11..21
         val rnd = java.util.Random(e.minute * 17L + idx)
-        scia.clear(); scia.add(Offset(ax.value, ay.value))
+        scia.clear(); scia.add(Offset(sim.x, sim.y))
         inVolo = true
-        var da = Offset(ax.value, ay.value)
-        tappe.forEachIndexed { i, (px, py) ->
-            val dist = hypot(px - da.x, (py - da.y) * 0.55f)
-            // Palla alta: lanci lunghi e, ogni tanto, il tiro finale
-            val picco = if (dist > 0.30f) 1f else if (i == tappe.lastIndex && rnd.nextFloat() < 0.35f) 0.8f else 0f
-            muoviPalla(ax, ay, az, px, py, if (veloce) durata else (dist * 900f * fattoreTempo).toInt().coerceIn(180, 800), picco)
-            scia.add(Offset(px, py)); da = Offset(px, py)
+        if (sim.possessore !in sq) { sim.passa(sq, Offset(sim.x, sim.y), 1.1f * ritmo); scia.add(Offset(sim.x, sim.y)) }
+        e.percorso.forEachIndexed { i, (px, py) ->
+            val pt = Offset(px, py)
+            if (i < e.percorso.lastIndex) {
+                val lungo = hypot(pt.x - sim.x, (pt.y - sim.y) * 0.55f) > 0.30f
+                sim.passa(sq, pt, 1.1f * ritmo, if (lungo) 1f else 0f)
+            } else {
+                if (!veloce) sim.porta(pt, 0.10f, 1.4f)
+                sim.tira(pt, 2.0f * ritmo, if (rnd.nextFloat() < 0.35f) 0.8f else 0f)
+            }
+            scia.add(Offset(sim.x, sim.y))
         }
         inVolo = false
         delay(if (veloce) 300L else 1500L)   // la traiettoria resta visibile un attimo dopo il tiro; la squadra resta alta
@@ -495,18 +552,20 @@ fun rememberPalla(
         if (inAzione || (ultimo != null && ultimo.minute == minuto)) return@LaunchedEffect
         val rnd = java.util.Random(minuto * 131L + possessoCasa)
         val casaPalla = rnd.nextInt(100) < possessoCasa
-        val mira = (0.5f + (possessoCasa - 50) / 100f * 0.5f + (rnd.nextFloat() - 0.5f) * 0.5f).coerceIn(0.1f, 0.9f) to
-            (0.15f + rnd.nextFloat() * 0.7f)
-        val (tx, ty) = alPiedeDi(postiGiocatori(if (casaPalla) hf else af, casaPalla, false), mira, null)
-        scia.clear(); scia.add(Offset(ax.value, ay.value))
+        val sq = if (casaPalla) 0..10 else 11..21
+        val mira = Offset((0.5f + (possessoCasa - 50) / 100f * 0.5f + (rnd.nextFloat() - 0.5f) * 0.5f).coerceIn(0.1f, 0.9f),
+            0.15f + rnd.nextFloat() * 0.7f)
+        scia.clear(); scia.add(Offset(sim.x, sim.y))
         inVolo = true
-        val dist = hypot(tx - ax.value, (ty - ay.value) * 0.55f)
-        muoviPalla(ax, ay, az, tx, ty, if (veloce) 30 else (dist * 1500f * fattoreTempo).toInt().coerceIn(350, 1100), if (dist > 0.30f) 0.6f else 0f)
-        scia.add(Offset(tx, ty))
+        if (sim.possessore !in sq) sim.passa(sq, Offset(sim.x, sim.y), 0.9f * ritmo)
+        if (!veloce) sim.porta(mira, 0.06f, 1.2f)
+        val lungo = hypot(mira.x - sim.x, (mira.y - sim.y) * 0.55f) > 0.30f
+        sim.passa(sq, mira, 0.9f * ritmo, if (lungo) 0.6f else 0f)
+        scia.add(Offset(sim.x, sim.y))
         inVolo = false
         delay(if (veloce) 100L else 500L)
         if (!inAzione) scia.clear()
     }
-    val tragitto = if (inVolo) scia.toList() + Offset(ax.value, ay.value) else scia.toList()
-    return PallaAnimata(ax.value, ay.value, attacco, tragitto, az.value, inVolo)
+    val tragitto = if (inVolo) scia.toList() + Offset(sim.x, sim.y) else scia.toList()
+    return PallaAnimata(sim.x, sim.y, attacco, tragitto, sim.z, inVolo, sim)
 }
