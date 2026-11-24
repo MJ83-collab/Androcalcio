@@ -20,7 +20,7 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - La squadra B non gioca partite proprie: cresce soltanto.
 - Prelazione sui giovani del satellite: non fatta.
 - Rivendita solo verso club della stessa nazione.
-- Playoff simulati con la forza delle rose, senza partita 2D.
+- Playoff e playout: giocati dal vivo solo se c'è la tua squadra; in parità passa la meglio piazzata.
 - Avatar ancora disegnati in codice.
 
 ## Blocchi del ramo feat/fine-partita
@@ -41,7 +41,7 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Blocco 17 – Ritiro, fedeltà, sfide** (`engine/Fedelta.kt`, `engine/Sfide.kt`): ritiro precampionato (luglio-agosto, 20.000 €/giorno); bonus fedeltà a fine stagione (3+ stagioni, 3% dell'ingaggio, morale +3); sfide a scelta facile/media/difficile.
 
 ## Da fare (priorità)
-1. **Playoff e playout giocabili.** Oggi sono simulati con la forza delle rose (`Spareggi` in `engine/V06.kt`, usati in `AndrocalcioViewModel`). Vanno giocati come partite vere, con la partita dal vivo se coinvolgono la squadra dell'utente.
+1. **Playoff e playout giocabili: fatto (24/11), da provare.** Se c'è la squadra dell'utente si gioca dal vivo (gara secca, meglio piazzata in casa), le altre gare si simulano (`giocaSpareggio` in `AndrocalcioViewModel`, `Spareggi.playoffCon`). In parità passa la meglio piazzata: mancano supplementari e rigori. Il salvataggio automatico è sospeso durante la gara. Da verificare: uscita dall'app a metà gara.
 2. Provare tutto su telefono e tablet.
 3. Prelazione sui giovani del satellite.
 4. Far giocare partite proprie alla squadra B.
