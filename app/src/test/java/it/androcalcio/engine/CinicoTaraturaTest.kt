@@ -110,10 +110,9 @@ class CinicoTaraturaTest {
         assertTrue("Il Cinico deve segnare il 10-15% in più (margine 8-18%): rapporto $rapporto", rapporto in 1.08..1.18)
         assertTrue("Quota di gol dopo il 75' spostata troppo: ${tardi(base)} -> ${tardi(cin)}", tardi(cin) - tardi(base) in -0.5..2.0)
         assertTrue("Conversione rigori ${conv(cin)}% fuori da 74-83%", conv(cin) in 74.0..83.0)
-        assertTrue("Il Cinico deve segnare più rigori", cin.rigoriCiniciGol.toDouble() / cin.rigoriCinici > base.rigoriGol.toDouble() / base.rigori)
     }
 
-    // --- Regole semplici ---
+    // --- Regole semplici (il bonus sui rigori si verifica qui: in campionato i rigoristi Cinici sono pochi e diversi) ---
 
     private fun gioc(id: Long, nome: String, role: String = "A", fi: Int = 70) =
         Player(id = id, teamId = 1, name = nomeNonInnato(nome), role = role, age = 25, overall = 70, morale = 50,
