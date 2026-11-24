@@ -2822,7 +2822,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     // Senza i giocatori All Star: non si possono ingaggiare, cercare né confrontare
     val allPlayers: StateFlow<List<Player>> =
-        combine(dao.allPlayersFlow(), teams) { ps, ts ->
+        combine(osserva("players") { dao.allPlayers() }, teams) { ps, ts ->
             val asIds = ts.filter { AllStar.isAllStar(it) }.map { it.id }.toSet()
             ps.filter { it.teamId !in asIds }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -3748,7 +3748,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Forza (media dei migliori 11) e monte ingaggi attuale di ogni squadra, per la schermata di scelta. */
     data class TeamInfo(val strength: Int, val wages: Long)
-    val teamInfo: StateFlow<Map<Long, TeamInfo>> = dao.allPlayersFlow().map { all ->
+    val teamInfo: StateFlow<Map<Long, TeamInfo>> = osserva("players") { dao.allPlayers() }.map { all ->
         all.groupBy { it.teamId }.mapValues { (_, ps) ->
             TeamInfo(ps.map { it.overall }.sortedDescending().take(11).average().toInt(), ps.sumOf { it.salary })
         }

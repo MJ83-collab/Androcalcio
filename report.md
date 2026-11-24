@@ -1,4 +1,4 @@
-# Androcalcio — report (aggiornato 24/11/2026, sera 10)
+# Androcalcio — report (aggiornato 24/11/2026, notte 11)
 
 Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/stadio` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
@@ -27,10 +27,17 @@ Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, ico
 - **Merge su `main` e release v0.7.0** (dopo il via di Marco).
 - **Bug da tenere d'occhio:** crash "Couldn't read row 1444 … CursorWindow" nella prova su emulatore (2 volte). Causa probabile: lettura di tutti i giocatori in un colpo; ora letti a pagine da 500 e le letture dei flussi si riprovano una volta. Se ricompare, cercare un'altra lettura grande.
 
+## Decisioni prese da Marco (24/11 notte) — da realizzare
+- **Palla 2D:** portata dal giocatore e passata (stile FM). Lavoro grande, non ancora iniziato.
+- **Schemi:** devono usare in automatico FD/FS/AD/AS dalle affinità. Non ancora fatto.
+- **Cinico:** conta anche nei rigori e nei finali di partita; serve nuova taratura (Opus). Non ancora fatto.
+
 ## Decisioni aperte (chiedere a Marco)
-- Come far muovere la palla in 2D: portata dal giocatore e passata (come FM) oppure solo più morbida?
-- Gli schemi (4-3-3, ecc.) devono usare in automatico ali ed esterni destro/sinistro?
-- Il Cinico deve contare anche nei rigori e nei finali di partita?
+- Nessuna. Ordine dei tre lavori sopra: da chiedere a inizio chat.
+
+## Sessione 24/11 notte (11): controllo repo
+- **Bug corretto:** `allPlayers` e `teamInfo` (ViewModel) leggevano ancora tutti i giocatori in un colpo con `allPlayersFlow()`, senza pagine né nuovo tentativo. Ora usano `osserva("players") { dao.allPlayers() }` (pagine da 500 + un nuovo tentativo). Probabile causa del crash CursorWindow riga 1444. Non compilato in locale: verifica con la build su GitHub Actions.
+- Altre letture complete (`allStats`, `youths`, `staff`) sono piccole: lasciate.
 
 ## Sessione 24/11 sera (10): staff, movimento, id, bug
 - **Staff (Home):** colonna con 8 tessere (ALL lavagna, ASS cartellina, GIO figura con stella, PRE bilanciere, FIS croce, SCO lente, GIA erba, ANA schermo con grafico), sigla sotto ciascuna.
