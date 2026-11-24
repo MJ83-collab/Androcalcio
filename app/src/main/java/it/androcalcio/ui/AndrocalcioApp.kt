@@ -307,7 +307,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 Screen.GIORNALE -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
-                    GiornaleScreen(ex) { vm.scegliSfida(it) }
+                    GiornaleScreen(ex, { vm.scegliSfida(it) }, { vm.coreografia() })
                 }
                 Screen.PRESTITI -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
@@ -327,7 +327,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val linea by vm.line.collectAsStateWithLifecycle()
                     val allen by vm.training.collectAsStateWithLifecycle()
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
-                    RosaScreen(team, players, { p, y -> vm.renew(p, y) },
+                    RosaScreen(team, players, { p, y, b, r -> vm.renew(p, y, b, r) },
                         modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() },
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) },
@@ -850,7 +850,7 @@ private fun roleColor(role: String): Color = when (role) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RosaScreen(
-    team: Team?, players: List<Player>, onRenew: (Player, Int) -> Unit,
+    team: Team?, players: List<Player>, onRenew: (Player, Int, Boolean, Boolean) -> Unit,
     formation: Formation, onFormation: (Formation) -> Unit,
     onToggleStarter: (Player) -> Unit, onCoach: () -> Unit,
     press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit,
@@ -868,6 +868,8 @@ fun RosaScreen(
     sheet?.let { p -> SchedaGiocatore(p, team, onClose = { sheet = null }, onRenew = { renew = p; sheet = null }) }
     renew?.let { p ->
         var years by remember(p) { mutableStateOf(3) }
+        var cBonus by remember(p) { mutableStateOf(false) }
+        var cResc by remember(p) { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { renew = null },
             title = { Text("Rinnovo ${p.name}") },
@@ -880,9 +882,11 @@ fun RosaScreen(
                             PcChip(selected = years == y, onClick = { years = y }, label = { Text("$y") })
                         }
                     }
+                    PcChip(selected = cBonus, onClick = { cBonus = !cBonus }, label = { Text("Bonus gol doppio (ingaggio -6%)") })
+                    PcChip(selected = cResc, onClick = { cResc = !cResc }, label = { Text("Clausola rescissoria (ingaggio -8%)") })
                 }
             },
-            confirmButton = { PcAction(onClick = { onRenew(p, years); renew = null }) { Text("Rinnova") } },
+            confirmButton = { PcAction(onClick = { onRenew(p, years, cBonus, cResc); renew = null; cBonus = false; cResc = false }) { Text("Rinnova") } },
             dismissButton = { TextButton(onClick = { renew = null }) { Text("Annulla") } }
         )
     }

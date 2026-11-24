@@ -41,6 +41,7 @@ import it.androcalcio.engine.Relazioni
 import it.androcalcio.engine.SponsorDeal
 import it.androcalcio.engine.Sponsors
 import it.androcalcio.ui.components.GlassCard
+import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcButton
 import it.androcalcio.ui.components.PcChip
 import it.androcalcio.ui.components.SectionTitle
@@ -251,8 +252,17 @@ fun ObiettiviScreen(ex: ExtraStato, c: ClubState, posizione: Int? = null) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun GiornaleScreen(ex: ExtraStato, onSceltaSfida: (Int) -> Unit = {}) {
+fun GiornaleScreen(ex: ExtraStato, onSceltaSfida: (Int) -> Unit = {}, onCoreo: () -> Unit = {}) {
     Pagina {
+        SectionTitle("Ultras")
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp)) {
+                Text("Umore degli ultras: ${ex.ultras}/100" + if (ex.ultras < 25) " · in contestazione" else "", color = AC.Text, fontWeight = FontWeight.Bold)
+                Text("Le vittorie li scaldano, le sconfitte li raffreddano: sotto 25 contestano e abbassano tifosi e fiducia. Una coreografia (15.000 €) carica l'atmosfera della prossima partita in casa.",
+                    color = AC.TextDim, fontSize = 11.sp)
+                PcAction(onClick = onCoreo, enabled = !ex.coreo) { Text(if (ex.coreo) "Coreografia pronta" else "Organizza coreografia") }
+            }
+        }
         SectionTitle("Prossima partita")
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(10.dp)) {

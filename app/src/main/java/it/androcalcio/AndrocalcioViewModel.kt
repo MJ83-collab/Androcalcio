@@ -645,7 +645,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val prestiti: List<Prestiti.Prestito> = emptyList(),
         val meteo: Meteo.Condizioni? = null, val budget: Long = 0L, val giornata: Int = 1,
         val inPrima: Set<Long> = emptySet(),
-        val analista: Int = -1, val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
+        val analista: Int = -1, val ultras: Int = 60, val coreo: Boolean = false, val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
     )
     private val _extra = MutableStateFlow(ExtraStato())
     val extra: StateFlow<ExtraStato> = _extra
@@ -699,6 +699,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             trofei = Achievement.decode(dao.stato("achievement")), avanzate = Avanzate.decode(dao.stato("avanzate")),
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
+            ultras = dao.stato("ultras")?.toIntOrNull() ?: 60, coreo = dao.stato("coreo") == "1",
             analista = dao.allStaff().firstOrNull { it.teamId == t.id && it.role == Staffing.ANALISTA }?.skill ?: -1,
             prepAuto = dao.stato(PreparatoreCapo.KEY_AUTO) != "0",
             prepAssunto = dao.allStaff().any { it.teamId == t.id && it.role == Staffing.PREPARATORE && it.specialita == Staffing.GENERALE },
@@ -750,6 +751,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             r.playerRatings[p.id]?.let { p.name to (Math.round(it * 2) / 2.0) }
         }
         dao.setStato(Stato("giornale", Giornale.encode(Giornale.crea(me.name, opp.name, gf, gs, derby, voti))))
+        // Ultras: umore in base ai risultati; sotto 25 contestano la squadra
+        val ultras = ((dao.stato("ultras")?.toIntOrNull() ?: 60) + (if (gf > gs) 4 else if (gf == gs) 0 else -5)).coerceIn(0, 100)
+        dao.setStato(Stato("ultras", ultras.toString()))
+        if (ultras < 25 && gf < gs) {
+            dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) - 2)
+            dao.setStatoInt(StatoKeys.FIDUCIA, dao.statoInt(StatoKeys.FIDUCIA) - 1)
+            _notice.value = "📢 Contestazione degli ultras: striscioni contro squadra e società."
+        }
         // Sfida della settimana: valutata a fine partita, poi ne arriva una nuova
         Sfide.da(dao.stato("sfida")?.toIntOrNull())?.let { sf ->
             val ok = Sfide.riuscita(sf, gf, gs)
@@ -1042,7 +1051,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val msLega = dao.matchesOnce(key(me), _season.value)
         val cond = condizioni(league?.round ?: 1, msLega.filter { !Cup.isCup(it.round) }.maxOfOrNull { it.round } ?: 38, home,
             userHome, Migliorie.decodeFatte(dao.stato("migliorie_fatte")))
-        val atm = Atmosfera.valore(dao.statoInt(StatoKeys.TIFOSI), userHome, home.stadiumCapacity)
+        val ultrasM = dao.stato("ultras")?.toIntOrNull() ?: 60
+        val coreo = userHome && dao.stato("coreo") == "1"
+        val atm = (Atmosfera.valore(dao.statoInt(StatoKeys.TIFOSI), userHome, home.stadiumCapacity) +
+            (if (userHome) (ultrasM - 60) / 6 else 0) + (if (coreo) 8 else 0)).coerceIn(0, 100)
+        if (coreo) dao.setStato(Stato("coreo", ""))
         val m = LiveMatch(
             home, if (userHome) res.xi else opp, away, if (userHome) opp else res.xi,
             if (userHome) _formation.value else oppF, if (userHome) oppF else _formation.value,
@@ -2334,16 +2347,61 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun renew(p: Player, years: Int) {
+    fun renew(p: Player, years: Int, bonusGol: Boolean = false, rescissoria: Boolean = false) {
         viewModelScope.launch {
             if (p.morale < 40) {
                 _notice.value = "${p.name} rifiuta di rinnovare (morale basso)."
                 return@launch
             }
-            val wage = Progression.wage(p)
+            // Clausole concesse in cambio di uno sconto sull'ingaggio: bonus gol raddoppiato (-6%), rescissoria (-8%)
+            var wage = Progression.wage(p)
+            if (bonusGol) {
+                wage = wage * 94 / 100
+                val base = maxOf(p.salary, 100_000L)
+                val c = dao.clausoleOnce().firstOrNull { it.playerId == p.id } ?: Clausola(p.id, p.teamId, base / 2, base / 2, base, base / 2)
+                dao.upsertClausole(listOf(c.copy(bonusGol = c.bonusGol * 2)))
+            }
+            if (rescissoria) {
+                wage = wage * 92 / 100
+                dao.setStato(Stato("resc_${p.id}", (Market.value(p) * 3).toString()))
+            } else dao.setStato(Stato("resc_${p.id}", ""))
             dao.updatePlayer(p.copy(contract = years, salary = wage))
-            _notice.value = "${p.name} ha rinnovato per $years anni a ${money(wage)} l'anno."
+            _notice.value = "${p.name} ha rinnovato per $years anni a ${money(wage)} l'anno" +
+                (if (bonusGol) ", con bonus gol doppio" else "") + (if (rescissoria) " e clausola rescissoria" else "") + "."
         }
+    }
+
+    /** Coreografia degli ultras: costa 15.000 € e carica l'atmosfera della prossima partita in casa. */
+    fun coreografia() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val t = selectedTeam.value ?: return@launch
+            val tt = dao.team(t.id)
+            if (dao.stato("coreo") == "1") { _notice.value = "La coreografia è già pronta."; return@launch }
+            if (tt.budget < 15_000L) { _notice.value = "Budget insufficiente per la coreografia."; return@launch }
+            dao.updateTeam(tt.copy(budget = tt.budget - 15_000L))
+            registra(tt.id, "Coreografia ultras", -15_000L, tt.budget - 15_000L)
+            dao.setStato(Stato("coreo", "1"))
+            aggiornaExtra()
+            _notice.value = "🎆 Coreografia pronta per la prossima partita in casa."
+        }
+    }
+
+    /** Clausole rescissorie: a fine stagione un club può pagarle e portarsi via un giocatore forte. */
+    private suspend fun rescissorie(meId: Long, budget: Long, rng: kotlin.random.Random, note: MutableList<String>): Long {
+        val rosa = dao.playersOnce(meId)
+        var incasso = 0L
+        val altre = dao.allTeams().filter { it.id != meId && it.nazione == dao.team(meId).nazione && !AllStar.isAllStar(it) }
+        for (p in rosa) {
+            val clausola = dao.stato("resc_${p.id}")?.toLongOrNull() ?: continue
+            if (p.overall >= 72 && altre.isNotEmpty() && rng.nextDouble() < 0.2) {
+                dao.updatePlayer(p.copy(teamId = altre[rng.nextInt(altre.size)].id, starter = false))
+                incasso += clausola
+                registra(meId, "Rescissoria: ${p.name}", clausola, budget + incasso)
+                note += "${p.name} se ne va pagando la clausola rescissoria: incassi ${money(clausola)}."
+            }
+            dao.setStato(Stato("resc_${p.id}", ""))
+        }
+        return incasso
     }
 
     val goals: StateFlow<List<Goal>> =
@@ -4104,6 +4162,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         dao.setStato(Stato(Cartellini.KEY, Cartellini.encode(Cartellini.avanza(Cartellini.decode(dao.stato(Cartellini.KEY))))))
         // Rivendite: il club che lo ha comprato può cederlo a un altro club della stessa nazione
         val rng = kotlin.random.Random.Default
+        t = t.copy(budget = t.budget + rescissorie(meId, t.budget, rng, note))
         val rimaste = ArrayList<Cartellini.Rivendita>()
         for (r in Cartellini.decodeR(dao.stato(Cartellini.KEY_RIVENDITE))) {
             val p = dao.playerById(r.playerId) ?: continue
