@@ -255,7 +255,8 @@ object CoppeEuropee {
 
     /** Premi in euro: partecipazione, risultati nei gironi, ogni turno a eliminazione raggiunto (ottavi, quarti, semifinali, finale), titolo. */
     private fun tabella(c: Coppa) = when (c) {
-        Coppa.CAMPIONI -> Premi(4_000_000, 800_000, 300_000, listOf(1_500_000, 2_500_000, 3_500_000, 5_000_000), 8_000_000)
+        // Taratura 24/11: uscita nei gironi circa 4,5 M, vincitrice circa 21 M (prima era 29 M, più di un campionato vinto)
+        Coppa.CAMPIONI -> Premi(3_000_000, 600_000, 200_000, listOf(1_000_000, 1_500_000, 2_500_000, 3_500_000), 6_000_000)
         Coppa.EUROPA -> Premi(1_200_000, 0, 0, listOf(500_000, 800_000, 1_200_000, 2_000_000), 3_500_000)
         Coppa.COPPE -> Premi(800_000, 0, 0, listOf(300_000, 500_000, 800_000, 1_200_000), 2_000_000)
     }

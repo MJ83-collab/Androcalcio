@@ -31,13 +31,26 @@ object Economia {
     /** Partite in casa in un campionato a andata e ritorno con [squadre] squadre. */
     fun partiteInCasa(squadre: Int) = (squadre - 1).coerceAtLeast(1)
 
-    fun diritti(divisione: Int): Long = DIRITTI_TV.getOrElse(divisione) { DIRITTI_TV_MINORI }
+    /**
+     * Campionati nuovi (solo massima serie): premio di piazzamento basso e diritti TV più alti, perché gli ingaggi
+     * minimi per livello pesano molto sulle squadre deboli e gli stadi sono piccoli. Taratura 24/11 (replica Python
+     * delle rose generate, 40 estrazioni): mediana +3..+4 M, peggiore tipica circa -1,5 M (Serie A: +5,6 e -2,8).
+     */
+    val PREMI_ESTERI = mapOf(            // nazione -> (premio della prima, diritti TV base)
+        "Olanda" to (1_600_000L to 9_000_000L), "Portogallo" to (1_600_000L to 9_000_000L),
+        "Belgio" to (1_600_000L to 9_500_000L), "Turchia" to (1_600_000L to 6_500_000L),
+        "Grecia" to (1_600_000L to 8_500_000L), "Scozia" to (1_600_000L to 12_000_000L)
+    )
 
-    fun premioBase(divisione: Int): Long = PREMIO_BASE.getOrElse(divisione) { PREMIO_BASE_MINORI }
+    fun diritti(divisione: Int, nazione: String = ""): Long =
+        PREMI_ESTERI[nazione]?.takeIf { divisione == 0 }?.second ?: DIRITTI_TV.getOrElse(divisione) { DIRITTI_TV_MINORI }
+
+    fun premioBase(divisione: Int, nazione: String = ""): Long =
+        PREMI_ESTERI[nazione]?.takeIf { divisione == 0 }?.first ?: PREMIO_BASE.getOrElse(divisione) { PREMIO_BASE_MINORI }
 
     /** Premio di piazzamento più diritti TV; frac = 1 per la prima, 0 per l'ultima. */
-    fun premioStagione(divisione: Int, frac: Double): Long =
-        (premioBase(divisione) * frac.coerceIn(0.0, 1.0) + diritti(divisione) * quotaTv(frac)).toLong()
+    fun premioStagione(divisione: Int, frac: Double, nazione: String = ""): Long =
+        (premioBase(divisione, nazione) * frac.coerceIn(0.0, 1.0) + diritti(divisione, nazione) * quotaTv(frac)).toLong()
 
     /** Incasso dei biglietti di una stagione; rel = forza relativa nel campionato (0 = ultima, 1 = prima). */
     fun incassoStadio(capienza: Int, prezzo: Int, rel: Double, squadreLega: Int): Long =

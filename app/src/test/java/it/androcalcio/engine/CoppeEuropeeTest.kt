@@ -169,7 +169,7 @@ class CoppeEuropeeTest {
         val premi = ids.associateWith { CoppeEuropee.premio(Coppa.CAMPIONI, p, it, forza) }
         val (vince, finalista) = CoppeEuropee.finale(p, forza)!!
         assertTrue(premi.getValue(vince) > premi.getValue(finalista))
-        assertTrue(premi.values.all { it >= 4_000_000L })
+        assertTrue(premi.values.all { it >= 3_000_000L })
         assertEquals(0L, CoppeEuropee.premio(Coppa.CAMPIONI, p, 999_999L))
         assertEquals("Vincitrice", CoppeEuropee.faseRaggiunta(p, vince, forza))
         assertEquals("Finale", CoppeEuropee.faseRaggiunta(p, finalista, forza))

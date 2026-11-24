@@ -3186,7 +3186,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val tier = if (serieC(k)) 3 else catena.indexOf(k)
                     st.forEachIndexed { pos, row ->
                         val frac = (size - 1 - pos).toDouble() / (size - 1).coerceAtLeast(1)
-                        prizes[row.team.id] = Economia.premioStagione(tier, frac)   // premio di piazzamento + diritti TV
+                        prizes[row.team.id] = Economia.premioStagione(tier, frac, k.first)   // premio di piazzamento + diritti TV
                         posInfo[row.team.id] = "${pos + 1}º su $size in ${k.second}"
                     }
                 }

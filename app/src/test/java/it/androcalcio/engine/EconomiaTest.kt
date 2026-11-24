@@ -51,4 +51,12 @@ class EconomiaTest {
         assertTrue(alto > basso && basso > 0)
         assertEquals(1_000_000L - 1_000_000L, Economia.saldoBase(600_000, 400_000, 1_000_000))
     }
+
+    @Test fun campionatiNuoviPiuPiatti() {
+        // La prima di Olanda prende meno della prima di Serie A, l'ultima di più (ingaggi minimi e stadi piccoli)
+        assertTrue(Economia.premioStagione(0, 1.0, "Olanda") < Economia.premioStagione(0, 1.0, "Italia"))
+        assertTrue(Economia.premioStagione(0, 0.0, "Olanda") > Economia.premioStagione(0, 0.0, "Italia"))
+        assertEquals(Economia.premioStagione(0, 0.5), Economia.premioStagione(0, 0.5, "Italia"))
+        Economia.PREMI_ESTERI.keys.forEach { assertTrue(it, Economia.premioStagione(0, 0.0, it) >= 3_500_000L) }
+    }
 }
