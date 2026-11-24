@@ -86,7 +86,7 @@ class LiveMatch(
     var fuorigiocoA = 0; private set
     private fun split(ps: List<Player>, bench: List<Player>?, f: Formation): Pair<MutableList<Player>, MutableList<Player>> =
         if (bench != null) ps.toMutableList() to bench.toMutableList()
-        else Lineup.coachPick(ps, f).let { xi -> xi.toMutableList() to ps.filter { it !in xi }.toMutableList() }
+        else Lineup.coachPick(ps, f).let { xi -> val dentro = xi.map { it.id }.toSet(); xi.toMutableList() to ps.filter { it.id !in dentro }.toMutableList() }
 
     val xiH: MutableList<Player>; val benchH: MutableList<Player>
     val xiA: MutableList<Player>; val benchA: MutableList<Player>

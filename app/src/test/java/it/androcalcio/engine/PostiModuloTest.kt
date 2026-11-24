@@ -50,8 +50,8 @@ class PostiModuloTest {
     }
 
     @Test
-    fun alaConAffinitaAltaGiocaSullaFascia() {
-        val ala = p("A", "ES", ov = 74, sec2 = "AD", aff2 = 90)
+    fun alaCheConosceIlRuoloGiocaSullaFascia() {
+        val ala = p("A", "ES", ov = 74, sec2 = "AD", aff2 = 100)
         val sinistra = p("A", "ES", ov = 76, sec2 = "AS", aff2 = 100)
         val r = rosa().filter { it.pos != "ES" } + ala + sinistra + p("A", "ES", ov = 74)
         val xi = Lineup.coachPick(r, Formation.F433A)
@@ -62,8 +62,8 @@ class PostiModuloTest {
     }
 
     @Test
-    fun affinitaBassaNonCambiaRuoloInCampo() {
-        val ala = p("A", "ES", ov = 80, sec2 = "AD", aff2 = 50)
+    fun affinitaSotto100NonCambiaRuoloInCampo() {
+        val ala = p("A", "ES", ov = 80, sec2 = "AD", aff2 = 90)
         val r = rosa().filter { it.pos != "ES" } + ala + p("A", "ES", ov = 60)
         val xi = Lineup.coachPick(r, Formation.F433A)
         xi.filter { it.id == ala.id }.forEach { assertEquals("", it.ruoloPartita) }

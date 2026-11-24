@@ -20,10 +20,13 @@ object Lineup {
         return base * (0.7 + 0.3 * (p.condition.coerceAtLeast(35) / 100.0))
     }
 
-    /** Peso di un giocatore messo in un posto che non è il suo ruolo naturale né uno che conosce (solo per la scelta). */
-    private const val FUORI_POSTO = 0.85
-    /** Sotto questa affinità (%) l'allenatore non assegna il ruolo in campo: il giocatore resta nel suo ruolo naturale. */
-    const val AFFINITA_MIN = 70
+    /** Peso, nella scelta, di un giocatore messo in un posto che non è il suo ruolo naturale né uno che conosce: resta nel suo ruolo, senza penalità in campo. */
+    private const val FUORI_POSTO = 0.95
+    /**
+     * Affinità (%) da cui l'allenatore assegna il ruolo in campo. Sotto il 100% il motore riduce l'efficacia del giocatore
+     * (vedi [TacticalRoles.factor]), quindi l'allenatore non lo fa da solo: chi vuole far imparare un ruolo lo sceglie lui.
+     */
+    const val AFFINITA_MIN = 100
 
     /** Ordine di assegnazione dei posti: prima le fasce e le ali (più rare), poi il resto. */
     private fun rarita(codice: String): Int = when (codice) {
@@ -32,11 +35,11 @@ object Lineup {
         else -> 2
     }
 
-    /** Quanto sta bene [p] nel posto [codice]: 1 se è il suo ruolo o non c'è un posto fisso, l'affinità se lo conosce, altrimenti poco meno. */
+    /** Quanto sta bene [p] nel posto [codice]: 1 se è il suo ruolo o non c'è un posto fisso, l'affinità se lo conosce (come il motore), altrimenti poco meno. */
     fun idoneita(p: Player, codice: String): Double {
         if (codice.isEmpty() || p.pos.isEmpty() || p.pos == codice) return 1.0
         val aff = TacticalRoles.options(p).firstOrNull { it.first == codice }?.second ?: return FUORI_POSTO
-        return 0.7 + 0.3 * aff / 100.0
+        return aff / 100.0
     }
 
     /**
