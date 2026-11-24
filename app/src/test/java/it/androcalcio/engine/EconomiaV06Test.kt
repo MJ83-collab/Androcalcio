@@ -30,15 +30,13 @@ class EconomiaV06Test {
 
     @Test fun squadraMediaInPariOUtile() {
         val a = saldi("Serie A", 0).sorted(); val b = saldi("Serie B", 1).sorted()
-        assertTrue("Serie A mediana ${a[a.size / 2]}", a[a.size / 2] > 0L)
-        assertTrue("Serie B mediana ${b[b.size / 2]}", b[b.size / 2] > -500_000L)
-        assertTrue("Nessuna di A perde più di 8 M: ${a.first()}", a.first() > -8_000_000L)
-    }
-
-    @Test fun sondaMedianeTEMP() {
-        val a = saldi("Serie A", 0).sorted(); val b = saldi("Serie B", 1).sorted()
         val c = listOf("Serie C Girone A", "Serie C Girone B", "Serie C Girone C").flatMap { saldi(it, 3) }.sorted()
-        println("SONDA A med=${a[a.size / 2]} min=${a.first()} max=${a.last()} | B med=${b[b.size / 2]} min=${b.first()} | C med=${c[c.size / 2]} min=${c.first()} n=${c.size}")
+        // Valori misurati il 24/11/2026: A mediana +5,6 M (min -2,8 M), B mediana +2,2 M, C mediana -2,9 M (min -5,1 M)
+        assertTrue("Serie A mediana ${a[a.size / 2]}", a[a.size / 2] in 4_000_000L..7_500_000L)
+        assertTrue("Serie B mediana ${b[b.size / 2]}", b[b.size / 2] in 1_000_000L..3_500_000L)
+        assertTrue("Nessuna di A perde più di 8 M: ${a.first()}", a.first() > -8_000_000L)
+        assertTrue("Serie C mediana ${c[c.size / 2]} (oggi in perdita: da ritarare)", c[c.size / 2] > -4_000_000L)
+        assertTrue("Serie C peggiore ${c.first()}", c.first() > -6_000_000L)
     }
 
     @Test fun premioVittoriaSponsor() {

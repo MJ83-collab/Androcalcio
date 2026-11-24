@@ -17,9 +17,7 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Verifica economica con le rose vere:** il test c'è ma le soglie sono larghe (vedi note di controllo); da stringere (Serie A, B, C e tetto di 8 M). Valori attesi: Serie A mediana circa +5 M, Serie B circa +2 M, Serie C circa in pari; nessuna squadra di A perde più di 8 M. Non ancora eseguita.
 
 ## Limiti noti
-- La squadra B non gioca partite proprie: cresce soltanto.
-- Prelazione sui giovani del satellite: non fatta.
-- Rivendita solo verso club della stessa nazione.
+- La squadra B gioca una partita al mese simulata (nessuna partita 2D).
 - Playoff e playout: giocati dal vivo solo se c'è la tua squadra; in parità passa la meglio piazzata.
 - Avatar ancora disegnati in codice.
 
@@ -47,7 +45,14 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 4. Far giocare partite proprie alla squadra B.
 5. Merge su `main` e v0.7.0 (da decidere con Marco).
 
-## Note di controllo del 24/11 (lettura del codice, nessuna build eseguita)
+## Fatto il 24/11 (dopo i playoff)
+- **Squadra B con partite proprie:** una al mese contro un club della tua nazione, simulata dall'allenatore in seconda (senza vice non si gioca). Vittoria +4% e pareggio +2% alla crescita del mese; ultimi risultati nella scheda Rosa.
+- **Prelazione sul satellite:** i giovani (max 23 anni) del satellite con contratto in scadenza restano 3 anni allo stesso ingaggio.
+- **Bonus fedeltà per id:** gli omonimi non si confondono più (le vecchie chiavi a nome valgono una volta).
+- **Rivendita:** 25% delle volte verso un club di un'altra nazione.
+- **Test economico misurato in CI:** Serie A mediana +5,6 M (peggiore −2,8 M), Serie B +2,2 M. **Serie C mediana −2,9 M, peggiore −5,1 M: NON in pari come scritto nel report v0.6.0.** Da ritarare (decisione aperta).
+
+## Note di controllo del 24/11 (lettura del codice)
 - La verifica economica **esiste come test** (`EconomiaV06Test.squadraMediaInPariOUtile`) e gira in CI. Le soglie sono più larghe dei valori attesi nel report: A mediana > 0, B mediana > -0,5 M, nessuna di A sotto -8 M. I valori "A circa +5 M, B circa +2 M" non sono verificati dal test.
 - La prova su emulatore in CI usa **1.500 tocchi** (`.github/smoke.sh`), non 9.000 come scritto sopra.
 - La Serie C non ha un controllo nel test economico.
