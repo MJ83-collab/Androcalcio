@@ -70,6 +70,15 @@ Verifica (test con le rose vere, una stagione tipo con 3 sponsor): Serie A media
 
 **Modello:** Sonnet basta per altre migliorie; Opus solo per nuove tarature.
 
+## Dopo v0.6.0 – ramo feat/fine-partita (24/11/2026, build verdi, non provato su telefono)
+- Palla: passa da giocatore a giocatore, i vicini le vanno incontro, traiettoria blu tratteggiata dell'azione (`ui/Manga.kt`, `rememberPalla`).
+- CI: un solo allegato (APK).
+- Blocco 14 – Cambi con condizioni (`engine/CambiCondizioni.kt`): stanco, ammonito, sotto dal 60', sopra dal 75'; max un cambio ogni 5 minuti dal 30'. Tattica > "Cambi con condizioni".
+- Blocco 15 – Atmosfera stadio (`engine/StatExtra.kt`, solo partita dal vivo: ±4% sul possesso di chi gioca in casa; tifosi e capienza). Passaggi, precisione, duelli, km in Stat e nell'analisi finale.
+- Blocco 16 – Gioco sulle fasce (`engine/FasceSchemi.kt`: Centrale/Misto/Fasce, ±8% in base ai giocatori della zona) e schema sui calci piazzati (Normale/Palloni in area/Tiro diretto/Corto). Predefiniti = nessun effetto, taratura invariata.
+- Blocco 17 – Ritiro precampionato (attività del calendario, luglio-agosto, 20.000 €/giorno), bonus fedeltà a fine stagione (3+ stagioni, 3% dell'ingaggio, morale +3; chiave `fedelta`), sfide a scelta (facile/media/difficile) con serie di 3.
+- Da fare: provare sul telefono; merge su main e v0.7.0 (chiedere a Marco); grandi: squadra B, satellite, amichevoli su invito.
+
 ---
 ## Cronologia
 - v0.3.0 (22/11): 20 migliorie (conferenze, sponsor, vivaio, nazionali U21, All Star…).
