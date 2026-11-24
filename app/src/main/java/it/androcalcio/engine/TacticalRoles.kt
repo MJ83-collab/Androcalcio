@@ -19,28 +19,33 @@ object TacticalRoles {
 
     /** Ruoli affini per ruolo naturale, sempre nella stessa linea (difesa, centrocampo, attacco). */
     val AFFINI: Map<String, List<Pair<String, Int>>> = mapOf(
-        "TD" to listOf("TS" to 70, "DC" to 40, "FD" to 60),
-        "TS" to listOf("TD" to 70, "DC" to 40, "FS" to 60),
+        "TD" to listOf("TS" to 70, "DC" to 40),
+        "TS" to listOf("TD" to 70, "DC" to 40),
         "DC" to listOf("CS" to 90, "CD" to 90),
         "CS" to listOf("CD" to 90, "DC" to 80),
         "CD" to listOf("CS" to 90, "DC" to 80),
         "POR" to listOf("DC" to 100),
         "MED" to listOf("REG" to 70, "INT" to 50),
         "REG" to listOf("MED" to 70, "INT" to 40),
-        "INT" to listOf("MP" to 70, "MED" to 40, "FD" to 50, "FS" to 50),
-        "MP" to listOf("INT" to 70, "REG" to 40, "AD" to 60, "AS" to 60),
-        "ES" to listOf("CA" to 50, "AD" to 80, "AS" to 80),
-        "CA" to listOf("ES" to 40, "AD" to 50, "AS" to 50),
-        "FD" to listOf("FS" to 70, "TD" to 60, "AD" to 60, "INT" to 60),
-        "FS" to listOf("FD" to 70, "TS" to 60, "AS" to 60, "INT" to 60),
-        "AD" to listOf("AS" to 70, "FD" to 60, "ES" to 80, "CA" to 50),
-        "AS" to listOf("AD" to 70, "FS" to 60, "ES" to 80, "CA" to 50)
+        "INT" to listOf("MP" to 70, "MED" to 40),
+        "MP" to listOf("INT" to 70, "REG" to 40),
+        "ES" to listOf("CA" to 50),
+        "CA" to listOf("ES" to 40)
+    )
+
+    /** Ruoli di fascia (destra/sinistra) che si imparano solo con l'allenamento: non entrano nei ruoli di partenza. */
+    val DA_IMPARARE: Map<String, List<Pair<String, Int>>> = mapOf(
+        "TD" to listOf("FD" to 60), "TS" to listOf("FS" to 60),
+        "INT" to listOf("FD" to 50, "FS" to 50),
+        "MP" to listOf("AD" to 60, "AS" to 60),
+        "ES" to listOf("AD" to 80, "AS" to 80),
+        "CA" to listOf("AD" to 50, "AS" to 50)
     )
 
     /** Imparare con l'allenamento: un nuovo ruolo affine (parte da metà dell'affinità) o più affinità in uno già noto. */
     fun impara(p: Player, rng: kotlin.random.Random): Player {
         val noti = setOf(p.sec2, p.sec3, p.sec4)
-        val nuovi = AFFINI[p.pos].orEmpty().filter { it.first !in noti }
+        val nuovi = (AFFINI[p.pos].orEmpty() + DA_IMPARARE[p.pos].orEmpty()).filter { it.first !in noti }
         val liberi = listOf(p.sec2, p.sec3, p.sec4).count { it.isEmpty() }
         if (nuovi.isNotEmpty() && liberi > 0 && rng.nextInt(100) < 40) {
             val (r, a) = nuovi[rng.nextInt(nuovi.size)]
