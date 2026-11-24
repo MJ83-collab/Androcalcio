@@ -81,6 +81,13 @@ fun HomeBanner(team: Team, season: String) {
 fun ProssimaPartitaCard(me: Team, avversario: Team, m: MatchResult, onGioca: () -> Unit) {
     val home = if (m.homeTeamId == me.id) me else avversario
     val away = if (m.homeTeamId == me.id) avversario else me
+    if (AC.pc7) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = onGioca), horizontalAlignment = Alignment.CenterHorizontally) {
+            BannerPartita(home, away, "Giornata", "${m.round}")
+            Text("Tocca per andare alla partita", color = AC.TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+        }
+        return
+    }
     val shape = RoundedCornerShape(10.dp)
     Column(
         Modifier.fillMaxWidth()

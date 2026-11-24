@@ -51,7 +51,8 @@ fun GiornoCard(g: AndrocalcioViewModel.GiornoStato, onAttivita: (Attivita) -> Un
                 Attivita.values().filter { it != Attivita.RITIRO || g.oggi.monthValue in 7..8 }.chunked(2).forEach { riga ->
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         riga.forEach { a ->
-                            PcChip(false, { onAttivita(a) }, {
+                            if (AC.pc7) NastroTesto("${a.icona} ${a.label}", a.info, ColoriNastri[a.ordinal % ColoriNastri.size], Modifier.weight(1f)) { onAttivita(a) }
+                            else PcChip(false, { onAttivita(a) }, {
                                 Column {
                                     Text("${a.icona} ${a.label}", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                                     Text(a.info, fontSize = 10.sp)
