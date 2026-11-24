@@ -514,6 +514,8 @@ class LiveMatch(
         val kind = when { penalty -> "Rigore"; angolo -> "Calcio d'angolo"; else -> "Punizione" }
         if (homeAtt) hs++ else asht++
         val schema = if (homeAtt) homeSchema else awaySchema
+        val scena = scenaPiazzato(homeAtt, penalty, angolo, x to y)
+        val zona = if (immersivo) zonaTiro() else ""
         val pGoal = when {
             penalty -> 0.70 + 0.2 * taker.fi / 99.0
             // punizioni e angoli: stessa probabilità, così la taratura non cambia (lo schema scelto la sposta)
@@ -523,11 +525,30 @@ class LiveMatch(
             if (homeAtt) hg++ else ag++
             bump(taker, 1.0)
             events += MatchEvent(minute, EventType.GOAL, homeAtt,
-                "Gol su $kind! ${taker.name} (${team.shortName})", x, y, taker.id, 0, percorso(homeAtt, x to y))
+                "Gol su $kind! ${taker.name} (${team.shortName})$zona", x, y, taker.id, 0, scena)
         } else if (rng.nextBoolean()) {
-            events += MatchEvent(minute, EventType.SAVE, homeAtt, "$kind di ${taker.name}, para il portiere", x, y, 0, 0, percorso(homeAtt, x to y))
+            events += MatchEvent(minute, EventType.SAVE, homeAtt, "$kind di ${taker.name}$zona, para il portiere", x, y, 0, 0, scena)
         } else {
-            events += MatchEvent(minute, EventType.MISS, homeAtt, "$kind di ${taker.name} fuori", x, y, 0, 0, percorso(homeAtt, x to y))
+            events += MatchEvent(minute, EventType.MISS, homeAtt, "$kind di ${taker.name}$zona, fuori", x, y, 0, 0, scena)
+        }
+    }
+
+    /** Zona di porta scelta dal battitore (solo nella partita raccontata). */
+    private fun zonaTiro(): String = when (rngI.nextInt(5)) {
+        0 -> " all'incrocio"; 1 -> " sul palo lungo"; 2 -> " sul primo palo"; 3 -> " rasoterra"; else -> " centrale"
+    }
+
+    /** Scena del piazzato: dove parte il battitore e dove arriva la palla. */
+    private fun scenaPiazzato(homeAtt: Boolean, penalty: Boolean, angolo: Boolean, fine: Pair<Float, Float>): List<Pair<Float, Float>> {
+        if (!immersivo) return emptyList()
+        val gx = if (homeAtt) 0.99f else 0.01f
+        return when {
+            penalty -> listOf((if (homeAtt) 0.88f else 0.12f) to 0.5f, gx to (0.42f + rngI.nextFloat() * 0.16f))
+            angolo -> {
+                val alto = rngI.nextBoolean()
+                listOf(gx to (if (alto) 0.02f else 0.98f), (if (homeAtt) 0.9f else 0.1f) to (0.35f + rngI.nextFloat() * 0.3f), fine)
+            }
+            else -> listOf((if (homeAtt) fine.first - 0.18f else fine.first + 0.18f) to (0.2f + rngI.nextFloat() * 0.6f), fine)
         }
     }
 

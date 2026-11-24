@@ -48,6 +48,7 @@ fun FinePartitaScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMo
     val mia = if (info.userHome) m.home else m.away
     val altra = if (info.userHome) m.away else m.home
     val pronta = info.saved
+    info.rigori?.let { RigoriDialog(it, m.home.shortName, m.away.shortName, info.tick, { l -> vm.scegliRigore(l) }, { vm.chiudiRigori() }) }
 
     Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi)))) {
         LazyColumn(

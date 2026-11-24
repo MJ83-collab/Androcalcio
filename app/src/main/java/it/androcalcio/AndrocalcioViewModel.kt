@@ -1009,8 +1009,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val userHome: Boolean = true, val league: MatchResult? = null, val saved: Boolean = false,
         val meteo: String = "", val esito: Map<Long, EsitoGiocatore> = emptyMap(),
         val atmosfera: String = "",
-        val tempo: Meteo.Tempo = Meteo.Tempo.NUVOLOSO, val prato: Meteo.Campo = Meteo.Campo.BUONO
+        val tempo: Meteo.Tempo = Meteo.Tempo.NUVOLOSO, val prato: Meteo.Campo = Meteo.Campo.BUONO,
+        val rigori: it.androcalcio.engine.SerieRigori? = null
     )
+    private var pendingCup: MatchResult? = null
     private val _live = MutableStateFlow<LiveInfo?>(null)
     val live: StateFlow<LiveInfo?> = _live
     private var liveJob: kotlinx.coroutines.Job? = null
@@ -1217,25 +1219,54 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     dopo.condition, novita)
             }.toMap()
         }
+        var serie: it.androcalcio.engine.SerieRigori? = null
         if (mr != null && Cup.isCup(mr.round)) {
-            // Partita di coppa: supplementari e rigori se in parità, poi il turno successivo se è finito
+            // Partita di coppa: supplementari e rigori se in parità (i rigori li scegli tu), poi il turno successivo
             selectedTeam.value?.let { t ->
-                val fin = finalizeCup(t.nazione, _season.value, kotlin.random.Random.Default)
-                fin.find { it.id == mr.id && it.homePens >= 0 }?.let {
-                    _notice.value = "Parità dopo 90': supplementari e rigori, ${it.homePens}-${it.awayPens}."
+                val tutte = dao.matchesOnce(Cup.key(t.nazione), _season.value)
+                val partita = tutte.find { it.id == mr.id }
+                val prov = partita?.let { Cup.finalize(it, tutte, kotlin.random.Random.Default) }
+                if (prov != null && prov.homePens >= 0) {
+                    pendingCup = prov.copy(homePens = -1, awayPens = -1)
+                    serie = it.androcalcio.engine.SerieRigori(i.userHome)
+                    _notice.value = "Parità anche dopo i supplementari (${prov.homeGoals}-${prov.awayGoals}): si va ai rigori."
+                } else {
+                    if (prov != null && prov != partita) dao.updateMatch(prov)
+                    chiudiCoppa(t)
                 }
-                val ck = Cup.key(t.nazione)
-                val nation = dao.allTeams().filter { it.nazione == t.nazione }
-                dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), nation, strengthOf(),
-                    _season.value, ck, t.nazione, kotlin.random.Random.Default))
             }
         }
-        _live.value = _live.value?.copy(saved = true, tick = i.tick + 1, esito = esito)
+        _live.value = _live.value?.copy(saved = true, tick = i.tick + 1, esito = esito, rigori = serie)
+    }
+
+    /** Fine del turno di coppa: risolve le altre partite e sorteggia il turno successivo. */
+    private suspend fun chiudiCoppa(t: Team) {
+        finalizeCup(t.nazione, _season.value, kotlin.random.Random.Default)
+        val ck = Cup.key(t.nazione)
+        val nation = dao.allTeams().filter { it.nazione == t.nazione }
+        dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), nation, strengthOf(),
+            _season.value, ck, t.nazione, kotlin.random.Random.Default))
+    }
+
+    fun scegliRigore(lato: Int) { _live.value?.rigori?.scegli(lato); bump() }
+
+    fun chiudiRigori() {
+        val i = _live.value ?: return
+        val s = i.rigori ?: return
+        val base = pendingCup ?: return
+        if (!s.finita) return
+        pendingCup = null
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.updateMatch(base.copy(homePens = s.golCasa, awayPens = s.golOspiti))
+            selectedTeam.value?.let { chiudiCoppa(it) }
+            _notice.value = "Rigori: ${s.golCasa}-${s.golOspiti}."
+            _live.value = _live.value?.copy(rigori = null, tick = (_live.value?.tick ?: 0) + 1)
+        }
     }
 
     fun closeLive() {
         val i = _live.value ?: return
-        if (!i.m.finished) return
+        if (!i.m.finished || i.rigori != null) return
         liveJob?.cancel()
         _live.value = null
         viewModelScope.launch(Dispatchers.IO) { autoSalva() }
