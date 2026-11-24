@@ -330,7 +330,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
                         onCercaVice = { _ -> vm.staffFocus.value = it.androcalcio.engine.Staffing.Posto(it.androcalcio.engine.Staffing.ASSISTENTE); screen = Screen.STAFF },
                         forme = vm.formeRosa.collectAsStateWithLifecycle().value,
-                        mese = vm.giocatoreDelMese.collectAsStateWithLifecycle().value)
+                        mese = vm.giocatoreDelMese.collectAsStateWithLifecycle().value,
+                        capoAuto = vm.extra.collectAsStateWithLifecycle().value.prepAuto,
+                        capoAssunto = vm.extra.collectAsStateWithLifecycle().value.prepAssunto,
+                        capoReport = vm.extra.collectAsStateWithLifecycle().value.prepReport,
+                        onCapoAuto = { vm.setPrepAuto(it) })
                 }
                 Screen.SQUADRE -> {   // solo consultazione: la panchina cambia con le offerte
                     var scheda by remember { mutableStateOf<Team?>(null) }
@@ -848,7 +852,8 @@ fun RosaScreen(
     advice: it.androcalcio.engine.AssistantCoach.Advice? = null, onApplyXI: () -> Unit = {},
     onApplyTattica: () -> Unit = {},
     onCercaVice: (Unit) -> Unit = {},
-    forme: Map<Long, Double> = emptyMap(), mese: String? = null
+    forme: Map<Long, Double> = emptyMap(), mese: String? = null,
+    capoAuto: Boolean = true, capoAssunto: Boolean = false, capoReport: List<String> = emptyList(), onCapoAuto: (Boolean) -> Unit = {}
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -905,6 +910,7 @@ fun RosaScreen(
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
+        item { PreparatoreCapoCard(capoAuto, capoAssunto, capoReport, onCapoAuto) }
     }
 }
 

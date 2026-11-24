@@ -1,0 +1,34 @@
+package it.androcalcio.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import it.androcalcio.ui.components.GlassCard
+
+/** Scheda del preparatore atletico capo: interruttore e report mensili. */
+@Composable
+fun PreparatoreCapoCard(auto: Boolean, assunto: Boolean, report: List<String>, onAuto: (Boolean) -> Unit) {
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text("Preparatore atletico capo", fontSize = 15.sp)
+                Switch(checked = auto, onCheckedChange = onAuto)
+            }
+            Text(
+                if (!assunto) "Serve un preparatore atletico generale in staff: assumilo e gestirà da solo allenamenti, riposi, piani dei reparti e vivaio."
+                else if (auto) "Gestisce da solo allenamenti e riposi della rosa, i piani dei reparti e la crescita del vivaio. Report ogni mese."
+                else "Spento: allenamenti e riposi li scegli tu.", fontSize = 12.sp)
+            if (assunto && auto && report.isEmpty()) Text("Il primo report arriverà a inizio del prossimo mese.", fontSize = 12.sp)
+            report.take(3).forEach { Text(it, fontSize = 12.sp) }
+        }
+    }
+}

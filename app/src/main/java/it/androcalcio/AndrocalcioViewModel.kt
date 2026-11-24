@@ -1,6 +1,7 @@
 package it.androcalcio
 
 import it.androcalcio.engine.AvatarGen
+import it.androcalcio.engine.PreparatoreCapo
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
 import it.androcalcio.engine.Migliorie
@@ -643,7 +644,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val finestra: Finestre.Stato = Finestre.Stato.ESTIVA, val ultimoGiorno: Boolean = false,
         val prestiti: List<Prestiti.Prestito> = emptyList(),
         val meteo: Meteo.Condizioni? = null, val budget: Long = 0L, val giornata: Int = 1,
-        val inPrima: Set<Long> = emptySet()
+        val inPrima: Set<Long> = emptySet(),
+        val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
     )
     private val _extra = MutableStateFlow(ExtraStato())
     val extra: StateFlow<ExtraStato> = _extra
@@ -697,6 +699,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             trofei = Achievement.decode(dao.stato("achievement")), avanzate = Avanzate.decode(dao.stato("avanzate")),
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
+            prepAuto = dao.stato(PreparatoreCapo.KEY_AUTO) != "0",
+            prepAssunto = dao.allStaff().any { it.teamId == t.id && it.role == Staffing.PREPARATORE && it.specialita == Staffing.GENERALE },
+            prepReport = dao.stato(PreparatoreCapo.KEY_REPORT).orEmpty().split("§").filter { it.isNotBlank() }.reversed(),
             inPrima = Giovanili.decodeApparizioni(dao.stato("apparizioni")).map { it.first }.toSet()
         )
     }
@@ -3547,6 +3552,53 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         dao.setStatoInt(CalendarioGiorni.KEY_PREP, prep)
         dao.setStato(Stato(CalendarioGiorni.KEY_DIARIO + s, CalendarioGiorni.scriviDiario(diario)))
         dao.setStato(Stato(CalendarioGiorni.KEY_OGGI + s, nuovoOggi.toEpochDay().toString()))
+        capoMensile(nuovoOggi, diario)
+    }
+
+    /** Il preparatore capo è attivo: opzione accesa e preparatore generale assunto. Restituisce la sua abilità, o null. */
+    private suspend fun capoAttivo(): Pair<Int, String>? {
+        val t = selectedTeam.value ?: return null
+        if (dao.stato(PreparatoreCapo.KEY_AUTO) == "0") return null
+        val p = dao.allStaff().firstOrNull { it.teamId == t.id && it.role == Staffing.PREPARATORE && it.specialita == Staffing.GENERALE } ?: return null
+        return p.skill to p.name
+    }
+
+    fun setPrepAuto(on: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) { dao.setStato(Stato(PreparatoreCapo.KEY_AUTO, if (on) "1" else "0")); aggiornaExtra() }
+    }
+
+    /** A inizio mese: report del mese chiuso, crescita del vivaio e nuovo piano dei reparti. */
+    private suspend fun capoMensile(oggi: java.time.LocalDate, diario: Map<Long, CalendarioGiorni.Attivita>) {
+        val t = selectedTeam.value ?: return
+        val mese = PreparatoreCapo.meseDi(oggi)
+        val ultimo = dao.stato(PreparatoreCapo.KEY_MESE)
+        val rosa = dao.playersOnce(t.id)
+        var viv = dao.youthsOnce(t.id)
+        if (ultimo != null && ultimo != mese) {
+            val capo = capoAttivo()
+            if (capo != null) {
+                val rng = kotlin.random.Random.Default
+                val prima = PreparatoreCapo.decodifica(dao.stato(PreparatoreCapo.KEY_SNAP))
+                val vivPrima = PreparatoreCapo.decodifica(dao.stato(PreparatoreCapo.KEY_SNAP_VIV))
+                viv = viv.map { PreparatoreCapo.cresciVivaio(it, capo.first, rng) }
+                dao.updateYouths(viv)
+                val (piani, descr) = PreparatoreCapo.pianiReparti(rosa)
+                Training.individuali = piani
+                dao.setStato(Stato("allen_ind", Training.encodeInd(piani)))
+                val mesePrec = ultimo
+                val giorniMese = diario.filter { PreparatoreCapo.meseDi(java.time.LocalDate.ofEpochDay(it.key)) == mesePrec }.values
+                val rep = PreparatoreCapo.report(capo.second, mesePrec, rosa, prima, viv, vivPrima,
+                    giorniMese.count { it == CalendarioGiorni.Attivita.ALLENAMENTO || it == CalendarioGiorni.Attivita.RITIRO },
+                    giorniMese.count { it == CalendarioGiorni.Attivita.RIPOSO }, descr)
+                dao.setStato(Stato(PreparatoreCapo.KEY_REPORT, PreparatoreCapo.aggiungi(dao.stato(PreparatoreCapo.KEY_REPORT), rep)))
+                _notice.value = "📋 Report mensile del preparatore capo disponibile (scheda Rosa)."
+            }
+        }
+        if (ultimo != mese) {
+            dao.setStato(Stato(PreparatoreCapo.KEY_SNAP, PreparatoreCapo.codifica(rosa.associate { it.id to it.overall })))
+            dao.setStato(Stato(PreparatoreCapo.KEY_SNAP_VIV, PreparatoreCapo.codifica(viv.associate { it.id to it.overall })))
+            dao.setStato(Stato(PreparatoreCapo.KEY_MESE, mese))
+        }
     }
 
     /** Vive il giorno corrente con l'attività scelta e passa al giorno dopo. */
@@ -3584,8 +3636,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val diario = g.diario.toMutableMap()
             var d = g.oggi
             var n = 0
+            val capo = capoAttivo()
             while (d.isBefore(partita)) {
-                val a = CalendarioGiorni.automatica(d, partita)
+                val a = if (capo != null) PreparatoreCapo.attivita(d, partita, rosa, capo.first) else CalendarioGiorni.automatica(d, partita)
                 rosa = rosa.map { CalendarioGiorni.applica(it, a) }
                 prep = CalendarioGiorni.prep(prep, a)
                 diario[d.toEpochDay()] = a
@@ -3600,6 +3653,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Si gioca solo nel giorno della partita; la preparazione accumulata diventa morale. */
     private suspend fun prontoPerLaPartita(): Boolean {
+        capoAttivo()?.let { c ->
+            val t = selectedTeam.value
+            if (t != null) setTraining(PreparatoreCapo.piano(dao.playersOnce(t.id), c.first, dao.statoInt(MK.GIORNATA)))
+        }
         var g = calcolaGiorno() ?: return true
         if (g.prossima != null && !g.giornoPartita) {
             // Mai bloccare il gioco: i giorni che mancano passano in automatico (allenamento e riposo)
