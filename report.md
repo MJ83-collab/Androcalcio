@@ -1,4 +1,4 @@
-# Androcalcio — report (aggiornato 24/11/2026, notte 11)
+# Androcalcio — report (aggiornato 24/11/2026, notte 12)
 
 Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/stadio` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
@@ -19,21 +19,27 @@ Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato
 Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, icone staff, centro sportivo, movimento giocatori per fotogramma, ruoli FD/FS/AD/AS, allenamento ruoli/piede/Cinico, cronaca sincronizzata, importazione JSON con id, lettura giocatori a pagine, correzioni dei bug sotto.
 
 ## Cosa manca
-- **Prova sul telefono** di tutto il ramo `feat/stadio` (x1 fluido? Cinico bilanciato? icone staff leggibili?).
-- **Palla del 2D:** i giocatori ora si muovono per fotogramma, la palla no: ancora a tratti tra punti. Passo successivo: palla portata e passata da un giocatore (stile FM 26). Da decidere con Marco.
-- **Nuovi ruoli in formazione:** FD/FS/AD/AS si imparano e si scelgono dalle affinità, ma nessuno schema li usa in automatico.
-- **Cinico:** peso +20% sui tiri non tarato (serve Opus per tarare).
-- **Coppe europee a metà settimana** (oggi dopo campionato e coppa nazionale).
-- **Merge su `main` e release v0.7.0** (dopo il via di Marco).
-- **Bug da tenere d'occhio:** crash "Couldn't read row 1444 … CursorWindow" nella prova su emulatore (2 volte). Causa probabile: lettura di tutti i giocatori in un colpo; ora letti a pagine da 500 e le letture dei flussi si riprovano una volta. Se ricompare, cercare un'altra lettura grande.
-
-## Decisioni prese da Marco (24/11 notte) — da realizzare
-- **Palla 2D:** portata dal giocatore e passata (stile FM). Lavoro grande, non ancora iniziato.
-- **Schemi:** devono usare in automatico FD/FS/AD/AS dalle affinità. Non ancora fatto.
-- **Cinico:** conta anche nei rigori e nei finali di partita; serve nuova taratura (Opus). Non ancora fatto.
+- **Prova sul telefono** di tutto il ramo `feat/stadio` (x1 fluido? palla portata/passata credibile? Cinico bilanciato? coppe a metà settimana? moduli con ali? icone staff leggibili?).
+- **Ritocchi grafici** dopo la prova (punto 7) e **avatar** (punto 8): decide Marco.
+- **Merge su `main` e release v0.7.0**: solo dopo il via di Marco dopo la prova.
+- **Bug da tenere d'occhio:** crash "Couldn't read row 1444 … CursorWindow" nella prova su emulatore (visto 2 volte, poi corretto con letture a pagine). Se ricompare, cercare un'altra lettura grande.
 
 ## Decisioni aperte (chiedere a Marco)
-- Nessuna. Ordine dei tre lavori sopra: da chiedere a inizio chat.
+Dal punto 5 (Cinico, Opus):
+1. Base dei rigori in partita abbassata da 0,70 a 0,64 (+0,20 × fi/99): cambia anche i non Cinici (prima 84,8% di gol sui rigori, ora 79,7%; obiettivo 75-80%). Va bene?
+2. Serie di rigori simulate (`Cup.shootout`): il Cinico non conta (non ci sono giocatori). Portarli dentro richiede di cambiare `Cup.finalize`. Lo vuoi?
+3. "In bilico" nei finali: conta anche se la squadra è sotto di molti gol (es. 0-4 all'85'). Va bene o limitare a 1-2 gol?
+4. Attributo `ri` (rigori) non usato dal motore: il rigore dipende da `fi`. Usarlo?
+Altre:
+5. Giocatori di ruolo D con FD non vengono mai messi in automatico nella linea C (limite noto della scelta per posti).
+6. Salvataggi vecchi: le coppe già calendarizzate "recuperano" i turni.
+
+## Sessione 24/11 notte (12): punti 4, 6, 3, 5 (ramo feat/stadio, build verde, non provata sul telefono)
+- **Punto 4 – schemi con ruoli:** `Formation.posti` = 10 posti per modulo (TS, DC, FS, FD, AS, AD...). Nuovi moduli in fondo all'enum (ordinal salvato): 4-3-3 ali, 4-2-3-1 ali, 3-4-3 ali. Scelta automatica `Lineup.scegliPerPosti` (con `AFFINITA_MIN=100`, fuori posto x0,95), panchina `coachPickConPanchina`; ordine in campo `Lineup.perPosti`. Nel motore mai id (nei test sono 0): solo riferimenti. Test `PostiModuloTest`.
+- **Punto 6 – calendario a turni** (`engine/Turni.kt`): campionato chiave 2*giornata, coppe a metà settimana (mercoledì) tra le giornate; coppa nazionale e coppe europee senza sovrapposizioni e mai nei turni delle nazionali. `runRounds`, partita dal vivo e Calendario usano le chiavi. Test `TurniTest`.
+- **Punto 3 – palla 2D:** `PallonePista` (`ui/Manga.kt`): la palla sta ai piedi di un giocatore che la porta, passa al compagno vicino alla tappa (verso la sua posizione attuale), tiro libero. `rememberPalla` dà comandi `passa/porta/tira`; MangaPitch riceve `sim` (nullo nel Replay, che resta come prima).
+- **Punto 5 – Cinico** (Opus, ramo `feat/cinico` già unito): peso tiro 1,15 (+12,2% gol del Cinico, gol totali +0,5%); rigori +0,04; finali +10% dal 75', +20% dall'83'; serie dal vivo con nomi dei tiratori (`LiveMatch.rigoristi`). Test `CinicoTaraturaTest`.
+- Modello: Sonnet basta per tutto tranne la taratura del punto 5 (Opus).
 
 ## Sessione 24/11 notte (11): controllo repo
 - **Bug corretto:** `allPlayers` e `teamInfo` (ViewModel) leggevano ancora tutti i giocatori in un colpo con `allPlayersFlow()`, senza pagine né nuovo tentativo. Ora usano `osserva("players") { dao.allPlayers() }` (pagine da 500 + un nuovo tentativo). Probabile causa del crash CursorWindow riga 1444. Non compilato in locale: verifica con la build su GitHub Actions.
@@ -151,7 +157,7 @@ Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, ico
 2. Merge su `main` e v0.7.0, dopo la prova.
 3. Eventuale ritocco della grafica dopo la prova sul telefono.
 4. Avatar: da decidere cosa si vuole (oggi disegnati in codice).
-5. Coppe europee a metà settimana (oggi si giocano dopo campionato e coppa).
+5. (fatto: coppe a metà settimana)
 
 ## Fatto il 24/11 (dopo i playoff)
 - **Squadra B con partite proprie:** una al mese contro un club della tua nazione, simulata dall'allenatore in seconda (senza vice non si gioca). Vittoria +4% e pareggio +2% alla crescita del mese; ultimi risultati nella scheda Rosa.
