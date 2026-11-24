@@ -718,6 +718,25 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val bonusStrutture: Int = 0, val bonusCurva: Int = 0, val fatte: Set<String> = emptySet(),
         val cantieri: Map<String, Int> = emptyMap(), val manutenzioneAnno: Long = 0L, val abbonatiPct: Int = 0
     )
+    /** Una coppa europea: gironi (solo Campioni) e tutte le partite finora sorteggiate. */
+    data class EuropaCoppa(val coppa: CoppeEuropee.Coppa, val gironi: List<List<Long>>, val partite: List<MatchResult>)
+    data class EuropaStato(val stagione: String = "", val coppe: List<EuropaCoppa> = emptyList(), val mia: CoppeEuropee.Coppa? = null)
+    private val _europa = MutableStateFlow(EuropaStato())
+    val europa: StateFlow<EuropaStato> = _europa
+
+    fun aggiornaEuropa() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val t = selectedTeam.value ?: return@launch
+            val s = _season.value
+            assicuraCoppeEuropee(s)
+            val q = CoppeEuropee.decodeQualificate(dao.stato("eu_q_$s"))
+            _europa.value = EuropaStato(s, CoppeEuropee.Coppa.values().map { c ->
+                EuropaCoppa(c, CoppeEuropee.decodeGironi(dao.stato("eu_gironi_${s}_${c.sigla}")),
+                    dao.matchesOnce(CoppeEuropee.key(c), s))
+            }, CoppeEuropee.Coppa.values().firstOrNull { t.id in q[it].orEmpty() })
+        }
+    }
+
     private val _stadio = MutableStateFlow(StadioStato())
     val stadio: StateFlow<StadioStato> = _stadio
 

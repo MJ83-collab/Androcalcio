@@ -138,6 +138,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227)),
     STRUTTURE("Stadio e centro", Icons.Filled.Build, "Migliorie, cantieri, ritorni", Color(0xFF00897B)),
     STADIO("Stadio", Icons.Filled.Home, "Nome, settori, prezzi, atmosfera", Color(0xFF00695C)),
+    EUROPA("Coppe europee", Icons.Filled.Star, "Sorteggi, gironi, tabellone", Color(0xFF283593)),
     RELAZIONI("Stampa", Icons.Filled.Person, "Conferenze, colloqui, psicologo", Color(0xFFAD1457)),
     COMMERCIALE("Marketing", Icons.Filled.ShoppingCart, "Sponsor e marketing", Color(0xFFEF6C00)),
     OBIETTIVI("Obiettivi", Icons.Filled.Done, "Dirigenza, premi, trofei", Color(0xFF6A1B9A)),
@@ -277,6 +278,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val mig by vm.migliorie.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }
                     MigliorieScreen(team, mig) { vm.avviaMiglioria(it) }
+                }
+                Screen.EUROPA -> {
+                    val eu by vm.europa.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id, matches.size, cupMatches.size) { vm.aggiornaEuropa() }
+                    EuropaScreen(eu, teams, team?.id ?: 0L)
                 }
                 Screen.STADIO -> {
                     val sta by vm.stadio.collectAsStateWithLifecycle()
@@ -746,7 +752,7 @@ fun HomeScreen(
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
-            Screen.STRUTTURE, Screen.STADIO, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
+            Screen.STRUTTURE, Screen.STADIO, Screen.EUROPA, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
             Screen.SOCIETA, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->
