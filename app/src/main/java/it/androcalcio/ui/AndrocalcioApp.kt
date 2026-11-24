@@ -200,9 +200,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
             title = { Text("Il presidente") },
             text = { Text(msg) },
             confirmButton = {
-                TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.CALENDARIO }) { Text("Inizia la stagione") }
+                TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.CALENDARIO }) { Text("Fissa le amichevoli") }
             },
-            dismissButton = { TextButton(onClick = { vm.chiudiPresidente() }) { Text("Più tardi") } }
+            dismissButton = { TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.HOME }) { Text("Salta le amichevoli") } }
         )
     }
     val fineStagione by vm.fine.collectAsStateWithLifecycle()
@@ -263,8 +263,13 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
             if (li != null) LiveMatchScreen(li, vm) { screen = Screen.PARTITA } else when (screen) {
                 Screen.HOME -> {
                     val tm = team
-                    val next = if (tm == null) null else matches
+                    val amichevoli by vm.friendlyMatches.collectAsStateWithLifecycle()
+                    val nextLega = if (tm == null) null else matches
                         .filter { !it.played && (it.homeTeamId == tm.id || it.awayTeamId == tm.id) }.minByOrNull { it.round }
+                    // Prima della 1ª giornata, se ci sono amichevoli da giocare, la prossima partita è l'amichevole
+                    val iniziato = matches.any { it.played && !it.androcalcio.engine.Cup.isCup(it.round) }
+                    val nextAm = if (iniziato) null else amichevoli.filter { !it.played }.minByOrNull { it.round }
+                    val next = nextAm ?: nextLega
                     val oppId = next?.let { if (it.homeTeamId == tm?.id) it.awayTeamId else it.homeTeamId }
                     HomeScreen(team, players, season, next, teams.firstOrNull { it.id == oppId }) { screen = it }
                 }

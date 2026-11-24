@@ -29,6 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -106,9 +107,10 @@ private fun Intestazione(team: Team, season: String, prossima: MatchResult?, avv
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(season, color = Color(0xFF111111), fontWeight = FontWeight.Black, fontSize = 11.sp)
-            Text(if (prossima == null) "—" else if (it.androcalcio.engine.Cup.isCup(prossima.round)) "COPPA" else "Giornata",
+            Text(if (prossima == null) "—" else if (tipoGara(prossima) == TipoGara.AMICHEVOLE) "Amichevole"
+                else if (it.androcalcio.engine.Cup.isCup(prossima.round)) "COPPA" else "Giornata",
                 color = Color(0xFFC62828), fontWeight = FontWeight.Black, fontSize = 11.sp)
-            if (prossima != null && !it.androcalcio.engine.Cup.isCup(prossima.round))
+            if (prossima != null && tipoGara(prossima) == TipoGara.CAMPIONATO)
                 Text("${prossima.round}", color = Color(0xFF111111), fontWeight = FontWeight.Black, fontSize = 16.sp)
         }
         if (b != null) Lato(b, Modifier.weight(1f), false) else Box(Modifier.weight(1f))
@@ -168,31 +170,109 @@ private fun Nastro(testo: String, colore: Color, icona: androidx.compose.ui.grap
 }
 
 /** Coppa d'argento al centro con la prossima competizione. */
+private enum class TipoGara { CAMPIONATO, COPPA, AMICHEVOLE }
+
+private fun tipoGara(m: MatchResult): TipoGara = when {
+    m.league.startsWith("AMICHEVOLE|") -> TipoGara.AMICHEVOLE
+    it.androcalcio.engine.Cup.isCup(m.round) -> TipoGara.COPPA
+    else -> TipoGara.CAMPIONATO
+}
+
+/** Colori dello scudetto: quelli della bandiera della nazione (true = strisce verticali). */
+private fun coloriScudetto(nazione: String): Pair<List<Color>, Boolean> = when (nazione) {
+    "Italia" -> listOf(Color(0xFF009246), Color.White, Color(0xFFCE2B37)) to true
+    "Francia" -> listOf(Color(0xFF0055A4), Color.White, Color(0xFFEF4135)) to true
+    "Germania" -> listOf(Color.Black, Color(0xFFDD0000), Color(0xFFFFCE00)) to false
+    "Spagna" -> listOf(Color(0xFFAA151B), Color(0xFFF1BF00), Color(0xFFAA151B)) to false
+    "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF)) to false
+    "Inghilterra" -> listOf(Color.White, Color(0xFFCE1124), Color.White) to true
+    "Brasile" -> listOf(Color(0xFF009C3B), Color(0xFFFFDF00), Color(0xFF009C3B)) to true
+    "Giappone" -> listOf(Color.White, Color(0xFFBC002D), Color.White) to true
+    else -> listOf(Color(0xFF3F6FD8), Color.White, Color(0xFF3F6FD8)) to true
+}
+
+/** Centro della Home: coppa (gare di coppa), scudetto della nazione (campionato), stretta di mano (amichevole). */
 @Composable
 private fun Trofeo(prossima: MatchResult?, team: Team) {
+    val tipo = prossima?.let { tipoGara(it) }
     Row(Modifier.fillMaxWidth().height(70.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(if (prossima != null && it.androcalcio.engine.Cup.isCup(prossima.round)) "Coppa nazionale" else team.campionato,
-            Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.End)
+        Text(when {
+            tipo == TipoGara.AMICHEVOLE -> "Precampionato"
+            tipo == TipoGara.COPPA && prossima!!.league.startsWith("SUPERCOPPA") -> "Supercoppa"
+            tipo == TipoGara.COPPA -> "Coppa nazionale"
+            else -> team.campionato
+        }, Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.End)
         Canvas(Modifier.width(70.dp).fillMaxHeight()) {
-            val w = size.width; val h = size.height
-            val arg = Brush.horizontalGradient(listOf(Color(0xFF8E9AA8), Color(0xFFF2F5F8), Color(0xFFA9B3BF), Color(0xFF6E7884)))
-            val coppa = Path().apply { moveTo(w * 0.22f, h * 0.06f); lineTo(w * 0.78f, h * 0.06f)
-                quadraticBezierTo(w * 0.76f, h * 0.55f, w * 0.54f, h * 0.62f); lineTo(w * 0.54f, h * 0.78f); lineTo(w * 0.46f, h * 0.78f)
-                lineTo(w * 0.46f, h * 0.62f); quadraticBezierTo(w * 0.24f, h * 0.55f, w * 0.22f, h * 0.06f); close() }
-            drawPath(coppa, arg)
-            drawArc(Color(0xFFB7C0CB), 90f, 180f, false, Offset(w * 0.06f, h * 0.12f), Size(w * 0.24f, h * 0.30f),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5f))
-            drawArc(Color(0xFFB7C0CB), 270f, 180f, false, Offset(w * 0.70f, h * 0.12f), Size(w * 0.24f, h * 0.30f),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5f))
-            drawRect(arg, Offset(w * 0.30f, h * 0.80f), Size(w * 0.40f, h * 0.14f))
-            drawPath(coppa, Color(0xFF2B3440), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f))
+            when (tipo) {
+                TipoGara.COPPA -> disegnaCoppa()
+                TipoGara.AMICHEVOLE -> disegnaStrettaDiMano(Color(team.colorPrimary), Color(0xFF8A94A6))
+                else -> disegnaScudetto(team.nazione)
+            }
         }
         Text(when {
             prossima == null -> "Fine stagione"
-            it.androcalcio.engine.Cup.isCup(prossima.round) -> "Turno di coppa"
+            tipo == TipoGara.AMICHEVOLE -> "Amichevole"
+            tipo == TipoGara.COPPA -> "Turno di coppa"
             else -> "Giornata ${prossima.round}"
         }, Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
     }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.disegnaCoppa() {
+    val w = size.width; val h = size.height
+    val arg = Brush.horizontalGradient(listOf(Color(0xFF8E9AA8), Color(0xFFF2F5F8), Color(0xFFA9B3BF), Color(0xFF6E7884)))
+    val coppa = Path().apply { moveTo(w * 0.22f, h * 0.06f); lineTo(w * 0.78f, h * 0.06f)
+        quadraticBezierTo(w * 0.76f, h * 0.55f, w * 0.54f, h * 0.62f); lineTo(w * 0.54f, h * 0.78f); lineTo(w * 0.46f, h * 0.78f)
+        lineTo(w * 0.46f, h * 0.62f); quadraticBezierTo(w * 0.24f, h * 0.55f, w * 0.22f, h * 0.06f); close() }
+    drawPath(coppa, arg)
+    drawArc(Color(0xFFB7C0CB), 90f, 180f, false, Offset(w * 0.06f, h * 0.12f), Size(w * 0.24f, h * 0.30f),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5f))
+    drawArc(Color(0xFFB7C0CB), 270f, 180f, false, Offset(w * 0.70f, h * 0.12f), Size(w * 0.24f, h * 0.30f),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5f))
+    drawRect(arg, Offset(w * 0.30f, h * 0.80f), Size(w * 0.40f, h * 0.14f))
+    drawPath(coppa, Color(0xFF2B3440), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f))
+}
+
+/** Scudetto con i colori della bandiera: bordo dorato, punta in basso. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.disegnaScudetto(nazione: String) {
+    val w = size.width; val h = size.height
+    val l = w * 0.18f; val r = w * 0.82f; val t = h * 0.08f; val b = h * 0.94f
+    val forma = Path().apply {
+        moveTo(l, t); lineTo(w * 0.42f, t); lineTo(w * 0.5f, t + h * 0.07f); lineTo(w * 0.58f, t); lineTo(r, t)
+        lineTo(r, h * 0.52f); quadraticBezierTo(r, h * 0.80f, w * 0.5f, b); quadraticBezierTo(l, h * 0.80f, l, h * 0.52f); close()
+    }
+    val (colori, verticale) = coloriScudetto(nazione)
+    clipPath(forma) {
+        colori.forEachIndexed { i, c ->
+            if (verticale) drawRect(c, Offset(l + (r - l) / colori.size * i, t), Size((r - l) / colori.size + 1f, b - t))
+            else drawRect(c, Offset(l, t + (b - t) / colori.size * i), Size(r - l, (b - t) / colori.size + 1f))
+        }
+        // riflesso
+        drawRect(Color.White.copy(alpha = 0.18f), Offset(l, t), Size((r - l) * 0.35f, b - t))
+    }
+    drawPath(forma, Color(0xFFD4AF37), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5f))
+    drawPath(forma, Color(0xFF5C4A12), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f))
+}
+
+/** Stretta di mano: due braccia (manica della tua squadra e dell'avversario) che si incontrano al centro. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.disegnaStrettaDiMano(manicaSx: Color, manicaDx: Color) {
+    val w = size.width; val h = size.height
+    val pelle = Color(0xFFF1C27D); val ombra = Color(0xFFC6955A); val bordo = Color(0xFF3B2A18)
+    fun tratto(x0: Float, y0: Float, x1: Float, y1: Float, c: Color, spessore: Float) =
+        drawLine(c, Offset(w * x0, h * y0), Offset(w * x1, h * y1), w * spessore, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+    tratto(0.02f, 0.92f, 0.30f, 0.62f, manicaSx, 0.20f)
+    tratto(0.98f, 0.92f, 0.70f, 0.62f, manicaDx, 0.20f)
+    tratto(0.27f, 0.65f, 0.33f, 0.59f, Color(0xFFF5F5F5), 0.21f)   // polsini
+    tratto(0.73f, 0.65f, 0.67f, 0.59f, Color(0xFFF5F5F5), 0.21f)
+    tratto(0.36f, 0.56f, 0.60f, 0.50f, ombra, 0.20f)                 // mano sotto
+    tratto(0.64f, 0.56f, 0.42f, 0.48f, pelle, 0.17f)                 // mano sopra
+    for (k in 0..3) {                                                 // dita che avvolgono
+        val x = 0.40f + k * 0.06f
+        tratto(x, 0.43f, x + 0.015f, 0.56f, pelle, 0.07f)
+        if (k > 0) drawLine(bordo, Offset(w * (x - 0.03f), h * 0.44f), Offset(w * (x - 0.02f), h * 0.54f), 1.5f)
+    }
+    tratto(0.40f, 0.47f, 0.52f, 0.40f, pelle, 0.07f)                 // pollice
+    drawLine(bordo, Offset(w * 0.40f, h * 0.44f), Offset(w * 0.52f, h * 0.37f), 1.5f)
 }
 
 @Composable
