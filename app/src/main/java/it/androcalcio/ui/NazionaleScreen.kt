@@ -1,5 +1,9 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.TrofeoIcona
+import it.androcalcio.ui.components.trofeoDa
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -103,7 +107,11 @@ fun NazionaleScreen(
         item { Text("TORNEI", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) }
         items(listOf("Mondiali", "Europei")) { nome ->
             val vincitore = tornei.firstOrNull { it.competizione == nome }?.vincitore
-            Text("$nome: " + (vincitore?.let { "vince $it" } ?: "non ancora disputati"), fontSize = 13.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TrofeoIcona(trofeoDa(nome), lato = 34.dp)
+                Text("$nome: " + (vincitore?.let { v -> "vince $v" } ?: "non ancora disputati"), fontSize = 13.sp,
+                    modifier = Modifier.padding(start = 6.dp))
+            }
         }
         item { Text("NAZIONALI DELLA STAGIONE", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) }
         if (naz.isEmpty()) item { Text("Nessuna convocazione in questa stagione.", fontSize = 12.sp) }
