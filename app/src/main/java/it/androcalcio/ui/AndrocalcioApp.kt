@@ -684,6 +684,8 @@ fun HomeScreen(
         }
         return
     }
+    // Home in stile PC Calcio 7 (menu a quattro blocchi); la vecchia home resta sotto, non più usata
+    if (true) { HomePc(team, season, prossima, avversario, go); return }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(if (AC.pc7) 10.dp else 16.dp),
         verticalArrangement = Arrangement.spacedBy(if (AC.pc7) 10.dp else 12.dp)
