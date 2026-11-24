@@ -26,7 +26,7 @@ fun RigoriDialog(s: SerieRigori, nomeCasa: String, nomeOspiti: String, tick: Int
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 s.tiri.takeLast(6).forEachIndexed { _, x ->
-                    val chi = if (x.casa) nomeCasa else nomeOspiti
+                    val chi = (if (x.casa) nomeCasa else nomeOspiti) + if (x.chi.isNotEmpty()) " (${x.chi})" else ""
                     val esito = if (x.gol) "GOL" else if (x.lato == x.tuffo) "PARATO" else "FUORI"
                     Text("$chi: $esito (tiro ${SerieRigori.nomeLato(x.lato)}, portiere ${SerieRigori.nomeLato(x.tuffo)})", fontSize = 12.sp)
                 }

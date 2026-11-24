@@ -12,6 +12,12 @@ import kotlin.random.Random
  * manualHome / manualAway: i cambi di quella squadra li decide l'utente (niente cambi automatici).
  */
 private const val ANGOLO_QUOTA = 0.4
+/**
+ * Rigore in partita: probabilità di segnare RIGORE_BASE + RIGORE_FI * fi / 99 (più il bonus del Cinico).
+ * Era 0,70 + 0,2: la conversione misurata era 84,8%, sopra le medie reali (75-80%); con 0,64 scende a circa 79%.
+ */
+internal const val RIGORE_BASE = 0.64
+internal const val RIGORE_FI = 0.20
 
 class LiveMatch(
     val home: Team, homePlayers: List<Player>,
@@ -368,7 +374,9 @@ class LiveMatch(
                 val who = sh?.name ?: "Attaccante"
                 val (x, y) = pos(homeAtt)
                 val pGoal = (0.22 * (att.atk / dfn.gk).pow(1.5) *
-                    (if (homeAtt) MatchEngine.HOME_FINISH else 1.0)).coerceIn(0.08, 0.45)
+                    (if (homeAtt) MatchEngine.HOME_FINISH else 1.0)).coerceIn(0.08, 0.45) *
+                    // Cinico: nel finale con il risultato in bilico finalizza meglio (vedi Tratti.fattoreFinale)
+                    (sh?.let { Tratti.fattoreFinale(it, minute, if (homeAtt) hg else ag, if (homeAtt) ag else hg) } ?: 1.0)
                 val r = rng.nextDouble()
                 when {
                     r < pGoal && !golValido(homeAtt, team.shortName, who, x, y) -> Unit   // annullato: resta il tiro
@@ -528,7 +536,7 @@ class LiveMatch(
         val scena = scenaPiazzato(homeAtt, penalty, angolo, x to y)
         val zona = if (immersivo) zonaTiro() else ""
         val pGoal = when {
-            penalty -> 0.70 + 0.2 * taker.fi / 99.0
+            penalty -> Tratti.rigore(RIGORE_BASE + RIGORE_FI * taker.fi / 99.0, taker)   // il Cinico sbaglia meno
             // punizioni e angoli: stessa probabilità, così la taratura non cambia (lo schema scelto la sposta)
             else -> (0.04 + 0.08 * taker.ti / 99.0) * (if (angolo) schema.angoli else schema.punizioni)
         }
@@ -542,6 +550,20 @@ class LiveMatch(
         } else {
             events += MatchEvent(minute, EventType.MISS, homeAtt, "$kind di ${taker.name}$zona, fuori", x, y, 0, 0, scena)
         }
+    }
+
+    /**
+     * Rigoristi per una serie di rigori dopo la partita: prima quelli della lista dei tiri in campo, poi gli altri
+     * per finalizzazione, il portiere per ultimo. Confronto per riferimento (nei test gli id sono 0).
+     */
+    fun rigoristi(homeSide: Boolean): List<Player> {
+        val xi = if (homeSide) xiH else xiA
+        val lista = (if (homeSide) homeTiri else awayTiri).rigori
+            .mapNotNull { id -> xi.firstOrNull { it.id == id && id != 0L } }
+            .fold(emptyList<Player>()) { acc, p -> if (acc.any { it === p }) acc else acc + p }
+        val altri = xi.filter { p -> lista.none { it === p } }
+            .sortedWith(compareBy<Player> { it.role == "P" }.thenByDescending { it.fi })
+        return lista + altri
     }
 
     /** Zona di porta scelta dal battitore (solo nella partita raccontata). */
