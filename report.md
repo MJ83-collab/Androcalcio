@@ -11,6 +11,12 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Vendite delle maglie** (sostituiscono il vecchio merchandising): tifosi, piazzamento, giocatori 84+, novità (+20%), bellezza, negozi e sito, prezzo scelto dall'utente. Prezzo standard A 90 €, B 65 €, minori 45-50 €. Costo 45% dello standard. Sensibilità al prezzo: A 1,6, B 2,0, minori 2,6. Con valori medi il guadagno è uguale al vecchio merchandising, quindi il test economico non cambia. Voce "Maglie e merchandising" nel bilancio. Test: `MaglieTest`.
 - Stato nuovo (nell'export): "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo".
 
+## Sessione 24/11 sera (5): grafica altre schermate (ramo feat/stadio, build verde, non provato sul telefono)
+- **Rosa:** valori colorati (verde 80+, arancio sotto 65, rosso sotto 50, anche morale) e nuova colonna CT con gli anni di contratto (rosso 1 anno o meno, arancio 2, verde di più).
+- **Scheda giocatore:** blocco Contratto (`ui/GraficaV07.kt`): etichetta IN SCADENZA / N ANNI, ingaggio annuo e mensile, valore di mercato, ingaggio in % del valore.
+- **Prestagione:** amichevoli a tabella (bandiera, avversario, casa/trasferta, risultato o da giocare), contatore colorato (rosso sotto 3, arancio 3-4, verde da 5), lista squadre con bandiera, stadio e pulsante Chiedi.
+- Non fatto: forza della squadra avversaria nella lista amichevoli (la schermata non la riceve).
+
 ## Sessione 24/11 sera (3): campionati nuovi (ramo feat/stadio, build verde, non provato sul telefono)
 - `assets/squadre_europa.json`: 100 squadre inventate, solo massima serie: Olanda 18, Portogallo 18, Belgio 18, Scozia 10, Turchia 18, Grecia 18. Giocatori generati (`SeedData.insertEuropa`), cognomi comuni con iniziali casuali.
 - **Solo carriere nuove** (primo avvio e "nuova carriera"); i salvataggi esistenti non li ricevono. Chi usa "predefinito utente" non li vede finché non ne crea uno nuovo.
@@ -47,7 +53,7 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 
 ## Prossimi lavori decisi con Marco
 - Maglie, merchandising e stadio personalizzabile: **fatti** (sessioni 24/11 sera).
-- Da fare: grafica delle altre schermate ispirata alle foto (tabella giocatori a colonne colorate, scheda giocatore con contratto, prestagione con amichevoli).
+- Grafica delle altre schermate: **fatta** (sessione 5), da provare sul telefono.
 
 ## Da provare
 - **v0.6.0 e ramo feat/fine-partita:** mai provati sul telefono. La v0.6.0 è stata provata solo su emulatore (Android 11).
@@ -86,7 +92,7 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 ## Da fare (priorità)
 1. Provare tutto su telefono e tablet (playoff con supplementari e rigori, stadio, maglie, coppe europee, nuovi campionati). Da verificare: uscita dall'app a metà gara di playoff.
 2. Merge su `main` e v0.7.0, dopo la prova.
-3. Grafica delle altre schermate.
+3. Eventuale ritocco della grafica dopo la prova sul telefono.
 4. Avatar: da decidere cosa si vuole (oggi disegnati in codice).
 5. Coppe europee a metà settimana (oggi si giocano dopo campionato e coppa).
 
