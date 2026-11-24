@@ -29,3 +29,6 @@ object Atmosfera {
     /** Moltiplicatore sul possesso della squadra di casa: da -4% (stadio freddo) a +4% (stadio infuocato). Solo partita dal vivo. */
     fun fattore(v: Int): Double = 1.0 + (v.coerceIn(0, 100) - 50) / 50.0 * 0.04
 }
+
+/** Minuto per il tabellone e la cronaca: oltre il 90' è recupero ("90+3"). */
+fun etichettaMinuto(m: Int): String = if (m > 90) "90+${m - 90}" else "$m"

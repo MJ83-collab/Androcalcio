@@ -1008,7 +1008,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val m: LiveMatch, val tick: Int = 0, val paused: Boolean = false, val speed: Int = 1,
         val userHome: Boolean = true, val league: MatchResult? = null, val saved: Boolean = false,
         val meteo: String = "", val esito: Map<Long, EsitoGiocatore> = emptyMap(),
-        val atmosfera: String = ""
+        val atmosfera: String = "",
+        val tempo: Meteo.Tempo = Meteo.Tempo.NUVOLOSO, val prato: Meteo.Campo = Meteo.Campo.BUONO
     )
     private val _live = MutableStateFlow<LiveInfo?>(null)
     val live: StateFlow<LiveInfo?> = _live
@@ -1057,7 +1058,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         )
         assistVisti.clear(); assistUltimo = -1; _consiglio.value = null
         return LiveInfo(m, speed = _opzioni.value.velocita, userHome = userHome, league = league, meteo = cond.descrizione(),
-            atmosfera = "${Atmosfera.etichetta(atm)} ($atm%)")
+            atmosfera = "${Atmosfera.etichetta(atm)} ($atm%)",
+            tempo = cond.tempo, prato = cond.campo)
     }
 
     // Assistente dell'allenatore in partita: consiglio corrente, livello scelto (0 attivo, 1 discreto, 2 muto)

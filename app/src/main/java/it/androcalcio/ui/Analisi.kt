@@ -68,7 +68,7 @@ fun AnalisiPartita(rep: MatchReport, userHome: Boolean) {
             Text("MOVIOLA DEI GOL", color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
             val gol = rep.events.filter { it.type == EventType.GOAL }
             if (gol.isEmpty()) Text("Nessun gol.", color = AC.PaperText, fontSize = 12.sp)
-            gol.forEach { Text("${it.minute}' ${it.text}", color = AC.PaperText, fontSize = 12.sp) }
+            gol.forEach { Text("${it.androcalcio.engine.etichettaMinuto(it.minute)}' ${it.text}", color = AC.PaperText, fontSize = 12.sp) }
             Text("STATISTICHE AVANZATE", color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
             Row {
                 Text("", Modifier.weight(1f))

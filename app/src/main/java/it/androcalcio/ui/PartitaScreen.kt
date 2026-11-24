@@ -292,7 +292,7 @@ fun CronacaPanel(events: List<it.androcalcio.engine.MatchEvent>) {
     PaperPanel(Modifier.fillMaxWidth()) {
         events.forEachIndexed { i, e ->
             PaperRow(i) {
-                Text("${e.minute}'", Modifier.width(30.dp), fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = AC.PaperText)
+                Text("${it.androcalcio.engine.etichettaMinuto(e.minute)}'", Modifier.width(30.dp), fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = AC.PaperText)
                 Text(e.text, color = pcEventColor(e.type), fontSize = 12.sp,
                     fontWeight = if (e.type == EventType.GOAL) FontWeight.ExtraBold else FontWeight.Medium)
             }

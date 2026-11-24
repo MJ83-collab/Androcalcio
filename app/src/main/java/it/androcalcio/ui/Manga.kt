@@ -43,6 +43,7 @@ import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.AvatarGen
 import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Meteo
 import it.androcalcio.ui.components.AvatarSpec
 import it.androcalcio.ui.components.LocalAvatarModificati
 import it.androcalcio.ui.components.coloriPersona
@@ -79,8 +80,16 @@ fun MangaPitch(
     homeXI: List<Player>, awayXI: List<Player>, attaccoCasa: Boolean?,
     scia: List<Offset> = emptyList(),   // percorso della palla nell'azione, in coordinate 0..1 (traiettoria blu tratteggiata)
     quota: Float = 0f,                  // altezza della palla 0..1 (0 = rasoterra)
-    inMoto: Boolean = true              // la palla sta viaggiando (linee di velocità)
+    inMoto: Boolean = true,             // la palla sta viaggiando (linee di velocità)
+    meteo: it.androcalcio.engine.Meteo.Tempo? = null, prato: it.androcalcio.engine.Meteo.Campo? = null,
+    lineaCasa: it.androcalcio.engine.DefLine? = null, lineaOspiti: it.androcalcio.engine.DefLine? = null
 ) {
+    val animato = meteo == it.androcalcio.engine.Meteo.Tempo.PIOGGIA || meteo == it.androcalcio.engine.Meteo.Tempo.NEVE ||
+        meteo == it.androcalcio.engine.Meteo.Tempo.VENTO
+    val fase = if (animato) androidx.compose.animation.core.rememberInfiniteTransition(label = "meteo").animateFloat(
+        0f, 1f, androidx.compose.animation.core.infiniteRepeatable(
+            tween(if (meteo == it.androcalcio.engine.Meteo.Tempo.NEVE) 4000 else 1100, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "fase").value else 0f
     val spinta = androidx.compose.animation.core.animateFloatAsState(
         when (attaccoCasa) { null -> 0f; true -> 1f; false -> -1f }, tween(350), label = "spinta")
     val mappa = LocalAvatarModificati.current
@@ -161,7 +170,10 @@ fun MangaPitch(
             val segno = if (casa) 1f else -1f
             val att = kotlin.math.max(segno * s, 0f)
             val dif = kotlin.math.max(-segno * s, 0f)
-            val dx = if (portiere) 0f else segno * ((0.04f + 0.35f * base) * att - 0.15f * base * dif)
+            val linea = if (casa) lineaCasa else lineaOspiti
+            val extraLinea = if (portiere || base >= 0.3f) 0f else when (linea) {
+                it.androcalcio.engine.DefLine.ALTA -> 0.05f; it.androcalcio.engine.DefLine.BASSA -> -0.04f; else -> 0f }
+            val dx = if (portiere) 0f else segno * ((0.04f + 0.35f * base) * att - 0.15f * base * dif + extraLinea)
             val x0 = (base + dx + shift).coerceIn(0.03f, 0.97f)
             val y0 = ny + (by - ny) * (0.18f * abs(s))
             val d = hypot(bx - x0, (by - y0) * 0.55f)
@@ -181,15 +193,25 @@ fun MangaPitch(
             val mm = textMeasurer.measure(numero.toString(), stile)
             drawText(textMeasurer, numero.toString(), topLeft = Offset(c.x - mm.size.width / 2f, c.y - mm.size.height / 2f), style = stile)
         }
+        var lineaX = if (attaccoCasa == true) Float.MAX_VALUE else Float.MIN_VALUE   // ultimo difensore di chi non ha la palla
         hf.coords().forEachIndexed { i, (fx, fy) ->
             homeNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                pallino(pl, dove(fx, fy + (by - fy) * 0.08f, true, i == 0), mH, if (pl.numero > 0) pl.numero else pos, true)
+                val c = dove(fx, fy + (by - fy) * 0.08f, true, i == 0)
+                pallino(pl, c, mH, if (pl.numero > 0) pl.numero else pos, true)
+                if (i > 0 && attaccoCasa == false && c.x > lineaX) lineaX = c.x
             }
         }
         af.coords().forEachIndexed { i, (fx, fy) ->
             awayNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                pallino(pl, dove(1f - fx, fy + (by - fy) * 0.08f, false, i == 0), mA, if (pl.numero > 0) pl.numero else pos, false)
+                val c = dove(1f - fx, fy + (by - fy) * 0.08f, false, i == 0)
+                pallino(pl, c, mA, if (pl.numero > 0) pl.numero else pos, false)
+                if (i > 0 && attaccoCasa == true && c.x < lineaX) lineaX = c.x
             }
+        }
+        // Linea del fuorigioco: tratteggio rosso all'altezza dell'ultimo difensore di chi non ha la palla
+        if (attaccoCasa != null && lineaX != Float.MAX_VALUE && lineaX != Float.MIN_VALUE) {
+            drawLine(Color(0xFFFF3B6B).copy(alpha = 0.8f), Offset(lineaX, top), Offset(lineaX, bottom), 2.5f,
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(12f, 9f)))
         }
 
         // Arbitro: maglia gialla, segue l'azione a debita distanza
@@ -226,6 +248,31 @@ fun MangaPitch(
             drawLine(Inchiostro, bc, Offset(bc.x + rb, bc.y), 2f)
         }
         drawCircle(Inchiostro, rb, bc, style = Stroke(width = 2f))
+
+        // Meteo e prato sul campo
+        when (meteo) {
+            Meteo.Tempo.PIOGGIA -> for (k in 0 until 70) {
+                val x = ((k * 97) % 100) / 100f * w
+                val y = top + ((((k * 53) % 100) / 100f + fase) % 1f) * ph
+                drawLine(Color(0xFFBFD8FF).copy(alpha = 0.5f), Offset(x, y), Offset(x - r * 0.3f, y + r * 0.9f), 2f)
+            }
+            Meteo.Tempo.NEVE -> for (k in 0 until 60) {
+                val x = ((k * 97) % 100) / 100f * w + sin(fase * 2 * PI + k).toFloat() * r * 0.6f
+                val y = top + ((((k * 53) % 100) / 100f + fase) % 1f) * ph
+                drawCircle(Color.White.copy(alpha = 0.85f), 2.5f + (k % 3), Offset(x, y))
+            }
+            Meteo.Tempo.NEBBIA -> drawRect(Color.White.copy(alpha = 0.22f), Offset(0f, top), Size(w, ph))
+            Meteo.Tempo.VENTO -> for (k in 0 until 14) {
+                val y = top + ((k * 71) % 100) / 100f * ph
+                val x = ((((k * 37) % 100) / 100f + fase) % 1f) * w
+                drawLine(Color.White.copy(alpha = 0.35f), Offset(x, y), Offset(x + r * 2.5f, y), 2f, StrokeCap.Round)
+            }
+            Meteo.Tempo.CALDO -> drawRect(Color(0xFFFF8A00).copy(alpha = 0.10f), Offset(0f, top), Size(w, ph))
+            else -> {}
+        }
+        if (prato == Meteo.Campo.PESANTE || prato == Meteo.Campo.PESSIMO) {
+            drawRect(Color(0xFF5A3B1E).copy(alpha = if (prato == Meteo.Campo.PESSIMO) 0.18f else 0.10f), Offset(0f, top), Size(w, ph))
+        }
     }
 }
 
@@ -366,7 +413,8 @@ private suspend fun muoviPalla(
 @Composable
 fun rememberPalla(
     events: List<it.androcalcio.engine.MatchEvent>, minuto: Int, possessoCasa: Int, veloce: Boolean,
-    hf: it.androcalcio.engine.Formation, af: it.androcalcio.engine.Formation
+    hf: it.androcalcio.engine.Formation, af: it.androcalcio.engine.Formation,
+    fattoreTempo: Float = 1f   // > 1 con pioggia, neve o prato pesante: la palla corre meno
 ): PallaAnimata {
     val ax = remember { Animatable(0.5f) }
     val ay = remember { Animatable(0.5f) }
@@ -377,7 +425,7 @@ fun rememberPalla(
     var inVolo by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }   // la palla sta viaggiando: la scia arriva fino a lei
     val idx = events.indexOfLast { it.percorso.isNotEmpty() }
     val ultimo = events.getOrNull(idx)
-    val durata = if (veloce) 30 else 260
+    val durata = if (veloce) 30 else (260 * fattoreTempo).toInt()
 
     LaunchedEffect(idx) {
         val e = ultimo ?: return@LaunchedEffect
@@ -415,7 +463,7 @@ fun rememberPalla(
         scia.clear(); scia.add(Offset(ax.value, ay.value))
         inVolo = true
         val dist = hypot(tx - ax.value, (ty - ay.value) * 0.55f)
-        muoviPalla(ax, ay, az, tx, ty, if (veloce) 30 else 700, if (dist > 0.30f) 0.6f else 0f)
+        muoviPalla(ax, ay, az, tx, ty, if (veloce) 30 else (700 * fattoreTempo).toInt(), if (dist > 0.30f) 0.6f else 0f)
         scia.add(Offset(tx, ty))
         inVolo = false
         delay(if (veloce) 100L else 500L)

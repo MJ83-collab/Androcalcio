@@ -78,7 +78,10 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         EventType.COMMENTO, EventType.VAR)
     val last = events.lastOrNull { it.type !in ignorati }
     val lastGoal = events.lastOrNull { it.type == EventType.GOAL }
-    val palla = rememberPalla(events, m.minute, m.possessoCasa, info.speed >= 4, m.homeF, m.awayF)
+    val lento = info.tempo == it.androcalcio.engine.Meteo.Tempo.PIOGGIA || info.tempo == it.androcalcio.engine.Meteo.Tempo.NEVE ||
+        info.prato == it.androcalcio.engine.Meteo.Campo.PESANTE || info.prato == it.androcalcio.engine.Meteo.Campo.PESSIMO
+    val palla = rememberPalla(events, m.minute, m.possessoCasa, info.speed >= 4, m.homeF, m.awayF, if (lento) 1.25f else 1f)
+    var replay by remember { mutableStateOf<it.androcalcio.engine.MatchEvent?>(null) }
     var subOpen by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(LivePanel.NESSUNO) }
     val mySubs = if (info.userHome) m.subsH else m.subsA
@@ -108,7 +111,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
             Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item { Scoreboard(m.home, m.away, m.hg, m.ag, "${m.minute}'" + if (info.paused) " · pausa" else "") }
+            item { Scoreboard(m.home, m.away, m.hg, m.ag, "${it.androcalcio.engine.etichettaMinuto(m.minute)}'" + if (info.paused) " · pausa" else "") }
             item { PossessoBar(m.possessoCasa) }
             consiglio?.let { c ->
                 item {
@@ -121,8 +124,12 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
             item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + (if (m.varAttivo) " · VAR" else "") +
                 (if (info.atmosfera.isNotEmpty()) " · Stadio ${info.atmosfera}" else ""),
                 color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
-            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco, palla.scia, palla.quota, palla.inVolo) }
+            if (lastGoal != null && m.minute - lastGoal.minute <= 3) {
+                item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
+                item { PcChip(selected = false, onClick = { vm.setLivePaused(true); replay = lastGoal }, label = { Text("▶ Replay del gol") }) }
+            }
+            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco, palla.scia, palla.quota, palla.inVolo,
+                info.tempo, info.prato, m.lineH, m.lineA) }
             item { TelecronacaBubble(events, m.minute) }
             when (panel) {
                 LivePanel.TATTICA -> {
@@ -209,6 +216,9 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
             }
         }
     }
+    replay?.let { ev ->
+        it.androcalcio.ui.ReplayGol(ev, m) { replay = null; vm.setLivePaused(false) }
+    }
     momento?.let { ev ->
         val tutti = m.xiH + m.xiA + m.benchH + m.benchA
         MomentoChiave(titoloMomento(ev) ?: "", ev.text, if (ev.home) m.home else m.away,
@@ -236,6 +246,7 @@ private fun titoloMomento(e: it.androcalcio.engine.MatchEvent): String? {
         }
         e.type == EventType.GOAL -> if (rigore) "GOL SU RIGORE!" else "GOOOL!"
         e.type == EventType.RED -> "ESPULSO!"
+        e.type == EventType.INJURY -> "INFORTUNIO!"
         e.type == EventType.SAVE && rigore -> "RIGORE PARATO!"
         e.type == EventType.MISS && rigore -> "RIGORE SBAGLIATO!"
         else -> null
@@ -264,7 +275,7 @@ private fun GolBanner(testo: String, minuto: Int) {
         Modifier.fillMaxWidth().background(AC.GoalBanner, RoundedCornerShape(4.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("$testo ($minuto')", color = AC.Night, fontWeight = FontWeight.Black, fontSize = 15.sp,
+        Text("$testo (${it.androcalcio.engine.etichettaMinuto(minuto)}')", color = AC.Night, fontWeight = FontWeight.Black, fontSize = 15.sp,
             maxLines = 2, textAlign = TextAlign.Center)
     }
 }

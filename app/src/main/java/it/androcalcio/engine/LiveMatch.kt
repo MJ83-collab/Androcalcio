@@ -143,7 +143,9 @@ class LiveMatch(
     val tiriCasa get() = hs
     val tiriOspiti get() = asht
     val possessoCasa get() = (pHome * 100).toInt()
-    val finished get() = minute >= 90
+    /** Fine della partita: 90' più il recupero (calcolato al 90' solo nella partita dal vivo). */
+    var fine = 90; private set
+    val finished get() = minute >= fine
 
     // Mentalità iniziale delle squadre AI: in base al rapporto di forza
     private fun startMent(own: MatchEngine.Ratings, opp: MatchEngine.Ratings, bonus: Double): Mentality {
@@ -424,8 +426,37 @@ class LiveMatch(
         }
         if (rng.nextDouble() < 0.0006) infortunio(rng.nextBoolean())
         if (minute == 45) events += MatchEvent(45, EventType.HALFTIME, true, "Fine primo tempo", 0.5f, 0.5f)
-        if (minute == 90) events += MatchEvent(90, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
-        if (immersivo) { statisticheMinuto(); telecronaca(prima) }
+        if (minute == 90 && immersivo && fine == 90) {
+            // Recupero: cambi, infortuni e controlli VAR fanno allungare la partita
+            val rec = (1 + (subsH + subsA) / 3 + infortunati.size + events.count { it.type == EventType.VAR } / 2 + rngI.nextInt(0, 2)).coerceIn(1, 7)
+            fine = 90 + rec
+            events += MatchEvent(90, EventType.COMMENTO, true, "Recupero: $rec ${if (rec == 1) "minuto" else "minuti"}", 0.5f, 0.5f)
+        }
+        if (minute == fine) events += MatchEvent(minute, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
+        if (immersivo) { statisticheMinuto(); registraCalore(); telecronaca(prima) }
+    }
+
+    /** Mappa di calore: per ogni giocatore, i minuti passati in ciascuna zona (8 colonne x 5 righe, casa verso destra). */
+    val calore = HashMap<Long, IntArray>()
+
+    private fun registraCalore() {
+        val ev = events.lastOrNull { it.percorso.isNotEmpty() && minute - it.minute <= 2 }
+        val bx = ev?.x ?: 0.5f; val by = ev?.y ?: 0.5f
+        fun reg(xi: List<Player>, f: Formation, casa: Boolean) {
+            val ordine = xi.sortedWith(compareBy<Player>({ when (it.role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 } }, { -it.overall }))
+            val coords = f.coords()
+            val segno = if (casa) 1f else -1f
+            ordine.forEachIndexed { i, p ->
+                val (fx, fy) = coords.getOrNull(i) ?: return@forEachIndexed
+                val base = if (casa) fx else 1f - fx
+                var x = base + (bx - 0.5f) * 0.2f
+                if (ev != null && i > 0) x += if (ev.home == casa) segno * (0.04f + 0.35f * base) else -segno * 0.15f * base
+                val y = fy + (by - fy) * 0.12f
+                val cella = (x.coerceIn(0f, 0.999f) * 8).toInt() + (y.coerceIn(0f, 0.999f) * 5).toInt() * 8
+                calore.getOrPut(p.id) { IntArray(40) }[cella]++
+            }
+        }
+        reg(xiH, homeF, true); reg(xiA, awayF, false)
     }
 
     private fun forzaDuello(xi: List<Player>): Double =

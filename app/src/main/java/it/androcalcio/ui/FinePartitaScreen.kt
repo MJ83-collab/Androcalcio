@@ -1,6 +1,7 @@
 package it.androcalcio.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -53,9 +54,9 @@ fun FinePartitaScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMo
             item { Titolo("Analisi e statistiche") }
             item { AnalisiPartita(rep, info.userHome) }
             item { Titolo("Le tue pagelle · ${mia.shortName}") }
-            item { Tabella(rep, info.userHome, m::minutiGiocati, info.esito, mie = true, pronta = pronta) }
+            item { Tabella(rep, info.userHome, m::minutiGiocati, { id -> m.calore[id] }, info.esito, mie = true, pronta = pronta) }
             item { Titolo("Avversario · ${altra.shortName}") }
-            item { Tabella(rep, !info.userHome, m::minutiGiocati, info.esito, mie = false, pronta = pronta) }
+            item { Tabella(rep, !info.userHome, m::minutiGiocati, { id -> m.calore[id] }, info.esito, mie = false, pronta = pronta) }
             item { Titolo("Top 11 della partita") }
             item { Top11(rep) }
             item { Titolo("Cronaca") }
@@ -98,11 +99,13 @@ private fun Titolo(testo: String) {
 /** Pagelle di una squadra: chi è sceso in campo, dal voto più alto; sotto il nome le statistiche personali. */
 @Composable
 private fun Tabella(
-    rep: MatchReport, casa: Boolean, minuti: (Long) -> Int,
+    rep: MatchReport, casa: Boolean, minuti: (Long) -> Int, calore: (Long) -> IntArray?,
     esito: Map<Long, AndrocalcioViewModel.EsitoGiocatore>, mie: Boolean, pronta: Boolean
 ) {
     val giocati = if (casa) rep.homePlayed else rep.awayPlayed
     val ps = rep.playedPlayers.filter { it.id in giocati }.sortedByDescending { rep.playerRatings[it.id] ?: 6.0 }
+    var scelto by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<it.androcalcio.data.Player?>(null) }
+    scelto?.let { p -> it.androcalcio.ui.MappaCalore(p.name, calore(p.id), casa) { scelto = null } }
     PaperPanel(Modifier.fillMaxWidth()) {
         ps.forEachIndexed { i, p ->
             val voto = rep.playerRatings[p.id] ?: 6.0
@@ -113,8 +116,8 @@ private fun Tabella(
             val inf = p.id in rep.infortunati
             val e = if (mie) esito[p.id] else null
             PaperRow(i) {
-                Column(Modifier.weight(1f)) {
-                    Text("${p.pos.ifEmpty { p.role }}  ${p.name}", color = AC.PaperText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Column(Modifier.weight(1f).clickable { scelto = p }) {
+                    Text("${p.pos.ifEmpty { p.role }}  ${p.name}  🔥", color = AC.PaperText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Text(dettagli(gol, ass, amm, esp, inf, minuti(p.id), e, mie && pronta), color = AC.PaperText.copy(alpha = 0.7f), fontSize = 11.sp)
                     e?.miglioramenti?.takeIf { it.isNotEmpty() }?.let {
                         Text("Crescita: " + it.joinToString(" · "), color = Verde, fontSize = 11.sp, fontWeight = FontWeight.Bold)
