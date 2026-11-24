@@ -250,11 +250,13 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
         containerColor = AC.Bg,
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().background(
-                if (AC.pc7) androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(Color(0xFF4652B8), Color(0xFF2A3A8C), Color(0xFF1B2461)))
-                else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.Bg, AC.Surface))
-            )
+            Modifier.padding(padding).fillMaxSize().let { m ->
+                if (AC.tema == 3) m.marmo()
+                else m.background(
+                    if (AC.pc7) androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFF4652B8), Color(0xFF2A3A8C), Color(0xFF1B2461)))
+                    else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.Bg, AC.Surface)))
+            }
         ) {
         HeaderBar(team, season, screen)
         Row(Modifier.weight(1f)) {

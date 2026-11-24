@@ -48,7 +48,7 @@ private val ColFinanze = Color(0xFF9A7A55)
 private val Fondo = Brush.verticalGradient(listOf(Color(0xFF7FA0D4), Color(0xFF5878B2), Color(0xFF3A5A92)))
 
 /** Sfondo azzurro marmorizzato come nel menu originale: gradiente con nuvole chiare e scure. */
-private fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
+internal fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
     val w = size.width; val h = size.height
     listOf(Triple(0.2f, 0.12f, 0.55f), Triple(0.85f, 0.3f, 0.5f), Triple(0.3f, 0.55f, 0.6f), Triple(0.8f, 0.8f, 0.55f), Triple(0.15f, 0.92f, 0.5f)).forEachIndexed { i, (x, y, r) ->
         val c = if (i % 2 == 0) Color(0x33FFFFFF) else Color(0x2A0A1A44)

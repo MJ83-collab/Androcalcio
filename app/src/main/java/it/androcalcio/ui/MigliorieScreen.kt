@@ -56,7 +56,7 @@ fun MigliorieScreen(team: Team?, st: AndrocalcioViewModel.MigliorieStato, onAvvi
     var area by rememberSaveable { mutableStateOf(Migliorie.STADIO) }
     val tot = Migliorie.effetti(st.fatte)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { StadioDisegno(st.fatte, st.cantieri.keys, team) }
+        item { if (area == Migliorie.STADIO) StadioDisegno(st.fatte, st.cantieri.keys, team) else CentroDisegno(st.fatte, st.cantieri.keys, team) }
         item { Riepilogo(team, tot, st.fatte.size) }
         if (st.cantieri.isNotEmpty()) {
             item { SectionTitle("Cantieri aperti (${st.cantieri.size}/${Migliorie.MAX_CANTIERI})") }
@@ -189,3 +189,50 @@ private fun effettiTesto(e: EffettiMiglioria): String = buildList {
     if (e.vivaio > 0) add("giovani +${e.vivaio} potenziale")
     if (e.manutenzione < 0) add("risparmio ${money(-e.manutenzione)} l'anno")
 }.joinToString(" · ")
+
+/** Centro sportivo visto dall'alto: campi di allenamento con coni e porte piccole, edifici che compaiono con i lavori. */
+@Composable
+private fun CentroDisegno(fatte: Set<String>, inCorso: Set<String>, team: Team) {
+    val club = Color(team.colorPrimary)
+    fun colore(id: String) = when (id) { in fatte -> club; in inCorso -> AC.GoalBanner; else -> Color.White.copy(alpha = 0.10f) }
+    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF2F5A34))
+        .border(1.5.dp, AC.Neon.copy(alpha = 0.5f), RoundedCornerShape(10.dp)).padding(8.dp)) {
+        Canvas(Modifier.fillMaxWidth().aspectRatio(1.9f)) {
+            val w = size.width; val h = size.height
+            // vialetto
+            drawRect(Color(0xFFC8B98A), Offset(w * 0.36f, 0f), Size(w * 0.05f, h))
+            drawRect(Color(0xFFC8B98A), Offset(0f, h * 0.46f), Size(w, h * 0.06f))
+            // campo di allenamento principale (a strisce, porte piccole, coni)
+            fun campo(x: Float, y: Float, cw: Float, ch: Float, attivo: Boolean) {
+                val a = if (attivo) 1f else 0.35f
+                for (i in 0 until 6) drawRect(if (i % 2 == 0) AC.PitchA.copy(alpha = a) else AC.PitchB.copy(alpha = a),
+                    Offset(x + cw * i / 6f, y), Size(cw / 6f, ch))
+                drawRect(Color.White.copy(alpha = 0.7f), Offset(x, y), Size(cw, ch), style = Stroke(2f))
+                drawLine(Color.White.copy(alpha = 0.6f), Offset(x + cw / 2, y), Offset(x + cw / 2, y + ch), 2f)
+                drawRect(Color.White, Offset(x - 3f, y + ch * 0.4f), Size(5f, ch * 0.2f))
+                drawRect(Color.White, Offset(x + cw - 2f, y + ch * 0.4f), Size(5f, ch * 0.2f))
+                listOf(0.2f, 0.4f, 0.6f, 0.8f).forEach { f -> drawCircle(Color(0xFFFF9800), 3f, Offset(x + cw * f, y + ch * 0.5f)) }
+            }
+            campo(w * 0.43f, h * 0.04f, w * 0.54f, h * 0.38f, true)
+            campo(w * 0.43f, h * 0.56f, w * 0.54f, h * 0.38f, "campi" in fatte)
+            if ("coperto" in fatte) drawRoundRect(Color.White.copy(alpha = 0.22f), Offset(w * 0.43f, h * 0.56f), Size(w * 0.54f, h * 0.38f), CornerRadius(14f))
+            // edificio principale a sinistra: palestra, medico, video/gps, crio, mensa
+            fun edificio(id: String, x: Float, y: Float, bw: Float, bh: Float) {
+                drawRoundRect(colore(id), Offset(x, y), Size(bw, bh), CornerRadius(4f))
+                drawRoundRect(Color.Black.copy(alpha = 0.45f), Offset(x, y), Size(bw, bh), CornerRadius(4f), style = Stroke(1.5f))
+            }
+            edificio("palestra", w * 0.02f, h * 0.05f, w * 0.15f, h * 0.18f)
+            edificio("medico", w * 0.19f, h * 0.05f, w * 0.15f, h * 0.18f)
+            edificio("video", w * 0.02f, h * 0.26f, w * 0.15f, h * 0.15f)
+            edificio("gps", w * 0.19f, h * 0.26f, w * 0.15f, h * 0.15f)
+            edificio("piscina", w * 0.02f, h * 0.56f, w * 0.15f, h * 0.16f)
+            edificio("crio", w * 0.19f, h * 0.56f, w * 0.15f, h * 0.16f)
+            edificio("mensa", w * 0.02f, h * 0.76f, w * 0.10f, h * 0.18f)
+            edificio("relax", w * 0.14f, h * 0.76f, w * 0.08f, h * 0.18f)
+            edificio("foresteria", w * 0.24f, h * 0.76f, w * 0.10f, h * 0.18f)
+            if ("convitto" in fatte || "convitto" in inCorso) edificio("convitto", w * 0.36f, h * 0.76f, 0.0f + w * 0.05f, h * 0.18f)
+            // alberi
+            listOf(0.40f to 0.10f, 0.40f to 0.35f, 0.40f to 0.60f, 0.40f to 0.90f).forEach { (x, y) -> drawCircle(Color(0xFF1B4D24), h * 0.04f, Offset(w * x, h * y)) }
+        }
+    }
+}

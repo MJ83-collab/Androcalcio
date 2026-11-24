@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
@@ -295,7 +296,7 @@ fun GlassCard(
     if (AC.pc7) {
         Box(
             modifier.clip(RoundedCornerShape(2.dp))
-                .background(Brush.verticalGradient(listOf(AC.NavyTop, AC.NavyBottom)))
+                .background(Brush.verticalGradient(listOf(AC.NavyTop.copy(alpha = 0.93f), AC.NavyBottom.copy(alpha = 0.93f))))
                 .border(2.dp, AC.NavyBorder, RoundedCornerShape(2.dp))
                 .bevel(w = 1.dp)
         ) { CompositionLocalProvider(LocalContentColor provides AC.Text) { content() } }
@@ -419,17 +420,17 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
         return
     }
     if (AC.pc7) {
-        Box(
-            modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Brush.verticalGradient(listOf(AC.SectionTop, AC.SectionBottom)))
-                .border(1.dp, Color(0xFF0B1240), RoundedCornerShape(2.dp))
-                .bevel(w = 1.dp)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        // nastro obliquo come i titoli del menu di PC Calcio 7
+        Box(modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp).height(26.dp), contentAlignment = Alignment.CenterStart) {
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width; val h = size.height; val sl = h * 0.45f
+                val pth = Path().apply { moveTo(sl, 0f); lineTo(w, 0f); lineTo(w - sl, h); lineTo(0f, h); close() }
+                drawPath(pth, Brush.verticalGradient(listOf(AC.SectionTop, AC.SectionBottom)))
+                drawPath(pth, Color(0xFF0B1240), style = Stroke(width = 2.5f))
+                drawLine(Color.White.copy(alpha = 0.45f), Offset(sl + 3f, 2.5f), Offset(w - 6f, 2.5f), strokeWidth = 1.5f)
+            }
             Text(
-                text.uppercase(Locale.ITALY), color = Color.White, fontFamily = PcTitle,
+                text.uppercase(Locale.ITALY), Modifier.padding(horizontal = 16.dp), color = Color.White, fontFamily = PcTitle,
                 fontSize = 12.sp, letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelSmall.copy(shadow = Shadow(Color(0xFF0B1240), Offset(1f, 1f), 2f))
             )

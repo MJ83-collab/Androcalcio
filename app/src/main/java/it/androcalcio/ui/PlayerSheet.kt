@@ -105,6 +105,7 @@ fun PlayerSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Tag("${p.age} anni", AC.ColGreen); Tag(p.nationality, AC.ColBlue, Modifier.apriNazione(p.nationality))
                     Tag(Attr.FOOT_NAMES[p.foot] ?: "Destro", AC.ColOrange)
+                    if (it.androcalcio.engine.Tratti.cinico(p)) Tag("Cinico", AC.ColEn)
                 }
                 val squadra = dettaglio?.squadra ?: team?.name
                 if (squadra != null) Text(squadra, Modifier.apriSquadraNome(squadra), fontSize = 12.sp, color = AC.ColBlue, fontWeight = FontWeight.Bold)

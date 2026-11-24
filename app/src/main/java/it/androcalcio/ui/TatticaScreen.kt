@@ -75,6 +75,10 @@ private fun roleSpot(code: String, role: String): Offset = when (code) {
     "INT" -> Offset(0.55f, 0.28f)
     "MP" -> Offset(0.70f, 0.5f)
     "ES" -> Offset(0.70f, 0.14f)
+    "FD" -> Offset(0.50f, 0.85f)
+    "FS" -> Offset(0.50f, 0.15f)
+    "AD" -> Offset(0.75f, 0.85f)
+    "AS" -> Offset(0.75f, 0.15f)
     "CA" -> Offset(0.88f, 0.5f)
     else -> when (role) {
         "P" -> Offset(0.10f, 0.5f); "D" -> Offset(0.28f, 0.5f); "C" -> Offset(0.50f, 0.5f); else -> Offset(0.85f, 0.5f)

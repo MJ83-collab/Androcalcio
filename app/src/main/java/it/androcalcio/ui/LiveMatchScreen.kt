@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.PaperRow
 import androidx.compose.animation.core.animateFloatAsState
+import kotlinx.coroutines.flow.first
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,14 +74,30 @@ private enum class LivePanel { NESSUNO, TATTICA, STAT, ASSISTENTE }
 fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewModel, onProssima: () -> Unit = {}) {
     val m = info.m
     @Suppress("UNUSED_VARIABLE") val t = info.tick   // ricomposizione a ogni minuto
-    val events = m.events.toList()
+    val tutti = m.events.toList()
+    // Telecronaca e cronaca restano sincronizzate con il campo: il testo di un'azione compare quando la palla ha finito il tragitto
+    var mostrati by remember { mutableStateOf(tutti.size) }
+    val events = tutti.take(mostrati.coerceAtMost(tutti.size))
     val ignorati = setOf(EventType.YELLOW, EventType.SUB, EventType.TACTIC, EventType.RED, EventType.INJURY,
         EventType.COMMENTO, EventType.VAR)
     val last = events.lastOrNull { it.type !in ignorati }
     val lastGoal = events.lastOrNull { it.type == EventType.GOAL }
     val lento = info.tempo == it.androcalcio.engine.Meteo.Tempo.PIOGGIA || info.tempo == it.androcalcio.engine.Meteo.Tempo.NEVE ||
         info.prato == it.androcalcio.engine.Meteo.Campo.PESANTE || info.prato == it.androcalcio.engine.Meteo.Campo.PESSIMO
-    val palla = rememberPalla(events, m.minute, m.possessoCasa, info.speed >= 4, m.homeF, m.awayF, if (lento) 1.25f else 1f)
+    val palla = rememberPalla(tutti, m.minute, m.possessoCasa, info.speed >= 4, m.homeF, m.awayF, if (lento) 1.25f else 1f)
+    val pallaCorrente = androidx.compose.runtime.rememberUpdatedState(palla)
+    androidx.compose.runtime.LaunchedEffect(tutti.size) {
+        if (tutti.size < mostrati) mostrati = tutti.size
+        if (tutti.size > mostrati) {
+            val nuovi = tutti.subList(mostrati, tutti.size)
+            if (info.speed < 4 && nuovi.any { it.percorso.isNotEmpty() }) {
+                val partita = kotlinx.coroutines.withTimeoutOrNull(900) { androidx.compose.runtime.snapshotFlow { pallaCorrente.value.inVolo }.first { it } }
+                if (partita != null) kotlinx.coroutines.withTimeoutOrNull(7000) { androidx.compose.runtime.snapshotFlow { pallaCorrente.value.inVolo }.first { !it } }
+                kotlinx.coroutines.delay(200)
+            }
+            mostrati = tutti.size
+        }
+    }
     var replay by remember { mutableStateOf<it.androcalcio.engine.MatchEvent?>(null) }
     var subOpen by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(LivePanel.NESSUNO) }
@@ -109,7 +126,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
     Column(Modifier.fillMaxSize()) {
         val larga = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 720
         val colA: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
-            item { Scoreboard(m.home, m.away, m.hg, m.ag, "${it.androcalcio.engine.etichettaMinuto(m.minute)}'" + if (info.paused) " · pausa" else "") }
+            item { Scoreboard(m.home, m.away, if (mostrati >= tutti.size) m.hg else events.count { it.type == EventType.GOAL && it.home }, if (mostrati >= tutti.size) m.ag else events.count { it.type == EventType.GOAL && !it.home }, "${it.androcalcio.engine.etichettaMinuto(m.minute)}'" + if (info.paused) " · pausa" else "") }
             item { PossessoBar(m.possessoCasa) }
         }
         val colB: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {

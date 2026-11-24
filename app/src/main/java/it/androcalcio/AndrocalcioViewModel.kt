@@ -61,6 +61,7 @@ import it.androcalcio.engine.Evento
 import it.androcalcio.engine.Scelta
 import it.androcalcio.engine.Spogliatoio
 import it.androcalcio.engine.TrainFocus
+import it.androcalcio.engine.Tratti
 import it.androcalcio.engine.Training
 import it.androcalcio.engine.TrainIntensity
 import it.androcalcio.engine.TrainingPlan
@@ -1523,6 +1524,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 val finali = finali0.map { p -> if (p.id in r.infortunati && p.injuredRounds == 0) p.copy(injuredRounds = rng.nextInt(2, 6)) else p }
                 dao.updatePlayers(finali.map { p -> if (p.id in played) apprendiRuolo(p) else p })
             }
+            if (Tratti.sporco) { Tratti.sporco = false; dao.setStato(Stato("tratti", Tratti.encode())) }
             // Cosa è cambiato ai miei giocatori, per la schermata di fine partita
             if (t != null) esito = dao.playersOnce(t.id).mapNotNull { dopo ->
                 val p = prima[dopo.id] ?: return@mapNotNull null
@@ -4277,6 +4279,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             Leadership.vice = dao.stato("vicecapitano")?.toLongOrNull() ?: 0L
             _premio.value = dao.stato(PremioPartita.KEY) == "1"
             Training.individuali = Training.decodeInd(dao.stato("allen_ind"))
+            Tratti.decode(dao.stato("tratti"))
         }
     }
     private fun avvio6() { ripristinaScelte() }

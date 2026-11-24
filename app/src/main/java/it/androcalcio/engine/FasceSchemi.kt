@@ -18,7 +18,7 @@ enum class Fasce(val label: String, val descrizione: String) {
         val laterale = this == LATERALE
         val zona = xi.filter {
             val r = TacticalRoles.assigned(it)
-            if (laterale) r == "TD" || r == "TS" || r == "ES" else r == "MED" || r == "REG" || r == "INT" || r == "MP" || r == "CA"
+            if (laterale) r == "TD" || r == "TS" || r == "ES" || r == "FD" || r == "FS" || r == "AD" || r == "AS" else r == "MED" || r == "REG" || r == "INT" || r == "MP" || r == "CA"
         }
         val q = if (zona.isEmpty()) 55.0 else zona.map { if (laterale) (it.ve + it.qu) / 2.0 else (it.pa + it.qu) / 2.0 }.average()
         return 1.0 + 0.08 * ((q - 55.0) / 45.0).coerceIn(-1.0, 1.0)

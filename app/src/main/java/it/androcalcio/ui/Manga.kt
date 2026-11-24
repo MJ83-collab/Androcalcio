@@ -92,7 +92,11 @@ fun MangaPitch(
             tween(if (meteo == it.androcalcio.engine.Meteo.Tempo.NEVE) 4000 else 1100, easing = androidx.compose.animation.core.LinearEasing)),
         label = "fase").value else 0f
     val spinta = androidx.compose.animation.core.animateFloatAsState(
-        when (attaccoCasa) { null -> 0f; true -> 1f; false -> -1f }, tween(350), label = "spinta")
+        when (attaccoCasa) { null -> 0f; true -> 1f; false -> -1f }, tween(800), label = "spinta")
+    // I giocatori seguono la palla con un leggero ritardo (molla): niente scatti, movimento continuo
+    val molla = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 45f)
+    val pbxS = androidx.compose.animation.core.animateFloatAsState(bx, molla, label = "pbx")
+    val pbyS = androidx.compose.animation.core.animateFloatAsState(by, molla, label = "pby")
     val mappa = LocalAvatarModificati.current
     val (mH, mA) = remember(home.id, away.id) { maglie(home, away) }
     val homeNums = numbered(homeXI)
@@ -147,7 +151,8 @@ fun MangaPitch(
         }
 
         // Giocatori
-        val shift = (bx - 0.5f) * 0.2f
+        val pbx = pbxS.value; val pby = pbyS.value
+        val shift = (pbx - 0.5f) * 0.2f
         val r = ph * 0.042f
         val piede = Offset(r * 0.95f, r * 0.45f)   // la palla sta accanto al pallino di chi la gioca
 
@@ -176,10 +181,10 @@ fun MangaPitch(
                 it.androcalcio.engine.DefLine.ALTA -> 0.05f; it.androcalcio.engine.DefLine.BASSA -> -0.04f; else -> 0f }
             val dx = if (portiere) 0f else segno * ((0.04f + 0.35f * base) * att - 0.15f * base * dif + extraLinea)
             val x0 = (base + dx + shift).coerceIn(0.03f, 0.97f)
-            val y0 = ny + (by - ny) * (0.18f * abs(s))
-            val d = hypot(bx - x0, (by - y0) * 0.55f)
+            val y0 = ny + (pby - ny) * (0.18f * abs(s))
+            val d = hypot(pbx - x0, (pby - y0) * 0.55f)
             val k = 0.8f * (1f - d / 0.18f).coerceAtLeast(0f).let { it * it }
-            return p(x0 + (bx - x0) * k, y0 + (by - y0) * k)
+            return p(x0 + (pbx - x0) * k, y0 + (pby - y0) * k)
         }
         fun pallino(pl: Player, c: Offset, maglia: Pair<Color, Color>, numero: Int, casa: Boolean) {
             val portiere = pl.role == "P"
@@ -189,7 +194,7 @@ fun MangaPitch(
             drawCircle(col, rp, c)
             drawCircle(if (portiere) Inchiostro else maglia.second, rp, c, style = Stroke(width = r * 0.2f))
             // Chi ha la palla ha un anello giallo
-            if (hypot(c.x - bTerra.x, c.y - bTerra.y) < rp * 1.4f) drawCircle(Color(0xFFFFE23D), rp * 1.28f, c, style = Stroke(width = r * 0.16f))
+            if (hypot(c.x - bTerra.x, c.y - bTerra.y) < rp * 2.3f) drawCircle(Color(0xFFFFE23D), rp * 1.28f, c, style = Stroke(width = r * 0.16f))
             val stile = TextStyle(color = if (luminanza(col) > 0.6f) Inchiostro else Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
             val mm = textMeasurer.measure(numero.toString(), stile)
             drawText(textMeasurer, numero.toString(), topLeft = Offset(c.x - mm.size.width / 2f, c.y - mm.size.height / 2f), style = stile)
@@ -197,14 +202,14 @@ fun MangaPitch(
         var lineaX = if (attaccoCasa == true) Float.MAX_VALUE else Float.MIN_VALUE   // ultimo difensore di chi non ha la palla
         hf.coords().forEachIndexed { i, (fx, fy) ->
             homeNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                val c = dove(fx, fy + (by - fy) * 0.08f, true, i == 0)
+                val c = dove(fx, fy + (pby - fy) * 0.08f, true, i == 0)
                 pallino(pl, c, mH, if (pl.numero > 0) pl.numero else pos, true)
                 if (i > 0 && attaccoCasa == false && c.x > lineaX) lineaX = c.x
             }
         }
         af.coords().forEachIndexed { i, (fx, fy) ->
             awayNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                val c = dove(1f - fx, fy + (by - fy) * 0.08f, false, i == 0)
+                val c = dove(1f - fx, fy + (pby - fy) * 0.08f, false, i == 0)
                 pallino(pl, c, mA, if (pl.numero > 0) pl.numero else pos, false)
                 if (i > 0 && attaccoCasa == true && c.x < lineaX) lineaX = c.x
             }
@@ -403,10 +408,10 @@ private suspend fun muoviPalla(
     px: Float, py: Float, ms: Int, picco: Float
 ) {
     kotlinx.coroutines.coroutineScope {
-        launch { ax.animateTo(px, tween(ms)) }
-        launch { ay.animateTo(py, tween(ms)) }
+        launch { ax.animateTo(px, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
+        launch { ay.animateTo(py, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
         launch {
-            if (picco > 0f) { az.animateTo(picco, tween(ms / 2)); az.animateTo(0f, tween(ms - ms / 2)) } else az.snapTo(0f)
+            if (picco > 0f) { az.animateTo(picco, tween(ms / 2, easing = androidx.compose.animation.core.FastOutSlowInEasing)); az.animateTo(0f, tween(ms - ms / 2, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) } else az.snapTo(0f)
         }
     }
 }
@@ -445,7 +450,7 @@ fun rememberPalla(
             val dist = hypot(px - da.x, (py - da.y) * 0.55f)
             // Palla alta: lanci lunghi e, ogni tanto, il tiro finale
             val picco = if (dist > 0.30f) 1f else if (i == tappe.lastIndex && rnd.nextFloat() < 0.35f) 0.8f else 0f
-            muoviPalla(ax, ay, az, px, py, durata, picco)
+            muoviPalla(ax, ay, az, px, py, if (veloce) durata else (dist * 900f * fattoreTempo).toInt().coerceIn(180, 800), picco)
             scia.add(Offset(px, py)); da = Offset(px, py)
         }
         inVolo = false
@@ -464,7 +469,7 @@ fun rememberPalla(
         scia.clear(); scia.add(Offset(ax.value, ay.value))
         inVolo = true
         val dist = hypot(tx - ax.value, (ty - ay.value) * 0.55f)
-        muoviPalla(ax, ay, az, tx, ty, if (veloce) 30 else (700 * fattoreTempo).toInt(), if (dist > 0.30f) 0.6f else 0f)
+        muoviPalla(ax, ay, az, tx, ty, if (veloce) 30 else (dist * 1500f * fattoreTempo).toInt().coerceIn(350, 1100), if (dist > 0.30f) 0.6f else 0f)
         scia.add(Offset(tx, ty))
         inVolo = false
         delay(if (veloce) 100L else 500L)

@@ -16,7 +16,8 @@ object Attr {
     val POS_NAMES = mapOf(
         "POR" to "Portiere", "TD" to "Terzino des.", "TS" to "Terzino sin.", "DC" to "Centrale", "CS" to "Centrale sinistro", "CD" to "Centrale destro",
         "MED" to "Mediano", "REG" to "Regista", "INT" to "Interno", "MP" to "Mezzapunta",
-        "ES" to "Estremo", "CA" to "Centravanti"
+        "ES" to "Estremo", "CA" to "Centravanti",
+        "FD" to "Esterno dx", "FS" to "Esterno sx", "AD" to "Ala destra", "AS" to "Ala sinistra"
     )
     val FOOT_NAMES = mapOf("D" to "Destro", "S" to "Mancino", "A" to "Ambidestro")
 

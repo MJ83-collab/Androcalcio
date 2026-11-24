@@ -13,24 +13,52 @@ object TacticalRoles {
     val NAMES = mapOf(
         "POR" to "Portiere", "TD" to "Terzino destro", "TS" to "Terzino sinistro",
         "DC" to "Centrale", "CS" to "Centrale sinistro", "CD" to "Centrale destro", "MED" to "Mediano", "REG" to "Regista", "INT" to "Interno",
-        "MP" to "Mezzapunta", "ES" to "Estremo", "CA" to "Centravanti"
+        "MP" to "Mezzapunta", "ES" to "Estremo", "CA" to "Centravanti",
+        "FD" to "Esterno destro", "FS" to "Esterno sinistro", "AD" to "Ala destra", "AS" to "Ala sinistra"
     )
 
     /** Ruoli affini per ruolo naturale, sempre nella stessa linea (difesa, centrocampo, attacco). */
     val AFFINI: Map<String, List<Pair<String, Int>>> = mapOf(
-        "TD" to listOf("TS" to 70, "DC" to 40),
-        "TS" to listOf("TD" to 70, "DC" to 40),
+        "TD" to listOf("TS" to 70, "DC" to 40, "FD" to 60),
+        "TS" to listOf("TD" to 70, "DC" to 40, "FS" to 60),
         "DC" to listOf("CS" to 90, "CD" to 90),
         "CS" to listOf("CD" to 90, "DC" to 80),
         "CD" to listOf("CS" to 90, "DC" to 80),
         "POR" to listOf("DC" to 100),
         "MED" to listOf("REG" to 70, "INT" to 50),
         "REG" to listOf("MED" to 70, "INT" to 40),
-        "INT" to listOf("MP" to 70, "MED" to 40),
-        "MP" to listOf("INT" to 70, "REG" to 40),
-        "ES" to listOf("CA" to 50),
-        "CA" to listOf("ES" to 40)
+        "INT" to listOf("MP" to 70, "MED" to 40, "FD" to 50, "FS" to 50),
+        "MP" to listOf("INT" to 70, "REG" to 40, "AD" to 60, "AS" to 60),
+        "ES" to listOf("CA" to 50, "AD" to 80, "AS" to 80),
+        "CA" to listOf("ES" to 40, "AD" to 50, "AS" to 50),
+        "FD" to listOf("FS" to 70, "TD" to 60, "AD" to 60, "INT" to 60),
+        "FS" to listOf("FD" to 70, "TS" to 60, "AS" to 60, "INT" to 60),
+        "AD" to listOf("AS" to 70, "FD" to 60, "ES" to 80, "CA" to 50),
+        "AS" to listOf("AD" to 70, "FS" to 60, "ES" to 80, "CA" to 50)
     )
+
+    /** Imparare con l'allenamento: un nuovo ruolo affine (parte da metà dell'affinità) o più affinità in uno già noto. */
+    fun impara(p: Player, rng: kotlin.random.Random): Player {
+        val noti = setOf(p.sec2, p.sec3, p.sec4)
+        val nuovi = AFFINI[p.pos].orEmpty().filter { it.first !in noti }
+        val liberi = listOf(p.sec2, p.sec3, p.sec4).count { it.isEmpty() }
+        if (nuovi.isNotEmpty() && liberi > 0 && rng.nextInt(100) < 40) {
+            val (r, a) = nuovi[rng.nextInt(nuovi.size)]
+            val aff = (a / 2).coerceAtLeast(25)
+            return when {
+                p.sec2.isEmpty() -> p.copy(sec2 = r, aff2 = aff)
+                p.sec3.isEmpty() -> p.copy(sec3 = r, aff3 = aff)
+                else -> p.copy(sec4 = r, aff4 = aff)
+            }
+        }
+        val su = buildList { if (p.sec2.isNotEmpty() && p.aff2 < 100) add(2); if (p.sec3.isNotEmpty() && p.aff3 < 100) add(3); if (p.sec4.isNotEmpty() && p.aff4 < 100) add(4) }
+        if (su.isEmpty()) return p
+        return when (su[rng.nextInt(su.size)]) {
+            2 -> p.copy(aff2 = (p.aff2 + 4).coerceAtMost(100))
+            3 -> p.copy(aff3 = (p.aff3 + 4).coerceAtMost(100))
+            else -> p.copy(aff4 = (p.aff4 + 4).coerceAtMost(100))
+        }
+    }
 
     fun label(role: String): String = NAMES[role] ?: role
 
