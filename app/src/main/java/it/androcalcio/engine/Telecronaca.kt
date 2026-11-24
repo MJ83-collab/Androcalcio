@@ -17,6 +17,9 @@ object Telecronaca {
 
     private fun <T> Random.scegli(l: List<T>): T = l[nextInt(l.size)]
 
+    /** Commento di fondo della seconda voce, con la sua parlata. */
+    fun commento(q: Quadro, rng: Random, c: Coppia): String? = commento(q, rng)?.let { Voci.dici(c.seconda, it, q, rng) }
+
     /** Un commento di fondo, con un indizio se la situazione lo permette. Null = niente da dire. */
     fun commento(q: Quadro, rng: Random): String? {
         val indizi = mutableListOf<String>()
@@ -50,6 +53,13 @@ object Telecronaca {
         if (q.golMiei == q.golLoro) generici += "Il risultato è in equilibrio: il prossimo episodio può cambiare tutto."
         if (q.minuto > 80) generici += "Finale di partita: ogni pallone pesa doppio."
         return rng.scegli(generici)
+    }
+
+    /** Reazione a caldo della prima voce (col nome del giocatore) e, a volte, la battuta della seconda voce. */
+    fun reazione(e: MatchEvent, nome: String?, c: Coppia, rng: Random): List<String> {
+        val prima = Voci.reazione(c.prima, e, nome, rng) ?: return emptyList()
+        val seconda = if (e.type == EventType.GOAL || rng.nextInt(3) == 0) Voci.replica(c.seconda, e, nome, rng) else null
+        return listOfNotNull("${c.prima.nome}: $prima", seconda?.let { "${c.seconda.nome}: $it" })
     }
 
     /** Commento a caldo su un evento già successo. */

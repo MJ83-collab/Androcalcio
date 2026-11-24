@@ -482,11 +482,22 @@ class LiveMatch(
         }
     }
 
+    /** Coppia di telecronisti estratta a caso per questa partita. */
+    val telecronisti: Coppia = Coppia.sorteggia(kotlin.random.Random.Default)
+    private var presentati = false
+
     /** Un commento a caldo sull'ultimo episodio, oppure ogni cinque minuti un commento di fondo con un indizio. */
     private fun telecronaca(primaDi: Int) {
+        if (!presentati) { presentati = true; events += MatchEvent(minute, EventType.COMMENTO, vistaCasa, telecronisti.presentazione(), 0.5f, 0.5f) }
         val nuovi = events.subList(primaDi, events.size)
         val episodio = nuovi.lastOrNull { it.type in setOf(EventType.GOAL, EventType.SAVE, EventType.MISS, EventType.OFFSIDE, EventType.RED) }
-        val testo = if (episodio != null) { if (rngI.nextInt(10) < 7) Telecronaca.reazione(episodio, rngI) else null }
+        if (episodio != null && rngI.nextInt(10) < 7) {
+            val nome = (xiH + xiA).firstOrNull { it.id == episodio.playerId && it.id != 0L }?.name?.trim()?.split(" ")?.lastOrNull()
+            Telecronaca.reazione(episodio, nome, telecronisti, rngI).forEach { t ->
+                events += MatchEvent(minute, EventType.COMMENTO, vistaCasa, t, 0.5f, 0.5f) }
+            return
+        }
+        val testo = if (episodio != null) null
         else if (minute % 5 == 2 && minute < 90) {
             val mio = if (vistaCasa) xiH else xiA
             val loro = if (vistaCasa) xiA else xiH
@@ -496,7 +507,7 @@ class LiveMatch(
                 if (vistaCasa) possessoCasa else 100 - possessoCasa,
                 if (vistaCasa) hs else asht, if (vistaCasa) asht else hs,
                 en(mio), en(loro), mio.size < 11, loro.size < 11, arbitro,
-                if (vistaCasa) mH else mA, MatchEngine.MAX_SUBS - (if (vistaCasa) subsH else subsA)), rngI)
+                if (vistaCasa) mH else mA, MatchEngine.MAX_SUBS - (if (vistaCasa) subsH else subsA)), rngI, telecronisti)
         } else null
         if (testo != null) events += MatchEvent(minute, EventType.COMMENTO, vistaCasa, testo, 0.5f, 0.5f)
     }
