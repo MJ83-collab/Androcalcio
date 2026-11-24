@@ -71,6 +71,7 @@ import android.net.Uri
 import it.androcalcio.data.SaveSlots
 import it.androcalcio.data.SlotInfo
 import it.androcalcio.data.DataIO
+import it.androcalcio.data.allPlayers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

@@ -105,7 +105,11 @@ interface AndrocalcioDao {
     suspend fun allTeams(): List<Team>
 
     @Query("SELECT * FROM players")
-    suspend fun allPlayers(): List<Player>
+    suspend fun allPlayersRaw(): List<Player>
+
+    /** Lettura a pagine: una sola lettura di migliaia di righe riempie la finestra del cursore e può fallire se il database cambia nel frattempo. */
+    @Query("SELECT * FROM players WHERE id > :dopo ORDER BY id LIMIT :n")
+    suspend fun playersDopo(dopo: Long, n: Int): List<Player>
 
     @Delete
     suspend fun deletePlayer(p: Player)
@@ -278,3 +282,14 @@ interface AndrocalcioDao {
     @Query("DELETE FROM rosa_nazionale") suspend fun clearRosaNazionale()
 }
 
+/** Tutti i giocatori, letti a pagine da 500 (al posto di un'unica lettura enorme). */
+suspend fun AndrocalcioDao.allPlayers(): List<Player> {
+    val out = ArrayList<Player>()
+    var dopo = 0L
+    while (true) {
+        val pag = playersDopo(dopo, 500)
+        if (pag.isEmpty()) return out
+        out += pag
+        dopo = pag.last().id
+    }
+}
