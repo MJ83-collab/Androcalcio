@@ -4,6 +4,15 @@ Ramo attuale: `feat/fine-partita` (v0.6.0 + blocchi 1–6 + tablet).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato).
 Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul telefono.
 
+## Sessione 24/11 sera: stadio personale (ramo feat/stadio, da feat/fine-partita; build verde, non provato sul telefono)
+- Nuova schermata **Stadio** (Home → Finanze → Stadio; anche nel menu classico): pianta dall'alto, nome, colore dei seggiolini (12), settori, atmosfera, strutture.
+- **Prezzi per settore spostati** da Marketing allo Stadio (stessa chiave "prezzi"). Elasticità per settore: curva 1,7, distinti 1,5, tribuna 1,3, VIP 0,9.
+- **Posti per settore legati alle migliorie** (`StadioPersonale.settori`): curve ampliate → curva, anello e settore famiglie → distinti, tribuna coperta → tribuna, skybox e hospitality → VIP. A prezzi standard l'incasso non cambia.
+- **Atmosfera**: in casa + strutture (copertura 5, faretti 3, tribuna 2, maxischermo 2, LED 1, anello 1) + curva piena (-6..+6). Vantaggio dal vivo portato a ±5% di possesso.
+- **Negozi e sito**: dopo lo Store ufficiale, Sito web → Shop mondiale → App del club; Secondo store → Store in altra città → Store all'estero. `negozi()` e `livelloSito()` pronti per le vendite delle maglie.
+- Stato nuovo: "stadio_nome", "stadio_colore" (nell'export). Test: `StadioPersonaleTest`.
+- Restano da fare: maglie, merchandising, grafica altre schermate, prova su telefono e tablet.
+
 ## Sessione 24/11 pomeriggio (ramo feat/fine-partita, non ancora provato sul telefono)
 - **Economia:** Serie C mai in passivo (TV B 4 M, C 3,8 M; premio piazzamento serie minori 2,5 M; sponsor di maglia minimo circa 0,8 M). Test: A mediana +5,6 M, B +4,2 M, C +1,5 M, nessuna di C sotto zero (replica Python del test).
 - **Playoff/playout reali:** B a 6 squadre (preliminare secco 5-8 e 6-7, supplementari poi meglio piazzata; semifinali e finale andata/ritorno, meglio piazzata; finale a pari punti supplementari e rigori), terza diretta con più di 14 punti sulla quarta, perimetro playoff entro 14 punti, playout andata/ritorno e non disputato con più di 4 punti di distacco. Serie C: semifinali meglio piazzata, finale supplementari e rigori. Inghilterra e Spagna con regole proprie. Dal vivo se c'è la tua squadra (rigori scelti da te), simulati altrimenti. `Spareggi` in `engine/V06.kt`, `giocaTurno` nel ViewModel.
