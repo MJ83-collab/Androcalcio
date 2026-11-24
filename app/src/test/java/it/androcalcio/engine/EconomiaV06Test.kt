@@ -38,7 +38,7 @@ class EconomiaV06Test {
     @Test fun sondaMedianeTEMP() {
         val a = saldi("Serie A", 0).sorted(); val b = saldi("Serie B", 1).sorted()
         val c = listOf("Serie C Girone A", "Serie C Girone B", "Serie C Girone C").flatMap { saldi(it, 3) }.sorted()
-        org.junit.Assert.fail("SONDA A med=${a[a.size / 2]} min=${a.first()} max=${a.last()} | B med=${b[b.size / 2]} min=${b.first()} | C med=${c[c.size / 2]} min=${c.first()} n=${c.size}")
+        println("SONDA A med=${a[a.size / 2]} min=${a.first()} max=${a.last()} | B med=${b[b.size / 2]} min=${b.first()} | C med=${c[c.size / 2]} min=${c.first()} n=${c.size}")
     }
 
     @Test fun premioVittoriaSponsor() {
