@@ -154,12 +154,25 @@ Nota: nel primo report avevo scritto che le 20 non c'erano nel codice. Due esist
 - **Prova automatica su emulatore** a ogni build: avvio + 1.500 tocchi casuali. Nessun crash.
 - **Un solo file:** `Androcalcio-0.6.0.apk` (rose e dati già dentro).
 
+### Coppe europee (ramo feat/stadio)
+- **Tre coppe:** Coppa dei Campioni d'Europa (32 squadre, 8 gironi da 4, poi ottavi, quarti, semifinali, finale), Coppa Europa (16) e Coppa delle Coppe (16), a eliminazione diretta.
+- **Undici nazioni:** Italia, Spagna, Inghilterra, Germania, Francia, Olanda, Portogallo, Belgio, Turchia, Scozia, Grecia. Brasile e Argentina restano con la Sudamericana.
+- **Qualificate:** dalla classifica e dalla coppa nazionale. I posti non presi scendono in classifica. Una squadra gioca una sola coppa.
+- **Sorteggio:** 4 urne per forza, mai due squadre della stessa nazione nello stesso girone. Si crea a inizio stagione.
+- **Partite:** le tue le decidi tu (Gioca dal vivo o Simula). Le altre si simulano da sole. Nei gironi i pareggi restano; supplementari e rigori solo a eliminazione.
+- **Premi fissi:** Campioni 4 M di partecipazione, 0,8 M per vittoria nel girone, 0,3 M per pareggio, turni 1,5/2,5/3,5/5 M, titolo 8 M. Europa e Coppe più bassi. Finiscono nel bilancio di fine stagione e nell'albo d'oro (nazione "Europa").
+- **Schermata** "Coppe europee" nel menu: urna, gironi con maglie e bandiere, tabellone.
+- **Limite:** le partite europee si giocano dopo campionato e coppa nazionale, non a metà settimana. Servirebbe rifare l'ordine del calendario.
+- **Da fare:** tarare i premi (Opus); gestire la finale dal vivo con rigori scelti da te nei turni europei (già previsto, da provare); provare tutto su telefono e tablet.
+- File nuovi: `engine/CoppeEuropee.kt`, `ui/EuropaScreen.kt`, test `CoppeEuropeeTest`.
+
 ## Cronologia
 - v0.3.0 (22/11): 20 migliorie (conferenze, sponsor, vivaio, nazionali U21, All Star…).
 - v0.4.0: mutui, batteria/prestazioni, Analisi.
 - v0.5.0: 16 migliorie (rifinanziamento, rate, ampiezza, backup .zip, tema nero…).
 - v0.6.0 (23/11): economia più generosa, nuovo proprietario, 20 migliorie, B–F.
 - feat/fine-partita (24/11): blocchi 1–6 e tablet, non ancora una release.
+- feat/stadio (24/11): stadio personale, trofei, sei nuovi campionati, coppe europee. Non ancora una release.
 
 ## Modello
 Sonnet basta per altre migliorie; Opus solo per nuove tarature.
