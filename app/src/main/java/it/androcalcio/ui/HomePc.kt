@@ -80,7 +80,7 @@ fun HomePc(team: Team, season: String, prossima: MatchResult?, avversario: Team?
                 Triple("Stadio", Screen.STADIO, Screen.STRUTTURE.icon)), go)
         }
         // Altre voci: piccole targhe in due colonne
-        val altre = listOf(Screen.VIVAIO, Screen.PRESTITI, Screen.COMMERCIALE, Screen.RELAZIONI, Screen.OBIETTIVI,
+        val altre = listOf(Screen.VIVAIO, Screen.PRESTITI, Screen.COMMERCIALE, Screen.MAGLIE, Screen.RELAZIONI, Screen.OBIETTIVI,
             Screen.SOCIETA, Screen.NAZIONALI, Screen.SQUADRE, Screen.ALBO, Screen.STATISTICHE, Screen.EDITOR, Screen.OPZIONI)
         altre.chunked(2).forEach { r ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -7,6 +7,7 @@ import it.androcalcio.engine.SquadraB
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
 import it.androcalcio.engine.Migliorie
+import it.androcalcio.engine.Maglie
 import it.androcalcio.engine.Abbonamenti
 import it.androcalcio.engine.StadioPersonale
 import it.androcalcio.engine.Achievement
@@ -776,6 +777,96 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.setStato(Stato(StadioPersonale.KEY_COLORE, i.coerceIn(0, StadioPersonale.COLORI.size - 1).toString()))
             caricaStadio()
+        }
+    }
+
+    // ---- Maglie e merchandising (v0.7) ----
+    data class MaglieStato(
+        val marchio: Maglie.Marchio = Maglie.CLUB, val divisa: Maglie.Divisa? = null, val proposte: List<Maglie.Divisa> = emptyList(),
+        val puoiCambiare: Boolean = false, val obbligo: Boolean = false, val novita: Boolean = false,
+        val prezzo: Int = 0, val prezzoStandard: Int = 90, val divisione: Int = 0, val vendite: Maglie.Vendite? = null
+    )
+    private val _maglie = MutableStateFlow(MaglieStato())
+    val maglie: StateFlow<MaglieStato> = _maglie
+
+    /** Divisione (0 = massima serie) della squadra: la Serie C conta come 3, come nei premi di fine stagione. */
+    private suspend fun divisioneDi(t: Team): Int {
+        if (t.campionato.startsWith("Serie C")) return 3
+        val catena = dao.allTeams().filter { it.nazione == t.nazione && !it.campionato.startsWith("Serie C") }
+            .groupBy { it.campionato }.entries.sortedBy { e -> e.value.minOf { it.id } }.map { it.key }
+        return catena.indexOf(t.campionato).coerceAtLeast(0)
+    }
+
+    private suspend fun marchioAttuale(): Maglie.Marchio =
+        Maglie.marchioDi(SponsorDeal.decode(dao.stato("sponsor")).firstOrNull { it.tipo == "tecnico" }?.name)
+
+    /** Vendite di maglie della stagione: [frac] = posizione in classifica (1 = prima, 0 = ultima). */
+    private suspend fun venditeMaglie(t: Team, frac: Double): Maglie.Vendite {
+        val div = divisioneDi(t)
+        val fatte = Migliorie.decodeFatte(dao.stato("migliorie_fatte"))
+        val divisa = Maglie.Divisa.decode(dao.stato(Maglie.KEY))
+        return Maglie.vendite(
+            t.stadiumCapacity, div, dao.statoInt(Maglie.KEY_PREZZO), dao.statoInt(StatoKeys.TIFOSI), frac,
+            dao.playersOnce(t.id).count { it.overall >= 84 }, dao.stato(Maglie.KEY_NOVITA) == _season.value,
+            divisa?.let { Maglie.bellezza(it) } ?: 50, StadioPersonale.negozi(fatte), StadioPersonale.livelloSito(fatte)
+        )
+    }
+
+    private suspend fun caricaMaglie() {
+        val t0 = selectedTeam.value ?: return
+        val t = dao.team(t0.id)
+        val s = _season.value
+        val m = marchioAttuale()
+        var divisa = Maglie.Divisa.decode(dao.stato(Maglie.KEY))
+        if (divisa == null) {
+            // Prima volta: maglie di partenza del marchio attuale, non contano come novità
+            divisa = Maglie.genera(m, t.colorPrimary, t.colorSecondary, kotlin.random.Random(Maglie.seme(t.id, "inizio", m.nome)))
+            dao.setStato(Stato(Maglie.KEY, divisa.encode()))
+            dao.setStato(Stato(Maglie.KEY_STAGIONE, s))
+        }
+        val obbligo = divisa.marchio != m.nome
+        val puoi = obbligo || dao.stato(Maglie.KEY_STAGIONE) != s
+        val proposte = if (!puoi) emptyList() else {
+            val salvate = Maglie.decodeProposte(dao.stato(Maglie.KEY_PROPOSTE)).filter { it.marchio == m.nome }
+            salvate.takeIf { it.size == 3 } ?: Maglie.proposte(m, t.colorPrimary, t.colorSecondary, Maglie.seme(t.id, s, m.nome))
+                .also { dao.setStato(Stato(Maglie.KEY_PROPOSTE, Maglie.encodeProposte(it))) }
+        }
+        val div = divisioneDi(t)
+        _maglie.value = MaglieStato(m, divisa, proposte, puoi, obbligo, dao.stato(Maglie.KEY_NOVITA) == s,
+            dao.statoInt(Maglie.KEY_PREZZO), Maglie.prezzoStandard(div), div, venditeMaglie(t, 0.5))
+    }
+
+    fun aggiornaMaglie() { viewModelScope.launch(Dispatchers.IO) { caricaMaglie() } }
+
+    /** Tiene le maglie della stagione scorsa (non si può con un marchio nuovo). */
+    fun tieniMaglie() {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_maglie.value.obbligo) { _notice.value = "Con un nuovo sponsor tecnico le maglie vanno cambiate."; return@launch }
+            dao.setStato(Stato(Maglie.KEY_STAGIONE, _season.value))
+            dao.setStato(Stato(Maglie.KEY_PROPOSTE, ""))
+            _notice.value = "Maglie confermate per questa stagione."
+            caricaMaglie()
+        }
+    }
+
+    /** Sceglie una delle tre proposte: maglie nuove = più vendite in questa stagione. */
+    fun scegliMaglie(i: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val p = _maglie.value.proposte.getOrNull(i) ?: return@launch
+            if (!_maglie.value.puoiCambiare) return@launch
+            dao.setStato(Stato(Maglie.KEY, p.encode()))
+            dao.setStato(Stato(Maglie.KEY_STAGIONE, _season.value))
+            dao.setStato(Stato(Maglie.KEY_NOVITA, _season.value))
+            dao.setStato(Stato(Maglie.KEY_PROPOSTE, ""))
+            _notice.value = "Nuove maglie ${p.marchio}: i tifosi le vogliono subito."
+            caricaMaglie()
+        }
+    }
+
+    fun setPrezzoMaglie(euro: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.setStato(Stato(Maglie.KEY_PREZZO, euro.coerceIn(Maglie.PREZZO_MIN, Maglie.PREZZO_MAX).toString()))
+            caricaMaglie()
         }
     }
 
@@ -3313,7 +3404,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val dealsNext = deals.map { it.copy(years = it.years - 1) }
             dao.setStato(Stato("sponsor", SponsorDeal.encode(dealsNext.filter { it.years > 0 })))
             val expired = dealsNext.filter { it.years <= 0 }.map { it.name }
-            val meMc = Sponsorship.merch(me.stadiumCapacity)
+            // v0.7: merchandising = vendite delle maglie (tifosi, piazzamento, campioni, novità, bellezza, negozi, prezzo)
+            val meMc = run {
+                val cl = finals[me.nazione to me.campionato].orEmpty()
+                val pos = cl.indexOfFirst { it.team.id == me.id }
+                val frac = if (pos < 0 || cl.size < 2) 0.5 else (cl.size - 1 - pos).toDouble() / (cl.size - 1)
+                venditeMaglie(dao.team(me.id), frac).also { v ->
+                    dao.setStato(Stato("maglie_vendute_$s", "${v.maglie}|${v.prezzo}|${v.ricavo}"))
+                }.ricavo
+            }
             val livAll = dao.statoInt(Strutture.ALLENAMENTO)
             val effMig = Migliorie.effetti(Migliorie.decodeFatte(dao.stato("migliorie_fatte")))
             val upkeep = Strutture.manutenzione(livAll) + Strutture.manutenzione(dao.statoInt(Strutture.VIVAIO))
@@ -3437,7 +3536,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     add("Ingaggio allenatore" to -coach)
                     if (clausePay > 0) add("Clausole giocatori" to -clausePay)
                     if (upkeep > 0) add("Manutenzione strutture" to -upkeep)
-                    add("Merchandising" to meMc)
+                    add("Maglie e merchandising" to meMc)
                     if (extraIncasso > 0) add("Migliorie stadio: incassi extra" to extraIncasso)
                     if (effMig.merchAnno > 0) add("Migliorie: store, museo e servizi" to effMig.merchAnno)
                     if (effMig.manutenzione != 0L) add("Manutenzione migliorie" to -effMig.manutenzione)

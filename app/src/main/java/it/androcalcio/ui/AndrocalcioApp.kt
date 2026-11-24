@@ -138,6 +138,7 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227)),
     STRUTTURE("Stadio e centro", Icons.Filled.Build, "Migliorie, cantieri, ritorni", Color(0xFF00897B)),
     STADIO("Stadio", Icons.Filled.Home, "Nome, settori, prezzi, atmosfera", Color(0xFF00695C)),
+    MAGLIE("Maglie", Icons.Filled.Star, "Divise, sponsor tecnico, vendite", Color(0xFFC62828)),
     EUROPA("Coppe europee", Icons.Filled.Star, "Sorteggi, gironi, tabellone", Color(0xFF283593)),
     RELAZIONI("Stampa", Icons.Filled.Person, "Conferenze, colloqui, psicologo", Color(0xFFAD1457)),
     COMMERCIALE("Marketing", Icons.Filled.ShoppingCart, "Sponsor e marketing", Color(0xFFEF6C00)),
@@ -289,6 +290,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     LaunchedEffect(team?.id) { vm.aggiornaStadio() }
                     StadioScreen(sta, { vm.setNomeStadio(it) }, { vm.setColoreStadio(it) }, { s, p -> vm.setPrezzo(s, p) },
                         { screen = Screen.STRUTTURE })
+                }
+                Screen.MAGLIE -> {
+                    val mg by vm.maglie.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id, season) { vm.aggiornaMaglie() }
+                    MaglieScreen(mg, { vm.tieniMaglie() }, { vm.scegliMaglie(it) }, { vm.setPrezzoMaglie(it) })
                 }
                 Screen.SOCIETA -> {
                     val soc by vm.societa.collectAsStateWithLifecycle()
@@ -1138,7 +1144,7 @@ fun FinanzeScreen(
 
                 SectionTitle("Sponsor e merchandising")
                 Text(
-                    "Incassati a fine stagione. Merchandising: ${money(Sponsorship.merch(team.stadiumCapacity))} l'anno.",
+                    "Incassati a fine stagione. Maglie e merchandising: vedi la schermata Maglie.",
                     color = AC.TextDim, style = MaterialTheme.typography.bodySmall
                 )
                 Text("Gli sponsor si gestiscono in Dirigenza (fino a 5 contratti pluriennali).",

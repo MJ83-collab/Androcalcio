@@ -77,11 +77,13 @@ object Sponsors {
         val tipiLiberi = TIPI.filter { t -> active.none { it.tipo == t.id } }
         if (tipiLiberi.isEmpty()) return emptyList()
         val nomi = NOMI.filter { it !in usati }.shuffled(rng)
+        // v0.7: lo sponsor tecnico è uno degli 8 marchi di maglie (Maglie.MARCHI)
+        val marchio = Maglie.MARCHI.map { it.nome }.filter { it !in usati }.random(rng)
         return tipiLiberi.shuffled(rng).take(numeroOfferte(marketing)).mapIndexed { i, t ->
             val y = rng.nextInt(1, 6)
             val noise = (0.85 + rng.nextDouble() * 0.3) * (1.0 + bonusMarketingPct(marketing) / 100.0)
             val base = QUOTA_SPONSOR * valoreBase(strength) * fama * t.peso * (1.1 - 0.05 * y)
-            SponsorDeal(nomi[i % nomi.size], (base * noise).toLong() / 10_000 * 10_000, y, t.id)
+            SponsorDeal(if (t.id == "tecnico") marchio else nomi[i % nomi.size], (base * noise).toLong() / 10_000 * 10_000, y, t.id)
         }
     }
 }

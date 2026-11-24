@@ -21,7 +21,7 @@ object DataIO {
         "scontri", "storia_rec", "storia_hall", "ffp_perdite", "ffp_blocco", "auto_ultimo", "mutui", "rate_mercato", "capitano", "preferiti", "allen_ind",
         "proprietario", "salvataggi", "cartellini", "rivendite", "crediti_mercato", "plusvalenze", "nuovo_stadio", "prato", "prato_cura",
         "minuti", "minuti_partite", "voti", "storia_inf", "formazioni_salvate", "vicecapitano", "premio_partita", "fedelta", "sfide_offerte", "sfide_serie", "sfida",
-        "stadio_nome", "stadio_colore")
+        "stadio_nome", "stadio_colore", "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo")
 
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()
