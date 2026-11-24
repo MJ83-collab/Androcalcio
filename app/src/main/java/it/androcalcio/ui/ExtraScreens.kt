@@ -274,6 +274,17 @@ fun GiornaleScreen(ex: ExtraStato) {
             }
         }
 
+        SectionTitle("Sfida della settimana")
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val sf = ex.sfida
+                Text(sf?.let { "Prossima partita: ${it.testo} (premio: +${it.fiducia} fiducia, +${it.tifosi} tifosi)" }
+                    ?: "La prima sfida arriva dopo la prossima partita.", color = AC.Text, fontWeight = FontWeight.Bold)
+                if (ex.sfidaEsito.isNotEmpty()) Text(ex.sfidaEsito, color = AC.TextDim, fontSize = 12.sp)
+                Text("Sfide riuscite: ${ex.sfideVinte}", color = AC.TextDim, fontSize = 12.sp)
+            }
+        }
+
         SectionTitle("Il social del club")
         if (ex.social.isEmpty()) Text("Dopo la prossima partita tifosi, giornalisti e presidente dicono la loro.", color = AC.TextDim, fontSize = 12.sp)
         else GlassCard(Modifier.fillMaxWidth()) {

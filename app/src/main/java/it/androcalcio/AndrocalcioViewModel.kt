@@ -108,6 +108,7 @@ import it.androcalcio.engine.Medical
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Annunci
 import it.androcalcio.engine.Social
+import it.androcalcio.engine.Sfide
 import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.Lineup
 import it.androcalcio.engine.LiveMatch
@@ -619,6 +620,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val obiettivo: Obiettivi.Obiettivo? = null, val posizioneAttesa: Int = 0,
         val prezzi: Map<String, Int> = emptyMap(), val abbonatiPct: Int = 0,
         val premi: List<Premi.Premio> = emptyList(), val giornale: Giornale.Edizione? = null, val social: List<String> = emptyList(),
+        val sfida: Sfide.Sfida? = null, val sfideVinte: Int = 0, val sfidaEsito: String = "",
         val trofei: Set<String> = emptySet(), val avanzate: Avanzate.Totali = Avanzate.Totali(),
         val finestra: Finestre.Stato = Finestre.Stato.ESTIVA, val ultimoGiorno: Boolean = false,
         val prestiti: List<Prestiti.Prestito> = emptyList(),
@@ -672,6 +674,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             prezzi = prezzi,
             abbonatiPct = Abbonamenti.abbonatiPct(dao.statoInt(StatoKeys.TIFOSI), prezzi.values.average().toInt()),
             premi = Premi.decode(dao.stato("premi")), giornale = Giornale.decode(dao.stato("giornale")), social = Social.decode(dao.stato("social")),
+            sfida = Sfide.da(dao.stato("sfida")?.toIntOrNull()), sfideVinte = dao.statoInt("sfide_vinte"), sfidaEsito = dao.stato("sfida_esito").orEmpty(),
             trofei = Achievement.decode(dao.stato("achievement")), avanzate = Avanzate.decode(dao.stato("avanzate")),
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
@@ -713,6 +716,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             r.playerRatings[p.id]?.let { p.name to (Math.round(it * 2) / 2.0) }
         }
         dao.setStato(Stato("giornale", Giornale.encode(Giornale.crea(me.name, opp.name, gf, gs, derby, voti))))
+        // Sfida della settimana: valutata a fine partita, poi ne arriva una nuova
+        Sfide.da(dao.stato("sfida")?.toIntOrNull())?.let { sf ->
+            val ok = Sfide.riuscita(sf, gf, gs)
+            if (ok) {
+                dao.setStatoInt(StatoKeys.FIDUCIA, dao.statoInt(StatoKeys.FIDUCIA) + sf.fiducia)
+                dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + sf.tifosi)
+                dao.setStatoInt("sfide_vinte", dao.statoInt("sfide_vinte") + 1)
+            }
+            dao.setStato(Stato("sfida_esito", (if (ok) "Sfida riuscita: " else "Sfida fallita: ") + sf.testo.lowercase() +
+                if (ok) " (+${sf.fiducia} fiducia, +${sf.tifosi} tifosi)." else "."))
+        }
+        dao.setStato(Stato("sfida", Sfide.genera(kotlin.random.Random.Default).id.toString()))
         dao.setStato(Stato("social", Social.encode(Social.post(me.name, opp.name, gf, gs, derby, voti.maxByOrNull { it.second }?.first, null, kotlin.random.Random.Default))))
         societaDopoPartita(me, opp, gf, gs, r, live)
         dopoPartitaV06(me, mioHome, gf, gs, r)
