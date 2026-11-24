@@ -75,7 +75,7 @@ fun HomePc(team: Team, season: String, prossima: MatchResult?, avversario: Team?
             Blocco("FINANZE", ColFinanze, Modifier.weight(1f), listOf(
                 Triple("Cassa", Screen.FINANZE, Screen.FINANZE.icon),
                 Triple("Decisioni", Screen.DIRIGENZA, Screen.DIRIGENZA.icon),
-                Triple("Stadio", Screen.STRUTTURE, Screen.STRUTTURE.icon)), go)
+                Triple("Stadio", Screen.STADIO, Screen.STRUTTURE.icon)), go)
         }
         // Altre voci: piccole targhe in due colonne
         val altre = listOf(Screen.VIVAIO, Screen.PRESTITI, Screen.COMMERCIALE, Screen.RELAZIONI, Screen.OBIETTIVI,

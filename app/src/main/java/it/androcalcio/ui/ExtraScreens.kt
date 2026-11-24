@@ -178,21 +178,7 @@ fun CommercialeScreen(
             }
         }
 
-        SectionTitle("Prezzi per settore")
-        Text("Prezzo in % del biglietto standard: più alto = più incasso a pieno stadio, ma meno pubblico. Abbonati stimati: ${ex.abbonatiPct}% dei posti.",
-            color = AC.TextDim, fontSize = 12.sp)
-        Abbonamenti.SETTORI.forEach { s ->
-            var v by remember(ex.prezzi[s.id]) { mutableStateOf((ex.prezzi[s.id] ?: 100).toFloat()) }
-            GlassCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(8.dp)) {
-                    Riga(s.nome, "${v.toInt()}%", true)
-                    Slider(value = v, onValueChange = { v = (Math.round(it / 5f) * 5).toFloat() },
-                        valueRange = Abbonamenti.PREZZO_MIN.toFloat()..Abbonamenti.PREZZO_MAX.toFloat(),
-                        onValueChangeFinished = { onPrezzo(s.id, v.toInt()) })
-                }
-            }
-        }
-        Text("L'effetto si somma agli incassi a fine stagione.", color = AC.TextDim, fontSize = 11.sp)
+        Text("I prezzi dei settori ora si trovano nella schermata Stadio (Home → Finanze → Stadio).", color = AC.TextDim, fontSize = 11.sp)
     }
 }
 

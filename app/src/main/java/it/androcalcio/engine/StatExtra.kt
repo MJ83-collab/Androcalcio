@@ -26,8 +26,8 @@ object Atmosfera {
         else -> "freddo"
     }
 
-    /** Moltiplicatore sul possesso della squadra di casa: da -4% (stadio freddo) a +4% (stadio infuocato). Solo partita dal vivo. */
-    fun fattore(v: Int): Double = 1.0 + (v.coerceIn(0, 100) - 50) / 50.0 * 0.04
+    /** Moltiplicatore sul possesso della squadra di casa: da -5% (stadio freddo) a +5% (stadio infuocato). Solo partita dal vivo. */
+    fun fattore(v: Int): Double = 1.0 + (v.coerceIn(0, 100) - 50) / 50.0 * 0.05
 }
 
 /** Minuto per il tabellone e la cronaca: oltre il 90' è recupero ("90+3"). */

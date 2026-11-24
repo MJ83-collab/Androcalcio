@@ -137,8 +137,9 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita", Color(0xFF16A085)),
     ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227)),
     STRUTTURE("Stadio e centro", Icons.Filled.Build, "Migliorie, cantieri, ritorni", Color(0xFF00897B)),
+    STADIO("Stadio", Icons.Filled.Home, "Nome, settori, prezzi, atmosfera", Color(0xFF00695C)),
     RELAZIONI("Stampa", Icons.Filled.Person, "Conferenze, colloqui, psicologo", Color(0xFFAD1457)),
-    COMMERCIALE("Marketing", Icons.Filled.ShoppingCart, "Sponsor e prezzi", Color(0xFFEF6C00)),
+    COMMERCIALE("Marketing", Icons.Filled.ShoppingCart, "Sponsor e marketing", Color(0xFFEF6C00)),
     OBIETTIVI("Obiettivi", Icons.Filled.Done, "Dirigenza, premi, trofei", Color(0xFF6A1B9A)),
     GIORNALE("Giornale", Icons.Filled.List, "Pagelle, meteo, xG", Color(0xFF455A64)),
     PRESTITI("Prestiti", Icons.Filled.Refresh, "Finestre e prestiti", Color(0xFF1565C0)),
@@ -271,6 +272,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val mig by vm.migliorie.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }
                     MigliorieScreen(team, mig) { vm.avviaMiglioria(it) }
+                }
+                Screen.STADIO -> {
+                    val sta by vm.stadio.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id) { vm.aggiornaStadio() }
+                    StadioScreen(sta, { vm.setNomeStadio(it) }, { vm.setColoreStadio(it) }, { s, p -> vm.setPrezzo(s, p) },
+                        { screen = Screen.STRUTTURE })
                 }
                 Screen.SOCIETA -> {
                     val soc by vm.societa.collectAsStateWithLifecycle()
@@ -734,7 +741,7 @@ fun HomeScreen(
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
-            Screen.STRUTTURE, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
+            Screen.STRUTTURE, Screen.STADIO, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
             Screen.SOCIETA, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->

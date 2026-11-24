@@ -7,6 +7,7 @@ import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
 import it.androcalcio.engine.Migliorie
 import it.androcalcio.engine.Abbonamenti
+import it.androcalcio.engine.StadioPersonale
 import it.androcalcio.engine.Achievement
 import it.androcalcio.engine.Agenti
 import it.androcalcio.engine.AllStar
@@ -584,6 +585,55 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun aggiornaMigliorie() { viewModelScope.launch(Dispatchers.IO) { caricaMigliorie() } }
 
+    // ---- Stadio personale (v0.7) ----
+    data class StadioStato(
+        val nome: String = "", val colore: Int = 0, val capienza: Int = 0, val prezzoBase: Int = 0,
+        val stime: List<StadioPersonale.StimaSettore> = emptyList(), val atmosfera: Int = 50,
+        val bonusStrutture: Int = 0, val bonusCurva: Int = 0, val fatte: Set<String> = emptySet(),
+        val cantieri: Map<String, Int> = emptyMap(), val manutenzioneAnno: Long = 0L, val abbonatiPct: Int = 0
+    )
+    private val _stadio = MutableStateFlow(StadioStato())
+    val stadio: StateFlow<StadioStato> = _stadio
+
+    private suspend fun caricaStadio() {
+        val t0 = selectedTeam.value ?: return
+        val t = dao.team(t0.id)
+        val fatte = Migliorie.decodeFatte(dao.stato("migliorie_fatte"))
+        val prezzi = Abbonamenti.decode(dao.stato("prezzi"))
+        val tifosi = dao.statoInt(StatoKeys.TIFOSI)
+        val stime = StadioPersonale.stime(t.stadiumCapacity, t.ticketPrice, 0.5, tifosi, prezzi, fatte)
+        val rc = stime.firstOrNull { it.settore.id == "curva" }?.riempimento ?: 0.7
+        val base = Atmosfera.valore(tifosi, true, t.stadiumCapacity)
+        _stadio.value = StadioStato(
+            nome = dao.stato(StadioPersonale.KEY_NOME)?.takeIf { it.isNotBlank() } ?: StadioPersonale.nomePredefinito(t.name),
+            colore = dao.statoInt(StadioPersonale.KEY_COLORE), capienza = t.stadiumCapacity, prezzoBase = t.ticketPrice,
+            stime = stime, atmosfera = StadioPersonale.atmosfera(base, fatte, rc),
+            bonusStrutture = StadioPersonale.bonusStrutture(fatte), bonusCurva = StadioPersonale.bonusCurva(rc),
+            fatte = fatte, cantieri = Migliorie.decodeCantieri(dao.stato("migliorie_cantieri")),
+            manutenzioneAnno = Migliorie.effetti(fatte.filter { Migliorie.trova(it)?.area == Migliorie.STADIO }.toSet()).manutenzione,
+            abbonatiPct = Abbonamenti.abbonatiPct(tifosi, prezzi.values.average().toInt())
+        )
+    }
+
+    fun aggiornaStadio() { viewModelScope.launch(Dispatchers.IO) { caricaStadio() } }
+
+    fun setNomeStadio(nome: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val n = StadioPersonale.nomeValido(nome)
+            if (n == null) { _notice.value = "Il nome dello stadio deve avere da ${StadioPersonale.NOME_MIN} a ${StadioPersonale.NOME_MAX} caratteri."; return@launch }
+            dao.setStato(Stato(StadioPersonale.KEY_NOME, n))
+            _notice.value = "Lo stadio ora si chiama $n."
+            caricaStadio()
+        }
+    }
+
+    fun setColoreStadio(i: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.setStato(Stato(StadioPersonale.KEY_COLORE, i.coerceIn(0, StadioPersonale.COLORI.size - 1).toString()))
+            caricaStadio()
+        }
+    }
+
     /** Avvia i lavori: paga subito dal budget mercato, finiscono dopo le giornate indicate. */
     fun avviaMiglioria(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -892,6 +942,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             m[settore] = pct.coerceIn(Abbonamenti.PREZZO_MIN, Abbonamenti.PREZZO_MAX)
             dao.setStato(Stato("prezzi", Abbonamenti.encode(m)))
             caricaExtra()
+            caricaStadio()
         }
     }
 
@@ -1058,7 +1109,16 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val ultrasM = dao.stato("ultras")?.toIntOrNull() ?: 60
         val coreo = userHome && dao.stato("coreo") == "1"
         val atm = (Atmosfera.valore(dao.statoInt(StatoKeys.TIFOSI), userHome, home.stadiumCapacity) +
-            (if (userHome) (ultrasM - 60) / 6 else 0) + (if (coreo) 8 else 0)).coerceIn(0, 100)
+            (if (userHome) (ultrasM - 60) / 6 else 0) + (if (coreo) 8 else 0)).coerceIn(0, 100).let { a0 ->
+                if (!userHome) a0 else {
+                    // Stadio personale: strutture (copertura, luci, maxischermo...) e curva piena scaldano l'ambiente
+                    val fatteS = Migliorie.decodeFatte(dao.stato("migliorie_fatte"))
+                    val curva = StadioPersonale.settori(fatteS).first { it.id == "curva" }
+                    val rc = Abbonamenti.riempimento(0.5, dao.statoInt(StatoKeys.TIFOSI),
+                        Abbonamenti.decode(dao.stato("prezzi")).getValue("curva"), curva.elasticita)
+                    StadioPersonale.atmosfera(a0, fatteS, rc)
+                }
+            }
         if (coreo) dao.setStato(Stato("coreo", ""))
         val m = LiveMatch(
             home, if (userHome) res.xi else opp, away, if (userHome) opp else res.xi,
@@ -3180,7 +3240,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     extraIncasso = gate * effMig.incassoPct / 100
                     val posFin = finals[t.nazione to t.campionato]?.indexOfFirst { it.team.id == t.id }?.let { it + 1 } ?: 0
                     extraPrezzi = (gate * (Abbonamenti.fattore(t.stadiumCapacity, t.ticketPrice, rel, dao.statoInt(StatoKeys.TIFOSI),
-                        Abbonamenti.decode(dao.stato("prezzi")), Economia.partiteInCasa(lg.size)) - 1.0)).toLong()
+                        Abbonamenti.decode(dao.stato("prezzi")), Economia.partiteInCasa(lg.size),
+                        StadioPersonale.settori(Migliorie.decodeFatte(dao.stato("migliorie_fatte")))) - 1.0)).toLong()
                     val ob = Obiettivi.decode(dao.stato("obiettivo"))
                     if (ob != null && posFin > 0) {
                         obPresente = true
