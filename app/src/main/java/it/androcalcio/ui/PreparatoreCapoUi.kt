@@ -37,12 +37,14 @@ fun PreparatoreCapoCard(auto: Boolean, assunto: Boolean, report: List<String>, o
 
 /** Squadra B/U23 e satellite: giovani della rosa che crescono di più; li segue il preparatore capo. */
 @Composable
-fun SquadraBCard(rosa: List<Player>, membri: Map<Long, Int>, onSet: (Player, Int?) -> Unit) {
+fun SquadraBCard(rosa: List<Player>, membri: Map<Long, Int>, onSet: (Player, Int?) -> Unit, risultati: List<String> = emptyList()) {
     val giovani = rosa.filter { it.age <= SquadraB.ETA_MAX }
     GlassCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Squadra B / Under 23 · ${membri.size}/${SquadraB.MAX}", fontSize = 15.sp)
             Text("Fino a 23 anni. Squadra B: crescita mensile extra. Satellite: crescita maggiore, costa 40.000 € l'anno. Restano nella rosa; li segue il preparatore capo.", fontSize = 12.sp)
+            Text("Ogni mese la squadra B gioca una partita, simulata dall'allenatore in seconda (serve averlo in staff): vittoria +4% e pareggio +2% alla crescita del mese. I giovani del satellite con contratto in scadenza restano con te per 3 anni (prelazione).", fontSize = 12.sp)
+            if (risultati.isNotEmpty()) Text("Ultime partite: " + risultati.takeLast(5).joinToString(" · ") { r -> r.substringBefore(":") + " " + r.substringAfter(":", "") }, fontSize = 12.sp)
             if (giovani.isEmpty()) Text("Nessun giocatore Under 23 in rosa.", fontSize = 12.sp)
             giovani.sortedByDescending { it.potential }.take(12).forEach { p ->
                 val lv = membri[p.id]

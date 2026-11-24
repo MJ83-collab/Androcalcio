@@ -340,7 +340,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         capoReport = vm.extra.collectAsStateWithLifecycle().value.prepReport,
                         onCapoAuto = { vm.setPrepAuto(it) },
                         squadraB = vm.extra.collectAsStateWithLifecycle().value.squadraB,
-                        onSquadraB = { p, l -> vm.setSquadraB(p, l) })
+                        onSquadraB = { p, l -> vm.setSquadraB(p, l) },
+                        risultatiB = vm.extra.collectAsStateWithLifecycle().value.risultatiB)
                 }
                 Screen.SQUADRE -> {   // solo consultazione: la panchina cambia con le offerte
                     var scheda by remember { mutableStateOf<Team?>(null) }
@@ -865,7 +866,7 @@ fun RosaScreen(
     onCercaVice: (Unit) -> Unit = {},
     forme: Map<Long, Double> = emptyMap(), mese: String? = null,
     capoAuto: Boolean = true, capoAssunto: Boolean = false, capoReport: List<String> = emptyList(), onCapoAuto: (Boolean) -> Unit = {},
-    squadraB: Map<Long, Int> = emptyMap(), onSquadraB: (Player, Int?) -> Unit = { _, _ -> }
+    squadraB: Map<Long, Int> = emptyMap(), onSquadraB: (Player, Int?) -> Unit = { _, _ -> }, risultatiB: List<String> = emptyList()
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -927,7 +928,7 @@ fun RosaScreen(
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
         item { PreparatoreCapoCard(capoAuto, capoAssunto, capoReport, onCapoAuto) }
-        item { SquadraBCard(players, squadraB, onSquadraB) }
+        item { SquadraBCard(players, squadraB, onSquadraB, risultatiB) }
     }
 }
 

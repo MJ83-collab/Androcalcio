@@ -18,5 +18,9 @@ object Fedelta {
     /** Una stagione in più per chi è ancora in rosa; chi se n'è andato esce dall'elenco. */
     fun avanza(prima: Map<String, Int>, rosa: List<String>): Map<String, Int> = rosa.associateWith { (prima[it] ?: 0) + 1 }
 
+    /** Come [avanza], ma per id: due giocatori con lo stesso nome non si confondono. Le vecchie chiavi a nome valgono una volta sola. */
+    fun avanzaId(prima: Map<String, Int>, rosa: List<Pair<Long, String>>): Map<String, Int> =
+        rosa.associate { (id, nome) -> id.toString() to ((prima[id.toString()] ?: prima[nome] ?: 0) + 1) }
+
     fun bonus(ingaggio: Long): Long = ingaggio * BONUS_PCT / 100
 }

@@ -646,7 +646,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val prestiti: List<Prestiti.Prestito> = emptyList(),
         val meteo: Meteo.Condizioni? = null, val budget: Long = 0L, val giornata: Int = 1,
         val inPrima: Set<Long> = emptySet(),
-        val analista: Int = -1, val squadraB: Map<Long, Int> = emptyMap(), val inviti: List<Long> = emptyList(), val ultras: Int = 60, val coreo: Boolean = false, val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
+        val analista: Int = -1, val squadraB: Map<Long, Int> = emptyMap(), val risultatiB: List<String> = emptyList(), val inviti: List<Long> = emptyList(), val ultras: Int = 60, val coreo: Boolean = false, val prepAuto: Boolean = true, val prepAssunto: Boolean = false, val prepReport: List<String> = emptyList()
     )
     private val _extra = MutableStateFlow(ExtraStato())
     val extra: StateFlow<ExtraStato> = _extra
@@ -702,6 +702,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
             ultras = dao.stato("ultras")?.toIntOrNull() ?: 60, coreo = dao.stato("coreo") == "1",
             squadraB = SquadraB.decode(dao.stato(SquadraB.KEY)),
+            risultatiB = dao.stato(SquadraB.KEY_RIS).orEmpty().split("|").filter { it.isNotBlank() },
             inviti = dao.stato(SquadraB.KEY_INVITI).orEmpty().split(",").mapNotNull { it.toLongOrNull() },
             analista = dao.allStaff().firstOrNull { it.teamId == t.id && it.role == Staffing.ANALISTA }?.skill ?: -1,
             prepAuto = dao.stato(PreparatoreCapo.KEY_AUTO) != "0",
@@ -3046,6 +3047,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.upsertClausole(clauseNuove)
             val clausePay = pagaSquadra[me.id] ?: 0L
+            val prelazioneIds = SquadraB.decode(dao.stato(SquadraB.KEY)).filterValues { it == 1 }.keys
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
@@ -3056,6 +3058,12 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         a.age >= Progression.retireAge(a) -> {
                             removed += p
                             if (t.id == me.id) leavers += "${p.name} (ritiro)"
+                        }
+                        a.contract <= 0 && t.id == me.id && a.id in prelazioneIds && a.age <= SquadraB.ETA_MAX -> {
+                            // Prelazione sul satellite: contratto in scadenza, rinnovo automatico di 3 anni allo stesso ingaggio
+                            val f = a.copy(contract = 3)
+                            updated += f; keep += f
+                            avviso("Prelazione: ${p.name} (satellite) resta con te per 3 anni, stesso ingaggio.")
                         }
                         a.contract <= 0 && t.id == me.id -> {
                             removed += p
@@ -3697,9 +3705,24 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (ultimo != null && ultimo != mese && membriB.isNotEmpty()) {
             val rngB = kotlin.random.Random.Default
             val skB = capoAttivo()?.first ?: 50
+            // Partita mensile della squadra B, simulata dall'allenatore in seconda (senza vice non si gioca)
+            val vice = dao.allStaff().firstOrNull { it.teamId == t.id && it.role == Staffing.ASSISTENTE }
+            var bonusB = 0.0
+            if (vice != null) {
+                val rosaB = rosa.filter { it.id in membriB }
+                val avv = dao.allTeams().filter { it.id != t.id && it.nazione == t.nazione && !AllStar.isAllStar(it) }.randomOrNull(rngB)
+                if (avv != null && rosaB.isNotEmpty()) {
+                    val giovaniAvv = dao.playersOnce(avv.id).filter { it.age <= SquadraB.ETA_MAX }.map { it.overall }.sortedDescending().take(8)
+                    val forzaAvv = if (giovaniAvv.size >= 5) giovaniAvv.average() else dao.playersOnce(avv.id).map { it.overall }.average() - 8
+                    val (gf, gs) = SquadraB.partita(rosaB.map { it.overall }.average(), forzaAvv, vice.skill, rngB)
+                    bonusB = SquadraB.bonusEsito(gf, gs)
+                    dao.setStato(Stato(SquadraB.KEY_RIS, SquadraB.aggiungiRisultato(dao.stato(SquadraB.KEY_RIS), "$gf-$gs:${avv.name.replace("|", " ").replace(":", " ")}")))
+                    avviso("Squadra B (allenatore in seconda): $gf-$gs contro ${avv.name}.")
+                }
+            }
             rosa = rosa.map { p ->
                 val lv = membriB[p.id]
-                if (lv != null && p.overall < p.potential && rngB.nextDouble() < SquadraB.probabilita(lv, skB)) { cresB++; p.copy(overall = p.overall + 1) } else p
+                if (lv != null && p.overall < p.potential && rngB.nextDouble() < SquadraB.probabilita(lv, skB, bonusB)) { cresB++; p.copy(overall = p.overall + 1) } else p
             }
             dao.updatePlayers(rosa.filter { it.id in membriB })
         }
@@ -4251,7 +4274,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             if (p.teamId == meId) continue
             val da = dao.team(p.teamId)
             val valore = Market.value(p)
-            val compratore = dao.allTeams().filter { it.id != da.id && it.id != meId && it.nazione == da.nazione && it.budget >= valore }.randomOrNull(rng)
+            // Di solito un club della stessa nazione, ogni tanto uno straniero (le leghe estere ci sono tutte)
+            val possibili = dao.allTeams().filter { it.id != da.id && it.id != meId && !AllStar.isAllStar(it) && it.budget >= valore }
+            val stessaNazione = possibili.filter { it.nazione == da.nazione }
+            val compratore = (if (stessaNazione.isEmpty() || rng.nextDouble() < 0.25) possibili else stessaNazione).randomOrNull(rng)
             if (compratore == null || rng.nextDouble() >= Cartellini.probRivendita(p)) { rimaste += r; continue }
             dao.updatePlayer(p.copy(teamId = compratore.id, starter = false))
             dao.updateTeam(compratore.copy(budget = compratore.budget - valore))
@@ -4275,9 +4301,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         dao.setStato(Stato(Minutaggio.KEY, "")); dao.setStatoInt(Minutaggio.KEY_PARTITE, 0, 0, 999)
         // Bonus fedeltà: dopo almeno 3 stagioni nel club un premio del 3% dell'ingaggio e +3 di morale (solo se la cassa regge)
         val rosaFedele = dao.playersOnce(meId)
-        val permanenza = Fedelta.avanza(Fedelta.decode(dao.stato(Fedelta.KEY)), rosaFedele.map { it.name })
+        val permanenza = Fedelta.avanzaId(Fedelta.decode(dao.stato(Fedelta.KEY)), rosaFedele.map { it.id to it.name })
         dao.setStato(Stato(Fedelta.KEY, Fedelta.encode(permanenza)))
-        val fedeli = rosaFedele.filter { (permanenza[it.name] ?: 0) >= Fedelta.ANNI_MIN }
+        val fedeli = rosaFedele.filter { (permanenza[it.id.toString()] ?: 0) >= Fedelta.ANNI_MIN }
         val totFedelta = fedeli.sumOf { Fedelta.bonus(it.salary) }
         if (fedeli.isNotEmpty() && t.budget > totFedelta * 2) {
             t = t.copy(budget = t.budget - totFedelta); registra(meId, "Bonus fedeltà", -totFedelta, t.budget)

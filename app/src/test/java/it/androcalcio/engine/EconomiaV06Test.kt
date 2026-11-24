@@ -35,6 +35,12 @@ class EconomiaV06Test {
         assertTrue("Nessuna di A perde più di 8 M: ${a.first()}", a.first() > -8_000_000L)
     }
 
+    @Test fun sondaMedianeTEMP() {
+        val a = saldi("Serie A", 0).sorted(); val b = saldi("Serie B", 1).sorted()
+        val c = listOf("Serie C Girone A", "Serie C Girone B", "Serie C Girone C").flatMap { saldi(it, 3) }.sorted()
+        org.junit.Assert.fail("SONDA A med=${a[a.size / 2]} min=${a.first()} max=${a.last()} | B med=${b[b.size / 2]} min=${b.first()} | C med=${c[c.size / 2]} min=${c.first()} n=${c.size}")
+    }
+
     @Test fun premioVittoriaSponsor() {
         assertEquals(60_000L, Sponsors.premioVittoria(0L, false))
         assertEquals(75_000L, Sponsors.premioVittoria(0L, true))
