@@ -1286,12 +1286,37 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Playoff e playout giocabili: se c'è la tua squadra si gioca dal vivo, le altre gare si simulano ----
+    private var spareggioAttesa: kotlinx.coroutines.CompletableDeferred<Pair<Int, Int>>? = null
+
+    /** Gara secca: restituisce chi passa tra [a] (meglio piazzata, in casa) e [b]. Se c'è [me], parte la partita dal vivo. */
+    private suspend fun giocaSpareggio(a: Long, b: Long, titolo: String, me: Team,
+                                       forza: Map<Long, Double>, rng: kotlin.random.Random): Long {
+        if (me.id != a && me.id != b) return Spareggi.passa(a, b, forza, rng)
+        val attesa = kotlinx.coroutines.CompletableDeferred<Pair<Int, Int>>()
+        spareggioAttesa = attesa
+        _notice.value = "$titolo: gara secca. Se finisce in parità passa la squadra meglio piazzata in classifica."
+        _live.value = buildLive(dao.team(a), dao.team(b), a == me.id, null)
+        startTicker()
+        val (gc, go) = attesa.await()
+        spareggioAttesa = null
+        return when { gc > go -> a; go > gc -> b; else -> a }
+    }
+
+    private suspend fun giocaPlayoff(seeds: List<Long>, titolo: String, me: Team,
+                                     forza: Map<Long, Double>, rng: kotlin.random.Random): Pair<Long, Long>? =
+        Spareggi.playoffCon(seeds) { a, b, turno -> giocaSpareggio(a, b, "$titolo – $turno", me, forza, rng) }
+
     fun closeLive() {
         val i = _live.value ?: return
         if (!i.m.finished || i.rigori != null) return
         liveJob?.cancel()
         _live.value = null
-        viewModelScope.launch(Dispatchers.IO) { autoSalva() }
+        val attesa = spareggioAttesa
+        if (attesa != null) {   // gara di playoff/playout: la chiusura della stagione riprende da qui
+            val r = i.m.report()
+            attesa.complete(r.homeGoals to r.awayGoals)
+        } else viewModelScope.launch(Dispatchers.IO) { autoSalva() }
     }
 
     private val _role = MutableStateFlow("%")
@@ -2877,7 +2902,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         // Promozioni: le prime kk-1 dirette, l'ultimo posto con i playoff tra le 4 successive
                         val dirette = if (kk >= 2 && low.size >= kk + 3) kk - 1 else kk
                         low.take(dirette).forEach { moves[it.team.id] = k.second; promoted += it.team.id }
-                        if (dirette < kk) Spareggi.playoff(low.drop(dirette).take(4).map { it.team.id }, forzaPO, rng)?.let { (w, f) ->
+                        if (dirette < kk) giocaPlayoff(low.drop(dirette).take(4).map { it.team.id }, "Playoff ${lk.second}", me, forzaPO, rng)?.let { (w, f) ->
                             moves[w] = k.second; promoted += w
                             spareggiNote += "Playoff ${lk.second}: ${nomePO(w)} batte ${nomePO(f)} in finale e sale in ${k.second}."
                             alboPO += AlboEntry(season = s, nazione = k.first, competizione = "Playoff ${lk.second}", vincitore = nomePO(w))
@@ -2894,7 +2919,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     // Playout: le ultime 3 scendono, la quart'ultima e la quint'ultima si giocano la salvezza
                     val giu = if (nGiu == 4 && stB.size >= 10) {
                         val alto = stB[stB.size - 5].team.id; val basso = stB[stB.size - 4].team.id
-                        val perde = Spareggi.playout(alto, basso, forzaPO, rng)
+                        val perde = if (giocaSpareggio(alto, basso, "Playout ${b.second}", me, forzaPO, rng) == alto) basso else alto
                         spareggiNote += "Playout ${b.second}: retrocede ${nomePO(perde)}, si salva ${nomePO(if (perde == alto) basso else alto)}."
                         stB.takeLast(3) + stB.first { it.team.id == perde }
                     } else stB.takeLast(nGiu)
@@ -2913,7 +2938,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     val seconde = gironi.mapNotNull { g -> finals.getValue(g).getOrNull(1) }.sortedWith(ordina)
                     val terza = gironi.mapNotNull { g -> finals.getValue(g).getOrNull(2) }.sortedWith(ordina).firstOrNull()
                     val seeds = (seconde + listOfNotNull(terza)).map { it.team.id }
-                    Spareggi.playoff(seeds, forzaPO, rng)?.let { (w, f) ->
+                    giocaPlayoff(seeds, "Playoff Serie C", me, forzaPO, rng)?.let { (w, f) ->
                         moves[w] = b.second; promoted += w
                         spareggiNote += "Playoff Serie C: ${nomePO(w)} batte ${nomePO(f)} e sale in ${b.second}."
                         alboPO += AlboEntry(season = s, nazione = b.first, competizione = "Playoff Serie C", vincitore = nomePO(w))

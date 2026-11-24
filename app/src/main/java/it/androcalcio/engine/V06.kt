@@ -15,17 +15,24 @@ object Spareggi {
     fun passa(a: Long, b: Long, forza: Map<Long, Double>, rng: Random): Long =
         if (rng.nextDouble() < probPassa(forza[a] ?: 60.0, forza[b] ?: 60.0)) a else b
 
-    /** Playoff a 4 (in ordine di classifica): semifinali 1ª-4ª e 2ª-3ª, poi finale. Restituisce (vincitrice, finalista). */
-    fun playoff(seeds: List<Long>, forza: Map<Long, Double>, rng: Random): Pair<Long, Long>? {
+    /**
+     * Playoff a 4 (in ordine di classifica): semifinali 1ª-4ª e 2ª-3ª, poi finale. Restituisce (vincitrice, finalista).
+     * [gioca] riceve (meglio piazzata, peggio piazzata, turno) e restituisce chi passa: può essere una partita vera.
+     */
+    inline fun playoffCon(seeds: List<Long>, gioca: (Long, Long, String) -> Long): Pair<Long, Long>? {
         if (seeds.size < 2) return null
-        if (seeds.size < 4) return passa(seeds[0], seeds[1], forza, rng).let { w -> w to (if (w == seeds[0]) seeds[1] else seeds[0]) }
-        val s1 = passa(seeds[0], seeds[3], forza, rng)
-        val s2 = passa(seeds[1], seeds[2], forza, rng)
+        if (seeds.size < 4) return gioca(seeds[0], seeds[1], "Finale").let { w -> w to (if (w == seeds[0]) seeds[1] else seeds[0]) }
+        val s1 = gioca(seeds[0], seeds[3], "Semifinale")
+        val s2 = gioca(seeds[1], seeds[2], "Semifinale")
         val alto = if (seeds.indexOf(s1) < seeds.indexOf(s2)) s1 else s2
         val basso = if (alto == s1) s2 else s1
-        val w = passa(alto, basso, forza, rng)
+        val w = gioca(alto, basso, "Finale")
         return w to (if (w == alto) basso else alto)
     }
+
+    /** Come [playoffCon], tutto simulato con la forza delle rose. */
+    fun playoff(seeds: List<Long>, forza: Map<Long, Double>, rng: Random): Pair<Long, Long>? =
+        playoffCon(seeds) { a, b, _ -> passa(a, b, forza, rng) }
 
     /** Playout: la meglio piazzata [alto] contro [basso]; restituisce chi retrocede. */
     fun playout(alto: Long, basso: Long, forza: Map<Long, Double>, rng: Random): Long =
