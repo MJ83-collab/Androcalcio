@@ -89,6 +89,7 @@ import it.androcalcio.data.Team
 import it.androcalcio.data.MatchResult
 import it.androcalcio.engine.Fixtures
 import it.androcalcio.engine.Cup
+import it.androcalcio.engine.Turni
 import it.androcalcio.engine.Friendlies
 import it.androcalcio.data.AlboEntry
 import it.androcalcio.data.Stato
@@ -364,7 +365,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val f = _formation.value
         val xi = AssistantCoach.startingXI(mine, f)
         val prossima = ms.filter { !it.played && (it.homeTeamId == me.id || it.awayTeamId == me.id) }
-            .minByOrNull { it.round }
+            .minByOrNull { Turni.chiave(it) }
         val opp = prossima?.let { m -> dao.team(if (m.homeTeamId == me.id) m.awayTeamId else m.homeTeamId) }
         val notes = if (opp == null) emptyList() else AssistantCoach.opponentNotes(
             opp, dao.playersOnce(opp.id), mine,
@@ -583,7 +584,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Gioca la prossima giornata (o tutte); skipId = la tua partita, giocata a parte dal vivo. */
-    private suspend fun runRounds(all: Boolean, skipId: Long?, eventi: Boolean = !all) {
+    private suspend fun runRounds(all: Boolean, skipId: Long?, eventi: Boolean = !all, fino: Int? = null) {
         risolviMercato()
         run {
             val t = selectedTeam.value ?: return
@@ -602,13 +603,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val fatteMie = Migliorie.decodeFatte(dao.stato("migliorie_fatte"))
             val totaliLega = ms.filter { !Cup.isCup(it.round) }.maxOfOrNull { it.round } ?: 38
             val pratoMio = dao.statoInt(Prato.KEY)
-            val rounds = ms.filter { !it.played }.map { it.round }.distinct().sorted()
-                .let { if (all) it else it.take(1) }
+            // Turni in ordine di calendario: giornata di campionato (domenica) o turno di coppa a metà settimana.
+            // Senza "tutto" si gioca fino alla tua prossima partita compresa: i turni in cui non giochi passano da soli.
+            val miaProssima = ms.filter { !it.played && (it.homeTeamId == t.id || it.awayTeamId == t.id) }.minOfOrNull { Turni.chiave(it) }
+            val limite = if (all) Int.MAX_VALUE else (fino ?: miaProssima ?: Int.MAX_VALUE)
+            val turni = ms.filter { !it.played }.map { Turni.chiave(it) }.distinct().sorted().filter { it <= limite }
+            val rounds = ms.filter { !it.played && !Cup.isCup(it.round) && Turni.chiave(it) in turni }.map { it.round }.distinct()
             rounds.forEach { giocaDataNazionali(_season.value, it); giocaDataU21(_season.value, it) }
             val assentiPerTurno: Map<Int, Set<Long>> = rounds.associateWith { r ->
                 dao.convocazioniData(_season.value, r).map { it.playerId }.toSet()
             }
-            for (m in ms.filter { !it.played && it.round in rounds && it.id != skipId }) {
+            for (m in ms.filter { !it.played && Turni.chiave(it) in turni && it.id != skipId }.sortedBy { Turni.chiave(it) }) {
                 val h = teamsById[m.homeTeamId] ?: continue
                 val a = teamsById[m.awayTeamId] ?: continue
                 val hp = cache.getOrPut(h.id) { dao.playersOnce(h.id) }
@@ -666,8 +671,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updatePlayers(cache.values.flatten())
             dao.insertGoals(goalsAcc)
             salvaStatistiche(_season.value, statAcc)
-            avanzaCantieri(rounds.size, t.id)
-            ms.filter { it.round in rounds && it.id != skipId && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
+            avanzaCantieri(turni.count { Turni.eCampionato(it) }, t.id)
+            ms.filter { !it.played && Turni.chiave(it) in turni && it.id != skipId && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
                 .forEach { m0 -> dao.match(m0.id)?.let { dopoMiaPartita(t.id, it, evento = eventi) } }
             if (lineupNotes.isNotEmpty()) _notice.value = lineupNotes.distinct().joinToString("\n")
             // Coppa: supplementari e rigori nelle parità, poi il turno successivo se è finito
@@ -676,8 +681,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.insertMatches(Cup.nextStage(dao.matchesOnce(ck, _season.value), teamsById.values.toList(),
                 strengthOf(), _season.value, ck, t.nazione, kotlin.random.Random.Default))
             avanzaEuropa(_season.value)
-            // Con "Fine stagione" si gioca fino in fondo, anche i turni di coppa sorteggiati adesso
-            if (all && playedNow > 0) runRounds(true, skipId)
+            // I turni di coppa sorteggiati adesso possono cadere prima del limite: si continua finché c'è qualcosa da giocare
+            if (playedNow > 0) runRounds(all, skipId, eventi, if (all) null else limite)
         }
     }
 
@@ -689,9 +694,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val t = selectedTeam.value ?: return@launch
             var giocate = 0
             while (giocate < 60) {
-                val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value)
-                val prossimo = ms.filter { !it.played }.minOfOrNull { it.round } ?: break
-                if (prossimo > fino) break
+                val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value) +
+                    europaMia(t, _season.value)
+                val prossimo = ms.filter { !it.played && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
+                    .minOfOrNull { Turni.chiave(it) } ?: break
+                if (prossimo > Turni.finoAGiornata(fino)) break
                 runRounds(false, null, eventi = false); giocate++
             }
             autoSalva()
@@ -1454,10 +1461,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             if (!prontoPerLaPartita()) return@launch
             val ms = dao.matchesOnce(key(t), _season.value) + dao.matchesOnce(Cup.key(t.nazione), _season.value) +
                 europaMia(t, _season.value)
-            val round = ms.filter { !it.played }.minOfOrNull { it.round } ?: return@launch
-            val mine = ms.firstOrNull { !it.played && it.round == round && (it.homeTeamId == t.id || it.awayTeamId == t.id) }
-            runRounds(false, mine?.id)
-            if (mine == null) { _notice.value = "In questa giornata la tua squadra riposa."; return@launch }
+            val mine = ms.filter { !it.played && (it.homeTeamId == t.id || it.awayTeamId == t.id) }.minByOrNull { Turni.chiave(it) }
+            if (mine == null && ms.none { !it.played }) return@launch
+            runRounds(false, mine?.id, fino = mine?.let { Turni.chiave(it) })
+            if (mine == null) { _notice.value = "Non hai altre partite in programma: le restanti sono state simulate."; return@launch }
             val teamsById = squadreInGioco(t, listOf(mine))
             val h = teamsById[mine.homeTeamId] ?: return@launch
             val a = teamsById[mine.awayTeamId] ?: return@launch
@@ -4055,7 +4062,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     /** Calendario a giorni: oggi, data e avversario della prossima giornata, diario delle attività e preparazione. */
     data class GiornoStato(
         val oggi: java.time.LocalDate, val prossima: java.time.LocalDate?, val giornata: Int?,
-        val avversario: String?, val casa: Boolean, val diario: Map<Long, CalendarioGiorni.Attivita>, val prep: Int
+        val avversario: String?, val casa: Boolean, val diario: Map<Long, CalendarioGiorni.Attivita>, val prep: Int,
+        val etichetta: String = ""
     ) {
         val giornoPartita get() = prossima != null && !oggi.isBefore(prossima)
         val giorniMancanti get() = prossima?.let { java.time.temporal.ChronoUnit.DAYS.between(oggi, it).toInt() } ?: 0
@@ -4065,13 +4073,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val t = selectedTeam.value ?: return null
         val s = _season.value
         val ms = dao.matchesOnce(key(t), s) + dao.matchesOnce(Cup.key(t.nazione), s) + europaMia(t, s)
-        val ultima = ms.filter { it.played }.maxOfOrNull { it.round }
-        val r = ms.filter { !it.played }.minOfOrNull { it.round }
+        val ultima = ms.filter { it.played }.maxOfOrNull { Turni.chiave(it) }
+        val r = ms.filter { !it.played }.minOfOrNull { Turni.chiave(it) }
         val oggi = CalendarioGiorni.oggi(s, dao.stato(CalendarioGiorni.KEY_OGGI + s)?.toLongOrNull(), ultima)
-        val mia = r?.let { rr -> ms.firstOrNull { !it.played && it.round == rr && (it.homeTeamId == t.id || it.awayTeamId == t.id) } }
+        // La tua prossima partita: la prima che ti riguarda, anche se nel turno in corso riposi
+        val mia = ms.filter { !it.played && (it.homeTeamId == t.id || it.awayTeamId == t.id) }.minByOrNull { Turni.chiave(it) }
+        val turnoMio = mia?.let { Turni.chiave(it) } ?: r
         val avv = mia?.let { m -> dao.team(if (m.homeTeamId == t.id) m.awayTeamId else m.homeTeamId).name }
-        return GiornoStato(oggi, r?.let { CalendarioGiorni.data(s, it) }, r, avv, mia?.homeTeamId == t.id,
-            CalendarioGiorni.leggiDiario(dao.stato(CalendarioGiorni.KEY_DIARIO + s)), dao.statoInt(CalendarioGiorni.KEY_PREP))
+        return GiornoStato(oggi, turnoMio?.let { CalendarioGiorni.data(s, it) }, mia?.let { if (Cup.isCup(it.round)) null else it.round } ?: turnoMio?.let { Turni.giornata(it) },
+            avv, mia?.homeTeamId == t.id,
+            CalendarioGiorni.leggiDiario(dao.stato(CalendarioGiorni.KEY_DIARIO + s)), dao.statoInt(CalendarioGiorni.KEY_PREP),
+            mia?.let { Turni.etichetta(it) }.orEmpty())
     }
 
     val giorno: StateFlow<GiornoStato?> = osserva("stato", "matches") { calcolaGiorno() }

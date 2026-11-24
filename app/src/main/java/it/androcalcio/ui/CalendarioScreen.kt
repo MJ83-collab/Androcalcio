@@ -43,6 +43,7 @@ import it.androcalcio.data.MatchResult
 import it.androcalcio.data.Team
 import it.androcalcio.engine.standings
 import it.androcalcio.engine.Cup
+import it.androcalcio.engine.Turni
 import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.theme.AC
@@ -108,10 +109,8 @@ fun CalendarioScreen(
     val lastRound = matches.maxOfOrNull { it.round } ?: 1
     val shown = if (round == 0) (nextRound ?: lastRound) else round
     val tutte = matches + cupMatches
-    val prossimaGiornata = tutte.filter { !it.played }.minOfOrNull { it.round }
-    val miaProssima = prossimaGiornata != null && tutte.any {
-        !it.played && it.round == prossimaGiornata && (it.homeTeamId == team.id || it.awayTeamId == team.id)
-    }
+    // Il turno successivo che ti riguarda: i turni di coppa in cui non giochi passano da soli
+    val miaProssima = tutte.any { !it.played && (it.homeTeamId == team.id || it.awayTeamId == team.id) }
     // Prima del campionato servono almeno cinque amichevoli fissate e giocate
     val amichevoliPronte = friendlyMatches.size >= Friendlies.MIN && friendlyMatches.all { it.played }
     val bloccoAmichevoli = false   // le amichevoli non sono obbligatorie
@@ -184,7 +183,7 @@ fun CalendarioScreen(
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 fun mine(m: MatchResult) = m.homeTeamId == team.id || m.awayTeamId == team.id
                 val league = matches.filter(::mine).sortedBy { it.round }
-                val cups = cupMatches.filter(::mine).sortedBy { it.round }
+                val cups = cupMatches.filter(::mine).sortedBy { Turni.chiave(it) }
                 val friends = friendlyMatches.sortedBy { it.round }
                 if (league.isNotEmpty()) {
                     SectionTitle("Campionato")
@@ -195,7 +194,7 @@ fun CalendarioScreen(
                 if (cups.isNotEmpty()) {
                     SectionTitle("Coppa e supercoppa")
                     PaperPanel(Modifier.fillMaxWidth()) {
-                        cups.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
+                        cups.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i, Turni.testo(DateGiornate.anno(season), Turni.chiave(m))) }
                     }
                 }
                 if (friends.isNotEmpty()) {
@@ -304,13 +303,14 @@ fun CalendarioScreen(
 
 /** Riga di una partita (casa - trasferta, risultato in riquadro nero), evidenziata se è della tua squadra. */
 @Composable
-private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: Int) {
+private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: Int, data: String = "") {
     val h = byId[m.homeTeamId]
     val a = byId[m.awayTeamId]
     val mine = m.homeTeamId == teamId || m.awayTeamId == teamId
     val c = if (mine) AC.ColBlue else AC.PaperText
     val w = if (mine) FontWeight.ExtraBold else FontWeight.Medium
     PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
+        if (data.isNotEmpty()) Text(data, Modifier.padding(end = 4.dp), fontSize = 10.sp, color = AC.PaperText)
         IconaCompetizione(m, byId[teamId]?.nazione ?: "")
         Text(h?.name ?: "?", Modifier.weight(1f).let { m -> if (h != null) m.apriSquadra(h) else m }, color = c, fontWeight = w,
             textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)

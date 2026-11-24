@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.MatchResult
 import it.androcalcio.data.Team
+import it.androcalcio.engine.Turni
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.PaperPanel
@@ -83,7 +84,7 @@ fun ProssimaPartitaCard(me: Team, avversario: Team, m: MatchResult, onGioca: () 
     val away = if (m.homeTeamId == me.id) avversario else me
     if (AC.pc7) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onGioca), horizontalAlignment = Alignment.CenterHorizontally) {
-            BannerPartita(home, away, "Giornata", "${m.round}")
+            Turni.banner(m).let { (titolo, numero) -> BannerPartita(home, away, titolo, numero) }
             Text("Tocca per andare alla partita", color = AC.TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         }
         return
@@ -96,7 +97,7 @@ fun ProssimaPartitaCard(me: Team, avversario: Team, m: MatchResult, onGioca: () 
             .clickable(onClick = onGioca).padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("PROSSIMA PARTITA · GIORNATA ${m.round}", color = AC.Neon, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+        Text("PROSSIMA PARTITA · ${Turni.etichetta(m).uppercase()}", color = AC.Neon, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Crest(home, 44.dp)

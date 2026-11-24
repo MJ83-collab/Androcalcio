@@ -62,7 +62,9 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.EventType
+import it.androcalcio.engine.Cup
 import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Turni
 import it.androcalcio.engine.Lineup
 import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.MatchReport
@@ -95,10 +97,9 @@ fun ProssimaPartitaScreen(
 ) {
     if (team == null) return
     val tutte = matches + cupMatches
-    val giornata = tutte.filter { !it.played }.minOfOrNull { it.round }
-    val mia = giornata?.let { g ->
-        tutte.firstOrNull { !it.played && it.round == g && (it.homeTeamId == team.id || it.awayTeamId == team.id) }
-    }
+    val mia = tutte.filter { !it.played && (it.homeTeamId == team.id || it.awayTeamId == team.id) }
+        .minByOrNull { it0 -> Turni.chiave(it0) }
+    val restano = tutte.any { !it.played }
     val avversario = mia?.let { m -> teams.firstOrNull { it.id == if (m.homeTeamId == team.id) m.awayTeamId else m.homeTeamId } }
     // Prima del campionato servono le amichevoli, che si giocano dal calendario
     val bloccoAmichevoli = false   // le amichevoli non sono obbligatorie
@@ -113,13 +114,13 @@ fun ProssimaPartitaScreen(
                 Text("Prima del campionato vanno giocate le amichevoli: le trovi nel calendario.", color = AC.Text)
                 Azione("Vai al calendario", onCalendario)
             }
-            giornata == null -> {
+            !restano -> {
                 Text("Non ci sono altre partite: la stagione è finita. Chiudila dal calendario.", color = AC.Text)
                 Azione("Vai al calendario", onCalendario)
             }
             mia == null || avversario == null -> {
-                Text("In questa giornata la tua squadra riposa.", color = AC.Text)
-                Azione("Passa alla giornata successiva", onPlay)
+                Text("Non hai altre partite in programma: le restanti si simulano.", color = AC.Text)
+                Azione("Simula le partite rimaste", onPlay)
             }
             else -> {
                 ProssimaPartitaCard(team, avversario, mia, onPlay)

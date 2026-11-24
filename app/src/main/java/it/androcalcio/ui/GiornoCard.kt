@@ -31,10 +31,11 @@ fun GiornoCard(g: AndrocalcioViewModel.GiornoStato, onAttivita: (Attivita) -> Un
             val prossima = g.prossima
             if (prossima != null) {
                 val vs = g.avversario?.let { (if (g.casa) "in casa contro " else "in trasferta contro ") + it } ?: "la tua squadra riposa"
+                val quale = g.etichetta.ifEmpty { "giornata ${g.giornata}" }
                 Text(
-                    if (g.giornoPartita) "⚽ Oggi si gioca: giornata ${g.giornata}, $vs."
+                    if (g.giornoPartita) "⚽ Oggi si gioca: $quale, $vs."
                     else "Prossima partita: ${CalendarioGiorni.nomeGiorno(prossima)}, tra ${g.giorniMancanti} " +
-                        (if (g.giorniMancanti == 1) "giorno" else "giorni") + ". Giornata ${g.giornata}, $vs.",
+                        (if (g.giorniMancanti == 1) "giorno" else "giorni") + ". ${quale.replaceFirstChar { it.uppercase() }}, $vs.",
                     color = AC.Text, fontSize = 12.sp
                 )
             } else {

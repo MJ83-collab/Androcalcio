@@ -30,12 +30,12 @@ object CalendarioGiorni {
     /** Primo giorno della stagione: 1 luglio, inizio del ritiro. */
     fun inizio(stagione: String): LocalDate = LocalDate.of(anno(stagione), 7, 1)
 
-    /** Data della giornata: la stessa fonte della lista partite, così scheda e calendario concordano. */
-    fun data(stagione: String, giornata: Int): LocalDate = DateGiornate.data(anno(stagione), giornata)
+    /** Data di un turno ([Turni.chiave]): domenica per il campionato, mercoledì per le coppe; la stessa fonte della lista partite. */
+    fun data(stagione: String, chiave: Int): LocalDate = Turni.data(anno(stagione), chiave)
 
-    /** Giorno corrente: quello salvato, ma mai prima del giorno dopo l'ultima giornata giocata. */
-    fun oggi(stagione: String, salvato: Long?, ultimaGiocata: Int?): LocalDate {
-        val minimo = ultimaGiocata?.let { data(stagione, it).plusDays(1) } ?: inizio(stagione)
+    /** Giorno corrente: quello salvato, ma mai prima del giorno dopo l'ultimo turno giocato. */
+    fun oggi(stagione: String, salvato: Long?, ultimoTurno: Int?): LocalDate {
+        val minimo = ultimoTurno?.let { data(stagione, it).plusDays(1) } ?: inizio(stagione)
         val s = salvato?.let { LocalDate.ofEpochDay(it) }
         return if (s == null || s.isBefore(minimo)) minimo else s
     }
