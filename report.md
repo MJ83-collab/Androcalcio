@@ -41,8 +41,8 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 ## Da fare (priorità)
 1. **Playoff e playout giocabili: fatto (24/11), da provare.** Se c'è la squadra dell'utente si gioca dal vivo (gara secca, meglio piazzata in casa), le altre gare si simulano (`giocaSpareggio` in `AndrocalcioViewModel`, `Spareggi.playoffCon`). In parità passa la meglio piazzata: mancano supplementari e rigori. Il salvataggio automatico è sospeso durante la gara. Da verificare: uscita dall'app a metà gara.
 2. Provare tutto su telefono e tablet.
-3. Prelazione sui giovani del satellite.
-4. Far giocare partite proprie alla squadra B.
+3. Ritarare l'economia della Serie C (mediana −2,9 M): decisione aperta.
+4. Avatar: da decidere cosa si vuole (oggi disegnati in codice).
 5. Merge su `main` e v0.7.0 (da decidere con Marco).
 
 ## Fatto il 24/11 (dopo i playoff)
