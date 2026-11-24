@@ -484,6 +484,62 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private class EsitoEuropa(val partite: Map<CoppeEuropee.Coppa, List<MatchResult>>, val premio: Long, val fase: String?)
+
+    /** Chiusura stagione: gioca tutte le partite europee rimaste e calcola premio e fase della tua squadra. */
+    private suspend fun simulaEuropa(
+        s: String, teamsNow: List<Team>, me: Team, cache: HashMap<Long, List<Player>>,
+        staffBy: Map<Long, List<Staff>>, rng: kotlin.random.Random, statAcc: HashMap<Long, PlayerStat>,
+        strength: Map<Long, Double>
+    ): EsitoEuropa {
+        assicuraCoppeEuropee(s)
+        val byTeam = teamsNow.associateBy { it.id }
+        for (giro in 0 until 40) {
+            val pending = CoppeEuropee.Coppa.values().flatMap { c -> dao.matchesOnce(CoppeEuropee.key(c), s) }
+                .filter { !it.played }.sortedBy { it.round }
+            if (pending.isEmpty()) break
+            val done = pending.mapNotNull { m ->
+                val h = byTeam[m.homeTeamId] ?: return@mapNotNull null
+                val a = byTeam[m.awayTeamId] ?: return@mapNotNull null
+                val r = simCupMatch(h, a, me, cache, staffBy, rng)
+                accumulaStat(statAcc, s, h.id, a.id, r)
+                m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
+            }
+            if (done.isEmpty()) break
+            dao.updateMatches(done)
+            avanzaEuropa(s)
+        }
+        val partite = CoppeEuropee.Coppa.values().associateWith { dao.matchesOnce(CoppeEuropee.key(it), s) }
+        val premio = partite.entries.sumOf { (c, p) -> CoppeEuropee.premio(c, p, me.id, strength) }
+        val fase = partite.entries.firstNotNullOfOrNull { (c, p) ->
+            CoppeEuropee.faseRaggiunta(p, me.id, strength).takeIf { it.isNotEmpty() }?.let { "${c.nome}: $it" }
+        }
+        return EsitoEuropa(partite, premio, fase)
+    }
+
+    /** Qualificate della stagione successiva: etichette per la classifica finale e Stato per i sorteggi. */
+    private suspend fun qualificateEuropee(
+        s: String, finals: Map<Pair<String, String>, List<it.androcalcio.engine.StandingRow>>,
+        strength: Map<Long, Double>, europei: HashMap<Long, String>
+    ) {
+        val primeDivisioni = CoppeEuropee.PRIME_DIVISIONI + mapOf("Brasile" to "Serie A", "Argentina" to "Primera")
+        val euQ = LinkedHashMap<Long, CoppeEuropee.Coppa>()
+        primeDivisioni.forEach { (nazione, camp) ->
+            val st = finals[nazione to camp] ?: return@forEach
+            val ids = st.map { it.team.id }
+            if (nazione in CoppeEuropee.PRIME_DIVISIONI) {
+                val fin = Cup.finalMatch(dao.matchesOnce(Cup.key(nazione), s))
+                val vinc = fin?.let { Cup.winnerOfTie(listOf(it), strength) }
+                val perso = fin?.let { if (vinc == it.homeTeamId) it.awayTeamId else it.homeTeamId }
+                euQ.putAll(CoppeEuropee.qualificate(nazione, ids, vinc, perso))
+            } else {
+                europei.putAll(Sudamericana.assegna(ids))
+            }
+        }
+        europei.putAll(euQ.mapValues { it.value.nome })
+        dao.setStato(Stato("eu_q_${seasonName(prefs.getInt("season_year", 2026) + 1)}", CoppeEuropee.encodeQualificate(euQ)))
+    }
+
     /** Partite della coppa europea della tua squadra, finché ne ha ancora da giocare (altrimenti vuoto). */
     private suspend fun europaMia(t: Team, s: String): List<MatchResult> {
         val q = CoppeEuropee.decodeQualificate(dao.stato("eu_q_$s"))
@@ -3017,28 +3073,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             // 1c2) Coppe europee: tutte le partite rimaste, anche le tue, poi i premi
-            assicuraCoppeEuropee(s)
-            val euByTeam = teamsNow.associateBy { it.id }
-            for (giro in 0 until 40) {
-                val pending = CoppeEuropee.Coppa.values().flatMap { c -> dao.matchesOnce(CoppeEuropee.key(c), s) }
-                    .filter { !it.played }.sortedBy { it.round }
-                if (pending.isEmpty()) break
-                val done = pending.mapNotNull { m ->
-                    val h = euByTeam[m.homeTeamId] ?: return@mapNotNull null
-                    val a = euByTeam[m.awayTeamId] ?: return@mapNotNull null
-                    val r = simCupMatch(h, a, me, cache, staffBy, rng)
-                    accumulaStat(statAcc, s, h.id, a.id, r)
-                    m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true)
-                }
-                if (done.isEmpty()) break
-                dao.updateMatches(done)
-                avanzaEuropa(s)
-            }
-            val euPartite = CoppeEuropee.Coppa.values().associateWith { dao.matchesOnce(CoppeEuropee.key(it), s) }
-            val premioEu = euPartite.entries.sumOf { (c, p) -> CoppeEuropee.premio(c, p, me.id, strength) }
-            val euFase = euPartite.entries.firstNotNullOfOrNull { (c, p) ->
-                CoppeEuropee.faseRaggiunta(p, me.id, strength).takeIf { it.isNotEmpty() }?.let { "${c.nome}: $it" }
-            }
+            val eu = simulaEuropa(s, teamsNow, me, cache, staffBy, rng, statAcc, strength)
+            val euPartite = eu.partite
+            val premioEu = eu.premio
+            val euFase = eu.fase
 
             salvaStatistiche(s, statAcc)
 
@@ -3204,22 +3242,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             // Qualificazioni: prima divisione di ogni nazione europea (Champions, Europa, Conference)
             // e di Brasile e Argentina (Copa Sudamericana)
             val europei = HashMap<Long, String>()
-            val primeDivisioni = CoppeEuropee.PRIME_DIVISIONI + mapOf("Brasile" to "Serie A", "Argentina" to "Primera")
-            val euQ = LinkedHashMap<Long, CoppeEuropee.Coppa>()
-            primeDivisioni.forEach { (nazione, camp) ->
-                val st = finals[nazione to camp] ?: return@forEach
-                val ids = st.map { it.team.id }
-                if (nazione in CoppeEuropee.PRIME_DIVISIONI) {
-                    val fin = Cup.finalMatch(dao.matchesOnce(Cup.key(nazione), s))
-                    val vinc = fin?.let { Cup.winnerOfTie(listOf(it), strength) }
-                    val perso = fin?.let { if (vinc == it.homeTeamId) it.awayTeamId else it.homeTeamId }
-                    euQ.putAll(CoppeEuropee.qualificate(nazione, ids, vinc, perso))
-                } else {
-                    europei.putAll(Sudamericana.assegna(ids))
-                }
-            }
-            europei.putAll(euQ.mapValues { it.value.nome })
-            dao.setStato(Stato("eu_q_${seasonName(prefs.getInt("season_year", 2026) + 1)}", CoppeEuropee.encodeQualificate(euQ)))
+            qualificateEuropee(s, finals, strength, europei)
             // Classifiche di fine stagione della tua nazione, con l'esito di ogni squadra
             _fine.value = FineStagione(
                 stagione = s,
