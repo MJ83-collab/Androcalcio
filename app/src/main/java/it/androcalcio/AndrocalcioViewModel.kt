@@ -1564,7 +1564,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 if (prov != null && prov.homePens >= 0) {
                     pendingCup = prov.copy(homePens = -1, awayPens = -1)
-                    serie = it.androcalcio.engine.SerieRigori(i.userHome)
+                    serie = it.androcalcio.engine.SerieRigori(i.userHome,
+                        rigoristiCasa = i.m.rigoristi(true), rigoristiOspiti = i.m.rigoristi(false))
                     _notice.value = "Parità anche dopo i supplementari (${prov.homeGoals}-${prov.awayGoals}): si va ai rigori."
                 } else {
                     if (prov != null && prov != partita) dao.updateMatch(prov)
@@ -1587,7 +1588,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (pari() && gs.regola == Spareggi.Regola.SUPPL_RIGORI) {
                 gs.parziale = ga to gb
-                serie = it.androcalcio.engine.SerieRigori(i.userHome)
+                serie = it.androcalcio.engine.SerieRigori(i.userHome,
+                        rigoristiCasa = i.m.rigoristi(true), rigoristiOspiti = i.m.rigoristi(false))
                 avviso("Ancora parità: si va ai rigori.")
             } else {
                 gs.esito = EsitoGara(ga, gb)

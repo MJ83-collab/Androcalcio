@@ -204,7 +204,7 @@ object Cup {
         return k - 1
     }
 
-    /** Rigori: 5 a testa, poi a oltranza finché il punteggio non cambia. */
+    /** Rigori: 5 a testa, poi a oltranza finché il punteggio non cambia. Serie simulata senza giocatori: il Cinico non conta. */
     private fun shootout(rng: Random): Pair<Int, Int> {
         var h = 0
         var a = 0
