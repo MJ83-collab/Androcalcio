@@ -36,8 +36,8 @@ object AC {
     /** Da preferenza (0 = blu PC Calcio 7, 1 = nero, 2 = chiaro, 3 = manga) a tema interno. */
     fun daPreferenza(v: Int) = when (v) { 1 -> 4; 2 -> 5; 3 -> 6; else -> 3 }
 
-    /** Preferenza predefinita per chi non ha mai scelto: manga. */
-    const val PREFERENZA_PREDEFINITA = 3
+    /** Preferenza predefinita: blu PC Calcio 7 (v0.7: prima era manga). */
+    const val PREFERENZA_PREDEFINITA = 0
 
     val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740, 0xFF2A3A8C, 0xFF000000, 0xFFEEF1F7, g = 0xFF12152B)
     val Surface get() = pick(0xFF131A22, 0xFF0C5A60, 0xFF14307A, 0xFF27358A, 0xFF0A0A0F, 0xFFFFFFFF, g = 0xFF1D2245)

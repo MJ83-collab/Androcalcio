@@ -11,6 +11,12 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Vendite delle maglie** (sostituiscono il vecchio merchandising): tifosi, piazzamento, giocatori 84+, novità (+20%), bellezza, negozi e sito, prezzo scelto dall'utente. Prezzo standard A 90 €, B 65 €, minori 45-50 €. Costo 45% dello standard. Sensibilità al prezzo: A 1,6, B 2,0, minori 2,6. Con valori medi il guadagno è uguale al vecchio merchandising, quindi il test economico non cambia. Voce "Maglie e merchandising" nel bilancio. Test: `MaglieTest`.
 - Stato nuovo (nell'export): "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo".
 
+## Sessione 24/11 sera (6): ritorno allo stile PC Calcio 7 (ramo feat/stadio, non provato sul telefono)
+- **Perché non si vedeva:** il tema di partenza era manga (blu notte e rosso). Il tema "Blu PC Calcio 7" esisteva ma andava scelto in Opzioni. Partita e Calendario non erano mai stati rifatti a parte: usano i componenti del tema.
+- **Tema predefinito = PC Calcio 7**, anche per chi aveva manga: una sola volta all'avvio (`tema_v07`) la scelta torna a PC Calcio 7. In Opzioni → Tema manga resta scegliibile.
+- **Home più vicina alla foto originale:** sfondo azzurro marmorizzato, colonna con le figure dello staff a sinistra (tocca per aprire Staff), barra nera con un dato vero sopra i nastri (campionato, avversario, cassa, posti dello stadio).
+- Da guardare sul telefono: Partita, Calendario e le altre schermate nel tema PC Calcio 7; se qualcosa non torna, dire quale schermata.
+
 ## Sessione 24/11 sera (5): grafica altre schermate (ramo feat/stadio, build verde, non provato sul telefono)
 - **Rosa:** valori colorati (verde 80+, arancio sotto 65, rosso sotto 50, anche morale) e nuova colonna CT con gli anni di contratto (rosso 1 anno o meno, arancio 2, verde di più).
 - **Scheda giocatore:** blocco Contratto (`ui/GraficaV07.kt`): etichetta IN SCADENZA / N ANNI, ingaggio annuo e mensile, valore di mercato, ingaggio in % del valore.

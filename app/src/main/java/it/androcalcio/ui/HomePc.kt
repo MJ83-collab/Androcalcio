@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -44,7 +45,38 @@ private val ColCampionato = Color(0xFF9C5A7E)
 private val ColAllenatore = Color(0xFF4F6E9E)
 private val ColMercato = Color(0xFF4E8A55)
 private val ColFinanze = Color(0xFF9A7A55)
-private val Fondo = Brush.verticalGradient(listOf(Color(0xFF5C7FB8), Color(0xFF3E5E96), Color(0xFF2B4472)))
+private val Fondo = Brush.verticalGradient(listOf(Color(0xFF7FA0D4), Color(0xFF5878B2), Color(0xFF3A5A92)))
+
+/** Sfondo azzurro marmorizzato come nel menu originale: gradiente con nuvole chiare e scure. */
+private fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
+    val w = size.width; val h = size.height
+    listOf(Triple(0.2f, 0.12f, 0.55f), Triple(0.85f, 0.3f, 0.5f), Triple(0.3f, 0.55f, 0.6f), Triple(0.8f, 0.8f, 0.55f), Triple(0.15f, 0.92f, 0.5f)).forEachIndexed { i, (x, y, r) ->
+        val c = if (i % 2 == 0) Color(0x33FFFFFF) else Color(0x2A0A1A44)
+        drawCircle(Brush.radialGradient(listOf(c, Color.Transparent), Offset(w * x, h * y), w * r), w * r, Offset(w * x, h * y))
+    }
+    // vena diagonale
+    drawLine(Color(0x22FFFFFF), Offset(0f, h * 0.35f), Offset(w, h * 0.1f), strokeWidth = 6f)
+    drawLine(Color(0x1A0A1A44), Offset(0f, h * 0.7f), Offset(w, h * 0.5f), strokeWidth = 5f)
+}
+
+private val ColoriStaff = listOf(Color(0xFFE08A12), Color(0xFFF2F2F2), Color(0xFFB9B9C8), Color(0xFF3AA0E0), Color(0xFFC0392B), Color(0xFF2F8F4E), Color(0xFFC9A227), Color(0xFF8E5BC8))
+
+/** Colonna con le figure dello staff a sinistra, come nell'originale: busto colorato e due barrette. Tocca per aprire lo Staff. */
+@Composable
+private fun ColonnaStaff(go: (Screen) -> Unit) {
+    Column(Modifier.width(30.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF14215C)).clickable { go(Screen.STAFF) }.padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        ColoriStaff.forEach { c ->
+            Canvas(Modifier.size(width = 24.dp, height = 36.dp)) {
+                val w = size.width; val h = size.height
+                drawCircle(Color(0xFFE9C9A5), w * 0.2f, Offset(w * 0.5f, h * 0.2f))
+                drawPath(Path().apply { moveTo(w * 0.1f, h * 0.62f); lineTo(w * 0.25f, h * 0.38f); lineTo(w * 0.75f, h * 0.38f); lineTo(w * 0.9f, h * 0.62f); close() }, c)
+                drawRect(Color(0xFFE53935), Offset(w * 0.15f, h * 0.72f), Size(w * 0.7f, h * 0.1f))
+                drawRect(Color(0xFF5C8DFF), Offset(w * 0.15f, h * 0.86f), Size(w * 0.7f, h * 0.1f))
+            }
+        }
+    }
+}
 
 /**
  * Home in stile PC Calcio 7, adattata al telefono: intestazione con la tua squadra contro la prossima avversaria,
@@ -53,28 +85,30 @@ private val Fondo = Brush.verticalGradient(listOf(Color(0xFF5C7FB8), Color(0xFF3
  */
 @Composable
 fun HomePc(team: Team, season: String, prossima: MatchResult?, avversario: Team?, go: (Screen) -> Unit) {
+    Row(Modifier.fillMaxSize().marmo().padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    ColonnaStaff(go)
     Column(
-        Modifier.fillMaxSize().background(Fondo).verticalScroll(rememberScrollState()).padding(8.dp),
+        Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Intestazione(team, season, prossima, avversario)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Blocco("CAMPIONATO", ColCampionato, Modifier.weight(1f), listOf(
+            Blocco("CAMPIONATO", ColCampionato, Modifier.weight(1f), team.campionato, listOf(
                 Triple("Risultati", Screen.GIORNALE, Screen.GIORNALE.icon),
                 Triple("Classifica", Screen.CALENDARIO, Screen.STATISTICHE.icon),
                 Triple("Calendario", Screen.CALENDARIO, Screen.CALENDARIO.icon)), go)
-            Blocco("ALLENATORE", ColAllenatore, Modifier.weight(1f), listOf(
+            Blocco("ALLENATORE", ColAllenatore, Modifier.weight(1f), avversario?.let { "vs ${it.name}" } ?: "Nessuna gara", listOf(
                 Triple("Formazione", Screen.TATTICA, Screen.TATTICA.icon),
                 Triple("Tattiche", Screen.TATTICA, Screen.TATTICA.icon),
                 Triple("Avversario", Screen.AVVERSARIO, Screen.AVVERSARIO.icon)), go)
         }
         Trofeo(prossima, team)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Blocco("MERCATO", ColMercato, Modifier.weight(1f), listOf(
+            Blocco("MERCATO", ColMercato, Modifier.weight(1f), "Cassa ${it.androcalcio.ui.components.money(team.budget)}", listOf(
                 Triple("Acquisti", Screen.MERCATO, Screen.MERCATO.icon),
                 Triple("Collaboratori", Screen.STAFF, Screen.STAFF.icon),
                 Triple("Rosa", Screen.ROSA, Screen.ROSA.icon)), go)
-            Blocco("FINANZE", ColFinanze, Modifier.weight(1f), listOf(
+            Blocco("FINANZE", ColFinanze, Modifier.weight(1f), "Stadio ${"%,d".format(team.stadiumCapacity).replace(',', '.')}", listOf(
                 Triple("Cassa", Screen.FINANZE, Screen.FINANZE.icon),
                 Triple("Decisioni", Screen.DIRIGENZA, Screen.DIRIGENZA.icon),
                 Triple("Stadio", Screen.STADIO, Screen.STRUTTURE.icon)), go)
@@ -88,6 +122,7 @@ fun HomePc(team: Team, season: String, prossima: MatchResult?, avversario: Team?
             }
         }
         BarraInferiore(go)
+    }
     }
 }
 
@@ -133,7 +168,7 @@ private fun Lato(t: Team, modifier: Modifier, sinistra: Boolean) {
 
 /** Blocco con l'etichetta verticale sul lato e tre pulsanti a nastro. */
 @Composable
-private fun Blocco(titolo: String, colore: Color, modifier: Modifier,
+private fun Blocco(titolo: String, colore: Color, modifier: Modifier, info: String,
                    voci: List<Triple<String, Screen, androidx.compose.ui.graphics.vector.ImageVector>>, go: (Screen) -> Unit) {
     Row(modifier.clip(RoundedCornerShape(4.dp)).background(Color(0x33000000)).border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(4.dp))) {
         Box(Modifier.width(18.dp).height(150.dp).background(Color(0xFF0E1A33)), contentAlignment = Alignment.Center) {
@@ -142,6 +177,8 @@ private fun Blocco(titolo: String, colore: Color, modifier: Modifier,
             }
         }
         Column(Modifier.weight(1f).padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(info, Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 4.dp, vertical = 2.dp),
+                color = Color.White, fontSize = 10.sp, maxLines = 1, textAlign = TextAlign.Center)
             voci.forEach { (n, s, icona) -> Nastro(n, colore, icona) { go(s) } }
         }
     }
