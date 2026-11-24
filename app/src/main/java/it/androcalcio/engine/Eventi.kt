@@ -71,7 +71,7 @@ object Spogliatoio {
     }
 
     /** Imprevisti positivi e negativi, con l'ironia di chi ha visto troppo calcio moderno. */
-    private fun imprevisto(a: String, b: String, rng: Random): Evento = when (rng.nextInt(16)) {
+    private fun imprevisto(a: String, b: String, rng: Random): Evento = when (rng.nextInt(24)) {
         0 -> Evento("Il procuratore chiama", "Il procuratore di $a: \"Ha tante offerte. Anche una in Arabia. Sono sempre in Arabia.\"", emptyList(), listOf(
             Scelta("Il contratto vale ancora", morale = -3, clima = 1, esito = "Il procuratore sbuffa: commissione a rischio."),
             Scelta("Facciamo un premio", morale = 8, fiducia = -2, esito = "Il procuratore sorride. Il presidente no.")))
@@ -119,6 +119,34 @@ object Spogliatoio {
         14 -> Evento("Premio fair play", "La società ritira un premio fair play per aver dimenticato di protestare con l'arbitro.", emptyList(), listOf(
             Scelta("Lo mostro a tutti", fiducia = 3, tifosi = 2, esito = "Targa in bacheca, accanto a quella dei tifosi."),
             Scelta("Lo metto nello sgabuzzino", morale = 1, esito = "Il magazziniere lo usa come fermaporta.")))
+        16 -> Evento("$a chiede di partire", "$a vuole più spazio, o meglio più stipendio, o meglio entrambe. Il procuratore è già al telefono.", emptyList(), listOf(
+            Scelta("Parliamone: ti do minuti", morale = 6, clima = -1, esito = "Per ora si calma, vedremo."),
+            Scelta("Resti e basta", morale = -6, clima = 2, fiducia = 1, esito = "Muso lungo, ma nessuno lo nota."),
+            Scelta("Lo metto sul mercato", morale = -3, clima = -2, esito = "Il gruppo capisce che la società fa sul serio.")))
+        17 -> Evento("Promessa mantenuta?", "Avevi promesso a $b più minuti. Se ne è accorto, e se n'è accorto anche il suo procuratore.", emptyList(), listOf(
+            Scelta("Lo faccio giocare", morale = 7, clima = 1, esito = "Un patto è un patto."),
+            Scelta("Spiego le mie scelte", morale = 2, clima = 1, esito = "Capisce, a metà."),
+            Scelta("Finta di niente", morale = -5, clima = -2, esito = "Alla prossima promessa non ci crederà.")))
+        18 -> Evento("Il presidente megalomane", "Il presidente annuncia in tv: \"Puntiamo alla Champions!\". Non hai neanche il portiere di riserva.", emptyList(), listOf(
+            Scelta("Ci credo anch'io", tifosi = 4, fiducia = 2, clima = -2, esito = "Aspettative alle stelle, pressione pure."),
+            Scelta("Abbasso i toni", tifosi = -2, fiducia = -2, clima = 2, esito = "Realista, ma poco social."),
+            Scelta("Sorrido e mi taccio", fiducia = 1, esito = "Strategia da veterano.")))
+        19 -> Evento("Il presidente tirchio", "Il presidente taglia le trasferte: \"Torniamo in treno, che fa bene al gruppo\".", emptyList(), listOf(
+            Scelta("Va bene, viaggiamo uniti", clima = 5, condizione = -3, fiducia = 2, esito = "Il treno diventa uno spogliatoio mobile."),
+            Scelta("Protesto", clima = -2, fiducia = -3, condizione = 3, esito = "Si vola, ma l'umore al presidente scende.")))
+        20 -> Evento("Riunione con il direttore sportivo", "Il DS propone di puntare su un giovane misterioso: \"Ho una fonte in Sudamerica\". La fonte è sua cognata.", emptyList(), listOf(
+            Scelta("Fidiamoci", morale = 2, fiducia = 2, esito = "Si vedrà. Intanto il DS è felice."),
+            Scelta("Chiedo i video", fiducia = 1, clima = 1, esito = "I video sono girati con un telefono vecchio.")))
+        21 -> Evento("Ritiro in una località esclusiva", "La società propone un weekend di ritiro in una spa sul lago. \"Per cementare il gruppo\".", emptyList(), listOf(
+            Scelta("Accetto", morale = 4, condizione = 6, clima = 4, fiducia = -1, esito = "Squadra rilassata, conto molto lungo."),
+            Scelta("Meglio il campo", clima = 1, condizione = 1, fiducia = 1, esito = "Nessuno si diverte, ma il presidente risparmia.")))
+        22 -> Evento("Invito a un'amichevole", "Una squadra importante chiede un'amichevole con grande incasso. In piena stagione.", emptyList(), listOf(
+            Scelta("Accetto", tifosi = 4, fiducia = 3, condizione = -6, esito = "Casa piena, gambe pesanti."),
+            Scelta("Declino", condizione = 2, fiducia = -2, tifosi = -1, esito = "Il presidente borbotta, i giocatori recuperano.")))
+        else -> Evento("Il senatore dello spogliatoio", "Il veterano chiede di riunire il gruppo prima del match: \"Parlo io, mister\".", emptyList(), listOf(
+            Scelta("Lascialo parlare", morale = 4, clima = 5, esito = "Discorso emozionante. Qualcuno piange."),
+            Scelta("Parlo io", clima = 2, fiducia = 1, esito = "Rispetto, ma meno trasporto."),
+            Scelta("Nessuno parla", clima = -1, esito = "Silenzio teso: cinque minuti di nulla.")))
         else -> Evento("Cambio di moda", "Un giocatore si presenta con la sciarpa in estate. \"È un look\".", emptyList(), listOf(
             Scelta("Nessun problema", morale = 3, clima = 1, esito = "La moda scalda, in effetti."),
             Scelta("Regole sull'abbigliamento", clima = -1, fiducia = 1, esito = "Il fashion look è bocciato.")))
