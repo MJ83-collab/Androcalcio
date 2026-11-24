@@ -303,7 +303,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 Screen.GIORNALE -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
-                    GiornaleScreen(ex)
+                    GiornaleScreen(ex) { vm.scegliSfida(it) }
                 }
                 Screen.PRESTITI -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
@@ -474,7 +474,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         vm.formazioniSalvate.collectAsStateWithLifecycle().value, { vm.salvaFormazione(it) }, { vm.caricaFormazione(it) },
                         vm.premioPromesso.collectAsStateWithLifecycle().value,
                         PremioPartita.costo(players.sumOf { p -> p.salary }), { vm.promettiPremio(it) },
-                        cambioCond = vm.cambioCond.collectAsStateWithLifecycle().value, onCambioCond = { vm.setCambioCond(it) })
+                        cambioCond = vm.cambioCond.collectAsStateWithLifecycle().value, onCambioCond = { vm.setCambioCond(it) },
+                        fasce = vm.fasce.collectAsStateWithLifecycle().value, onFasce = { vm.setFasce(it) },
+                        schema = vm.schemaPiazzati.collectAsStateWithLifecycle().value, onSchema = { vm.setSchemaPiazzati(it) })
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()

@@ -251,7 +251,7 @@ fun ObiettiviScreen(ex: ExtraStato, c: ClubState, posizione: Int? = null) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun GiornaleScreen(ex: ExtraStato) {
+fun GiornaleScreen(ex: ExtraStato, onSceltaSfida: (Int) -> Unit = {}) {
     Pagina {
         SectionTitle("Prossima partita")
         GlassCard(Modifier.fillMaxWidth()) {
@@ -281,7 +281,15 @@ fun GiornaleScreen(ex: ExtraStato) {
                 Text(sf?.let { "Prossima partita: ${it.testo} (premio: +${it.fiducia} fiducia, +${it.tifosi} tifosi)" }
                     ?: "La prima sfida arriva dopo la prossima partita.", color = AC.Text, fontWeight = FontWeight.Bold)
                 if (ex.sfidaEsito.isNotEmpty()) Text(ex.sfidaEsito, color = AC.TextDim, fontSize = 12.sp)
-                Text("Sfide riuscite: ${ex.sfideVinte}", color = AC.TextDim, fontSize = 12.sp)
+                if (ex.sfideOfferte.isNotEmpty()) {
+                    Text("Scegli la sfida (più è difficile, più rende):", color = AC.TextDim, fontSize = 12.sp)
+                    ex.sfideOfferte.forEach { o ->
+                        PcChip(ex.sfida?.id == o.id, { onSceltaSfida(o.id) }, {
+                            Text("${it.androcalcio.engine.Sfide.livello(o.id)}: ${o.testo} (+${o.fiducia} fiducia, +${o.tifosi} tifosi)", fontSize = 12.sp)
+                        }, Modifier.fillMaxWidth())
+                    }
+                }
+                Text("Sfide riuscite: ${ex.sfideVinte} · serie in corso: ${ex.sfideSerie} (ogni 3 di fila, premio extra)", color = AC.TextDim, fontSize = 12.sp)
             }
         }
 

@@ -14,8 +14,11 @@ object CalendarioGiorni {
         ALLENAMENTO("Allenamento", "🏃", "Condizione −1, preparazione +1"),
         RIPOSO("Riposo", "🛌", "Condizione +6, morale +1, preparazione −1"),
         AMICHEVOLE("Amichevole", "🤝", "Condizione −4, preparazione +2; apre le amichevoli"),
-        MERCATO("Mercato", "💼", "Giornata leggera, condizione +2; apre il mercato")
+        MERCATO("Mercato", "💼", "Giornata leggera, condizione +2; apre il mercato"),
+        RITIRO("Ritiro", "🏕️", "Solo luglio e agosto. Costa 20.000 €: condizione −2, preparazione +2, morale +2")
     }
+
+    const val COSTO_RITIRO = 20_000L   // al giorno
 
     const val KEY_OGGI = "cal_oggi_"      // + stagione: giorno corrente (epochDay)
     const val KEY_DIARIO = "cal_diario_"  // + stagione: "epochDay:ATTIVITA;..."
@@ -66,6 +69,7 @@ object CalendarioGiorni {
         Attivita.AMICHEVOLE -> attuale + 2
         Attivita.RIPOSO -> attuale - 1
         Attivita.MERCATO -> attuale
+        Attivita.RITIRO -> attuale + 2
     }.coerceIn(0, PREP_MAX)
 
     /** Effetto di un'attività su condizione e morale di un giocatore non infortunato. */
@@ -74,5 +78,6 @@ object CalendarioGiorni {
         Attivita.RIPOSO -> p.copy(condition = (p.condition + 6).coerceAtMost(100), morale = (p.morale + 1).coerceAtMost(99))
         Attivita.AMICHEVOLE -> p.copy(condition = (p.condition - 4).coerceAtLeast(50))
         Attivita.MERCATO -> p.copy(condition = (p.condition + 2).coerceAtMost(100))
+        Attivita.RITIRO -> p.copy(condition = (p.condition - 2).coerceAtLeast(50), morale = (p.morale + 2).coerceAtMost(99))
     }
 }

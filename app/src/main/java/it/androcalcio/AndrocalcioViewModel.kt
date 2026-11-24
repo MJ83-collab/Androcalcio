@@ -102,6 +102,10 @@ import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Forma
 import it.androcalcio.engine.Mentori
 import it.androcalcio.engine.Ritmo
+import it.androcalcio.engine.Atmosfera
+import it.androcalcio.engine.Fedelta
+import it.androcalcio.engine.Fasce
+import it.androcalcio.engine.SchemaPiazzati
 import it.androcalcio.engine.CalendarioGiorni
 import it.androcalcio.engine.AssistenteLive
 import it.androcalcio.engine.Medical
@@ -290,6 +294,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private val _ampiezza = MutableStateFlow(Ampiezza.values()[prefs.getInt("ampiezza", 1).coerceIn(0, 2)])
     val ampiezza: StateFlow<Ampiezza> = _ampiezza
     fun setAmpiezza(a: Ampiezza) { _ampiezza.value = a; prefs.edit().putInt("ampiezza", a.ordinal).apply() }
+
+    /** Gioco sulle fasce o al centro, e schema sui calci piazzati: solo per la tua squadra, in partita dal vivo. */
+    private val _fasce = MutableStateFlow(Fasce.values()[prefs.getInt("fasce", Fasce.MISTO.ordinal).coerceIn(0, Fasce.values().size - 1)])
+    val fasce: StateFlow<Fasce> = _fasce
+    fun setFasce(f: Fasce) { _fasce.value = f; prefs.edit().putInt("fasce", f.ordinal).apply() }
+    private val _schemaPiazzati = MutableStateFlow(SchemaPiazzati.values()[prefs.getInt("schema_piazzati", 0).coerceIn(0, SchemaPiazzati.values().size - 1)])
+    val schemaPiazzati: StateFlow<SchemaPiazzati> = _schemaPiazzati
+    fun setSchemaPiazzati(s: SchemaPiazzati) { _schemaPiazzati.value = s; prefs.edit().putInt("schema_piazzati", s.ordinal).apply() }
     fun liveAmpiezza(a: Ampiezza) { val i = _live.value ?: return; i.m.setAmpiezza(i.userHome, a); bump() }
 
     /** Cambio programmato: 0 = spento, altrimenti il minuto (60, 70, 80) in cui scatta un cambio automatico. */
@@ -626,6 +638,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val prezzi: Map<String, Int> = emptyMap(), val abbonatiPct: Int = 0,
         val premi: List<Premi.Premio> = emptyList(), val giornale: Giornale.Edizione? = null, val social: List<String> = emptyList(),
         val sfida: Sfide.Sfida? = null, val sfideVinte: Int = 0, val sfidaEsito: String = "",
+        val sfideOfferte: List<Sfide.Sfida> = emptyList(), val sfideSerie: Int = 0,
         val trofei: Set<String> = emptySet(), val avanzate: Avanzate.Totali = Avanzate.Totali(),
         val finestra: Finestre.Stato = Finestre.Stato.ESTIVA, val ultimoGiorno: Boolean = false,
         val prestiti: List<Prestiti.Prestito> = emptyList(),
@@ -680,6 +693,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             abbonatiPct = Abbonamenti.abbonatiPct(dao.statoInt(StatoKeys.TIFOSI), prezzi.values.average().toInt()),
             premi = Premi.decode(dao.stato("premi")), giornale = Giornale.decode(dao.stato("giornale")), social = Social.decode(dao.stato("social")),
             sfida = Sfide.da(dao.stato("sfida")?.toIntOrNull()), sfideVinte = dao.statoInt("sfide_vinte"), sfidaEsito = dao.stato("sfida_esito").orEmpty(),
+            sfideOfferte = Sfide.decodeOfferte(dao.stato("sfide_offerte")), sfideSerie = dao.statoInt("sfide_serie"),
             trofei = Achievement.decode(dao.stato("achievement")), avanzate = Avanzate.decode(dao.stato("avanzate")),
             finestra = Finestre.stato(prossima, totali), ultimoGiorno = Finestre.ultimoGiorno(prossima, totali),
             prestiti = Prestiti.decode(dao.stato("prestiti")), meteo = meteo, budget = t.budget, giornata = prossima,
@@ -709,6 +723,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         avviso("Trofeo sbloccato: " + nuovi.joinToString { "${it.icona} ${it.nome}" } + ".")
     }
 
+    /** Sceglie la sfida per la prossima partita tra quelle proposte. */
+    fun scegliSfida(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (Sfide.decodeOfferte(dao.stato("sfide_offerte")).none { it.id == id }) return@launch
+            dao.setStato(Stato("sfida", id.toString()))
+            aggiornaExtra()
+        }
+    }
+
     /** Dopo una partita della tua squadra: statistiche avanzate, giornale, contatori di carriera, trofei. */
     private suspend fun registraPartita(me: Team, opp: Team, mioHome: Boolean, r: MatchReport, live: Boolean = false) {
         val gf = if (mioHome) r.homeGoals else r.awayGoals
@@ -729,10 +752,20 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + sf.tifosi)
                 dao.setStatoInt("sfide_vinte", dao.statoInt("sfide_vinte") + 1)
             }
+            // Serie di sfide riuscite: ogni terza di fila vale un premio extra
+            val serie = if (ok) dao.statoInt("sfide_serie") + 1 else 0
+            dao.setStatoInt("sfide_serie", serie)
+            if (ok && serie % 3 == 0) {
+                dao.setStatoInt(StatoKeys.FIDUCIA, dao.statoInt(StatoKeys.FIDUCIA) + 2)
+                dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + 3)
+            }
             dao.setStato(Stato("sfida_esito", (if (ok) "Sfida riuscita: " else "Sfida fallita: ") + sf.testo.lowercase() +
                 if (ok) " (+${sf.fiducia} fiducia, +${sf.tifosi} tifosi)." else "."))
         }
-        dao.setStato(Stato("sfida", Sfide.genera(kotlin.random.Random.Default).id.toString()))
+        // Tre sfide per la prossima partita (facile, media, difficile): di default la media, la puoi cambiare dal giornale
+        val offerte = Sfide.offerte(kotlin.random.Random.Default)
+        dao.setStato(Stato("sfide_offerte", Sfide.codice(offerte)))
+        dao.setStato(Stato("sfida", offerte[1].id.toString()))
         dao.setStato(Stato("social", Social.encode(Social.post(me.name, opp.name, gf, gs, derby, voti.maxByOrNull { it.second }?.first, null, kotlin.random.Random.Default))))
         societaDopoPartita(me, opp, gf, gs, r, live)
         dopoPartitaV06(me, mioHome, gf, gs, r)
@@ -974,7 +1007,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     data class LiveInfo(
         val m: LiveMatch, val tick: Int = 0, val paused: Boolean = false, val speed: Int = 1,
         val userHome: Boolean = true, val league: MatchResult? = null, val saved: Boolean = false,
-        val meteo: String = "", val esito: Map<Long, EsitoGiocatore> = emptyMap()
+        val meteo: String = "", val esito: Map<Long, EsitoGiocatore> = emptyMap(),
+        val atmosfera: String = ""
     )
     private val _live = MutableStateFlow<LiveInfo?>(null)
     val live: StateFlow<LiveInfo?> = _live
@@ -999,6 +1033,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val msLega = dao.matchesOnce(key(me), _season.value)
         val cond = condizioni(league?.round ?: 1, msLega.filter { !Cup.isCup(it.round) }.maxOfOrNull { it.round } ?: 38, home,
             userHome, Migliorie.decodeFatte(dao.stato("migliorie_fatte")))
+        val atm = Atmosfera.valore(dao.statoInt(StatoKeys.TIFOSI), userHome, home.stadiumCapacity)
         val m = LiveMatch(
             home, if (userHome) res.xi else opp, away, if (userHome) opp else res.xi,
             if (userHome) _formation.value else oppF, if (userHome) oppF else _formation.value,
@@ -1015,10 +1050,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             meteoGol = cond.fattoreGol() * (if (userHome) Prato.fattore(dao.statoInt(Prato.KEY)) else 1.0),
             trapH = userHome && _trappola.value, trapA = !userHome && _trappola.value,
             arbitro = Disciplina.arbitro(dao.statoInt("c_partite") + 1, _season.value.hashCode().toLong()),
-            varAttivo = true, immersivo = true
+            varAttivo = true, immersivo = true, atmosfera = atm,
+            homeFasce = if (userHome) _fasce.value else Fasce.MISTO, awayFasce = if (userHome) Fasce.MISTO else _fasce.value,
+            homeSchema = if (userHome) _schemaPiazzati.value else SchemaPiazzati.NORMALE,
+            awaySchema = if (userHome) SchemaPiazzati.NORMALE else _schemaPiazzati.value
         )
         assistVisti.clear(); assistUltimo = -1; _consiglio.value = null
-        return LiveInfo(m, speed = _opzioni.value.velocita, userHome = userHome, league = league, meteo = cond.descrizione())
+        return LiveInfo(m, speed = _opzioni.value.velocita, userHome = userHome, league = league, meteo = cond.descrizione(),
+            atmosfera = "${Atmosfera.etichetta(atm)} ($atm%)")
     }
 
     // Assistente dell'allenatore in partita: consiglio corrente, livello scelto (0 attivo, 1 discreto, 2 muto)
@@ -3483,6 +3522,13 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val g = calcolaGiorno() ?: return@launch
             val t = selectedTeam.value ?: return@launch
             if (g.giornoPartita) { _notice.value = "Oggi si gioca: vai alla partita."; return@launch }
+            if (a == CalendarioGiorni.Attivita.RITIRO) {
+                if (g.oggi.monthValue !in 7..8) { _notice.value = "Il ritiro si fa solo a luglio e agosto."; return@launch }
+                val tt = dao.team(t.id)
+                if (tt.budget < CalendarioGiorni.COSTO_RITIRO) { _notice.value = "Budget insufficiente per il ritiro."; return@launch }
+                dao.updateTeam(tt.copy(budget = tt.budget - CalendarioGiorni.COSTO_RITIRO))
+                registra(tt.id, "Ritiro precampionato", -CalendarioGiorni.COSTO_RITIRO, tt.budget - CalendarioGiorni.COSTO_RITIRO)
+            }
             val diario = g.diario.toMutableMap().also { it[g.oggi.toEpochDay()] = a }
             salvaGiorni(dao.playersOnce(t.id).map { CalendarioGiorni.applica(it, a) }, CalendarioGiorni.prep(g.prep, a), diario, g.oggi.plusDays(1))
             _notice.value = "${a.icona} ${a.label} · ${CalendarioGiorni.nomeGiorno(g.oggi)}"
@@ -3995,6 +4041,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (cura > 0L) { t = t.copy(budget = t.budget - cura); registra(meId, "Ampliamento: cura del prato", -cura, t.budget) }
         dao.setStatoInt(Prato.KEY, (dao.statoInt(Prato.KEY) + 30).coerceAtMost(100))   // in estate il prato si rifà
         dao.setStato(Stato(Minutaggio.KEY, "")); dao.setStatoInt(Minutaggio.KEY_PARTITE, 0, 0, 999)
+        // Bonus fedeltà: dopo almeno 3 stagioni nel club un premio del 3% dell'ingaggio e +3 di morale (solo se la cassa regge)
+        val rosaFedele = dao.playersOnce(meId)
+        val permanenza = Fedelta.avanza(Fedelta.decode(dao.stato(Fedelta.KEY)), rosaFedele.map { it.name })
+        dao.setStato(Stato(Fedelta.KEY, Fedelta.encode(permanenza)))
+        val fedeli = rosaFedele.filter { (permanenza[it.name] ?: 0) >= Fedelta.ANNI_MIN }
+        val totFedelta = fedeli.sumOf { Fedelta.bonus(it.salary) }
+        if (fedeli.isNotEmpty() && t.budget > totFedelta * 2) {
+            t = t.copy(budget = t.budget - totFedelta); registra(meId, "Bonus fedeltà", -totFedelta, t.budget)
+            dao.updatePlayers(fedeli.map { it.copy(morale = (it.morale + Fedelta.MORALE).coerceAtMost(99)) })
+            avviso("Bonus fedeltà a ${fedeli.size} ${if (fedeli.size == 1) "giocatore" else "giocatori"} con almeno ${Fedelta.ANNI_MIN} stagioni nel club (${money(totFedelta)}): morale +${Fedelta.MORALE}.")
+        }
         dao.updateTeam(t)
         note.forEach { avviso(it) }
     }

@@ -209,7 +209,10 @@ fun TatticaScreen(
     formazioni: List<it.androcalcio.engine.FormazioniSalvate.Preset?> = emptyList(),
     onSalvaFormazione: (Int) -> Unit = {}, onCaricaFormazione: (Int) -> Unit = {},
     premio: Boolean = false, costoPremio: Long = 0L, onPremio: (Boolean) -> Unit = {},
-    cambioCond: Int = 0, onCambioCond: (Int) -> Unit = {}
+    cambioCond: Int = 0, onCambioCond: (Int) -> Unit = {},
+    fasce: it.androcalcio.engine.Fasce = it.androcalcio.engine.Fasce.MISTO, onFasce: (it.androcalcio.engine.Fasce) -> Unit = {},
+    schema: it.androcalcio.engine.SchemaPiazzati = it.androcalcio.engine.SchemaPiazzati.NORMALE,
+    onSchema: (it.androcalcio.engine.SchemaPiazzati) -> Unit = {}
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi)
     var roleFor by remember { mutableStateOf<Player?>(null) }
@@ -284,6 +287,16 @@ fun TatticaScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 it.androcalcio.engine.Ampiezza.values().forEach { a -> PcChip(ampiezza == a, { onAmpiezza(a) }, { Text(a.label) }) }
             }
+            SectionTitle("Gioco sulle fasce")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                it.androcalcio.engine.Fasce.values().forEach { f -> PcChip(fasce == f, { onFasce(f) }, { Text(f.label) }) }
+            }
+            Text(fasce.descrizione, color = AC.TextDim, fontSize = 12.sp)
+            SectionTitle("Schema calci piazzati")
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                it.androcalcio.engine.SchemaPiazzati.values().forEach { s -> PcChip(schema == s, { onSchema(s) }, { Text(s.label) }) }
+            }
+            Text(schema.descrizione, color = AC.TextDim, fontSize = 12.sp)
             SectionTitle("Cambio programmato")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(0 to "Spento", 60 to "60'", 70 to "70'", 80 to "80'").forEach { (m, l) -> PcChip(cambioPronto == m, { onCambioPronto(m) }, { Text(l) }) }

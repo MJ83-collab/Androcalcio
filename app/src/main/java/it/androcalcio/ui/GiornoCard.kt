@@ -48,7 +48,7 @@ fun GiornoCard(g: AndrocalcioViewModel.GiornoStato, onAttivita: (Attivita) -> Un
             )
             if (prossima != null && !g.giornoPartita) {
                 Text("COSA FAI OGGI?", color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                Attivita.values().toList().chunked(2).forEach { riga ->
+                Attivita.values().filter { it != Attivita.RITIRO || g.oggi.monthValue in 7..8 }.chunked(2).forEach { riga ->
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         riga.forEach { a ->
                             PcChip(false, { onAttivita(a) }, {

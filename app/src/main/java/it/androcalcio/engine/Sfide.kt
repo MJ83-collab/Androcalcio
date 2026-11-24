@@ -17,6 +17,15 @@ object Sfide {
         Sfida(7, "Fai felice la curva: vinci con tre gol o più", 3, 6)
     )
 
+    // Livelli: tre sfide proposte a ogni partita, una per livello; più è difficile, più rende
+    private val FACILI = listOf(0, 4)
+    private val MEDIE = listOf(1, 2, 5)
+    private val DIFFICILI = listOf(3, 6, 7)
+    fun offerte(rng: Random): List<Sfida> = listOf(FACILI, MEDIE, DIFFICILI).map { l -> TUTTE[l[rng.nextInt(l.size)]] }
+    fun livello(id: Int): String = when (id) { in FACILI -> "Facile"; in MEDIE -> "Media"; else -> "Difficile" }
+    fun codice(l: List<Sfida>): String = l.joinToString(",") { it.id.toString() }
+    fun decodeOfferte(s: String?): List<Sfida> = s.orEmpty().split(",").mapNotNull { it.toIntOrNull() }.mapNotNull { da(it) }
+
     fun genera(rng: Random): Sfida = TUTTE[rng.nextInt(TUTTE.size)]
     fun da(id: Int?): Sfida? = TUTTE.firstOrNull { it.id == id }
 
