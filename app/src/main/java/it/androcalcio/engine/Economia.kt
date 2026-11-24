@@ -15,11 +15,11 @@ object Economia {
     const val QUOTA_INCASSO_STADIO = 0.55
 
     /** Diritti TV per divisione (0 = massima serie; l'ultimo valore vale anche per la Serie C), scalati dal piazzamento. */
-    val DIRITTI_TV = listOf(7_000_000L, 3_200_000L, 1_800_000L, 2_500_000L)   // 24/11: Serie C 1,5 -> 2,5 M
+    val DIRITTI_TV = listOf(7_000_000L, 4_000_000L, 1_800_000L, 3_800_000L)   // 24/11: B 3,2 -> 4 M, Serie C 1,5 -> 3,8 M (mai in passivo)
 
     /** Premio di piazzamento del primo classificato per divisione; il resto scende in proporzione. */
     private val PREMIO_BASE = listOf(8_000_000L, 3_000_000L, 1_500_000L)
-    private const val PREMIO_BASE_MINORI = 1_500_000L   // 24/11: 1 -> 1,5 M
+    private const val PREMIO_BASE_MINORI = 2_500_000L   // 24/11: 1 -> 2,5 M
     private const val DIRITTI_TV_MINORI = 1_500_000L
 
     /** Riempimento dello stadio: 45% per la squadra più debole del campionato, 90% per la più forte. */

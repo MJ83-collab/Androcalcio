@@ -27,6 +27,8 @@ import it.androcalcio.engine.AvatarGen.Spec
 /** Volti modificati dall'utente (nome -> volto) e azione per aprire l'editor; li fornisce il root dell'app. */
 val LocalAvatarModificati = compositionLocalOf<Map<String, Spec>> { emptyMap() }
 val LocalModificaAvatar = compositionLocalOf<((String) -> Unit)?> { null }
+/** I volti si modificano solo dentro l'editor: altrove toccarli non fa nulla. */
+val LocalEditorAttivo = compositionLocalOf { false }
 
 /** Colori sociali (maglia, colletto) della squadra di chi viene disegnato: se presenti, il volto indossa la maglia. */
 val LocalMagliaSquadra = compositionLocalOf<Pair<Color, Color>?> { null }
@@ -35,7 +37,7 @@ val LocalMagliaSquadra = compositionLocalOf<Pair<Color, Color>?> { null }
 @Composable
 fun Avatar(nome: String, size: Dp = 48.dp, modifier: Modifier = Modifier) {
     val spec = AvatarGen.specDi(nome, LocalAvatarModificati.current)
-    val modifica = LocalModificaAvatar.current
+    val modifica = LocalModificaAvatar.current.takeIf { LocalEditorAttivo.current }
     AvatarSpec(spec, size, if (modifica != null) modifier.clickable { modifica(nome) } else modifier, LocalMagliaSquadra.current)
 }
 

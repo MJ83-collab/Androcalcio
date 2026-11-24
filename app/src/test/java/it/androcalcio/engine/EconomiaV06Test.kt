@@ -31,12 +31,12 @@ class EconomiaV06Test {
     @Test fun squadraMediaInPariOUtile() {
         val a = saldi("Serie A", 0).sorted(); val b = saldi("Serie B", 1).sorted()
         val c = listOf("Serie C Girone A", "Serie C Girone B", "Serie C Girone C").flatMap { saldi(it, 3) }.sorted()
-        // Taratura 24/11/2026: A mediana circa +5,6 M, B circa +3,4 M, C circa in pari (-0,1 M)
+        // Taratura 24/11/2026: A mediana circa +5,6 M, B circa +4,2 M, C circa +1,5 M e nessuna squadra di C in passivo
         assertTrue("Serie A mediana ${a[a.size / 2]}", a[a.size / 2] in 4_000_000L..7_500_000L)
-        assertTrue("Serie B mediana ${b[b.size / 2]}", b[b.size / 2] in 2_500_000L..4_500_000L)
+        assertTrue("Serie B mediana ${b[b.size / 2]}", b[b.size / 2] in 3_000_000L..5_500_000L)
         assertTrue("Nessuna di A perde più di 8 M: ${a.first()}", a.first() > -8_000_000L)
-        assertTrue("Serie C mediana ${c[c.size / 2]}", c[c.size / 2] in -1_000_000L..1_000_000L)
-        assertTrue("Serie C peggiore ${c.first()}", c.first() > -3_000_000L)
+        assertTrue("Serie C mediana ${c[c.size / 2]}", c[c.size / 2] in 800_000L..2_500_000L)
+        assertTrue("Nessuna di C in passivo: ${c.first()}", c.first() > 0L)
     }
 
     @Test fun premioVittoriaSponsor() {

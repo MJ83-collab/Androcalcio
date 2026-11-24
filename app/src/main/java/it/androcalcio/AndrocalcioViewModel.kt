@@ -2352,6 +2352,24 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Database predefinito dell'utente: squadre, giocatori, staff e volti modificati nell'editor ----
+    private val predefinitoFile = File(app.filesDir, "predefinito_utente.json")
+
+    fun salvaComePredefinito() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val j = org.json.JSONObject(DataIO.export(dao))
+            listOf("statistiche", "clausole", "convocazioni", "rosaNazionale", "nazionaleStats", "tiri").forEach { j.remove(it) }
+            j.put("stato", org.json.JSONObject().apply { dao.stato("avatar")?.let { put("avatar", it) } })
+            predefinitoFile.writeText(j.toString())
+            _notice.value = "Le tue modifiche sono ora il database predefinito: le userà ogni nuova carriera."
+        }
+    }
+
+    fun tornaAlPredefinitoOriginale() {
+        predefinitoFile.delete()
+        _notice.value = "Database predefinito: di nuovo quello originale del gioco."
+    }
+
     private suspend fun resetDefaultsNow() {
         DataIO.wipe(dao)
         prefs.edit().remove("team_id").putBoolean("partita_iniziata", false).apply()
@@ -2359,8 +2377,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         _started.value = false
         prefs.edit().putInt("season_year", 2026).apply()
         _season.value = seasonName(2026)
-        SeedData.insertInto(ctx, dao)
-        SeedData.insertGiappone(ctx, dao)
+        val mio = predefinitoFile.takeIf { it.exists() }?.let { f ->
+            try {
+                DataIO.import(dao, f.readText())
+                org.json.JSONObject(f.readText()).optJSONObject("stato")?.optString("avatar")?.takeIf { it.isNotEmpty() }?.let {
+                    dao.setStato(Stato("avatar", it)); _avatar.value = AvatarGen.decodeMappa(it)
+                }
+                true
+            } catch (e: Exception) { DataIO.wipe(dao); false }
+        } ?: false
+        if (!mio) {
+            SeedData.insertInto(ctx, dao)
+            SeedData.insertGiappone(ctx, dao)
+        }
         assicuraAllStar()
         assegnaNumeri(0L)
     }

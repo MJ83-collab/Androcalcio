@@ -107,6 +107,12 @@ fun EditorScreen(
                         onClick = { vm.saveCustom() }, modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
                     ) { Text("Salva come personalizzati") }
+                    Text("Database predefinito: le tue modifiche (squadre, giocatori, volti) diventano la base di ogni nuova carriera e di \"Ripristina\". Tocca un volto qui sotto per modificarlo.",
+                        style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PcAction(onClick = { vm.salvaComePredefinito() }) { Text("Usa come predefinito") }
+                        PcAction(onClick = { vm.tornaAlPredefinitoOriginale() }) { Text("Torna all'originale") }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PcAction(onClick = { export.launch("androcalcio-dati.json") }) { Text("Esporta JSON") }
                         PcAction(onClick = { import.launch(arrayOf("*/*")) }) { Text("Importa JSON") }
@@ -144,8 +150,12 @@ fun EditorScreen(
         item { PcAction(onClick = { vm.addPlayer() }) { Text("Aggiungi giocatore") } }
         items(players, key = { it.id }) { p ->
             GlassCard(Modifier.fillMaxWidth().clickable { editing = p }) {
-                Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("${p.role}  ${p.name}")
+                Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.runtime.CompositionLocalProvider(it.androcalcio.ui.components.LocalEditorAttivo provides true) {
+                        it.androcalcio.ui.components.Avatar(p.name, 40.dp)   // tocca il volto per modificarlo
+                    }
+                    Text("${p.role}  ${p.name}", Modifier.weight(1f).padding(start = 8.dp))
                     Text("${p.overall}", color = AC.Accent)
                 }
             }
