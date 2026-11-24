@@ -54,7 +54,12 @@ fun AnalisiPartita(rep: MatchReport, userHome: Boolean) {
         Triple("Espulsioni", n(true, EventType.RED).toString(), n(false, EventType.RED).toString()),
         Triple("Infortuni", n(true, EventType.INJURY).toString(), n(false, EventType.INJURY).toString()),
         Triple("Cambi", n(true, EventType.SUB).toString(), n(false, EventType.SUB).toString())
-    )
+    ) + (if (rep.extraCasa != null && rep.extraOspiti != null) listOf(
+        Triple("Passaggi", "${rep.extraCasa.passaggiRiusciti}/${rep.extraCasa.passaggi}", "${rep.extraOspiti.passaggiRiusciti}/${rep.extraOspiti.passaggi}"),
+        Triple("Precisione passaggi", "${rep.extraCasa.precisione}%", "${rep.extraOspiti.precisione}%"),
+        Triple("Duelli vinti", "${rep.extraCasa.duelliVinti}/${rep.extraCasa.duelli}", "${rep.extraOspiti.duelliVinti}/${rep.extraOspiti.duelli}"),
+        Triple("Km percorsi", "%.1f".format(rep.extraCasa.km), "%.1f".format(rep.extraOspiti.km))
+    ) else emptyList())
 
     PaperPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -118,7 +118,8 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                     }, onChiudi = { vm.chiudiConsiglio() })
                 }
             }
-            item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + if (m.varAttivo) " · VAR" else "",
+            item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + (if (m.varAttivo) " · VAR" else "") +
+                (if (info.atmosfera.isNotEmpty()) " · Stadio ${info.atmosfera}" else ""),
                 color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
             item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco ?: last?.home, palla.scia) }
@@ -161,7 +162,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                         )
                     }
                 }
-                LivePanel.STAT -> item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
+                LivePanel.STAT -> item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa, m.extraH, m.extraA) }
                 LivePanel.ASSISTENTE -> item {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("IL TUO VICE", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
@@ -287,9 +288,22 @@ private fun NeonTile(label: String, icon: ImageVector, on: Boolean, modifier: Mo
 
 /** Statistiche della partita su carta bianca. */
 @Composable
-internal fun StatPanel(tiriCasa: Int, tiriOspiti: Int, possesso: Int) {
+internal fun StatPanel(
+    tiriCasa: Int, tiriOspiti: Int, possesso: Int,
+    extraCasa: it.androcalcio.engine.StatExtra? = null, extraOspiti: it.androcalcio.engine.StatExtra? = null
+) {
     PaperPanel(Modifier.fillMaxWidth()) {
-        listOf("Tiri" to "$tiriCasa - $tiriOspiti", "Possesso" to "$possesso% - ${100 - possesso}%").forEachIndexed { i, (k, v) ->
+        val righe = buildList {
+            add("Tiri" to "$tiriCasa - $tiriOspiti")
+            add("Possesso" to "$possesso% - ${100 - possesso}%")
+            if (extraCasa != null && extraOspiti != null) {
+                add("Passaggi" to "${extraCasa.passaggi} - ${extraOspiti.passaggi}")
+                add("Precisione" to "${extraCasa.precisione}% - ${extraOspiti.precisione}%")
+                add("Duelli vinti" to "${extraCasa.duelliVinti} - ${extraOspiti.duelliVinti}")
+                add("Km percorsi" to "%.1f - %.1f".format(extraCasa.km, extraOspiti.km))
+            }
+        }
+        righe.forEachIndexed { i, (k, v) ->
             PaperRow(i) {
                 Text(k, Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(v, color = AC.ColBlue, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)

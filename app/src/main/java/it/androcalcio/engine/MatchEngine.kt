@@ -37,7 +37,9 @@ data class MatchReport(
     val playedPlayers: List<Player> = emptyList(),  // tutti quelli scesi in campo, titolari e subentrati, per le pagelle
     val playerRatings: Map<Long, Double> = emptyMap(),  // pagella 3..10 per id giocatore
     val infortunati: Set<Long> = emptySet(),  // infortunati durante la partita
-    val espulsi: Set<Long> = emptySet()       // espulsi (rosso diretto o doppia ammonizione)
+    val espulsi: Set<Long> = emptySet(),      // espulsi (rosso diretto o doppia ammonizione)
+    val extraCasa: StatExtra? = null,         // passaggi, duelli e km (solo partita dal vivo)
+    val extraOspiti: StatExtra? = null
 )
 
 /**

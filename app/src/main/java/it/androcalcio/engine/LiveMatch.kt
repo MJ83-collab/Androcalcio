@@ -33,8 +33,15 @@ class LiveMatch(
     val arbitro: Disciplina.Arbitro = Disciplina.Arbitro("Arbitro", 2, 2),
     val varAttivo: Boolean = true,
     /** Partita raccontata: arbitro che può sbagliare, VAR, percorso della palla e telecronaca. Le simulazioni restano pulite. */
-    private val immersivo: Boolean = false
+    private val immersivo: Boolean = false,
+    /** Atmosfera dello stadio 0..100 (vedi Atmosfera): conta solo nella partita dal vivo. */
+    private val atmosfera: Int = 50,
+    private val homeFasce: Fasce = Fasce.MISTO, private val awayFasce: Fasce = Fasce.MISTO,
+    private val homeSchema: SchemaPiazzati = SchemaPiazzati.NORMALE, private val awaySchema: SchemaPiazzati = SchemaPiazzati.NORMALE
 ) {
+    private val campo = if (immersivo) Atmosfera.fattore(atmosfera) else 1.0
+    val extraH = StatExtra()
+    val extraA = StatExtra()
     private val vistaCasa = manualHome
     private val rngI: Random = if (immersivo) Random(rng.nextLong()) else rng   // flusso separato: non altera il resto della partita
 
@@ -327,7 +334,7 @@ class LiveMatch(
             "${away.shortName} passa a mentalità ${nA.label.lowercase()}", 0.5f, 0.5f)
         mH = nH; mA = nA
         if (rng.nextDouble() < MatchEngine.ATTACK_PER_MINUTE * meteoGol * (mH.tempo + mA.tempo) / 2) {
-            val ph = h.mid * MatchEngine.HOME_BONUS * pressH.poss * lineH.poss * ampH.poss
+            val ph = h.mid * MatchEngine.HOME_BONUS * campo * pressH.poss * lineH.poss * ampH.poss
             val pNow = ph / (ph + a.mid * pressA.poss * lineA.poss * ampA.poss)
             val homeAtt = rng.nextDouble() < pNow
             val att = if (homeAtt) h else a
@@ -343,6 +350,7 @@ class LiveMatch(
             var ratio = att.atk * mAtt.atk * lAtt.atk * ampAtt.atk / (dfn.def * mDef.def * lDef.def * ampDef.def * defPen)
             val contro = if (homeAtt) contropiedeH else contropiedeA
             if (contro && (if (homeAtt) pNow else 1 - pNow) < 0.5) ratio *= 1.12
+            ratio *= if (homeAtt) homeFasce.fattore(xiH) else awayFasce.fattore(xiA)
             // Trappola del fuorigioco: spesso ferma l'azione, ma se salta l'attaccante va in porta da solo
             val trappola = (if (homeAtt) trapA else trapH) && lDef == DefLine.ALTA
             val rT = rng.nextDouble()
@@ -417,7 +425,30 @@ class LiveMatch(
         if (rng.nextDouble() < 0.0006) infortunio(rng.nextBoolean())
         if (minute == 45) events += MatchEvent(45, EventType.HALFTIME, true, "Fine primo tempo", 0.5f, 0.5f)
         if (minute == 90) events += MatchEvent(90, EventType.FULLTIME, true, "Fine partita $hg-$ag", 0.5f, 0.5f)
-        if (immersivo) telecronaca(prima)
+        if (immersivo) { statisticheMinuto(); telecronaca(prima) }
+    }
+
+    private fun forzaDuello(xi: List<Player>): Double =
+        if (xi.isEmpty()) 1.0 else xi.map { it.ag + it.re }.average() * xi.map { energyOf(it) }.average()
+
+    /** Passaggi, duelli e chilometri del minuto: dipendono da possesso, qualità, aggressività, resistenza e fatica. */
+    private fun statisticheMinuto() {
+        fun corsa(e: StatExtra, xi: List<Player>, r: Ritmo) {
+            e.km += xi.sumOf { (0.088 + 0.04 * it.re / 99.0) * Math.sqrt(energyOf(it)) * Math.sqrt(r.consumo) }
+        }
+        fun passaggi(e: StatExtra, xi: List<Player>, quota: Double) {
+            if (xi.isEmpty()) return
+            val acc = (0.60 + 0.30 * xi.map { it.pa }.average() / 99.0).coerceIn(0.5, 0.92)
+            val n = (quota * 18 + rngI.nextInt(0, 4)).roundToInt()
+            repeat(n) { e.passaggi++; if (rngI.nextDouble() < acc) e.passaggiRiusciti++ }
+        }
+        corsa(extraH, xiH, ritmoH); corsa(extraA, xiA, ritmoA)
+        passaggi(extraH, xiH, pHome); passaggi(extraA, xiA, 1.0 - pHome)
+        val fh = forzaDuello(xiH); val fa = forzaDuello(xiA)
+        repeat(1 + rngI.nextInt(0, 2)) {
+            extraH.duelli++; extraA.duelli++
+            if (rngI.nextDouble() < fh / (fh + fa)) extraH.duelliVinti++ else extraA.duelliVinti++
+        }
     }
 
     /** Un commento a caldo sull'ultimo episodio, oppure ogni cinque minuti un commento di fondo con un indizio. */
@@ -451,9 +482,11 @@ class LiveMatch(
         val (x, y) = if (penalty) Pair(if (homeAtt) 0.9f else 0.1f, 0.5f) else pos(homeAtt)
         val kind = when { penalty -> "Rigore"; angolo -> "Calcio d'angolo"; else -> "Punizione" }
         if (homeAtt) hs++ else asht++
+        val schema = if (homeAtt) homeSchema else awaySchema
         val pGoal = when {
             penalty -> 0.70 + 0.2 * taker.fi / 99.0
-            else -> 0.04 + 0.08 * taker.ti / 99.0   // punizioni e angoli: stessa probabilità, così la taratura non cambia
+            // punizioni e angoli: stessa probabilità, così la taratura non cambia (lo schema scelto la sposta)
+            else -> (0.04 + 0.08 * taker.ti / 99.0) * (if (angolo) schema.angoli else schema.punizioni)
         }
         if (rng.nextDouble() < pGoal) {
             if (homeAtt) hg++ else ag++
@@ -516,5 +549,6 @@ class LiveMatch(
 
     fun report() = MatchReport(home, away, hg, ag, hs, asht, (pHome * 100).toInt(), events.toList(), homeF, awayF,
         playedH.toSet(), playedA.toSet(), xiH.toList(), xiA.toList(),
-        rated.values.toList(), finalRatings(), infortunati.toSet(), espulsi.toSet())
+        rated.values.toList(), finalRatings(), infortunati.toSet(), espulsi.toSet(),
+        if (immersivo) extraH else null, if (immersivo) extraA else null)
 }

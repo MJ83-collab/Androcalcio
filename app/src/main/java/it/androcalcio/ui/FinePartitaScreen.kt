@@ -49,7 +49,7 @@ fun FinePartitaScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMo
             Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item { Scoreboard(m.home, m.away, m.hg, m.ag, "Finale") }
-            item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
+            item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa, m.extraH, m.extraA) }
             item { Titolo("Analisi e statistiche") }
             item { AnalisiPartita(rep, info.userHome) }
             item { Titolo("Le tue pagelle · ${mia.shortName}") }
