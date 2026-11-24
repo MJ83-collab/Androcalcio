@@ -267,7 +267,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val nextLega = if (tm == null) null else matches
                         .filter { !it.played && (it.homeTeamId == tm.id || it.awayTeamId == tm.id) }.minByOrNull { it.round }
                     // Prima della 1ª giornata, se ci sono amichevoli da giocare, la prossima partita è l'amichevole
-                    val iniziato = matches.any { it.played && !it.androcalcio.engine.Cup.isCup(it.round) }
+                    val iniziato = matches.any { m -> m.played && !it.androcalcio.engine.Cup.isCup(m.round) }
                     val nextAm = if (iniziato) null else amichevoli.filter { !it.played }.minByOrNull { it.round }
                     val next = nextAm ?: nextLega
                     val oppId = next?.let { if (it.homeTeamId == tm?.id) it.awayTeamId else it.homeTeamId }
