@@ -14,7 +14,7 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Installazione:** la chiave di firma è fissa, ma questa volta bisogna disinstallare la vecchia versione una volta. Esportare prima i salvataggi.
 
 ## Da verificare
-- **Verifica economica con le rose vere:** da eseguire (Serie A, B, C e tetto di 8 M). Valori attesi: Serie A mediana circa +5 M, Serie B circa +2 M, Serie C circa in pari; nessuna squadra di A perde più di 8 M. Non ancora eseguita.
+- **Verifica economica con le rose vere:** il test c'è ma le soglie sono larghe (vedi note di controllo); da stringere (Serie A, B, C e tetto di 8 M). Valori attesi: Serie A mediana circa +5 M, Serie B circa +2 M, Serie C circa in pari; nessuna squadra di A perde più di 8 M. Non ancora eseguita.
 
 ## Limiti noti
 - La squadra B non gioca partite proprie: cresce soltanto.
@@ -33,6 +33,24 @@ Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul
 - **Blocco 6/6 – squadra B e amichevoli:** squadra B/Under 23 e satellite (max 8 giocatori, solo fino a 23 anni, crescita mensile extra; satellite 40.000 €/anno), seguite dal preparatore capo. Amichevoli su invito (due club al mese).
 - **Tablet:** rotazione libera; menu laterale sempre visibile da 720 dp; contenuto centrato; partita su due colonne.
 - **Già presenti nel gioco, non rifatti:** diritti TV per posizione; offerte di altri club e ct di nazionale.
+
+## Blocchi 14–17 del ramo feat/fine-partita (nel codice, rimessi nel report il 24/11)
+- **Blocco 14 – Cambi con condizioni** (`engine/CambiCondizioni.kt`): stanco (<88%), ammonito, sotto dal 60' entra un attaccante, sopra dal 75' entra un difensore; max un cambio ogni 5 minuti dal 30'. Tattica → Cambi con condizioni.
+- **Blocco 15 – Atmosfera stadio** (`engine/StatExtra.kt`): solo partita dal vivo, ±4% sul possesso di chi gioca in casa (tifosi e capienza). Passaggi, precisione, duelli e km in Stat e nell'analisi finale.
+- **Blocco 16 – Gioco sulle fasce e calci piazzati** (`engine/FasceSchemi.kt`): Centrale/Misto/Fasce (±8% in base ai giocatori della zona); schema Normale/Palloni in area/Tiro diretto/Corto. I predefiniti non hanno effetto.
+- **Blocco 17 – Ritiro, fedeltà, sfide** (`engine/Fedelta.kt`, `engine/Sfide.kt`): ritiro precampionato (luglio-agosto, 20.000 €/giorno); bonus fedeltà a fine stagione (3+ stagioni, 3% dell'ingaggio, morale +3); sfide a scelta facile/media/difficile.
+
+## Da fare (priorità)
+1. **Playoff e playout giocabili.** Oggi sono simulati con la forza delle rose (`Spareggi` in `engine/V06.kt`, usati in `AndrocalcioViewModel`). Vanno giocati come partite vere, con la partita dal vivo se coinvolgono la squadra dell'utente.
+2. Provare tutto su telefono e tablet.
+3. Prelazione sui giovani del satellite.
+4. Far giocare partite proprie alla squadra B.
+5. Merge su `main` e v0.7.0 (da decidere con Marco).
+
+## Note di controllo del 24/11 (lettura del codice, nessuna build eseguita)
+- La verifica economica **esiste come test** (`EconomiaV06Test.squadraMediaInPariOUtile`) e gira in CI. Le soglie sono più larghe dei valori attesi nel report: A mediana > 0, B mediana > -0,5 M, nessuna di A sotto -8 M. I valori "A circa +5 M, B circa +2 M" non sono verificati dal test.
+- La prova su emulatore in CI usa **1.500 tocchi** (`.github/smoke.sh`), non 9.000 come scritto sopra.
+- La Serie C non ha un controllo nel test economico.
 
 ## Versione v0.6.0 (23/11/2026)
 ### Economia — meno punitiva
@@ -88,7 +106,7 @@ Nota: nel primo report avevo scritto che le 20 non c'erano nel codice. Due esist
 
 ### Avvio e distribuzione
 - **Crash all'avvio** (presente da v0.4): alcune operazioni iniziali partivano prima che il gioco fosse pronto. Ora partono solo a gioco pronto.
-- **Prova automatica su emulatore** a ogni build: avvio + 9.000 tocchi casuali. Nessun crash.
+- **Prova automatica su emulatore** a ogni build: avvio + 1.500 tocchi casuali. Nessun crash.
 - **Un solo file:** `Androcalcio-0.6.0.apk` (rose e dati già dentro).
 
 ## Cronologia
