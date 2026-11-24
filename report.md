@@ -85,3 +85,16 @@ Verifica (test con le rose vere, una stagione tipo con 3 sponsor): Serie A media
 - v0.4.0: mutui, batteria/prestazioni, Analisi.
 - v0.5.0: 16 migliorie (rifinanziamento, rate, ampiezza, backup .zip, tema nero…).
 - v0.6.0 (questo report): economia più generosa, nuovo proprietario, 20 migliorie, B–F.
+
+## Blocchi 18-23 e tablet – ramo feat/fine-partita (24/11/2026)
+- Pallone e giocatori: pallini numerati stile FM, pallone che ruota e cresce se alto, traiettoria blu tratteggiata, movimento in base all'azione.
+- Blocco 1/6 partita: meteo sul campo, recupero dinamico (90+N), replay del gol, linea del fuorigioco, scena infortunio, mappa di calore (tocca il nome a fine partita).
+- Blocco 2/6: calci piazzati in scena (battitore e zona di porta); rigori a scelta nelle coppe (scegli dove tirare e dove tuffarti).
+- Blocco 3/6: preparatore atletico capo (serve il preparatore generale in staff): decide allenamenti e riposi nei giorni liberi, piano di squadra e piani per reparto, crescita mensile del vivaio, report mensile nella scheda Rosa. Interruttore on/off.
+- Blocco 4/6: analista video (nuovo posto staff) e report sull'avversario; missioni osservatori "Promesse" per nazione (giovani 16-20 anni).
+- Blocco 5/6: rinnovi con clausole (bonus gol doppio -6% ingaggio, rescissoria -8%); ultras (umore, contestazioni) e coreografie (15.000 €) nella schermata Giornale.
+- Blocco 6/6: squadra B/Under 23 e satellite (max 8, solo fino a 23 anni, crescita mensile extra; satellite 40.000 €/anno), seguite dal preparatore capo; amichevoli su invito (2 club al mese).
+- Tablet: rotazione libera, menu laterale sempre visibile da 720 dp, contenuto centrato, partita su due colonne.
+- Già presenti e non rifatti: diritti TV per posizione (16), offerte di altri club e ct nazionale (20).
+- Non fatto: prelazione sui giovani del satellite; la squadra B non gioca partite proprie (solo crescita).
+- Da fare: prova su telefono e tablet, poi merge su main / v0.7.0.
