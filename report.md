@@ -191,6 +191,16 @@ Nota: nel primo report avevo scritto che le 20 non c'erano nel codice. Due esist
 - **Da fare:** gestire la finale dal vivo con rigori scelti da te nei turni europei (già previsto, da provare); provare tutto su telefono e tablet.
 - File nuovi: `engine/CoppeEuropee.kt`, `ui/EuropaScreen.kt`, test `CoppeEuropeeTest`.
 
+### Sessione 24/11 sera (9): stile, movimento, ruoli
+- **Stile Home ovunque (tema PC Calcio 7 blu):** sfondo azzurro marmorizzato su tutte le schermate, titoli di sezione a nastro obliquo, riquadri leggermente trasparenti.
+- **Centro sportivo:** nella scheda "Centro sportivo" ora c'è un disegno dedicato (campi con strisce, porte e coni, palestra, centro medico, video, GPS, piscina, crio, mensa, relax, foresteria, campo coperto). Gli edifici si colorano con i lavori.
+- **Movimento fluido a x1:** la palla va a velocità costante (non frena a ogni passaggio), i giocatori seguono la palla con una molla (nessuno scatto), l'anello giallo compare con più margine.
+- **Nuovi ruoli:** Esterno destro (FD), Esterno sinistro (FS), Ala destra (AD), Ala sinistra (AS). Compaiono nei filtri del Mercato e nelle affinità. Difesa già con destro/sinistro/centrale.
+- **Allenamento:** con focus Tattica un giocatore può imparare un ruolo nuovo (parte a metà affinità) o salire di 4 punti in uno noto; con focus Tecnica può diventare ambidestro (lento, dipende da età e allenatore).
+- **Cinico ("portato al risultato"):** circa 1 giocatore su 6 lo è dalla nascita, gli altri possono acquisirlo con l'allenamento tattico (molto raro). Ha il 20% di peso in più tra i tiratori. Salvato in Stato ("tratti"). Etichetta "Cinico" nella scheda giocatore.
+- **Cronaca sincronizzata:** il testo, la cronaca e il punteggio di un'azione compaiono quando la palla ha finito il tragitto (non a x4 o più).
+- **Da provare sul telefono:** fluidità reale, bilanciamento del Cinico, nuovi ruoli in formazione (nessuna formazione li usa ancora in automatico: si scelgono dalle affinità).
+
 ## Cronologia
 - v0.3.0 (22/11): 20 migliorie (conferenze, sponsor, vivaio, nazionali U21, All Star…).
 - v0.4.0: mutui, batteria/prestazioni, Analisi.
