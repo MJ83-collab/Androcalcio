@@ -21,7 +21,7 @@ Test e build GitHub Actions verdi (debug e release R8). ⚠️ Non provato su te
 - fiducia a 55, tifosi +5. **Nessuna penalità in classifica.**
 - Il proprietario si vede in Finanze → Proprietà.
 
-Verifica (test con le rose vere, una stagione tipo con 3 sponsor): Serie A mediana circa +5 M, Serie B circa +2 M, Serie C circa in pari. Nessuna squadra di A perde più di 8 M.
+Verifica da eseguire (test con le rose vere, una stagione tipo con 3 sponsor): attesi Serie A mediana circa +5 M, Serie B circa +2 M, Serie C circa in pari; nessuna squadra di A deve perdere più di 8 M. Non ancora eseguita.
 
 ## Le 20 migliorie
 | # | Miglioria | Dove |
@@ -77,7 +77,7 @@ Verifica (test con le rose vere, una stagione tipo con 3 sponsor): Serie A media
 - Blocco 15 – Atmosfera stadio (`engine/StatExtra.kt`, solo partita dal vivo: ±4% sul possesso di chi gioca in casa; tifosi e capienza). Passaggi, precisione, duelli, km in Stat e nell'analisi finale.
 - Blocco 16 – Gioco sulle fasce (`engine/FasceSchemi.kt`: Centrale/Misto/Fasce, ±8% in base ai giocatori della zona) e schema sui calci piazzati (Normale/Palloni in area/Tiro diretto/Corto). Predefiniti = nessun effetto, taratura invariata.
 - Blocco 17 – Ritiro precampionato (attività del calendario, luglio-agosto, 20.000 €/giorno), bonus fedeltà a fine stagione (3+ stagioni, 3% dell'ingaggio, morale +3; chiave `fedelta`), sfide a scelta (facile/media/difficile) con serie di 3.
-- Da fare: provare sul telefono; merge su main e v0.7.0 (chiedere a Marco); grandi: squadra B, satellite, amichevoli su invito.
+- Da fare: provare sul telefono; merge su main e v0.7.0 (chiedere a Marco). Squadra B, satellite e amichevoli su invito: fatti nel blocco 6/6 (vedi sezione blocchi 18-23).
 
 ---
 ## Cronologia
