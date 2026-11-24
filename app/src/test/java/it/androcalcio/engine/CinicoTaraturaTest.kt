@@ -107,9 +107,10 @@ class CinicoTaraturaTest {
         assertTrue("Gol/partita senza Cinici ${g(base)} fuori da 2,4-3,0", g(base) in 2.4..3.0)
         assertTrue("Gol/partita con Cinici ${g(cin)} fuori da 2,4-3,0", g(cin) in 2.4..3.0)
         assertTrue("Il Cinico non deve creare molti gol in più: ${g(cin)} contro ${g(base)}", g(cin) / g(base) in 0.98..1.025)
-        assertTrue("Il Cinico deve segnare il 10-15% in più (margine 6-20%): rapporto $rapporto", rapporto in 1.06..1.20)
+        assertTrue("Il Cinico deve segnare il 10-15% in più (margine 8-18%): rapporto $rapporto", rapporto in 1.08..1.18)
         assertTrue("Quota di gol dopo il 75' spostata troppo: ${tardi(base)} -> ${tardi(cin)}", tardi(cin) - tardi(base) in -0.5..2.0)
-        assertTrue("Conversione rigori ${conv(cin)}% fuori da 72-90%", conv(cin) in 72.0..90.0)
+        assertTrue("Conversione rigori ${conv(cin)}% fuori da 74-83%", conv(cin) in 74.0..83.0)
+        assertTrue("Il Cinico deve segnare più rigori", cin.rigoriCiniciGol.toDouble() / cin.rigoriCinici > base.rigoriGol.toDouble() / base.rigori)
     }
 
     // --- Regole semplici ---
@@ -122,7 +123,7 @@ class CinicoTaraturaTest {
     fun rigoreCinicoSegnaDiPiu() {
         val c = gioc(42, "Cinico"); val n = gioc(43, "Normale")
         Tratti.acquisiti = setOf(42L)
-        val base = 0.70 + 0.2 * 70 / 99.0
+        val base = RIGORE_BASE + RIGORE_FI * 70 / 99.0
         assertTrue(Tratti.rigore(base, c) > Tratti.rigore(base, n))
         assertEquals(base, Tratti.rigore(base, n), 1e-9)
         assertEquals(base, Tratti.rigore(base, null), 1e-9)

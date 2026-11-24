@@ -12,6 +12,12 @@ import kotlin.random.Random
  * manualHome / manualAway: i cambi di quella squadra li decide l'utente (niente cambi automatici).
  */
 private const val ANGOLO_QUOTA = 0.4
+/**
+ * Rigore in partita: probabilità di segnare RIGORE_BASE + RIGORE_FI * fi / 99 (più il bonus del Cinico).
+ * Era 0,70 + 0,2: la conversione misurata era 84,8%, sopra le medie reali (75-80%); con 0,64 scende a circa 79%.
+ */
+internal const val RIGORE_BASE = 0.64
+internal const val RIGORE_FI = 0.20
 
 class LiveMatch(
     val home: Team, homePlayers: List<Player>,
@@ -530,7 +536,7 @@ class LiveMatch(
         val scena = scenaPiazzato(homeAtt, penalty, angolo, x to y)
         val zona = if (immersivo) zonaTiro() else ""
         val pGoal = when {
-            penalty -> Tratti.rigore(0.70 + 0.2 * taker.fi / 99.0, taker)   // il Cinico sbaglia meno
+            penalty -> Tratti.rigore(RIGORE_BASE + RIGORE_FI * taker.fi / 99.0, taker)   // il Cinico sbaglia meno
             // punizioni e angoli: stessa probabilità, così la taratura non cambia (lo schema scelto la sposta)
             else -> (0.04 + 0.08 * taker.ti / 99.0) * (if (angolo) schema.angoli else schema.punizioni)
         }

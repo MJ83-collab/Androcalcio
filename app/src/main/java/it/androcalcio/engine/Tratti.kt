@@ -19,10 +19,11 @@ object Tratti {
     @Volatile var sporco: Boolean = false
 
     /**
-     * Peso extra tra i possibili tiratori. Era 1,2 senza misure; con 1,2 il Cinico segnava circa il 20-25% in più
-     * di sé stesso non Cinico. Con 1,10, più rigori e finali, l'effetto complessivo misurato è nel bersaglio 10-15%.
+     * Peso extra tra i possibili tiratori (era 1,2, mai misurato). Misure di CinicoTaraturaTest (4560 partite):
+     * con 1,10 (più rigori e finali) il Cinico segna il 9,0% in più di sé stesso non Cinico, sotto il bersaglio 10-15%;
+     * con 1,15 si arriva a RAPPORTO_DA_MISURARE. Il totale dei gol cresce meno dell'1%.
      */
-    const val PESO_TIRO = 1.10
+    const val PESO_TIRO = 1.15
 
     /** Rigore: punti di probabilità di segnare in più (0,85 diventa 0,89). Vale in partita e nelle serie dal vivo. */
     const val BONUS_RIGORE = 0.04
