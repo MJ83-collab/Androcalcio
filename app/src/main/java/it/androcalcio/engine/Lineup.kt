@@ -42,39 +42,53 @@ object Lineup {
         return aff / 100.0
     }
 
+    private fun insiemePerRiferimento(): MutableSet<Player> =
+        java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Player, Boolean>())
+
     /**
      * Sceglie un titolare per ogni posto del modulo (stesso reparto del posto) e li restituisce con il codice del posto,
      * nell'ordine di campo; i posti senza candidati sono saltati. [punteggio] dà il valore del giocatore nel reparto.
+     * I giocatori si distinguono per riferimento, non per id (nei test gli id possono essere tutti 0).
      */
     fun scegliPerPosti(disponibili: List<Player>, f: Formation, punteggio: (Player, String) -> Double): List<Pair<Player, String>> {
         val codici = f.postiCompleti()
         val reparti = f.repartiPosti()
         val scelti = arrayOfNulls<Player>(codici.size)
-        val usati = HashSet<Long>()
+        val usati = insiemePerRiferimento()
         for (i in codici.indices.sortedBy { rarita(codici[it]) }) {
-            val best = disponibili.filter { it.role == reparti[i] && it.id !in usati }
+            val best = disponibili.filter { it.role == reparti[i] && it !in usati }
                 .maxByOrNull { punteggio(it, reparti[i]) * idoneita(it, codici[i]) } ?: continue
-            usati += best.id
+            usati += best
             scelti[i] = best
         }
         return codici.indices.mapNotNull { i -> scelti[i]?.let { it to codici[i] } }
     }
 
-    /** Il giocatore nel posto [codice]: ruolo in campo assegnato solo se lo conosce abbastanza, altrimenti il suo ruolo naturale. */
+    /** Il giocatore nel posto [codice]: ruolo in campo assegnato solo se lo conosce al massimo, altrimenti il suo ruolo naturale. */
     private fun nelPosto(p: Player, codice: String): Player {
         val aff = if (codice.isEmpty() || codice == p.pos) 0 else TacticalRoles.options(p).firstOrNull { it.first == codice }?.second ?: 0
         val ruolo = if (aff >= AFFINITA_MIN) codice else ""
         return if (p.ruoloPartita == ruolo) p else p.copy(ruoloPartita = ruolo, compito = "")
     }
 
-    /** Proposta dell'allenatore: i migliori disponibili per ogni posto del modulo, nell'ordine di campo, con il ruolo in campo. */
-    fun coachPick(players: List<Player>, f: Formation): List<Player> {
+    /**
+     * Proposta dell'allenatore: undici nell'ordine dei posti (con il ruolo in campo) e la panchina, cioè chi resta fuori.
+     * Pochi giocatori in un reparto: gli undici si completano con i migliori rimasti.
+     */
+    fun coachPickConPanchina(players: List<Player>, f: Formation): Pair<List<Player>, List<Player>> {
         val avail = players.filter { it.injuredRounds == 0 }
-        val xi = scegliPerPosti(avail, f) { p, r -> score(p, r) }.map { (p, codice) -> nelPosto(p, codice) }.toMutableList()
-        // Ruolo scoperto (pochi giocatori): completa con i migliori rimasti
-        if (xi.size < 11) xi += avail.filter { a -> xi.none { it.id == a.id } }.sortedByDescending { it.overall }.take(11 - xi.size)
-        return xi
+        val scelti = scegliPerPosti(avail, f) { p, r -> score(p, r) }
+        val dentro = insiemePerRiferimento().also { set -> scelti.forEach { set += it.first } }
+        val xi = scelti.map { (p, codice) -> nelPosto(p, codice) }.toMutableList()
+        if (xi.size < 11) {
+            val extra = avail.filter { it !in dentro }.sortedByDescending { it.overall }.take(11 - xi.size)
+            xi += extra; dentro += extra
+        }
+        return xi to players.filter { it !in dentro }
     }
+
+    /** Proposta dell'allenatore: i migliori disponibili per ogni posto del modulo, nell'ordine di campo, con il ruolo in campo. */
+    fun coachPick(players: List<Player>, f: Formation): List<Player> = coachPickConPanchina(players, f).first
 
     /**
      * Gli undici nell'ordine dei posti del modulo (portiere, difesa, centrocampo, attacco; da sinistra a destra):
@@ -83,22 +97,22 @@ object Lineup {
     fun perPosti(xi: List<Player>, f: Formation): List<Player> {
         val codici = f.postiCompleti()
         val reparti = f.repartiPosti()
-        val resto = xi.toMutableList()
+        val presi = insiemePerRiferimento()
         val out = ArrayList<Player>(xi.size)
         for (rep in listOf("P", "D", "C", "A")) {
             val posti = codici.indices.filter { reparti[it] == rep }
-            val gruppo = resto.filter { it.role == rep }.sortedByDescending { it.overall }.toMutableList()
-            resto.removeAll(gruppo)
+            val gruppo = xi.filter { it.role == rep }.sortedByDescending { it.overall }.toMutableList()
+            gruppo.forEach { presi += it }
             val assegnati = arrayOfNulls<Player>(posti.size)
             posti.forEachIndexed { k, i ->
-                val g = gruppo.firstOrNull { TacticalRoles.assigned(it) == codici[i] } ?: return@forEachIndexed
-                assegnati[k] = g; gruppo.remove(g)
+                val idx = gruppo.indexOfFirst { TacticalRoles.assigned(it) == codici[i] }
+                if (idx >= 0) assegnati[k] = gruppo.removeAt(idx)
             }
             for (k in assegnati.indices) if (assegnati[k] == null && gruppo.isNotEmpty()) assegnati[k] = gruppo.removeAt(0)
             out += assegnati.filterNotNull()
             out += gruppo   // più giocatori del reparto che posti: in coda
         }
-        out += resto
+        out += xi.filter { it !in presi }
         return out
     }
 
