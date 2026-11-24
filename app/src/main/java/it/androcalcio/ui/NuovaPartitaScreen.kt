@@ -51,7 +51,7 @@ fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (T
     var nomeAll by rememberSaveable { mutableStateOf("") }
     var cognomeAll by rememberSaveable { mutableStateOf("") }
 
-    Column(Modifier.fillMaxSize().background(AC.Bg).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().fondoApp().statusBarsPadding()) {
         Text("Nuova partita", Modifier.padding(start = 16.dp, top = 16.dp),
             style = MaterialTheme.typography.headlineSmall, color = AC.Text)
         Text("1. Nazione  ·  2. Campionato  ·  3. Squadra", Modifier.padding(start = 16.dp, top = 2.dp),

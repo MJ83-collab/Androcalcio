@@ -25,7 +25,7 @@ import it.androcalcio.ui.theme.AC
 @Composable
 fun FineStagioneDialog(fine: FineStagione, onSalvaEsci: () -> Unit, onNuovo: () -> Unit, onChiudi: () -> Unit) {
     Dialog(onDismissRequest = onChiudi, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxSize().background(AC.Bg).padding(16.dp)) {
+        Column(Modifier.fillMaxSize().fondoApp().padding(16.dp)) {
             Text("Fine stagione ${fine.stagione}", style = MaterialTheme.typography.headlineSmall, color = AC.Text)
             Text("Classifiche finali, promozioni, retrocessioni e qualificazioni europee.",
                 style = MaterialTheme.typography.bodySmall, color = AC.TextDim)

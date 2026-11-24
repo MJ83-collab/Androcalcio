@@ -104,6 +104,53 @@ fun MangaPitch(
     val colori = remember(homeXI, awayXI, mappa) { (homeXI + awayXI).associate { it.id to coloriPersona(it.name, mappa) } }
     val textMeasurer = rememberTextMeasurer()
 
+    // Ogni giocatore ha una posizione sua che si aggiorna a ogni fotogramma: accelera e frena dolcemente verso il bersaglio
+    // (formazione + spinta dell'azione + attrazione della palla), con velocità massima. Niente salti, come in Football Manager.
+    val pbx = pbxS.value; val pby = pbyS.value
+    val sp = spinta.value
+    val shift = (pbx - 0.5f) * 0.2f
+    fun dove(base: Float, ny: Float, casa: Boolean, portiere: Boolean): Offset {
+        val segno = if (casa) 1f else -1f
+        val att = kotlin.math.max(segno * sp, 0f)
+        val dif = kotlin.math.max(-segno * sp, 0f)
+        val linea = if (casa) lineaCasa else lineaOspiti
+        val extraLinea = if (portiere || base >= 0.3f) 0f else when (linea) {
+            it.androcalcio.engine.DefLine.ALTA -> 0.05f; it.androcalcio.engine.DefLine.BASSA -> -0.04f; else -> 0f }
+        val dx = if (portiere) 0f else segno * ((0.04f + 0.35f * base) * att - 0.15f * base * dif + extraLinea)
+        val x0 = (base + dx + shift).coerceIn(0.03f, 0.97f)
+        val y0 = ny + (pby - ny) * (0.18f * abs(sp))
+        val d = hypot(pbx - x0, (pby - y0) * 0.55f)
+        val k = 0.8f * (1f - d / 0.18f).coerceAtLeast(0f).let { it * it }
+        return Offset(x0 + (pbx - x0) * k, y0 + (pby - y0) * k)
+    }
+    val bersagli = Array<Offset?>(22) { null }
+    hf.coords().forEachIndexed { i, (fx, fy) -> if (i < 11) bersagli[i] = dove(fx, fy + (pby - fy) * 0.08f, true, i == 0) }
+    af.coords().forEachIndexed { i, (fx, fy) -> if (i < 11) bersagli[11 + i] = dove(1f - fx, fy + (pby - fy) * 0.08f, false, i == 0) }
+    val bersagliOra = androidx.compose.runtime.rememberUpdatedState(bersagli)
+    val posiz = remember { androidx.compose.runtime.mutableStateListOf<Offset>().also { l -> repeat(22) { l.add(Offset(0.5f, 0.5f)) } } }
+    val velocita = remember { FloatArray(44) }
+    val partiti = remember { BooleanArray(22) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        var prima = 0L
+        while (true) androidx.compose.runtime.withFrameNanos { ns ->
+            val dt = if (prima == 0L) 0.016f else ((ns - prima) / 1_000_000_000f).coerceIn(0.001f, 0.05f)
+            prima = ns
+            val tg = bersagliOra.value
+            for (i in 0 until 22) {
+                val g = tg[i] ?: continue
+                if (!partiti[i]) { posiz[i] = g; partiti[i] = true; continue }
+                val c = posiz[i]
+                var vx = (g.x - c.x) * 2.4f; var vy = (g.y - c.y) * 2.4f
+                val m = hypot(vx, vy); val vmax = 0.16f
+                if (m > vmax) { vx *= vmax / m; vy *= vmax / m }
+                val a = kotlin.math.min(1f, dt * 4.5f)
+                velocita[2 * i] += (vx - velocita[2 * i]) * a
+                velocita[2 * i + 1] += (vy - velocita[2 * i + 1]) * a
+                posiz[i] = Offset(c.x + velocita[2 * i] * dt, c.y + velocita[2 * i + 1] * dt)
+            }
+        }
+    }
+
     Canvas(Modifier.fillMaxWidth().aspectRatio(1.45f).border(3.dp, Inchiostro)) {
         val w = size.width; val h = size.height
         val top = h * 0.10f; val bottom = h * 0.90f; val ph = bottom - top
@@ -151,8 +198,6 @@ fun MangaPitch(
         }
 
         // Giocatori
-        val pbx = pbxS.value; val pby = pbyS.value
-        val shift = (pbx - 0.5f) * 0.2f
         val r = ph * 0.042f
         val piede = Offset(r * 0.95f, r * 0.45f)   // la palla sta accanto al pallino di chi la gioca
 
@@ -170,22 +215,7 @@ fun MangaPitch(
 
         // Giocatori come pallini numerati (stile Football Manager). Si muovono con l'azione: chi attacca sale,
         // chi difende arretra e si stringe verso la palla, e i vicini alla palla le vanno incontro.
-        val s = spinta.value
         val bTerra = p(bx, by)
-        fun dove(base: Float, ny: Float, casa: Boolean, portiere: Boolean): Offset {
-            val segno = if (casa) 1f else -1f
-            val att = kotlin.math.max(segno * s, 0f)
-            val dif = kotlin.math.max(-segno * s, 0f)
-            val linea = if (casa) lineaCasa else lineaOspiti
-            val extraLinea = if (portiere || base >= 0.3f) 0f else when (linea) {
-                it.androcalcio.engine.DefLine.ALTA -> 0.05f; it.androcalcio.engine.DefLine.BASSA -> -0.04f; else -> 0f }
-            val dx = if (portiere) 0f else segno * ((0.04f + 0.35f * base) * att - 0.15f * base * dif + extraLinea)
-            val x0 = (base + dx + shift).coerceIn(0.03f, 0.97f)
-            val y0 = ny + (pby - ny) * (0.18f * abs(s))
-            val d = hypot(pbx - x0, (pby - y0) * 0.55f)
-            val k = 0.8f * (1f - d / 0.18f).coerceAtLeast(0f).let { it * it }
-            return p(x0 + (pbx - x0) * k, y0 + (pby - y0) * k)
-        }
         fun pallino(pl: Player, c: Offset, maglia: Pair<Color, Color>, numero: Int, casa: Boolean) {
             val portiere = pl.role == "P"
             val col = if (portiere) (if (casa) Color(0xFFF4D03F) else Color(0xFF7CD957)) else maglia.first
@@ -200,16 +230,18 @@ fun MangaPitch(
             drawText(textMeasurer, numero.toString(), topLeft = Offset(c.x - mm.size.width / 2f, c.y - mm.size.height / 2f), style = stile)
         }
         var lineaX = if (attaccoCasa == true) Float.MAX_VALUE else Float.MIN_VALUE   // ultimo difensore di chi non ha la palla
-        hf.coords().forEachIndexed { i, (fx, fy) ->
+        hf.coords().forEachIndexed { i, _ ->
             homeNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                val c = dove(fx, fy + (pby - fy) * 0.08f, true, i == 0)
+                val n = posiz.getOrNull(i) ?: return@let
+                val c = p(n.x, n.y)
                 pallino(pl, c, mH, if (pl.numero > 0) pl.numero else pos, true)
                 if (i > 0 && attaccoCasa == false && c.x > lineaX) lineaX = c.x
             }
         }
-        af.coords().forEachIndexed { i, (fx, fy) ->
+        af.coords().forEachIndexed { i, _ ->
             awayNums.firstOrNull { it.first == i + 1 }?.let { (pos, pl) ->
-                val c = dove(1f - fx, fy + (pby - fy) * 0.08f, false, i == 0)
+                val n = posiz.getOrNull(11 + i) ?: return@let
+                val c = p(n.x, n.y)
                 pallino(pl, c, mA, if (pl.numero > 0) pl.numero else pos, false)
                 if (i > 0 && attaccoCasa == true && c.x < lineaX) lineaX = c.x
             }

@@ -122,7 +122,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi)))) {
+    Box(Modifier.fillMaxSize().fondoApp(Brush.verticalGradient(listOf(AC.Night, AC.NightHi)))) {
     Column(Modifier.fillMaxSize()) {
         val larga = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 720
         val colA: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {

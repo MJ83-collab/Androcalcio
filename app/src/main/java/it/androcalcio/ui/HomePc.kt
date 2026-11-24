@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import it.androcalcio.ui.components.TipoTrofeo
 import it.androcalcio.ui.components.disegnaTrofeo
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +49,10 @@ private val ColFinanze = Color(0xFF9A7A55)
 private val Fondo = Brush.verticalGradient(listOf(Color(0xFF7FA0D4), Color(0xFF5878B2), Color(0xFF3A5A92)))
 
 /** Sfondo azzurro marmorizzato come nel menu originale: gradiente con nuvole chiare e scure. */
+/** Sfondo di schermata: marmo azzurro nel tema PC Calcio 7 blu, altrimenti il fondo scuro di prima. */
+internal fun Modifier.fondoApp(scuro: Brush? = null): Modifier =
+    if (AC.tema == 3) this.marmo() else this.background(scuro ?: Brush.verticalGradient(listOf(AC.Bg, AC.Bg)))
+
 internal fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
     val w = size.width; val h = size.height
     listOf(Triple(0.2f, 0.12f, 0.55f), Triple(0.85f, 0.3f, 0.5f), Triple(0.3f, 0.55f, 0.6f), Triple(0.8f, 0.8f, 0.55f), Triple(0.15f, 0.92f, 0.5f)).forEachIndexed { i, (x, y, r) ->
@@ -59,20 +64,56 @@ internal fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
     drawLine(Color(0x1A0A1A44), Offset(0f, h * 0.7f), Offset(w, h * 0.5f), strokeWidth = 5f)
 }
 
-private val ColoriStaff = listOf(Color(0xFFE08A12), Color(0xFFF2F2F2), Color(0xFFB9B9C8), Color(0xFF3AA0E0), Color(0xFFC0392B), Color(0xFF2F8F4E), Color(0xFFC9A227), Color(0xFF8E5BC8))
-
-/** Colonna con le figure dello staff a sinistra, come nell'originale: busto colorato e due barrette. Tocca per aprire lo Staff. */
+/** Colonna dello staff a sinistra: una tessera per ruolo, con pittogramma e sigla ben riconoscibili. Tocca per aprire lo Staff. */
 @Composable
 private fun ColonnaStaff(go: (Screen) -> Unit) {
-    Column(Modifier.width(30.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF14215C)).clickable { go(Screen.STAFF) }.padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        ColoriStaff.forEach { c ->
-            Canvas(Modifier.size(width = 24.dp, height = 36.dp)) {
-                val w = size.width; val h = size.height
-                drawCircle(Color(0xFFE9C9A5), w * 0.2f, Offset(w * 0.5f, h * 0.2f))
-                drawPath(Path().apply { moveTo(w * 0.1f, h * 0.62f); lineTo(w * 0.25f, h * 0.38f); lineTo(w * 0.75f, h * 0.38f); lineTo(w * 0.9f, h * 0.62f); close() }, c)
-                drawRect(Color(0xFFE53935), Offset(w * 0.15f, h * 0.72f), Size(w * 0.7f, h * 0.1f))
-                drawRect(Color(0xFF5C8DFF), Offset(w * 0.15f, h * 0.86f), Size(w * 0.7f, h * 0.1f))
+    val voci = listOf("ALL" to Color(0xFFE08A12), "ASS" to Color(0xFF3AA0E0), "GIO" to Color(0xFF2F8F4E), "PRE" to Color(0xFFC0392B),
+        "FIS" to Color(0xFFEDEDED), "SCO" to Color(0xFF8E5BC8), "GIA" to Color(0xFF5BA83A), "ANA" to Color(0xFFC9A227))
+    Column(Modifier.width(38.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF14215C)).clickable { go(Screen.STAFF) }.padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        voci.forEach { (ruolo, c) ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Canvas(Modifier.size(28.dp)) {
+                    val w = size.width; val h = size.height
+                    drawCircle(c, w / 2f); drawCircle(Color(0xFF0B1240), w / 2f, style = Stroke(2.5f))
+                    val k = if (ruolo == "FIS") Color(0xFFD32F2F) else Color.White
+                    when (ruolo) {
+                        "ALL" -> { // lavagna tattica con due crocette e freccia
+                            drawRect(k, Offset(w * 0.22f, h * 0.28f), Size(w * 0.56f, h * 0.44f), style = Stroke(2f))
+                            drawLine(k, Offset(w * 0.32f, h * 0.6f), Offset(w * 0.68f, h * 0.38f), 2f)
+                            drawCircle(k, 2.2f, Offset(w * 0.34f, h * 0.4f))
+                        }
+                        "ASS" -> { // cartellina con fischietto
+                            drawRect(k, Offset(w * 0.3f, h * 0.22f), Size(w * 0.4f, h * 0.56f))
+                            for (i in 0..2) drawLine(c, Offset(w * 0.36f, h * (0.34f + i * 0.14f)), Offset(w * 0.64f, h * (0.34f + i * 0.14f)), 1.6f)
+                        }
+                        "GIO" -> { // piccola figura con stella
+                            drawCircle(k, w * 0.12f, Offset(w * 0.5f, h * 0.36f))
+                            drawRect(k, Offset(w * 0.38f, h * 0.5f), Size(w * 0.24f, h * 0.26f))
+                            drawCircle(Color(0xFFFFD54F), w * 0.07f, Offset(w * 0.74f, h * 0.26f))
+                        }
+                        "PRE" -> { // bilanciere
+                            drawLine(k, Offset(w * 0.2f, h * 0.5f), Offset(w * 0.8f, h * 0.5f), 3f)
+                            drawRect(k, Offset(w * 0.2f, h * 0.3f), Size(w * 0.1f, h * 0.4f)); drawRect(k, Offset(w * 0.7f, h * 0.3f), Size(w * 0.1f, h * 0.4f))
+                        }
+                        "FIS" -> { // croce rossa
+                            drawRect(k, Offset(w * 0.42f, h * 0.2f), Size(w * 0.16f, h * 0.6f)); drawRect(k, Offset(w * 0.2f, h * 0.42f), Size(w * 0.6f, h * 0.16f))
+                        }
+                        "SCO" -> { // lente d'ingrandimento
+                            drawCircle(k, w * 0.2f, Offset(w * 0.45f, h * 0.45f), style = Stroke(3f))
+                            drawLine(k, Offset(w * 0.6f, h * 0.6f), Offset(w * 0.78f, h * 0.78f), 4f)
+                        }
+                        "GIA" -> { // filo d'erba
+                            for (i in 0..3) drawLine(k, Offset(w * (0.3f + i * 0.13f), h * 0.76f), Offset(w * (0.26f + i * 0.16f), h * 0.3f), 2.6f)
+                        }
+                        else -> { // schermo con grafico
+                            drawRect(k, Offset(w * 0.2f, h * 0.26f), Size(w * 0.6f, h * 0.42f), style = Stroke(2f))
+                            drawLine(k, Offset(w * 0.28f, h * 0.58f), Offset(w * 0.42f, h * 0.44f), 2f); drawLine(k, Offset(w * 0.42f, h * 0.44f), Offset(w * 0.54f, h * 0.54f), 2f)
+                            drawLine(k, Offset(w * 0.54f, h * 0.54f), Offset(w * 0.72f, h * 0.34f), 2f)
+                        }
+                    }
+                }
+                Text(ruolo, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
             }
         }
     }
