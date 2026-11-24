@@ -4,6 +4,13 @@ Ramo attuale: `feat/fine-partita` (v0.6.0 + blocchi 1–6 + tablet).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato).
 Build GitHub Actions verdi sull'ultimo commit. ⚠️ Nulla è stato provato sul telefono.
 
+## Sessione 24/11 sera (2): Home, trofei e piano coppe europee (ramo feat/stadio, build verde)
+- Messaggio del presidente: pulsanti "Fissa le amichevoli" (apre il Calendario) e "Salta le amichevoli".
+- Home: al centro scudetto con i colori della nazione (campionato), coppa o supercoppa (coppe), stretta di mano (amichevole). Prima della 1ª giornata la prossima partita è l'amichevole, se ce n'è una.
+- `ui/components/Trofei.kt`: 9 trofei disegnati (scudetto, coppa nazionale, supercoppa, Coppa dei Campioni d'Europa, Coppa Europa, Coppa delle Coppe, Mondiali, Europei, amichevole). Usati in Home, Albo d'oro e Nazionali.
+- Decisioni di Marco: coppe europee giocabili (Campioni: gironi + eliminazione; Europa: eliminazione A/R; Coppe: vincitrici delle coppe), con sorteggi in stile PC Calcio 7. Nuovi campionati (solo massima serie, nomi e stemmi di fantasia, giocatori generati): Olanda, Portogallo, Belgio, Scozia, Turchia, Grecia.
+- Ordine: 1) trofei (fatto) 2) campionati nuovi 3) coppe europee e sorteggi.
+
 ## Sessione 24/11 sera: stadio personale (ramo feat/stadio, da feat/fine-partita; build verde, non provato sul telefono)
 - Nuova schermata **Stadio** (Home → Finanze → Stadio; anche nel menu classico): pianta dall'alto, nome, colore dei seggiolini (12), settori, atmosfera, strutture.
 - **Prezzi per settore spostati** da Marketing allo Stadio (stessa chiave "prezzi"). Elasticità per settore: curva 1,7, distinti 1,5, tribuna 1,3, VIP 0,9.
