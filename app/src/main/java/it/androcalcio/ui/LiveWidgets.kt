@@ -1,5 +1,7 @@
 package it.androcalcio.ui
 
+import it.androcalcio.engine.etichettaMinuto
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +38,7 @@ fun TelecronacaBubble(events: List<MatchEvent>, minuto: Int) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("🎙️", fontSize = 22.sp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(episodio?.let { "${it.androcalcio.engine.etichettaMinuto(it.minute)}' ${it.text}" } ?: "La partita sta per cominciare...",
+            Text(episodio?.let { "${etichettaMinuto(it.minute)}' ${it.text}" } ?: "La partita sta per cominciare...",
                 color = China, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, maxLines = 2)
             if (commento != null) Text(commento.text, color = Color(0xFF1E3FA0), fontStyle = FontStyle.Italic, fontSize = 12.sp, maxLines = 3)
         }

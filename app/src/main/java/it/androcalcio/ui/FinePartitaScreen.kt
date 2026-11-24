@@ -15,6 +15,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import it.androcalcio.data.Player
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -104,8 +108,8 @@ private fun Tabella(
 ) {
     val giocati = if (casa) rep.homePlayed else rep.awayPlayed
     val ps = rep.playedPlayers.filter { it.id in giocati }.sortedByDescending { rep.playerRatings[it.id] ?: 6.0 }
-    var scelto by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<it.androcalcio.data.Player?>(null) }
-    scelto?.let { p -> it.androcalcio.ui.MappaCalore(p.name, calore(p.id), casa) { scelto = null } }
+    var scelto by remember { mutableStateOf<Player?>(null) }
+    scelto?.let { p -> MappaCalore(p.name, calore(p.id), casa) { scelto = null } }
     PaperPanel(Modifier.fillMaxWidth()) {
         ps.forEachIndexed { i, p ->
             val voto = rep.playerRatings[p.id] ?: 6.0
