@@ -48,7 +48,7 @@ class V06Test {
         assertEquals(Spareggi.Regola.PIAZZATA, Spareggi.B_FINALE.regolaPer(false))
         // Tabellone B a 6: preliminari 5-8 e 6-7, poi semifinali con 3ª e 4ª
         val gare = ArrayList<String>()
-        val r = Spareggi.tabelloneB(listOf(3L, 4L, 5L, 6L, 7L, 8L)) { a, b, t -> gare += "${t.nome}:$a-$b"; a }!!
+        val r = kotlinx.coroutines.runBlocking { Spareggi.tabelloneB(listOf(3L, 4L, 5L, 6L, 7L, 8L)) { a, b, t -> gare += "${t.nome}:$a-$b"; a } }!!
         assertEquals(listOf("Turno preliminare:5-8", "Turno preliminare:6-7", "Semifinale:3-6", "Semifinale:4-5", "Finale:3-4"), gare)
         assertEquals(3L to 4L, r)
         val forza = mapOf(1L to 75.0, 2L to 60.0)

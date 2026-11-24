@@ -101,7 +101,7 @@ object Spareggi {
     }
 
     /** Playoff di Serie B a 6 (in ordine di classifica): preliminari 5ª-8ª e 6ª-7ª, poi semifinali con 3ª e 4ª, poi finale. */
-    inline fun tabelloneB(seeds: List<Long>, gioca: (Long, Long, Turno) -> Long): Pair<Long, Long>? {
+    suspend fun tabelloneB(seeds: List<Long>, gioca: suspend (Long, Long, Turno) -> Long): Pair<Long, Long>? {
         if (seeds.size < 6) return tabellone4(seeds, B_SEMIFINALE, B_FINALE, gioca)
         val p1 = gioca(seeds[2], seeds[5], B_PRELIMINARE)
         val p2 = gioca(seeds[3], seeds[4], B_PRELIMINARE)
@@ -110,7 +110,7 @@ object Spareggi {
     }
 
     /** Playoff a 4: semifinali 1ª-4ª e 2ª-3ª, poi finale; la meglio piazzata è sempre il primo argomento. */
-    inline fun tabellone4(seeds: List<Long>, semi: Turno, finale: Turno, gioca: (Long, Long, Turno) -> Long): Pair<Long, Long>? {
+    suspend fun tabellone4(seeds: List<Long>, semi: Turno, finale: Turno, gioca: suspend (Long, Long, Turno) -> Long): Pair<Long, Long>? {
         if (seeds.size < 2) return null
         if (seeds.size < 4) return gioca(seeds[0], seeds[1], finale).let { w -> w to (if (w == seeds[0]) seeds[1] else seeds[0]) }
         val s1 = gioca(seeds[0], seeds[3], semi)
@@ -122,7 +122,7 @@ object Spareggi {
     }
 
     /** Tabellone dei playoff di promozione secondo la nazione. */
-    inline fun playoffNazione(nazione: String, seeds: List<Long>, gioca: (Long, Long, Turno) -> Long): Pair<Long, Long>? = when (nazione) {
+    suspend fun playoffNazione(nazione: String, seeds: List<Long>, gioca: suspend (Long, Long, Turno) -> Long): Pair<Long, Long>? = when (nazione) {
         "Italia" -> tabelloneB(seeds, gioca)
         "Spagna" -> tabellone4(seeds, ESP_TURNO, ESP_FINALE, gioca)
         else -> tabellone4(seeds, ENG_SEMIFINALE, ENG_FINALE, gioca)
