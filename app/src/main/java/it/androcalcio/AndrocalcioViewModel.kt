@@ -196,8 +196,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun avvio1() {
         viewModelScope.launch {
-            if (dao.teamCount() == 0) SeedData.insertInto(ctx, dao)
+            val primoAvvio = dao.teamCount() == 0
+            if (primoAvvio) SeedData.insertInto(ctx, dao)
             if (dao.allTeams().none { it.nazione == "Giappone" }) SeedData.insertGiappone(ctx, dao)
+            if (primoAvvio) SeedData.insertEuropa(ctx, dao)   // v0.7: solo carriere nuove, non i salvataggi esistenti
             withContext(Dispatchers.IO) { assicuraAllStar() }
         }
     }
@@ -2449,6 +2451,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (!mio) {
             SeedData.insertInto(ctx, dao)
             SeedData.insertGiappone(ctx, dao)
+            SeedData.insertEuropa(ctx, dao)
         }
         assicuraAllStar()
         assegnaNumeri(0L)

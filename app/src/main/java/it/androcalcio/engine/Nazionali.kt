@@ -19,7 +19,7 @@ object Nazionali {
     const val CONVOCATI = 23
     const val MIN_ROSA = 11
     val EUROPA = setOf("Italia", "Spagna", "Inghilterra", "Germania", "Francia", "Portogallo", "Olanda",
-        "Belgio", "Croazia", "Polonia", "Serbia")
+        "Belgio", "Croazia", "Polonia", "Serbia", "Scozia", "Turchia", "Grecia")
 
     /** Europeo Under 21 ogni due anni (stagioni che iniziano in anni dispari). */
     fun europeoU21(annoInizio: Int) = annoInizio % 2 == 1

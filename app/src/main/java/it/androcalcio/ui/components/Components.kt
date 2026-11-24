@@ -533,6 +533,8 @@ fun FlagBox(nazione: String, modifier: Modifier = Modifier) {
     val v: List<Color>? = when (nazione) {
         "Italia" -> listOf(Color(0xFF009246), Color.White, Color(0xFFCE2B37))
         "Francia" -> listOf(Color(0xFF0055A4), Color.White, Color(0xFFEF4135))
+        "Portogallo" -> listOf(Color(0xFF006600), Color(0xFF006600), Color(0xFFFF0000), Color(0xFFFF0000), Color(0xFFFF0000))
+        "Belgio" -> listOf(Color.Black, Color(0xFFFAE042), Color(0xFFED2939))
         else -> null
     }
     val h: List<Color>? = when (nazione) {
@@ -540,6 +542,8 @@ fun FlagBox(nazione: String, modifier: Modifier = Modifier) {
         "Spagna" -> listOf(Color(0xFFAA151B), Color(0xFFF1BF00), Color(0xFFF1BF00), Color(0xFFAA151B))
         "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF))
         "Giappone" -> listOf(Color.White, Color(0xFFBC002D), Color.White)
+        "Olanda" -> listOf(Color(0xFFAE1C28), Color.White, Color(0xFF21468B))
+        "Grecia" -> listOf(Color(0xFF0D5EAF), Color.White, Color(0xFF0D5EAF), Color.White, Color(0xFF0D5EAF))
         else -> null
     }
     val apriNazione = it.androcalcio.ui.LocalApriNazione.current
@@ -553,6 +557,17 @@ fun FlagBox(nazione: String, modifier: Modifier = Modifier) {
                 drawRect(Color.White)
                 drawRect(Color(0xFFCE1124), Offset(size.width * 0.42f, 0f), Size(size.width * 0.16f, size.height))
                 drawRect(Color(0xFFCE1124), Offset(0f, size.height * 0.38f), Size(size.width, size.height * 0.24f))
+            }
+            nazione == "Scozia" -> {
+                drawRect(Color(0xFF005EB8))
+                drawLine(Color.White, Offset(0f, 0f), Offset(size.width, size.height), size.height * 0.22f)
+                drawLine(Color.White, Offset(size.width, 0f), Offset(0f, size.height), size.height * 0.22f)
+            }
+            nazione == "Turchia" -> {
+                drawRect(Color(0xFFE30A17))
+                drawCircle(Color.White, size.height * 0.30f, Offset(size.width * 0.38f, size.height / 2))
+                drawCircle(Color(0xFFE30A17), size.height * 0.24f, Offset(size.width * 0.43f, size.height / 2))
+                drawCircle(Color.White, size.height * 0.10f, Offset(size.width * 0.62f, size.height / 2))
             }
             nazione == "Brasile" -> {
                 drawRect(Color(0xFF009C3B))
