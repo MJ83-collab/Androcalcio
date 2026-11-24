@@ -267,8 +267,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val me = selectedTeam.value ?: return@launch
             val ps = dao.playersOnce(me.id)
-            val xi = Lineup.coachPick(ps, _formation.value).map { it.id }.toSet()
-            dao.updatePlayers(ps.map { it.copy(starter = it.id in xi) })
+            val xi = Lineup.coachPick(ps, _formation.value).associateBy { it.id }
+            // I titolari prendono anche il ruolo in campo scelto dall'allenatore (fasce e ali compresi)
+            dao.updatePlayers(ps.map { p -> xi[p.id]?.let { p.copy(starter = true, ruoloPartita = it.ruoloPartita, compito = it.compito) } ?: p.copy(starter = false) })
             _notice.value = "L'allenatore ha scelto gli 11 titolari per il ${_formation.value.label}."
         }
     }
@@ -632,8 +633,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
                     homeMent = if (h.id == t.id) _mentality.value else null,
                     awayMent = if (a.id == t.id) _mentality.value else null,
-                    homeBench = hL?.let { Medical.available(hpD) - it.xi.toSet() },
-                    awayBench = aL?.let { Medical.available(apD) - it.xi.toSet() },
+                    homeBench = hL?.let { l -> val dentro = l.xi.map { it.id }.toSet(); Medical.available(hpD).filter { it.id !in dentro } },
+                    awayBench = aL?.let { l -> val dentro = l.xi.map { it.id }.toSet(); Medical.available(apD).filter { it.id !in dentro } },
                     homePress = if (h.id == t.id) _pressing.value else null,
                     awayPress = if (a.id == t.id) _pressing.value else null,
                     homeLine = if (h.id == t.id) _line.value else null,
@@ -1337,7 +1338,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (nSqual > 0) avviso("$nSqual ${if (nSqual == 1) "squalificato" else "squalificati"}: oggi non gioca${if (nSqual == 1) "" else "no"}.")
         val res = Lineup.resolve(all, _formation.value)
         if (res.notes.isNotEmpty()) _notice.value = res.notes.joinToString("\n")
-        val myBench = Medical.available(all) - res.xi.toSet()
+        val dentroMio = res.xi.map { it.id }.toSet()
+        val myBench = Medical.available(all).filter { it.id !in dentroMio }
         val opp = Medical.available(dao.playersOnce(if (userHome) away.id else home.id))
         val oppF = schemaInPartita(if (userHome) away.id else home.id, kotlin.random.Random.Default)
         val tiriMe = tiriDi(me.id)

@@ -99,8 +99,8 @@ fun MangaPitch(
     val pbyS = androidx.compose.animation.core.animateFloatAsState(by, molla, label = "pby")
     val mappa = LocalAvatarModificati.current
     val (mH, mA) = remember(home.id, away.id) { maglie(home, away) }
-    val homeNums = numbered(homeXI)
-    val awayNums = numbered(awayXI)
+    val homeNums = numbered(homeXI, hf)
+    val awayNums = numbered(awayXI, af)
     val colori = remember(homeXI, awayXI, mappa) { (homeXI + awayXI).associate { it.id to coloriPersona(it.name, mappa) } }
     val textMeasurer = rememberTextMeasurer()
 

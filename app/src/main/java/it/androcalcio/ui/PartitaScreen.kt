@@ -63,6 +63,7 @@ import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.EventType
 import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Lineup
 import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.MatchReport
 import it.androcalcio.ui.components.Crest
@@ -162,10 +163,10 @@ private fun Choice(label: String, selected: Boolean, modifier: Modifier = Modifi
  * Giocatori in campo nell'ordine delle posizioni (1 portiere, poi difensori, centrocampisti, attaccanti).
  * Il primo valore è la posizione; il numero mostrato è quello di maglia, se assegnato.
  */
-internal fun numbered(xi: List<Player>): List<Pair<Int, Player>> {
+internal fun numbered(xi: List<Player>, f: Formation? = null): List<Pair<Int, Player>> {
     fun rank(role: String) = when (role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
-    return xi.sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }))
-        .mapIndexed { i, p -> (i + 1) to p }
+    val ordinati = if (f != null) Lineup.perPosti(xi, f) else xi.sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }))
+    return ordinati.mapIndexed { i, p -> (i + 1) to p }
 }
 
 @Composable
@@ -178,8 +179,8 @@ fun Pitch(
     val awayColor = AC.NeonPink
     val homePos = hf.coords()
     val awayPos = af.coords()
-    val homeNums = numbered(homeXI)
-    val awayNums = numbered(awayXI)
+    val homeNums = numbered(homeXI, hf)
+    val awayNums = numbered(awayXI, af)
     val textMeasurer = rememberTextMeasurer()
     val numStyle = TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
     Canvas(

@@ -107,7 +107,7 @@ fun FormazioneAvatar(
     xi: List<Player>, formation: Formation, modifier: Modifier = Modifier,
     squadra: Team? = null, titolo: String = "FORMAZIONE"
 ) {
-    val ordered = orderedXI(xi)
+    val ordered = orderedXI(xi, formation)
     val coords = formation.coords()
     Column(modifier.fillMaxWidth()) {
         Row(

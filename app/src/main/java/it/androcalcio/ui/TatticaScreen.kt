@@ -59,8 +59,9 @@ import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.theme.AC
 
 /** Undici ordinato per linee (portiere, difesa, centrocampo, attacco), come le posizioni del modulo. */
-fun orderedXI(xi: List<Player>): List<Player> =
-    xi.sortedBy { when (it.role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 } }
+fun orderedXI(xi: List<Player>, formation: Formation? = null): List<Player> =
+    if (formation != null) Lineup.perPosti(xi, formation)
+    else xi.sortedBy { when (it.role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 } }
 
 private fun dem(role: String) = when (role) { "P" -> "POR"; "D" -> "DIF"; "C" -> "MED"; else -> "ATT" }
 
@@ -150,7 +151,7 @@ fun LineupTable(xi: List<Player>, onRole: ((Player) -> Unit)? = null, onOpen: ((
 @Composable
 fun TacticPitch(xi: List<Player>, formation: Formation, modifier: Modifier = Modifier) {
     val measurer = rememberTextMeasurer()
-    val ordered = orderedXI(xi)
+    val ordered = orderedXI(xi, formation)
     val coords = formation.coords()
     Canvas(modifier.fillMaxWidth().aspectRatio(1.7f).background(AC.PitchB)) {
         // strisce del prato
@@ -218,7 +219,7 @@ fun TatticaScreen(
     schema: it.androcalcio.engine.SchemaPiazzati = it.androcalcio.engine.SchemaPiazzati.NORMALE,
     onSchema: (it.androcalcio.engine.SchemaPiazzati) -> Unit = {}
 ) {
-    val xi = orderedXI(Lineup.resolve(players, formation).xi)
+    val xi = orderedXI(Lineup.resolve(players, formation).xi, formation)
     var roleFor by remember { mutableStateOf<Player?>(null) }
     var tiriAperti by remember { mutableStateOf(false) }
     if (tiriAperti) TiriDialog(players, tiri, { tiriAperti = false }, { onSalvaTiri(it); tiriAperti = false })
@@ -344,7 +345,7 @@ private fun Modifier.border2(): Modifier =
 /** Formazione verticale come le grafiche TV: campo in prospettiva, giocatori con maglia, numero e nome in etichetta. */
 @Composable
 fun FormationBoard(xi: List<Player>, formation: Formation, shirt: Color, modifier: Modifier = Modifier) {
-    val ordered = orderedXI(xi)
+    val ordered = orderedXI(xi, formation)
     val coords = formation.coords()
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier.fillMaxWidth().aspectRatio(0.8f)

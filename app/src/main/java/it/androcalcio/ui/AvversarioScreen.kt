@@ -57,7 +57,7 @@ fun AvversarioScreen(advice: AssistantCoach.Advice?, analista: Int = -1) {
             }
         }
         if (a.opponentXI.isNotEmpty()) {
-            item { LineupTable(orderedXI(a.opponentXI)) }
+            item { LineupTable(orderedXI(a.opponentXI, a.opponentSchema)) }
             a.opponentSchema?.let { f -> item { FormationBoard(a.opponentXI, f, androidx.compose.ui.graphics.Color(0xFF1E3FA0)) } }
         }
         item {

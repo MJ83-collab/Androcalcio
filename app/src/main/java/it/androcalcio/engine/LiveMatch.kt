@@ -443,7 +443,7 @@ class LiveMatch(
         val ev = events.lastOrNull { it.percorso.isNotEmpty() && minute - it.minute <= 2 }
         val bx = ev?.x ?: 0.5f; val by = ev?.y ?: 0.5f
         fun reg(xi: List<Player>, f: Formation, casa: Boolean) {
-            val ordine = xi.sortedWith(compareBy<Player>({ when (it.role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 } }, { -it.overall }))
+            val ordine = Lineup.perPosti(xi, f)
             val coords = f.coords()
             val segno = if (casa) 1f else -1f
             ordine.forEachIndexed { i, p ->

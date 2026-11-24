@@ -4,6 +4,8 @@ import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -157,10 +159,11 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("MODULO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 val attuale = if (info.userHome) m.homeF else m.awayF
                                 listOf(it.androcalcio.engine.Formation.F442, it.androcalcio.engine.Formation.F433,
-                                    it.androcalcio.engine.Formation.F352, it.androcalcio.engine.Formation.F451).forEach { f ->
+                                    it.androcalcio.engine.Formation.F352, it.androcalcio.engine.Formation.F451,
+                                    it.androcalcio.engine.Formation.F433A, it.androcalcio.engine.Formation.F4231A).forEach { f ->
                                     PcChip(selected = f == attuale, onClick = { vm.liveModulo(f) }, label = { Text(f.label) })
                                 }
                             }

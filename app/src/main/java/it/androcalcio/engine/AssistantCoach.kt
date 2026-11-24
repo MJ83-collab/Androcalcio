@@ -55,10 +55,7 @@ object AssistantCoach {
     /** Undici per il modulo: infortunati esclusi, poi per ruolo; chi è in forma passa avanti. */
     fun startingXI(players: List<Player>, f: Formation): List<Player> {
         val avail = players.filter { it.injuredRounds == 0 }
-        val xi = mutableListOf<Player>()
-        Lineup.needs(f).forEach { (role, n) ->
-            xi += avail.filter { it.role == role && it !in xi }.sortedByDescending { score(it) }.take(n)
-        }
+        val xi = Lineup.scegliPerPosti(avail, f) { p, _ -> score(p) }.map { it.first }.toMutableList()
         if (xi.size < 11) xi += avail.filter { it !in xi }.sortedByDescending { score(it) }.take(11 - xi.size)
         return xi
     }
