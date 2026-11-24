@@ -61,9 +61,10 @@ fun TabelloneTV(
                 Box(Modifier.weight(1f).fillMaxHeight().background(Color(0xFFD32F2F)))
             }
         }
-        Row(Modifier.fillMaxWidth().height(60.dp).background(BluTvScuro), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(64.dp).background(androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(Color(0xFF3A5BD9), BluTvScuro, Color(0xFF0B1240)))), verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f).padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Crest(home, 38.dp)
+                Crest(home, 50.dp)
                 Text(home.name.uppercase(), Modifier.weight(1f).padding(horizontal = 6.dp), color = Color.White,
                     fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1, textAlign = TextAlign.Center)
             }
@@ -83,7 +84,7 @@ fun TabelloneTV(
             Row(Modifier.weight(1f).padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(away.name.uppercase(), Modifier.weight(1f).padding(horizontal = 6.dp), color = Color.White,
                     fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1, textAlign = TextAlign.Center)
-                Crest(away, 38.dp)
+                Crest(away, 50.dp)
             }
         }
         Text(
@@ -120,17 +121,31 @@ fun FormazioneAvatar(
             val w = maxWidth
             val h = maxHeight
             Canvas(Modifier.matchParentSize()) {
-                val fasce = 10
-                val fh = size.height / fasce
-                for (k in 0 until fasce step 2) drawRect(AC.PitchA, Offset(0f, k * fh), Size(size.width, fh))
-                val line = Color.White.copy(alpha = 0.8f)
-                val st = Stroke(2f)
-                drawRect(line, Offset(8f, 8f), Size(size.width - 16f, size.height - 16f), style = st)
-                drawLine(line, Offset(8f, size.height / 2), Offset(size.width - 8f, size.height / 2), 2f)
-                drawCircle(line, size.width * 0.13f, Offset(size.width / 2, size.height / 2), style = st)
-                val bw = size.width * 0.5f; val bh = size.height * 0.16f
-                drawRect(line, Offset((size.width - bw) / 2, 8f), Size(bw, bh), style = st)
-                drawRect(line, Offset((size.width - bw) / 2, size.height - 8f - bh), Size(bw, bh), style = st)
+                // Campo in prospettiva come nei tabelloni delle formazioni ufficiali: più stretto in alto
+                val W = size.width; val H = size.height
+                drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF1B1F2A), Color(0xFF3B4152))))
+                val inA = W * 0.14f; val y0 = H * 0.02f; val y1 = H * 0.98f
+                fun x(fx: Float, fy: Float): Float { val m = inA * (1f - fy); return m + (W - 2 * m) * fx }
+                fun pt(fx: Float, fy: Float) = Offset(x(fx, fy), y0 + (y1 - y0) * fy)
+                val campo = Path().apply { moveTo(pt(0f, 0f).x, pt(0f, 0f).y); lineTo(pt(1f, 0f).x, pt(1f, 0f).y)
+                    lineTo(pt(1f, 1f).x, pt(1f, 1f).y); lineTo(pt(0f, 1f).x, pt(0f, 1f).y); close() }
+                drawPath(campo, AC.PitchB)
+                for (k in 0 until 10 step 2) {
+                    val a = k / 10f; val b = (k + 1) / 10f
+                    drawPath(Path().apply { moveTo(pt(0f, a).x, pt(0f, a).y); lineTo(pt(1f, a).x, pt(1f, a).y)
+                        lineTo(pt(1f, b).x, pt(1f, b).y); lineTo(pt(0f, b).x, pt(0f, b).y); close() }, AC.PitchA)
+                }
+                drawPath(campo, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent, Color.White.copy(alpha = 0.08f))))
+                val line = Color.White.copy(alpha = 0.85f); val st = Stroke(2.5f)
+                drawPath(campo, line, style = st)
+                drawLine(line, pt(0f, 0.5f), pt(1f, 0.5f), 2.5f)
+                drawOval(line, Offset(W / 2 - W * 0.12f, pt(0.5f, 0.5f).y - H * 0.055f), Size(W * 0.24f, H * 0.11f), style = st)
+                fun area(fa: Float, fb: Float, top: Boolean) {
+                    val (ya, yb) = if (top) 0f to fb else (1f - fb) to 1f
+                    drawPath(Path().apply { moveTo(pt(fa, ya).x, pt(fa, ya).y); lineTo(pt(1 - fa, ya).x, pt(1 - fa, ya).y)
+                        lineTo(pt(1 - fa, yb).x, pt(1 - fa, yb).y); lineTo(pt(fa, yb).x, pt(fa, yb).y); close() }, line, style = st)
+                }
+                area(0.22f, 0.15f, true); area(0.36f, 0.06f, true); area(0.22f, 0.15f, false); area(0.36f, 0.06f, false)
             }
             val cardW = 70.dp
             ordered.forEachIndexed { i, p ->

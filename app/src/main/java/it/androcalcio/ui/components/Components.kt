@@ -35,6 +35,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -73,55 +75,128 @@ fun Modifier.vignetta(d: Dp = 3.dp): Modifier = this.drawBehind {
 /** Sfumatura verticale dei pulsanti PC 7. */
 val BtnGradient = Brush.verticalGradient(listOf(Color(0xFF30303C), Color(0xFF07070B)))
 
-/** Mascotte comiche degli stemmi: scelte dal nome della squadra, sempre la stessa per lo stesso club. */
-private val MASCOTTE = listOf("🐂", "🦁", "🐺", "🐍", "🦅", "🐓", "🐗", "🐴", "🐟", "🦆", "🐐", "🦊",
-    "🐻", "🐝", "🐸", "🦈", "🐧", "🐷", "🦉", "🐌", "🦀", "🐊", "🦬", "🐿")
-
 /**
- * Stemma originale e un po' comico: scudo storto con il motivo dei colori sociali (strisce, bande, metà...)
- * e una mascotte al centro. È generato dal nome: niente loghi reali dei club.
+ * Stemma originale in stile realistico, generato dal nome (niente loghi reali): 5 sagome (scudo classico, scudo
+ * appuntito, tondo con anello, ovale, scudo arrotondato), 9 motivi con i colori sociali, un simbolo disegnato
+ * (stella, corona, torre, pallone, fulmine, onde) o il monogramma, bordo oro o scuro, effetto lucido e nastro col nome.
  */
 @Composable
 fun Crest(team: Team, size: Dp = 44.dp, modifier: Modifier = Modifier) {
     val c1 = Color(team.colorPrimary)
-    val c2 = Color(team.colorSecondary)
+    val c2 = Color(team.colorSecondary).let { if (it == c1) Color.White else it }
     val h = Math.floorMod(team.name.hashCode(), 1_000_003)
-    val motivo = h % 5
-    val mascotte = it.androcalcio.engine.Stemmi.MASCOTTE[team.name] ?: MASCOTTE[(h / 5) % MASCOTTE.size]
-    val storto = ((h / 7) % 9 - 4).toFloat()   // da -4 a +4 gradi
+    val forma = h % 5
+    val motivo = (h / 5) % 9
+    val simbolo = (h / 45) % 8
+    val oro = (h / 360) % 3 == 0
+    val sigla = team.shortName.filter { it.isLetter() }.take(if (simbolo == 7) 1 else 2).uppercase()
     val apriSquadra = it.androcalcio.ui.LocalApriSquadra.current
     Box(modifier.size(size).clickable { apriSquadra(team) }, contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(size)) {
-            val w = this.size.width; val hh = this.size.height
-            val scudo = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.10f, hh * 0.08f)
-                quadraticBezierTo(w * 0.5f, hh * 0.16f, w * 0.90f, hh * 0.08f)
-                lineTo(w * 0.90f, hh * 0.50f)
-                quadraticBezierTo(w * 0.88f, hh * 0.80f, w * 0.5f, hh * 0.96f)
-                quadraticBezierTo(w * 0.12f, hh * 0.80f, w * 0.10f, hh * 0.50f)
-                close()
-            }
-            rotate(storto) {
-                clipPath(scudo) {
-                    drawRect(c1)
-                    when (motivo) {
-                        0 -> for (i in 0 until 5 step 2) drawRect(c2, Offset(w * (0.1f + i * 0.16f), 0f), Size(w * 0.16f, hh))
-                        1 -> drawRect(c2, Offset(w / 2, 0f), Size(w / 2, hh))
-                        2 -> drawLine(c2, Offset(0f, 0f), Offset(w, hh), strokeWidth = w * 0.26f)
-                        3 -> for (i in 0 until 5 step 2) drawRect(c2, Offset(0f, hh * (0.1f + i * 0.17f)), Size(w, hh * 0.17f))
-                        else -> { drawRect(c2, Offset(w / 2, 0f), Size(w / 2, hh / 2)); drawRect(c2, Offset(0f, hh / 2), Size(w / 2, hh / 2)) }
-                    }
-                }
-                drawPath(scudo, Color.Black, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
-                drawPath(scudo, if (AC.pc7) Color(0xFFFFD86B) else Color.White,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.04f))
-            }
-        }
-        Text(mascotte, fontSize = (size.value * 0.40f).sp, modifier = Modifier.padding(bottom = (size.value * 0.06f).dp))
-        if (size >= 40.dp) Text(
-            team.shortName, Modifier.align(Alignment.BottomCenter).background(Color.Black.copy(alpha = 0.75f)).padding(horizontal = 3.dp),
-            color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.17f).sp, maxLines = 1
+        Canvas(Modifier.size(size)) { stemma(c1, c2, forma, motivo, simbolo, oro) }
+        if (simbolo >= 6) Text(
+            sigla, color = if (c1.luminanceApprox() > 0.6f) Color(0xFF111111) else Color.White,
+            fontWeight = FontWeight.Black, fontSize = (size.value * (if (sigla.length > 1) 0.30f else 0.40f)).sp,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.6f), Offset(1.5f, 1.5f), 2f))
         )
+        if (size >= 40.dp) Text(
+            team.shortName.uppercase(),
+            Modifier.align(Alignment.BottomCenter).offset(y = (size.value * 0.04f).dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(if (oro) Color(0xFFB8902A) else Color(0xFF15151C))
+                .border(1.dp, if (oro) Color(0xFFFFE9A0) else c2, RoundedCornerShape(2.dp))
+                .padding(horizontal = 3.dp),
+            color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.15f).sp, maxLines = 1
+        )
+    }
+}
+
+private fun Color.luminanceApprox(): Float = 0.299f * red + 0.587f * green + 0.114f * blue
+
+private fun sagomaStemma(forma: Int, w: Float, h: Float) = androidx.compose.ui.graphics.Path().apply {
+    when (forma) {
+        0 -> { moveTo(w * 0.12f, h * 0.07f); lineTo(w * 0.88f, h * 0.07f); lineTo(w * 0.88f, h * 0.52f)
+            cubicTo(w * 0.88f, h * 0.78f, w * 0.66f, h * 0.90f, w * 0.5f, h * 0.97f)
+            cubicTo(w * 0.34f, h * 0.90f, w * 0.12f, h * 0.78f, w * 0.12f, h * 0.52f); close() }
+        1 -> { moveTo(w * 0.10f, h * 0.05f); quadraticBezierTo(w * 0.5f, h * 0.16f, w * 0.90f, h * 0.05f)
+            lineTo(w * 0.90f, h * 0.55f); lineTo(w * 0.5f, h * 0.97f); lineTo(w * 0.10f, h * 0.55f); close() }
+        2 -> addOval(androidx.compose.ui.geometry.Rect(w * 0.05f, h * 0.05f, w * 0.95f, h * 0.95f))
+        3 -> addOval(androidx.compose.ui.geometry.Rect(w * 0.15f, h * 0.03f, w * 0.85f, h * 0.97f))
+        else -> { moveTo(w * 0.12f, h * 0.30f); cubicTo(w * 0.12f, h * 0.04f, w * 0.88f, h * 0.04f, w * 0.88f, h * 0.30f)
+            lineTo(w * 0.88f, h * 0.58f); quadraticBezierTo(w * 0.86f, h * 0.86f, w * 0.5f, h * 0.97f)
+            quadraticBezierTo(w * 0.14f, h * 0.86f, w * 0.12f, h * 0.58f); close() }
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.stemma(c1: Color, c2: Color, forma: Int, motivo: Int, simbolo: Int, oro: Boolean) {
+    val w = size.width; val h = size.height
+    val sag = sagomaStemma(forma, w, h)
+    val bordo = if (oro) Color(0xFFC9A227) else Color(0xFF16161D)
+    val ink = Color(0xFF111111)
+    translate(w * 0.035f, h * 0.035f) { drawPath(sag, Color.Black.copy(alpha = 0.35f)) }
+    clipPath(sag) {
+        drawRect(c1)
+        when (motivo) {
+            0 -> for (i in 0 until 7 step 2) drawRect(c2, Offset(w * i / 7f, 0f), Size(w / 7f, h))
+            1 -> for (i in 0 until 7 step 2) drawRect(c2, Offset(0f, h * i / 7f), Size(w, h / 7f))
+            2 -> drawLine(c2, Offset(0f, 0f), Offset(w, h), strokeWidth = w * 0.30f)
+            3 -> drawRect(c2, Offset(w / 2, 0f), Size(w / 2, h))
+            4 -> { drawRect(c2, Offset(w / 2, 0f), Size(w / 2, h / 2)); drawRect(c2, Offset(0f, h / 2), Size(w / 2, h / 2)) }
+            5 -> { drawRect(c2, Offset(w * 0.40f, 0f), Size(w * 0.20f, h)); drawRect(c2, Offset(0f, h * 0.38f), Size(w, h * 0.18f)) }
+            6 -> drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(0f, h * 0.85f); lineTo(w / 2, h * 0.35f); lineTo(w, h * 0.85f) },
+                c2, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.20f))
+            7 -> drawPath(sag, c2, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.24f))
+            else -> drawRect(c2, Offset(0f, 0f), Size(w, h * 0.42f))
+        }
+        // Effetto lucido: luce in alto, ombra in basso
+        drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(Color.White.copy(alpha = 0.38f), Color.Transparent, Color.Black.copy(alpha = 0.28f))))
+        drawOval(Color.White.copy(alpha = 0.16f), Offset(w * 0.18f, h * 0.06f), Size(w * 0.64f, h * 0.26f))
+    }
+    if (forma == 2) {   // tondo: anello esterno con filetto
+        drawCircle(bordo, w * 0.43f, Offset(w / 2, h / 2), style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
+        drawCircle(if (oro) Color(0xFFFFE9A0) else c2, w * 0.37f, Offset(w / 2, h / 2), style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.02f))
+    }
+    drawPath(sag, bordo, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.075f))
+    drawPath(sag, if (oro) Color(0xFFFFE9A0) else Color.White.copy(alpha = 0.7f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.018f))
+    // Simbolo al centro (bianco o oro, contorno scuro)
+    val cx = w / 2; val cy = h * 0.47f; val r = w * 0.17f
+    val fill = if (oro) Color(0xFFF2CF5B) else Color.White
+    val tratto = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.03f, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+    fun simb(p: androidx.compose.ui.graphics.Path) { drawPath(p, fill); drawPath(p, ink, style = tratto) }
+    when (simbolo) {
+        0 -> simb(androidx.compose.ui.graphics.Path().apply {   // stella
+            for (k in 0 until 10) {
+                val a = Math.PI * (-0.5 + k / 5.0); val rr = if (k % 2 == 0) r * 1.15f else r * 0.48f
+                val x = cx + (rr * Math.cos(a)).toFloat(); val y = cy + (rr * Math.sin(a)).toFloat()
+                if (k == 0) moveTo(x, y) else lineTo(x, y)
+            }; close() })
+        1 -> simb(androidx.compose.ui.graphics.Path().apply {   // corona
+            moveTo(cx - r, cy + r * 0.6f); lineTo(cx - r * 1.1f, cy - r * 0.6f); lineTo(cx - r * 0.5f, cy - r * 0.05f)
+            lineTo(cx, cy - r * 0.9f); lineTo(cx + r * 0.5f, cy - r * 0.05f); lineTo(cx + r * 1.1f, cy - r * 0.6f)
+            lineTo(cx + r, cy + r * 0.6f); close() })
+        2 -> simb(androidx.compose.ui.graphics.Path().apply {   // torre merlata
+            moveTo(cx - r * 0.8f, cy + r); lineTo(cx - r * 0.8f, cy - r * 0.8f); lineTo(cx - r * 0.45f, cy - r * 0.8f)
+            lineTo(cx - r * 0.45f, cy - r * 0.45f); lineTo(cx - r * 0.15f, cy - r * 0.45f); lineTo(cx - r * 0.15f, cy - r * 0.8f)
+            lineTo(cx + r * 0.15f, cy - r * 0.8f); lineTo(cx + r * 0.15f, cy - r * 0.45f); lineTo(cx + r * 0.45f, cy - r * 0.45f)
+            lineTo(cx + r * 0.45f, cy - r * 0.8f); lineTo(cx + r * 0.8f, cy - r * 0.8f); lineTo(cx + r * 0.8f, cy + r); close() })
+        3 -> {   // pallone
+            drawCircle(Color.White, r * 1.05f, Offset(cx, cy)); drawCircle(ink, r * 1.05f, Offset(cx, cy), style = tratto)
+            drawPath(androidx.compose.ui.graphics.Path().apply {
+                for (k in 0 until 5) { val a = Math.PI * (-0.5 + k * 0.4)
+                    val x = cx + (r * 0.42f * Math.cos(a)).toFloat(); val y = cy + (r * 0.42f * Math.sin(a)).toFloat()
+                    if (k == 0) moveTo(x, y) else lineTo(x, y) }; close() }, ink)
+        }
+        4 -> simb(androidx.compose.ui.graphics.Path().apply {   // fulmine
+            moveTo(cx + r * 0.3f, cy - r * 1.1f); lineTo(cx - r * 0.6f, cy + r * 0.15f); lineTo(cx - r * 0.05f, cy + r * 0.15f)
+            lineTo(cx - r * 0.35f, cy + r * 1.1f); lineTo(cx + r * 0.65f, cy - r * 0.2f); lineTo(cx + r * 0.1f, cy - r * 0.2f); close() })
+        5 -> for (k in 0..2) {   // onde
+            val y = cy - r * 0.6f + k * r * 0.6f
+            drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(cx - r, y)
+                quadraticBezierTo(cx - r / 2, y - r * 0.35f, cx, y); quadraticBezierTo(cx + r / 2, y + r * 0.35f, cx + r, y) },
+                fill, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
+        else -> drawCircle(Color.Black.copy(alpha = 0.25f), r * 1.15f, Offset(cx, cy))   // fondo del monogramma
     }
 }
 
