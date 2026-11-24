@@ -78,7 +78,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         EventType.COMMENTO, EventType.VAR)
     val last = events.lastOrNull { it.type !in ignorati }
     val lastGoal = events.lastOrNull { it.type == EventType.GOAL }
-    val palla = rememberPalla(events, m.minute, m.possessoCasa, info.speed >= 4)
+    val palla = rememberPalla(events, m.minute, m.possessoCasa, info.speed >= 4, m.homeF, m.awayF)
     var subOpen by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(LivePanel.NESSUNO) }
     val mySubs = if (info.userHome) m.subsH else m.subsA
@@ -121,7 +121,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
             item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + if (m.varAttivo) " · VAR" else "",
                 color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
-            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco ?: last?.home) }
+            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco ?: last?.home, palla.scia) }
             item { TelecronacaBubble(events, m.minute) }
             when (panel) {
                 LivePanel.TATTICA -> {
