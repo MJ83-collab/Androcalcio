@@ -34,6 +34,8 @@ Decisioni di Marco: 1) squadre AI con gli 11 stili, in base all'allenatore e all
 
 - **Squadre storiche (25/11 sera):** elenco fisso `StiliAi.STORICHE` per le 14 nazioni, preso dagli albi d'oro reali e associato ai nomi del gioco. Se una squadra è rinominata nell'editor, si completa con stadio e budget.
 
+- **Forza delle squadre reali (25/11 sera):** `strumenti/forza_squadre.py` adatta gli overall di `rose_fisse.csv` (massime serie con rose fisse) al valore di mercato reale della rosa (Transfermarkt via footystats.org e footballwhispers.com). La media di ogni campionato non cambia: cambia l'ordine e la distanza tra squadre (circa ±8 punti, estremi limitati). Nei campionati con rose generate (Olanda, Portogallo, Belgio, Scozia, Turchia, Grecia, Giappone) le squadre sono riordinate nei JSON per valore reale (la forza dipende dalla posizione). Solo carriere nuove. Stime a mano dove la fonte era incompleta: Boca, Racing, Independiente, Estudiantes, Talleres, San Lorenzo, Argentinos, Anderlecht, Bruges, Gent, Genk, Yokohama, Kobe, Nagoya. Squadre non trovate (es. Sampdoria, Wolfsburg, Burnley): 25° percentile del campionato.
+
 ### Decisioni aperte (Tattica FM)
 1. Squadre storiche da confermare: Italia 4ª (Napoli, in alternativa Genoa o Torino per titoli); Francia (Saint-Étienne, la più titolata, è in Ligue 2: esclusa); Germania (Norimberga, Schalke e Amburgo sono in 2.Bundesliga: escluse); Turchia e Grecia (nel gioco una sola squadra per Istanbul e Atene).
 2. Da provare sul telefono: leggibilità del campo, scelta ruolo, istruzioni, movimento senza palla in partita, equilibrio dei campionati con le AI a stili.

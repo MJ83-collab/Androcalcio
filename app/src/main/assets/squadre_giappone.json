@@ -2,20 +2,29 @@
  {
   "nazione": "Giappone",
   "campionato": "J1 League",
-  "squadra": "Tokyo Ryu",
-  "sigla": "TKR",
-  "colore1": "#C8102E",
+  "squadra": "Kashima Kuro",
+  "sigla": "KSK",
+  "colore1": "#8B0000",
   "colore2": "#111111",
-  "sponsor": "Nihon Cloud"
+  "sponsor": "Kuro Cafe"
  },
  {
   "nazione": "Giappone",
   "campionato": "J1 League",
-  "squadra": "Osaka Tora",
-  "sigla": "OST",
-  "colore1": "#F2B705",
-  "colore2": "#111111",
-  "sponsor": "Takoyaki Bank"
+  "squadra": "Urawa Akai",
+  "sigla": "URA",
+  "colore1": "#D00000",
+  "colore2": "#FFFFFF",
+  "sponsor": "Akai Robot"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Hiroshima Momiji",
+  "sigla": "HRM",
+  "colore1": "#6A0DAD",
+  "colore2": "#FFFFFF",
+  "sponsor": "Momiji Foods"
  },
  {
   "nazione": "Giappone",
@@ -38,15 +47,6 @@
  {
   "nazione": "Giappone",
   "campionato": "J1 League",
-  "squadra": "Nagoya Kaze",
-  "sigla": "NGK",
-  "colore1": "#B22222",
-  "colore2": "#F2B705",
-  "sponsor": "Kaze Motors"
- },
- {
-  "nazione": "Giappone",
-  "campionato": "J1 League",
   "squadra": "Kawasaki Taiyo",
   "sigla": "KWT",
   "colore1": "#1E90FF",
@@ -56,29 +56,29 @@
  {
   "nazione": "Giappone",
   "campionato": "J1 League",
-  "squadra": "Urawa Akai",
-  "sigla": "URA",
-  "colore1": "#D00000",
-  "colore2": "#FFFFFF",
-  "sponsor": "Akai Robot"
- },
- {
-  "nazione": "Giappone",
-  "campionato": "J1 League",
-  "squadra": "Kashima Kuro",
-  "sigla": "KSK",
-  "colore1": "#8B0000",
+  "squadra": "Osaka Tora",
+  "sigla": "OST",
+  "colore1": "#F2B705",
   "colore2": "#111111",
-  "sponsor": "Kuro Cafe"
+  "sponsor": "Takoyaki Bank"
  },
  {
   "nazione": "Giappone",
   "campionato": "J1 League",
-  "squadra": "Hiroshima Momiji",
-  "sigla": "HRM",
-  "colore1": "#6A0DAD",
-  "colore2": "#FFFFFF",
-  "sponsor": "Momiji Foods"
+  "squadra": "Tokyo Ryu",
+  "sigla": "TKR",
+  "colore1": "#C8102E",
+  "colore2": "#111111",
+  "sponsor": "Nihon Cloud"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Nagoya Kaze",
+  "sigla": "NGK",
+  "colore1": "#B22222",
+  "colore2": "#F2B705",
+  "sponsor": "Kaze Motors"
  },
  {
   "nazione": "Giappone",
