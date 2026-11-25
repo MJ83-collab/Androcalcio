@@ -1,11 +1,11 @@
 # Androcalcio — report (aggiornato 25/11/2026, mattina)
 
-Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/stadio` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
+Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/tattica-fm` (da `main` v0.7.0; prima `feat/stadio`) (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
 Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato sul telefono.
 
 ## COMANDO PER RIPARTIRE (da incollare nella nuova chat insieme a questo file)
-> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/stadio`. Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/tattica-fm`. Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
 
 ## Regole permanenti (valgono per ogni report futuro)
 1. Ricontrollare la repo e cercare bug a ogni ripartenza; correggere i bug certi, chiedere per i dubbi.
@@ -14,6 +14,22 @@ Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato
 4. Italiano educato e preciso, poche parole; dire se basta un modello più piccolo (Sonnet basta per UI e merge; Opus solo per nuove tarature).
 5. Dopo 5 domande su un argomento: nuovo report.md e nuova chat. Il report deve sempre avere: comando di ripartenza, cosa manca, decisioni aperte.
 6. Il merge su `main` / release v0.7.0 solo dopo la prova di Marco sul telefono (prima: esportare i salvataggi, disinstallare la vecchia versione una volta).
+
+## Sessione 25/11 sera: Tattica in stile FM27 (ramo feat/tattica-fm, build verde con test, NON provata sul telefono)
+Scelte di Marco: tutto, motore compreso; due ruoli per giocatore (con e senza palla); 11 stili con i nomi dell'articolo FM Religion.
+- **`engine/Stili.kt`:** `StileTattico` (11 stili con intensità, complessità, pregi/rischi, istruzioni), `PianoTattico` (passaggi, creatività, transizione, costruzione portiere, frequenza pressing, contrasti, contropressing, blocco portiere, ritmo, ruoli senza palla per id), `Effetti`, `RuoliFm` (stelle del ruolo e attributi chiave). Pressing, linea, ampiezza, fasce e piazzati restano le impostazioni di prima: lo stile le scrive (`vm.applicaStile`).
+- **Motore:** `LiveMatch`/`MatchEngine.simulate` hanno `homePiano`/`awayPiano` opzionali (solo la tua squadra; le AI non cambiano). Effetti piccoli su possesso, attacco, difesa e fatica; efficacia dello stile ±4% in base alla rosa (`idoneita`); ruolo senza palla più congeniale: difesa fino a ±8%. Ritmo iniziale e contropiede iniziale vengono dallo stile.
+- **Salvataggio:** SharedPreferences, chiave `piano_tattico` (nessuna migrazione DB).
+- **UI `ui/TatticaFm.kt`:** campo con viste Combinata / In possesso / Non in possesso, scelta ruolo con stelle, ruoli da imparare, attributi chiave e compito, istruzioni di squadra a due fasi (tocco = cambia valore, punto giallo = modificato), scelta stile con "Consigliato" ai 3 più adatti. In `AndrocalcioApp` la Tattica ha un interruttore Stile FM / Classica (la vecchia schermata è intatta).
+- **Test:** `PianoTatticoTest` (salvataggio, effetti, gol medi 1,5-4,2 per ogni stile). Tutti verdi.
+- Modello: Sonnet basta per UI e collegamenti; Opus solo se si vuole tarare a fondo gli effetti.
+
+### Decisioni aperte (Tattica FM)
+1. Le squadre AI usano ancora il vecchio stile Attacco/Difesa: dar loro uno dei 11 stili cambierebbe la taratura dei campionati. Vuoi che lo facciano?
+2. Tiki-Taka verticale: le istruzioni senza palla non erano leggibili nell'articolo (nel codice sono quelle del Tiki-Taka).
+3. Effetti: sono volutamente piccoli (pochi %). Se in prova sul telefono non si sentono, alzarli.
+4. Mancano ancora: istruzioni per singolo giocatore (come FM), ruoli diversi per fase nel campo della partita dal vivo, stile consigliato dall'allenatore in seconda.
+5. Da provare sul telefono: leggibilità delle caselle sul campo con 5 giocatori in fila, scelta ruolo, cambio stile.
 
 ## Stato dei compiti (24/11 sera)
 Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, icone staff, centro sportivo, movimento giocatori per fotogramma, ruoli FD/FS/AD/AS, allenamento ruoli/piede/Cinico, cronaca sincronizzata, importazione JSON con id, lettura giocatori a pagine, correzioni dei bug sotto.
