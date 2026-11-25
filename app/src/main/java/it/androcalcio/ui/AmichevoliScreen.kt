@@ -51,7 +51,8 @@ fun AmichevoliScreen(
     onGioca: () -> Unit,
     onChiudi: () -> Unit,
     inviti: List<Long> = emptyList(),
-    onInvito: (Long) -> Unit = {}
+    onInvito: (Long) -> Unit = {},
+    forza: Map<Long, Int> = emptyMap()
 ) {
     val nazioni = teams.map { it.nazione }.distinct()
     var nazione by rememberSaveable { mutableStateOf(team.nazione) }
@@ -112,9 +113,11 @@ fun AmichevoliScreen(
         }
 
         Text("3. Squadra · $liberi posto/i libero/i", style = MaterialTheme.typography.labelLarge, color = AC.Text)
+        forza[team.id]?.let { Text("La tua forza: $it · verde = più debole, rosso = più forte", fontSize = 11.sp, color = AC.TextDim) }
         PaperPanel(Modifier.weight(1f).fillMaxWidth()) {
             Row(Modifier.padding(horizontal = 6.dp, vertical = 5.dp)) {
                 HeadCell("SQUADRA", AC.PaperText, Modifier.weight(1f), TextAlign.Start)
+                HeadCell("FORZA", AC.ColGreen, Modifier.width(44.dp))
                 HeadCell("STADIO", AC.ColBlue, Modifier.width(60.dp))
                 HeadCell("", AC.PaperText, Modifier.width(76.dp))
             }
@@ -123,6 +126,9 @@ fun AmichevoliScreen(
                     PaperRow(squadre.indexOf(t)) {
                         FlagBox(t.nazione, Modifier.size(width = 20.dp, height = 13.dp))
                         Text("  " + t.name, Modifier.weight(1f), maxLines = 1, fontSize = 12.sp, color = AC.PaperText, fontWeight = FontWeight.Bold)
+                        val f = forza[t.id]; val mia = forza[team.id]
+                        Text(f?.toString() ?: "–", Modifier.width(44.dp), textAlign = TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
+                            color = if (f == null || mia == null) AC.PaperText else if (f > mia + 2) AC.ColEn else if (f < mia - 2) AC.ColGreen else AC.ColOrange)
                         Text("%,d".format(t.stadiumCapacity).replace(',', '.'), Modifier.width(60.dp), textAlign = TextAlign.Center,
                             fontSize = 11.sp, color = AC.ColBlue)
                         Box(Modifier.width(76.dp), contentAlignment = Alignment.Center) {

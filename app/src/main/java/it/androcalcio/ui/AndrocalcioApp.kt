@@ -454,6 +454,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         onPlayFriendlies = { vm.playFriendlies() },
                         inviti = vm.extra.collectAsStateWithLifecycle().value.inviti,
                         onInvito = { vm.accettaInvito(it) },
+                        forza = vm.teamInfo.collectAsStateWithLifecycle().value.mapValues { it.value.strength },
                         onSimulaFino = { vm.simulaFino(it) },
                         giorno = vm.giorno.collectAsStateWithLifecycle().value,
                         onAttivita = { a ->
