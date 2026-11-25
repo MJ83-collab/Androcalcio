@@ -37,7 +37,7 @@ Decisioni di Marco: 1) squadre AI con gli 11 stili, in base all'allenatore e all
 - **Forza delle squadre reali (25/11 sera):** `strumenti/forza_squadre.py` adatta gli overall di `rose_fisse.csv` (massime serie con rose fisse) al valore di mercato reale della rosa (Transfermarkt via footystats.org e footballwhispers.com). La media di ogni campionato non cambia: cambia l'ordine e la distanza tra squadre (circa ±8 punti, estremi limitati). Nei campionati con rose generate (Olanda, Portogallo, Belgio, Scozia, Turchia, Grecia, Giappone) le squadre sono riordinate nei JSON per valore reale (la forza dipende dalla posizione). Solo carriere nuove. Stime a mano dove la fonte era incompleta: Boca, Racing, Independiente, Estudiantes, Talleres, San Lorenzo, Argentinos, Anderlecht, Bruges, Gent, Genk, Yokohama, Kobe, Nagoya. Squadre non trovate (es. Sampdoria, Wolfsburg, Burnley): 25° percentile del campionato.
 
 ### Decisioni aperte (Tattica FM)
-1. Squadre storiche da confermare: Italia 4ª (Napoli, in alternativa Genoa o Torino per titoli); Francia (Saint-Étienne, la più titolata, è in Ligue 2: esclusa); Germania (Norimberga, Schalke e Amburgo sono in 2.Bundesliga: escluse); Turchia e Grecia (nel gioco una sola squadra per Istanbul e Atene).
+1. Squadre storiche: **confermate da Marco il 25/11** (Napoli 4ª italiana; Saint-Étienne, Schalke, Amburgo e Norimberga escluse perché in seconda divisione; una sola squadra per Istanbul e Atene).
 2. Da provare sul telefono: leggibilità del campo, scelta ruolo, istruzioni, movimento senza palla in partita, equilibrio dei campionati con le AI a stili.
 
 ## Stato dei compiti (24/11 sera)
@@ -342,3 +342,7 @@ Sonnet basta per la prova, il merge e la grafica; Opus solo per nuove tarature.
 
 ## Per ripartire in una nuova chat
 Repo: https://github.com/MJ83-collab/Androcalcio, branch `feat/stadio`. Niente SDK locale: compilazione e test solo con GitHub Actions (`gh run list --branch feat/stadio`). Regole di Marco: risposte brevi e precise, chiedere prima di modificare, report.md ogni 5 domande.
+
+
+## Aggiornamento 25/11 sera (2): valori reali aggiunti
+Per Cádiz (22,7 M€), Granada (35,85 M€), Athletico Paranaense (~31 M€), Cuiabá (~13,5 M€) e Criciúma (~13,4 M€) ho usato valori Transfermarkt (footystats; i brasiliani da R$ a € a circa 6,2). Ricalcolo fatto dai file originali (prima della scalatura). Restano senza valore: Sampdoria, Wolfsburg, Heidenheim, Burnley, Almería, Metz, Clermont, Lorient: le fonti trovate usano altre stime (non confrontabili con Transfermarkt), quindi non le ho mescolate.
