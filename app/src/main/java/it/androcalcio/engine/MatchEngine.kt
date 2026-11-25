@@ -97,14 +97,14 @@ object MatchEngine {
         )
     }
 
-    internal fun shooter(ps: List<Player>, rng: Random): Player? {
+    internal fun shooter(ps: List<Player>, rng: Random, peso: (Player) -> Double = { 1.0 }): Player? {
         val weights = ps.map {
             (when (it.role) {
                 "A" -> (it.fi + it.ti) / 2.0 * 3.0
                 "C" -> (it.fi + it.ti + it.pa) / 3.0 * 1.5
                 "D" -> it.ti * 0.4
                 else -> 0.0
-            }) * Tratti.pesoTiro(it)
+            }) * Tratti.pesoTiro(it) * peso(it)
         }
         val total = weights.sum()
         if (total <= 0.0) return null
@@ -134,12 +134,13 @@ object MatchEngine {
         homeTiri: SetPieces = SetPieces.NONE, awayTiri: SetPieces = SetPieces.NONE,
         rng: Random = Random.Default,
         meteoGol: Double = 1.0,
-        homeTrap: Boolean = false, awayTrap: Boolean = false
+        homeTrap: Boolean = false, awayTrap: Boolean = false,
+        homePiano: PianoTattico? = null, awayPiano: PianoTattico? = null
     ): MatchReport = LiveMatch(
         home, homePlayers, away, awayPlayers, homeF, awayF, homeCoach, awayCoach,
         homeMent, awayMent, homeBench, awayBench, rng,
         homePress = homePress, awayPress = awayPress, homeLine = homeLine, awayLine = awayLine, homeAmp = homeAmp, awayAmp = awayAmp,
         homeStile = homeStile, awayStile = awayStile, homeTiri = homeTiri, awayTiri = awayTiri, meteoGol = meteoGol,
-        trapH = homeTrap, trapA = awayTrap
+        trapH = homeTrap, trapA = awayTrap, homePiano = homePiano, awayPiano = awayPiano
     ).also { it.runToEnd() }.report()
 }

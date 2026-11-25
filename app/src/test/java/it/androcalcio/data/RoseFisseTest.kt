@@ -42,9 +42,12 @@ class RoseFisseTest {
         File("build/rose_fisse.csv").apply { parentFile.mkdirs(); writeText(csv) }
         val congelato = File("src/main/assets/rose_fisse.csv")
         if (congelato.exists()) {
+            // Gli overall e i parametri del file sono stati adattati alla forza reale dei club (strumenti/forza_squadre.py):
+            // si confrontano solo squadra, ruolo, età, nazionalità e nome di ogni giocatore.
+            fun chiave(t: String) = t.lines().filter { it.isNotBlank() }.map { r -> r.split("|").let { c -> listOf(c[0], c[1], c[2], c[6], c.getOrElse(9) { "" }) } }
             assertEquals(
-                "Le rose generate non coincidono con assets/rose_fisse.csv: rigenera il file dall'artifact",
-                congelato.readText(), csv
+                "Le rose generate non coincidono con assets/rose_fisse.csv (squadre, ruoli o nomi): rigenera il file dall'artifact",
+                chiave(congelato.readText()), chiave(csv)
             )
         } else {
             // Primo congelamento: il CSV finisce nel log della CI tra i due marcatori

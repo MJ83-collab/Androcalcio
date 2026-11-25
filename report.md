@@ -1,11 +1,11 @@
 # Androcalcio — report (aggiornato 25/11/2026, mattina)
 
-Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/stadio` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
+Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/tattica-fm` (da `main` v0.7.0; prima `feat/stadio`) (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
 Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato sul telefono.
 
 ## COMANDO PER RIPARTIRE (da incollare nella nuova chat insieme a questo file)
-> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/stadio`. Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/tattica-fm`. Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
 
 ## Regole permanenti (valgono per ogni report futuro)
 1. Ricontrollare la repo e cercare bug a ogni ripartenza; correggere i bug certi, chiedere per i dubbi.
@@ -14,6 +14,31 @@ Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato
 4. Italiano educato e preciso, poche parole; dire se basta un modello più piccolo (Sonnet basta per UI e merge; Opus solo per nuove tarature).
 5. Dopo 5 domande su un argomento: nuovo report.md e nuova chat. Il report deve sempre avere: comando di ripartenza, cosa manca, decisioni aperte.
 6. Il merge su `main` / release v0.7.0 solo dopo la prova di Marco sul telefono (prima: esportare i salvataggi, disinstallare la vecchia versione una volta).
+
+## Sessione 25/11 sera: Tattica in stile FM27 (ramo feat/tattica-fm, build verde con test, NON provata sul telefono)
+Scelte di Marco: tutto, motore compreso; due ruoli per giocatore (con e senza palla); 11 stili con i nomi dell'articolo FM Religion.
+- **`engine/Stili.kt`:** `StileTattico` (11 stili con intensità, complessità, pregi/rischi, istruzioni), `PianoTattico` (passaggi, creatività, transizione, costruzione portiere, frequenza pressing, contrasti, contropressing, blocco portiere, ritmo, ruoli senza palla per id), `Effetti`, `RuoliFm` (stelle del ruolo e attributi chiave). Pressing, linea, ampiezza, fasce e piazzati restano le impostazioni di prima: lo stile le scrive (`vm.applicaStile`).
+- **Motore:** `LiveMatch`/`MatchEngine.simulate` hanno `homePiano`/`awayPiano` opzionali (solo la tua squadra; le AI non cambiano). Effetti piccoli su possesso, attacco, difesa e fatica; efficacia dello stile ±4% in base alla rosa (`idoneita`); ruolo senza palla più congeniale: difesa fino a ±8%. Ritmo iniziale e contropiede iniziale vengono dallo stile.
+- **Salvataggio:** SharedPreferences, chiave `piano_tattico` (nessuna migrazione DB).
+- **UI `ui/TatticaFm.kt`:** campo con viste Combinata / In possesso / Non in possesso, scelta ruolo con stelle, ruoli da imparare, attributi chiave e compito, istruzioni di squadra a due fasi (tocco = cambia valore, punto giallo = modificato), scelta stile con "Consigliato" ai 3 più adatti. In `AndrocalcioApp` la Tattica ha un interruttore Stile FM / Classica (la vecchia schermata è intatta).
+- **Test:** `PianoTatticoTest` (salvataggio, effetti, gol medi 1,5-4,2 per ogni stile). Tutti verdi.
+- Modello: Sonnet basta per UI e collegamenti; Opus solo se si vuole tarare a fondo gli effetti.
+
+### Seconda parte (25/11 sera, Opus, build verde, NON provata sul telefono)
+Decisioni di Marco: 1) squadre AI con gli 11 stili, in base all'allenatore e alle 4 squadre più storiche e forti; 2) effetti alzati di poco; 3) Tiki-Taka verticale ok così; 4) istruzioni per giocatore e ruoli per fase in partita, subito.
+- **`StiliAi`:** le 4 squadre più storiche e forti di ogni nazione (stadio più grande, poi budget) scelgono tra Controllo del possesso, Tiki-Taka, Tiki-Taka verticale, Gegenpress; le altre tra gli stili d'attacco o di difesa secondo l'allenatore. Vince lo stile più adatto alla rosa. Per le AI pressing, linea, ampiezza e fasce vengono dallo stile.
+- **Effetti alzati** di circa un quarto; ruolo senza palla fino a ±10%.
+- **`IstrGiocatore`:** 11 istruzioni per giocatore (tiro, dribbling, passaggi, sortite, pressing, contrasti), effetto totale massimo ±5%; "Tira di più/meno" cambia chi tira. Nella scelta ruolo; punto "•" sul campo.
+- **Ruoli per fase in partita:** nella partita dal vivo e nella vista "Non in possesso" i giocatori vanno verso il ruolo senza palla (`PostoRuolo`).
+- **Tecnico:** `closeSeason` di nuovo al limite ("Method too large"): partita spostata in `simChiusura`. Ogni aggiunta futura lì va in funzioni separate.
+
+- **Squadre storiche (25/11 sera):** elenco fisso `StiliAi.STORICHE` per le 14 nazioni, preso dagli albi d'oro reali e associato ai nomi del gioco. Se una squadra è rinominata nell'editor, si completa con stadio e budget.
+
+- **Forza delle squadre reali (25/11 sera):** `strumenti/forza_squadre.py` adatta gli overall di `rose_fisse.csv` (massime serie con rose fisse) al valore di mercato reale della rosa (Transfermarkt via footystats.org e footballwhispers.com). La media di ogni campionato non cambia: cambia l'ordine e la distanza tra squadre (circa ±8 punti, estremi limitati). Nei campionati con rose generate (Olanda, Portogallo, Belgio, Scozia, Turchia, Grecia, Giappone) le squadre sono riordinate nei JSON per valore reale (la forza dipende dalla posizione). Solo carriere nuove. Stime a mano dove la fonte era incompleta: Boca, Racing, Independiente, Estudiantes, Talleres, San Lorenzo, Argentinos, Anderlecht, Bruges, Gent, Genk, Yokohama, Kobe, Nagoya. Squadre non trovate (es. Sampdoria, Wolfsburg, Burnley): 25° percentile del campionato.
+
+### Decisioni aperte (Tattica FM)
+1. Squadre storiche: **confermate da Marco il 25/11** (Napoli 4ª italiana; Saint-Étienne, Schalke, Amburgo e Norimberga escluse perché in seconda divisione; una sola squadra per Istanbul e Atene).
+2. Da provare sul telefono: leggibilità del campo, scelta ruolo, istruzioni, movimento senza palla in partita, equilibrio dei campionati con le AI a stili.
 
 ## Stato dei compiti (24/11 sera)
 Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, icone staff, centro sportivo, movimento giocatori per fotogramma, ruoli FD/FS/AD/AS, allenamento ruoli/piede/Cinico, cronaca sincronizzata, importazione JSON con id, lettura giocatori a pagine, correzioni dei bug sotto.
@@ -317,3 +342,7 @@ Sonnet basta per la prova, il merge e la grafica; Opus solo per nuove tarature.
 
 ## Per ripartire in una nuova chat
 Repo: https://github.com/MJ83-collab/Androcalcio, branch `feat/stadio`. Niente SDK locale: compilazione e test solo con GitHub Actions (`gh run list --branch feat/stadio`). Regole di Marco: risposte brevi e precise, chiedere prima di modificare, report.md ogni 5 domande.
+
+
+## Aggiornamento 25/11 sera (2): valori reali aggiunti
+Per Cádiz (22,7 M€), Granada (35,85 M€), Athletico Paranaense (~31 M€), Cuiabá (~13,5 M€) e Criciúma (~13,4 M€) ho usato valori Transfermarkt (footystats; i brasiliani da R$ a € a circa 6,2). Ricalcolo fatto dai file originali (prima della scalatura). Restano senza valore: Sampdoria, Wolfsburg, Heidenheim, Burnley, Almería, Metz, Clermont, Lorient: le fonti trovate usano altre stime (non confrontabili con Transfermarkt), quindi non le ho mescolate.

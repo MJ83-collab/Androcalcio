@@ -2,7 +2,10 @@ package it.androcalcio
 
 import it.androcalcio.engine.AvatarGen
 import it.androcalcio.engine.CoppeEuropee
+import it.androcalcio.engine.PianoTattico
 import it.androcalcio.engine.PreparatoreCapo
+import it.androcalcio.engine.StileTattico
+import it.androcalcio.engine.StiliAi
 import it.androcalcio.engine.SquadraB
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
@@ -309,6 +312,29 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun setAmpiezza(a: Ampiezza) { _ampiezza.value = a; prefs.edit().putInt("ampiezza", a.ordinal).apply() }
 
     /** Gioco sulle fasce o al centro, e schema sui calci piazzati: solo per la tua squadra, in partita dal vivo. */
+    /** Piano tattico a due fasi (stile, istruzioni nuove, ruoli senza palla): vedi engine/Stili.kt. */
+    private val _piano = MutableStateFlow(PianoTattico.decodifica(prefs.getString("piano_tattico", "")))
+    val piano: StateFlow<PianoTattico> = _piano
+    fun setPiano(p: PianoTattico) { _piano.value = p; prefs.edit().putString("piano_tattico", p.codifica()).apply() }
+    /** Sceglie uno stile: imposta pressing, linea, ampiezza, fasce, schema e le istruzioni nuove; i ruoli senza palla restano. */
+    fun applicaStile(s: StileTattico) {
+        setPressing(s.pressing); setLine(s.linea); setAmpiezza(s.ampiezza)
+        if (s != StileTattico.TABULA_RASA) { setFasce(s.fasce); setSchemaPiazzati(s.schema) }
+        setPiano(s.pianoCompleto(_piano.value.ruoliNonPoss))
+    }
+    /** Istruzione per singolo giocatore: accende o spegne (toglie le altre dello stesso gruppo). */
+    fun setIstrGiocatore(p: Player, i: it.androcalcio.engine.IstrGiocatore) { setPiano(_piano.value.conIstruzione(p.id, i)) }
+
+    /** Le 4 squadre più storiche e forti di ogni nazione (vedi StiliAi.grandi), lette una volta. */
+    @Volatile private var grandiSquadre: Set<Long>? = null
+    private suspend fun grandi(): Set<Long> = grandiSquadre ?: StiliAi.grandi(dao.allTeams()).also { grandiSquadre = it }
+    /** Piano tattico di una squadra AI: uno degli 11 stili, scelto dallo stile dell'allenatore e dalla rosa. */
+    private fun pianoAi(t: Team, rosa: List<Player>, staffBy: Map<Long, List<it.androcalcio.data.Staff>>, gr: Set<Long>): PianoTattico =
+        StiliAi.scegli(t.id, Staffing.stile(staffBy, t.id), rosa, t.id in gr).pianoCompleto()
+
+    /** Ruolo senza palla di un giocatore ("" = come in possesso). */
+    fun setRuoloSenzaPalla(p: Player, ruolo: String) { setPiano(_piano.value.conRuoloSenzaPalla(p.id, ruolo.ifEmpty { null })) }
+
     private val _fasce = MutableStateFlow(Fasce.values()[prefs.getInt("fasce", Fasce.MISTO.ordinal).coerceIn(0, Fasce.values().size - 1)])
     val fasce: StateFlow<Fasce> = _fasce
     fun setFasce(f: Fasce) { _fasce.value = f; prefs.edit().putInt("fasce", f.ordinal).apply() }
@@ -653,7 +679,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     awayStile = if (a.id == t.id) null else Staffing.stile(staffBy, a.id),
                     meteoGol = condizioni(m.round, totaliLega, h, h.id == t.id, fatteMie).fattoreGol() *
                         (if (h.id == t.id) Prato.fattore(pratoMio) else 1.0),
-                    homeTrap = h.id == t.id && _trappola.value, awayTrap = a.id == t.id && _trappola.value
+                    homeTrap = h.id == t.id && _trappola.value, awayTrap = a.id == t.id && _trappola.value,
+                    homePiano = if (h.id == t.id) _piano.value else pianoAi(h, hL?.xi ?: Medical.available(hpD), staffBy, grandi()),
+                    awayPiano = if (a.id == t.id) _piano.value else pianoAi(a, aL?.xi ?: Medical.available(apD), staffBy, grandi())
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
                 if (h.id == t.id || a.id == t.id) registraPartita(t, if (h.id == t.id) a else h, h.id == t.id, r)
@@ -1400,6 +1428,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             homeTiri = if (userHome) tiriMe else SetPieces.NONE, awayTiri = if (userHome) SetPieces.NONE else tiriMe,
             meteoGol = cond.fattoreGol() * (if (userHome) Prato.fattore(dao.statoInt(Prato.KEY)) else 1.0),
             trapH = userHome && _trappola.value, trapA = !userHome && _trappola.value,
+            homePiano = if (userHome) _piano.value else pianoAi(home, opp, staffBy, grandi()),
+            awayPiano = if (userHome) pianoAi(away, opp, staffBy, grandi()) else _piano.value,
             arbitro = Disciplina.arbitro(dao.statoInt("c_partite") + 1, _season.value.hashCode().toLong()),
             varAttivo = true, immersivo = true, atmosfera = atm,
             homeFasce = if (userHome) _fasce.value else Fasce.MISTO, awayFasce = if (userHome) Fasce.MISTO else _fasce.value,
@@ -3063,6 +3093,29 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         return changed
     }
 
+    /** Partita di campionato simulata in chiusura stagione (fuori da closeSeason, che è al limite di dimensione). */
+    private suspend fun simChiusura(
+        h: Team, a: Team, me: Team, hx: List<Player>, ax: List<Player>, hb: List<Player>?, ab: List<Player>?,
+        staffBy: Map<Long, List<Staff>>
+    ): MatchReport = MatchEngine.simulate(
+        h, hx, a, ax,
+        if (h.id == me.id) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
+        if (a.id == me.id) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
+        Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
+        Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
+        homeMent = if (h.id == me.id) _mentality.value else null,
+        awayMent = if (a.id == me.id) _mentality.value else null,
+        homeBench = hb, awayBench = ab,
+        homePress = if (h.id == me.id) _pressing.value else null,
+        awayPress = if (a.id == me.id) _pressing.value else null,
+        homeLine = if (h.id == me.id) _line.value else null,
+        awayLine = if (a.id == me.id) _line.value else null,
+        homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
+        awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id),
+        homePiano = if (h.id == me.id) _piano.value else pianoAi(h, hx, staffBy, grandi()),
+        awayPiano = if (a.id == me.id) _piano.value else pianoAi(a, ax, staffBy, grandi())
+    )
+
     /** Simula una partita di coppa in chiusura stagione: stesse regole delle giornate di campionato. */
     private suspend fun simCupMatch(
         h: Team, a: Team, me: Team, cache: HashMap<Long, List<Player>>,
@@ -3090,6 +3143,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             awayLine = if (a.id == me.id) _line.value else null,
             homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
             awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id),
+            homePiano = if (h.id == me.id) _piano.value else pianoAi(h, hx, staffBy, grandi()),
+            awayPiano = if (a.id == me.id) _piano.value else pianoAi(a, ax, staffBy, grandi()),
             rng = rng
         )
         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
@@ -3274,22 +3329,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         fun bench(id: Long, xi: List<Player>) =
                             if (id == me.id) Medical.available(cache[id].orEmpty().filter { it.id !in assenti }) - xi.toSet() else null
                         val hx = xi(h.id); val ax = xi(a.id)
-                        val r = MatchEngine.simulate(
-                            h, hx, a, ax,
-                            if (h.id == me.id) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
-                            if (a.id == me.id) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
-                            Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
-                            Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
-                            homeMent = if (h.id == me.id) _mentality.value else null,
-                            awayMent = if (a.id == me.id) _mentality.value else null,
-                            homeBench = bench(h.id, hx), awayBench = bench(a.id, ax),
-                            homePress = if (h.id == me.id) _pressing.value else null,
-                            awayPress = if (a.id == me.id) _pressing.value else null,
-                            homeLine = if (h.id == me.id) _line.value else null,
-                            awayLine = if (a.id == me.id) _line.value else null,
-                            homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
-                            awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id)
-                        )
+                        val r = simChiusura(h, a, me, hx, ax, bench(h.id, hx), bench(a.id, ax), staffBy)
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
                             Staffing.cura(staffBy, h.id), rng,
                             planFor(h.id, me.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))

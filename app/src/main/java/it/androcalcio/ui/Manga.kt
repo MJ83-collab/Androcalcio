@@ -84,7 +84,9 @@ fun MangaPitch(
     inMoto: Boolean = true,             // la palla sta viaggiando (linee di velocità)
     meteo: it.androcalcio.engine.Meteo.Tempo? = null, prato: it.androcalcio.engine.Meteo.Campo? = null,
     lineaCasa: it.androcalcio.engine.DefLine? = null, lineaOspiti: it.androcalcio.engine.DefLine? = null,
-    sim: PallonePista? = null           // se presente, la palla è simulata sui giocatori (portata e passata) invece di essere disegnata dove dice bx,by
+    sim: PallonePista? = null,          // se presente, la palla è simulata sui giocatori (portata e passata) invece di essere disegnata dove dice bx,by
+    ruoliSenzaCasa: Map<Long, String> = emptyMap(),   // ruoli senza palla (piano tattico): ci si sposta lì quando si difende
+    ruoliSenzaOspiti: Map<Long, String> = emptyMap()
 ) {
     val animato = meteo == it.androcalcio.engine.Meteo.Tempo.PIOGGIA || meteo == it.androcalcio.engine.Meteo.Tempo.NEVE ||
         meteo == it.androcalcio.engine.Meteo.Tempo.VENTO
@@ -125,8 +127,22 @@ fun MangaPitch(
         return Offset(x0 + (pbx - x0) * k, y0 + (pby - y0) * k)
     }
     val bersagli = Array<Offset?>(22) { null }
-    hf.coords().forEachIndexed { i, (fx, fy) -> if (i < 11) bersagli[i] = dove(fx, fy + (pby - fy) * 0.08f, true, i == 0) }
-    af.coords().forEachIndexed { i, (fx, fy) -> if (i < 11) bersagli[11 + i] = dove(1f - fx, fy + (pby - fy) * 0.08f, false, i == 0) }
+    // Senza palla ogni giocatore scivola verso il suo ruolo di non possesso, tanto più quanto più la squadra difende
+    fun spostaFase(nums: List<Pair<Int, Player>>, ruoli: Map<Long, String>, i: Int, casa: Boolean): Pair<Float, Float> {
+        val p = nums.getOrNull(i)?.second ?: return 0f to 0f
+        val r = ruoli[p.id] ?: return 0f to 0f
+        val dif = kotlin.math.max(-(if (casa) 1f else -1f) * sp, 0f)
+        val (dd, dw) = it.androcalcio.engine.PostoRuolo.spostamento(it.androcalcio.engine.TacticalRoles.assigned(p), r)
+        return dd * 0.5f * dif to dw * 0.8f * dif
+    }
+    hf.coords().forEachIndexed { i, (fx, fy) -> if (i < 11) {
+        val (dd, dw) = spostaFase(homeNums, ruoliSenzaCasa, i, true)
+        bersagli[i] = dove(fx + dd, fy + dw + (pby - fy) * 0.08f, true, i == 0)
+    } }
+    af.coords().forEachIndexed { i, (fx, fy) -> if (i < 11) {
+        val (dd, dw) = spostaFase(awayNums, ruoliSenzaOspiti, i, false)
+        bersagli[11 + i] = dove(1f - (fx + dd), fy + dw + (pby - fy) * 0.08f, false, i == 0)
+    } }
     val bersagliOra = androidx.compose.runtime.rememberUpdatedState(bersagli)
     val posiz = remember { androidx.compose.runtime.mutableStateListOf<Offset>().also { l -> repeat(22) { l.add(Offset(0.5f, 0.5f)) } } }
     val velocita = remember { FloatArray(44) }

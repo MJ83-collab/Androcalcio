@@ -2,11 +2,11 @@
  {
   "nazione": "Olanda",
   "campionato": "Eredivisie",
-  "squadra": "Amsterdam Vlam",
-  "sigla": "AMV",
-  "colore1": "#D62828",
+  "squadra": "Eindhoven Licht",
+  "sigla": "EIL",
+  "colore1": "#E63946",
   "colore2": "#FFFFFF",
-  "sponsor": "Gracht Bank"
+  "sponsor": "Lumen Tech"
  },
  {
   "nazione": "Olanda",
@@ -20,101 +20,11 @@
  {
   "nazione": "Olanda",
   "campionato": "Eredivisie",
-  "squadra": "Eindhoven Licht",
-  "sigla": "EIL",
-  "colore1": "#E63946",
+  "squadra": "Amsterdam Vlam",
+  "sigla": "AMV",
+  "colore1": "#D62828",
   "colore2": "#FFFFFF",
-  "sponsor": "Lumen Tech"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Utrecht Dom",
-  "sigla": "UTD",
-  "colore1": "#1D3557",
-  "colore2": "#F1FAEE",
-  "sponsor": "Dom Verzekering"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Den Haag Zee",
-  "sigla": "DEZ",
-  "colore1": "#2A9D8F",
-  "colore2": "#FFFFFF",
-  "sponsor": "Zee Energie"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Groningen Noord",
-  "sigla": "GRN",
-  "colore1": "#2E7D32",
-  "colore2": "#FFFFFF",
-  "sponsor": "Noord Zuivel"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Arnhem Brug",
-  "sigla": "ARB",
-  "colore1": "#F4A261",
-  "colore2": "#111111",
-  "sponsor": "Brug Bouw"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Tilburg Wolf",
-  "sigla": "TIW",
-  "colore1": "#6A1B9A",
-  "colore2": "#FFFFFF",
-  "sponsor": "Wolf Textiel"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Breda Kasteel",
-  "sigla": "BRK",
-  "colore1": "#E9C46A",
-  "colore2": "#264653",
-  "sponsor": "Kasteel Bier"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Nijmegen Rijn",
-  "sigla": "NIR",
-  "colore1": "#C1121F",
-  "colore2": "#111111",
-  "sponsor": "Rijn Telecom"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Enschede Wind",
-  "sigla": "ENW",
-  "colore1": "#00B4D8",
-  "colore2": "#FFFFFF",
-  "sponsor": "Wind Molens"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Zwolle Molen",
-  "sigla": "ZWM",
-  "colore1": "#386641",
-  "colore2": "#F2E8CF",
-  "sponsor": "Molen Brood"
- },
- {
-  "nazione": "Olanda",
-  "campionato": "Eredivisie",
-  "squadra": "Heerenveen Ijs",
-  "sigla": "HEI",
-  "colore1": "#4895EF",
-  "colore2": "#FFFFFF",
-  "sponsor": "IJs Sport"
+  "sponsor": "Gracht Bank"
  },
  {
   "nazione": "Olanda",
@@ -128,11 +38,83 @@
  {
   "nazione": "Olanda",
   "campionato": "Eredivisie",
-  "squadra": "Venlo Maas",
-  "sigla": "VEM",
-  "colore1": "#9D0208",
+  "squadra": "Enschede Wind",
+  "sigla": "ENW",
+  "colore1": "#00B4D8",
   "colore2": "#FFFFFF",
-  "sponsor": "Maas Logistiek"
+  "sponsor": "Wind Molens"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Utrecht Dom",
+  "sigla": "UTD",
+  "colore1": "#1D3557",
+  "colore2": "#F1FAEE",
+  "sponsor": "Dom Verzekering"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Nijmegen Rijn",
+  "sigla": "NIR",
+  "colore1": "#C1121F",
+  "colore2": "#111111",
+  "sponsor": "Rijn Telecom"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Heerenveen Ijs",
+  "sigla": "HEI",
+  "colore1": "#4895EF",
+  "colore2": "#FFFFFF",
+  "sponsor": "IJs Sport"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Groningen Noord",
+  "sigla": "GRN",
+  "colore1": "#2E7D32",
+  "colore2": "#FFFFFF",
+  "sponsor": "Noord Zuivel"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Breda Kasteel",
+  "sigla": "BRK",
+  "colore1": "#E9C46A",
+  "colore2": "#264653",
+  "sponsor": "Kasteel Bier"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Zwolle Molen",
+  "sigla": "ZWM",
+  "colore1": "#386641",
+  "colore2": "#F2E8CF",
+  "sponsor": "Molen Brood"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Deventer Hanze",
+  "sigla": "DEH",
+  "colore1": "#774936",
+  "colore2": "#FFFFFF",
+  "sponsor": "Hanze Handel"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Tilburg Wolf",
+  "sigla": "TIW",
+  "colore1": "#6A1B9A",
+  "colore2": "#FFFFFF",
+  "sponsor": "Wolf Textiel"
  },
  {
   "nazione": "Olanda",
@@ -146,11 +128,29 @@
  {
   "nazione": "Olanda",
   "campionato": "Eredivisie",
-  "squadra": "Deventer Hanze",
-  "sigla": "DEH",
-  "colore1": "#774936",
+  "squadra": "Den Haag Zee",
+  "sigla": "DEZ",
+  "colore1": "#2A9D8F",
   "colore2": "#FFFFFF",
-  "sponsor": "Hanze Handel"
+  "sponsor": "Zee Energie"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Arnhem Brug",
+  "sigla": "ARB",
+  "colore1": "#F4A261",
+  "colore2": "#111111",
+  "sponsor": "Brug Bouw"
+ },
+ {
+  "nazione": "Olanda",
+  "campionato": "Eredivisie",
+  "squadra": "Venlo Maas",
+  "sigla": "VEM",
+  "colore1": "#9D0208",
+  "colore2": "#FFFFFF",
+  "sponsor": "Maas Logistiek"
  },
  {
   "nazione": "Olanda",
@@ -191,11 +191,11 @@
  {
   "nazione": "Portogallo",
   "campionato": "Primeira Liga",
-  "squadra": "Coimbra Livro",
-  "sigla": "COL",
-  "colore1": "#111111",
-  "colore2": "#FFFFFF",
-  "sponsor": "Livro Editora"
+  "squadra": "Estoril Costa",
+  "sigla": "ESC",
+  "colore1": "#F4D35E",
+  "colore2": "#0D3B66",
+  "sponsor": "Costa Casino"
  },
  {
   "nazione": "Portogallo",
@@ -205,6 +205,24 @@
   "colore1": "#FFFFFF",
   "colore2": "#111111",
   "sponsor": "Castelo Cimentos"
+ },
+ {
+  "nazione": "Portogallo",
+  "campionato": "Primeira Liga",
+  "squadra": "Barcelos Galo",
+  "sigla": "BAG",
+  "colore1": "#D62828",
+  "colore2": "#111111",
+  "sponsor": "Galo Barro"
+ },
+ {
+  "nazione": "Portogallo",
+  "campionato": "Primeira Liga",
+  "squadra": "Coimbra Livro",
+  "sigla": "COL",
+  "colore1": "#111111",
+  "colore2": "#FFFFFF",
+  "sponsor": "Livro Editora"
  },
  {
   "nazione": "Portogallo",
@@ -272,15 +290,6 @@
  {
   "nazione": "Portogallo",
   "campionato": "Primeira Liga",
-  "squadra": "Barcelos Galo",
-  "sigla": "BAG",
-  "colore1": "#D62828",
-  "colore2": "#111111",
-  "sponsor": "Galo Barro"
- },
- {
-  "nazione": "Portogallo",
-  "campionato": "Primeira Liga",
   "squadra": "Portimao Vela",
   "sigla": "POV",
   "colore1": "#48CAE4",
@@ -315,13 +324,13 @@
   "sponsor": "Cruz Papel"
  },
  {
-  "nazione": "Portogallo",
-  "campionato": "Primeira Liga",
-  "squadra": "Estoril Costa",
-  "sigla": "ESC",
-  "colore1": "#F4D35E",
-  "colore2": "#0D3B66",
-  "sponsor": "Costa Casino"
+  "nazione": "Belgio",
+  "campionato": "Pro League",
+  "squadra": "Brugge Zwaan",
+  "sigla": "BRZ",
+  "colore1": "#2A6F97",
+  "colore2": "#111111",
+  "sponsor": "Zwaan Kant"
  },
  {
   "nazione": "Belgio",
@@ -335,11 +344,11 @@
  {
   "nazione": "Belgio",
   "campionato": "Pro League",
-  "squadra": "Antwerpen Haven",
-  "sigla": "ANH",
-  "colore1": "#C1121F",
+  "squadra": "Genk Mijn",
+  "sigla": "GEM",
+  "colore1": "#0077B6",
   "colore2": "#FFFFFF",
-  "sponsor": "Haven Diamant"
+  "sponsor": "Mijn Staal"
  },
  {
   "nazione": "Belgio",
@@ -353,38 +362,20 @@
  {
   "nazione": "Belgio",
   "campionato": "Pro League",
+  "squadra": "Antwerpen Haven",
+  "sigla": "ANH",
+  "colore1": "#C1121F",
+  "colore2": "#FFFFFF",
+  "sponsor": "Haven Diamant"
+ },
+ {
+  "nazione": "Belgio",
+  "campionato": "Pro League",
   "squadra": "Liege Acier",
   "sigla": "LIA",
   "colore1": "#D00000",
   "colore2": "#111111",
   "sponsor": "Acier Metal"
- },
- {
-  "nazione": "Belgio",
-  "campionato": "Pro League",
-  "squadra": "Charleroi Kool",
-  "sigla": "CHK",
-  "colore1": "#111111",
-  "colore2": "#FFFFFF",
-  "sponsor": "Kool Energie"
- },
- {
-  "nazione": "Belgio",
-  "campionato": "Pro League",
-  "squadra": "Brugge Zwaan",
-  "sigla": "BRZ",
-  "colore1": "#2A6F97",
-  "colore2": "#111111",
-  "sponsor": "Zwaan Kant"
- },
- {
-  "nazione": "Belgio",
-  "campionato": "Pro League",
-  "squadra": "Leuven Studio",
-  "sigla": "LES",
-  "colore1": "#FFFFFF",
-  "colore2": "#C1121F",
-  "sponsor": "Studio Boeken"
  },
  {
   "nazione": "Belgio",
@@ -398,11 +389,29 @@
  {
   "nazione": "Belgio",
   "campionato": "Pro League",
-  "squadra": "Genk Mijn",
-  "sigla": "GEM",
-  "colore1": "#0077B6",
+  "squadra": "Waregem Piste",
+  "sigla": "WAP",
+  "colore1": "#52796F",
   "colore2": "#FFFFFF",
-  "sponsor": "Mijn Staal"
+  "sponsor": "Piste Paarden"
+ },
+ {
+  "nazione": "Belgio",
+  "campionato": "Pro League",
+  "squadra": "Charleroi Kool",
+  "sigla": "CHK",
+  "colore1": "#111111",
+  "colore2": "#FFFFFF",
+  "sponsor": "Kool Energie"
+ },
+ {
+  "nazione": "Belgio",
+  "campionato": "Pro League",
+  "squadra": "Leuven Studio",
+  "sigla": "LES",
+  "colore1": "#FFFFFF",
+  "colore2": "#C1121F",
+  "sponsor": "Studio Boeken"
  },
  {
   "nazione": "Belgio",
@@ -452,15 +461,6 @@
  {
   "nazione": "Belgio",
   "campionato": "Pro League",
-  "squadra": "Waregem Piste",
-  "sigla": "WAP",
-  "colore1": "#52796F",
-  "colore2": "#FFFFFF",
-  "sponsor": "Piste Paarden"
- },
- {
-  "nazione": "Belgio",
-  "campionato": "Pro League",
   "squadra": "Tournai Pont",
   "sigla": "TOP",
   "colore1": "#E9C46A",
@@ -497,15 +497,6 @@
  {
   "nazione": "Scozia",
   "campionato": "Premiership",
-  "squadra": "Edimburgo Rock",
-  "sigla": "EDR",
-  "colore1": "#C1121F",
-  "colore2": "#FFFFFF",
-  "sponsor": "Rock Banca"
- },
- {
-  "nazione": "Scozia",
-  "campionato": "Premiership",
   "squadra": "Aberdeen Granite",
   "sigla": "ABG",
   "colore1": "#E63946",
@@ -515,47 +506,20 @@
  {
   "nazione": "Scozia",
   "campionato": "Premiership",
-  "squadra": "Dundee Tay",
-  "sigla": "DUT",
-  "colore1": "#023E8A",
+  "squadra": "Edimburgo Rock",
+  "sigla": "EDR",
+  "colore1": "#C1121F",
   "colore2": "#FFFFFF",
-  "sponsor": "Tay Jute"
+  "sponsor": "Rock Banca"
  },
  {
   "nazione": "Scozia",
   "campionato": "Premiership",
-  "squadra": "Inverness Loch",
-  "sigla": "INL",
-  "colore1": "#2D6A4F",
-  "colore2": "#FFFFFF",
-  "sponsor": "Loch Salmon"
- },
- {
-  "nazione": "Scozia",
-  "campionato": "Premiership",
-  "squadra": "Perth Thistle",
-  "sigla": "PET",
-  "colore1": "#7B2CBF",
-  "colore2": "#FFFFFF",
-  "sponsor": "Thistle Tartan"
- },
- {
-  "nazione": "Scozia",
-  "campionato": "Premiership",
-  "squadra": "Stirling Bridge",
-  "sigla": "STB",
-  "colore1": "#F4A261",
-  "colore2": "#111111",
-  "sponsor": "Bridge Cement"
- },
- {
-  "nazione": "Scozia",
-  "campionato": "Premiership",
-  "squadra": "Paisley Mill",
-  "sigla": "PAM",
-  "colore1": "#E5383B",
-  "colore2": "#FFFFFF",
-  "sponsor": "Mill Tessile"
+  "squadra": "Motherwell Steel",
+  "sigla": "MOS",
+  "colore1": "#F1C40F",
+  "colore2": "#7F1D1D",
+  "sponsor": "Steel Works"
  },
  {
   "nazione": "Scozia",
@@ -569,11 +533,47 @@
  {
   "nazione": "Scozia",
   "campionato": "Premiership",
-  "squadra": "Motherwell Steel",
-  "sigla": "MOS",
-  "colore1": "#F1C40F",
-  "colore2": "#7F1D1D",
-  "sponsor": "Steel Works"
+  "squadra": "Dundee Tay",
+  "sigla": "DUT",
+  "colore1": "#023E8A",
+  "colore2": "#FFFFFF",
+  "sponsor": "Tay Jute"
+ },
+ {
+  "nazione": "Scozia",
+  "campionato": "Premiership",
+  "squadra": "Paisley Mill",
+  "sigla": "PAM",
+  "colore1": "#E5383B",
+  "colore2": "#FFFFFF",
+  "sponsor": "Mill Tessile"
+ },
+ {
+  "nazione": "Scozia",
+  "campionato": "Premiership",
+  "squadra": "Perth Thistle",
+  "sigla": "PET",
+  "colore1": "#7B2CBF",
+  "colore2": "#FFFFFF",
+  "sponsor": "Thistle Tartan"
+ },
+ {
+  "nazione": "Scozia",
+  "campionato": "Premiership",
+  "squadra": "Inverness Loch",
+  "sigla": "INL",
+  "colore1": "#2D6A4F",
+  "colore2": "#FFFFFF",
+  "sponsor": "Loch Salmon"
+ },
+ {
+  "nazione": "Scozia",
+  "campionato": "Premiership",
+  "squadra": "Stirling Bridge",
+  "sigla": "STB",
+  "colore1": "#F4A261",
+  "colore2": "#111111",
+  "sponsor": "Bridge Cement"
  },
  {
   "nazione": "Turchia",
@@ -583,6 +583,42 @@
   "colore1": "#FFC300",
   "colore2": "#0B3D91",
   "sponsor": "Bosforo Telekom"
+ },
+ {
+  "nazione": "Turchia",
+  "campionato": "Super Lig",
+  "squadra": "Trabzon Karadeniz",
+  "sigla": "TRK",
+  "colore1": "#7B1E3A",
+  "colore2": "#48CAE4",
+  "sponsor": "Karadeniz Cay"
+ },
+ {
+  "nazione": "Turchia",
+  "campionato": "Super Lig",
+  "squadra": "Samsun Liman",
+  "sigla": "SAL",
+  "colore1": "#D00000",
+  "colore2": "#FFFFFF",
+  "sponsor": "Liman Lojistik"
+ },
+ {
+  "nazione": "Turchia",
+  "campionato": "Super Lig",
+  "squadra": "Rize Cay",
+  "sigla": "RIC",
+  "colore1": "#386641",
+  "colore2": "#FFFFFF",
+  "sponsor": "Cay Bahcesi"
+ },
+ {
+  "nazione": "Turchia",
+  "campionato": "Super Lig",
+  "squadra": "Antalya Sahil",
+  "sigla": "ANS",
+  "colore1": "#00B4D8",
+  "colore2": "#FFFFFF",
+  "sponsor": "Sahil Turizm"
  },
  {
   "nazione": "Turchia",
@@ -614,24 +650,6 @@
  {
   "nazione": "Turchia",
   "campionato": "Super Lig",
-  "squadra": "Antalya Sahil",
-  "sigla": "ANS",
-  "colore1": "#00B4D8",
-  "colore2": "#FFFFFF",
-  "sponsor": "Sahil Turizm"
- },
- {
-  "nazione": "Turchia",
-  "campionato": "Super Lig",
-  "squadra": "Trabzon Karadeniz",
-  "sigla": "TRK",
-  "colore1": "#7B1E3A",
-  "colore2": "#48CAE4",
-  "sponsor": "Karadeniz Cay"
- },
- {
-  "nazione": "Turchia",
-  "campionato": "Super Lig",
   "squadra": "Konya Ova",
   "sigla": "KOO",
   "colore1": "#2A9D8F",
@@ -655,15 +673,6 @@
   "colore1": "#6A994E",
   "colore2": "#FFFFFF",
   "sponsor": "Fistik Gida"
- },
- {
-  "nazione": "Turchia",
-  "campionato": "Super Lig",
-  "squadra": "Samsun Liman",
-  "sigla": "SAL",
-  "colore1": "#D00000",
-  "colore2": "#FFFFFF",
-  "sponsor": "Liman Lojistik"
  },
  {
   "nazione": "Turchia",
@@ -704,15 +713,6 @@
  {
   "nazione": "Turchia",
   "campionato": "Super Lig",
-  "squadra": "Rize Cay",
-  "sigla": "RIC",
-  "colore1": "#386641",
-  "colore2": "#FFFFFF",
-  "sponsor": "Cay Bahcesi"
- },
- {
-  "nazione": "Turchia",
-  "campionato": "Super Lig",
   "squadra": "Bodrum Koy",
   "sigla": "BOK",
   "colore1": "#48CAE4",
@@ -740,15 +740,6 @@
  {
   "nazione": "Grecia",
   "campionato": "Super League",
-  "squadra": "Atene Ulivo",
-  "sigla": "ATU",
-  "colore1": "#2D6A4F",
-  "colore2": "#FFFFFF",
-  "sponsor": "Ulivo Oil"
- },
- {
-  "nazione": "Grecia",
-  "campionato": "Super League",
   "squadra": "Salonicco Torre",
   "sigla": "SAT",
   "colore1": "#111111",
@@ -758,11 +749,11 @@
  {
   "nazione": "Grecia",
   "campionato": "Super League",
-  "squadra": "Patrasso Porto",
-  "sigla": "PAP",
-  "colore1": "#0077B6",
+  "squadra": "Atene Ulivo",
+  "sigla": "ATU",
+  "colore1": "#2D6A4F",
   "colore2": "#FFFFFF",
-  "sponsor": "Porto Ferries"
+  "sponsor": "Ulivo Oil"
  },
  {
   "nazione": "Grecia",
@@ -776,11 +767,29 @@
  {
   "nazione": "Grecia",
   "campionato": "Super League",
-  "squadra": "Larissa Pianura",
-  "sigla": "LAP",
-  "colore1": "#F4A261",
-  "colore2": "#111111",
-  "sponsor": "Pianura Grano"
+  "squadra": "Tripoli Monte",
+  "sigla": "TRM",
+  "colore1": "#6D597A",
+  "colore2": "#FFFFFF",
+  "sponsor": "Monte Miele"
+ },
+ {
+  "nazione": "Grecia",
+  "campionato": "Super League",
+  "squadra": "Agrinio Foglia",
+  "sigla": "AGF",
+  "colore1": "#386641",
+  "colore2": "#F2E8CF",
+  "sponsor": "Foglia Verde"
+ },
+ {
+  "nazione": "Grecia",
+  "campionato": "Super League",
+  "squadra": "Serres Alba",
+  "sigla": "SEA",
+  "colore1": "#FFFFFF",
+  "colore2": "#0D3B66",
+  "sponsor": "Alba Cotone"
  },
  {
   "nazione": "Grecia",
@@ -790,6 +799,33 @@
   "colore1": "#023E8A",
   "colore2": "#FFFFFF",
   "sponsor": "Argo Cantieri"
+ },
+ {
+  "nazione": "Grecia",
+  "campionato": "Super League",
+  "squadra": "Lamia Termopili",
+  "sigla": "LAT",
+  "colore1": "#9D0208",
+  "colore2": "#FFFFFF",
+  "sponsor": "Passo Trasporti"
+ },
+ {
+  "nazione": "Grecia",
+  "campionato": "Super League",
+  "squadra": "Patrasso Porto",
+  "sigla": "PAP",
+  "colore1": "#0077B6",
+  "colore2": "#FFFFFF",
+  "sponsor": "Porto Ferries"
+ },
+ {
+  "nazione": "Grecia",
+  "campionato": "Super League",
+  "squadra": "Larissa Pianura",
+  "sigla": "LAP",
+  "colore1": "#F4A261",
+  "colore2": "#111111",
+  "sponsor": "Pianura Grano"
  },
  {
   "nazione": "Grecia",
@@ -830,47 +866,11 @@
  {
   "nazione": "Grecia",
   "campionato": "Super League",
-  "squadra": "Tripoli Monte",
-  "sigla": "TRM",
-  "colore1": "#6D597A",
-  "colore2": "#FFFFFF",
-  "sponsor": "Monte Miele"
- },
- {
-  "nazione": "Grecia",
-  "campionato": "Super League",
-  "squadra": "Serres Alba",
-  "sigla": "SEA",
-  "colore1": "#FFFFFF",
-  "colore2": "#0D3B66",
-  "sponsor": "Alba Cotone"
- },
- {
-  "nazione": "Grecia",
-  "campionato": "Super League",
   "squadra": "Chania Faro",
   "sigla": "CHF",
   "colore1": "#00A896",
   "colore2": "#FFFFFF",
   "sponsor": "Faro Barche"
- },
- {
-  "nazione": "Grecia",
-  "campionato": "Super League",
-  "squadra": "Lamia Termopili",
-  "sigla": "LAT",
-  "colore1": "#9D0208",
-  "colore2": "#FFFFFF",
-  "sponsor": "Passo Trasporti"
- },
- {
-  "nazione": "Grecia",
-  "campionato": "Super League",
-  "squadra": "Agrinio Foglia",
-  "sigla": "AGF",
-  "colore1": "#386641",
-  "colore2": "#F2E8CF",
-  "sponsor": "Foglia Verde"
  },
  {
   "nazione": "Grecia",
