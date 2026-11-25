@@ -1,6 +1,5 @@
 package it.androcalcio.data
 
-import it.androcalcio.engine.Nomi
 import it.androcalcio.engine.Attr
 import it.androcalcio.engine.Market
 import it.androcalcio.engine.Talenti
@@ -145,8 +144,7 @@ object RoseFisse {
                     }
                 }
                 ov = ov.coerceIn(40, 91)
-                val nazG = if (rng.nextInt(100) < 75) nat else codes.keys.random(rng)
-                val nome = Nomi.genera(rng, nazG)
+                val nome = "${initials[rng.nextInt(initials.length)]}. ${surnames[rng.nextInt(surnames.size)]}"
                 val giocatore = Attr.fill(Player(
                     teamId = 0L,
                     name = nome,
@@ -155,7 +153,7 @@ object RoseFisse {
                     overall = ov,
                     morale = rng.nextInt(50, 91),
                     salary = Market.wageAt(ov, age),
-                    nationality = nazG,
+                    nationality = if (rng.nextInt(100) < 75) nat else codes.keys.random(rng),
                     potential = pot.coerceIn(ov, 99),
                     contract = rng.nextInt(1, 5)
                 ), rng)
@@ -175,7 +173,7 @@ object RoseFisse {
         val rngSvincolati = Random(SEME_SVINCOLATI)
         repeat(40) { i ->
             val ovr = rngSvincolati.nextInt(55, 80)
-            val nome = Nomi.genera(rngSvincolati, "Italia")
+            val nome = "${initials[rngSvincolati.nextInt(initials.length)]}. ${surnames[rngSvincolati.nextInt(surnames.size)]}"
             val giocatore = Player(
                 teamId = 0L,
                 name = nome,
@@ -190,7 +188,15 @@ object RoseFisse {
             )
             righe += Riga("", giocatore)
         }
-        return righe
+        // Nomi più vari e coerenti con la nazionalità: sostituisce i nomi generici "X. Cognome" con un calcolo fisso
+        // sull'indice della riga (lo stesso fatto da strumenti/nomi_rose.py sul CSV congelato)
+        val vecchi = surnames.toSet()
+        return righe.mapIndexed { i, r ->
+            val n = r.giocatore.name
+            if (n.length > 3 && n[1] == '.' && n.substring(3) in vecchi)
+                r.copy(giocatore = r.giocatore.copy(name = it.androcalcio.engine.Nomi.fisso(r.giocatore.nationality, i)))
+            else r
+        }
     }
 
     /** Testo CSV con intestazione: una riga per giocatore, campi separati da "|". */

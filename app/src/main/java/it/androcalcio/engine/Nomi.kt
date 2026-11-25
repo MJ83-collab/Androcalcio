@@ -90,6 +90,13 @@ object Nomi {
     /** Tutti i cognomi conosciuti, per le nazioni senza elenco proprio. */
     private val tutti: List<String> by lazy { elenco.values.flatten().distinct() }
 
+    /** Nome fisso per la riga [i] delle rose congelate: solo aritmetica intera, riproducibile anche in Python. */
+    fun fisso(nazionalita: String, i: Int): String {
+        val l = elenco[nazionalita] ?: tutti
+        val ini = INIZIALI_PER[nazionalita] ?: INIZIALI
+        return "${ini[Math.floorMod(i * 31 + 7, ini.length)]}. ${l[Math.floorMod(i * 7919 + 13, l.size)]}"
+    }
+
     /** Nome casuale coerente con la nazionalità ("X. Cognome"). */
     fun genera(rng: Random, nazionalita: String? = null): String {
         val l = elenco[nazionalita] ?: tutti
