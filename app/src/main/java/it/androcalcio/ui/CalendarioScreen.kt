@@ -43,6 +43,7 @@ import it.androcalcio.data.MatchResult
 import it.androcalcio.data.Team
 import it.androcalcio.engine.standings
 import it.androcalcio.engine.Cup
+import it.androcalcio.engine.Turni
 import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.theme.AC
@@ -78,9 +79,17 @@ fun CalendarioScreen(
     friendlyMatches: List<MatchResult> = emptyList(),
     onRequestFriendly: (Long) -> Unit = {},
     onPlayFriendlies: () -> Unit = {},
-    onSimulaFino: (Int) -> Unit = {}
+    inviti: List<Long> = emptyList(), onInvito: (Long) -> Unit = {},
+    onSimulaFino: (Int) -> Unit = {},
+    giorno: it.androcalcio.AndrocalcioViewModel.GiornoStato? = null,
+    onAttivita: (it.androcalcio.engine.CalendarioGiorni.Attivita) -> Unit = {},
+    onSalta: () -> Unit = {},
+    onMercato: () -> Unit = {},
+    sceltaAmichevoli: String? = "IO",
+    onSceltaAmichevoli: (Boolean) -> Unit = {}
 ) {
     var askNext by remember { mutableStateOf(false) }
+    var chiediAmichevoli by remember { mutableStateOf(false) }
     var amichevoliAperte by rememberSaveable { mutableStateOf(false) }
     if (askNext) AlertDialog(
         onDismissRequest = { askNext = false },
@@ -91,7 +100,7 @@ fun CalendarioScreen(
     )
     if (team == null) return
     if (amichevoliAperte) {
-        AmichevoliScreen(team, teams, friendlyMatches, { onRequestFriendly(it) }, onPlayFriendlies) { amichevoliAperte = false }
+        AmichevoliScreen(team, teams, friendlyMatches, { onRequestFriendly(it) }, onPlayFriendlies, { amichevoliAperte = false }, inviti, onInvito)
         return
     }
     val byId = teams.associateBy { it.id }
@@ -103,13 +112,11 @@ fun CalendarioScreen(
     val lastRound = matches.maxOfOrNull { it.round } ?: 1
     val shown = if (round == 0) (nextRound ?: lastRound) else round
     val tutte = matches + cupMatches
-    val prossimaGiornata = tutte.filter { !it.played }.minOfOrNull { it.round }
-    val miaProssima = prossimaGiornata != null && tutte.any {
-        !it.played && it.round == prossimaGiornata && (it.homeTeamId == team.id || it.awayTeamId == team.id)
-    }
+    // Il turno successivo che ti riguarda: i turni di coppa in cui non giochi passano da soli
+    val miaProssima = tutte.any { !it.played && (it.homeTeamId == team.id || it.awayTeamId == team.id) }
     // Prima del campionato servono almeno cinque amichevoli fissate e giocate
     val amichevoliPronte = friendlyMatches.size >= Friendlies.MIN && friendlyMatches.all { it.played }
-    val bloccoAmichevoli = matches.none { it.played } && !amichevoliPronte
+    val bloccoAmichevoli = false   // le amichevoli non sono obbligatorie
 
     Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -118,6 +125,27 @@ fun CalendarioScreen(
             PcButton("Coppa", { tab = 2 }, Modifier.weight(1f), main = tab == 2)
             PcButton("Tutte", { tab = 3 }, Modifier.weight(1f), main = tab == 3)
         }
+        if (chiediAmichevoli) androidx.compose.material3.AlertDialog(
+            onDismissRequest = { chiediAmichevoli = false },
+            title = { Text("Amichevoli di quest'anno") },
+            text = { Text("Vuoi delegare la scelta delle squadre all'allenatore in seconda o sceglierle tu? La domanda si ripete a ogni inizio stagione.") },
+            confirmButton = { androidx.compose.material3.TextButton({
+                chiediAmichevoli = false; onSceltaAmichevoli(true)
+                onAttivita(it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE); amichevoliAperte = true
+            }) { Text("Delego all'allenatore in seconda") } },
+            dismissButton = { androidx.compose.material3.TextButton({
+                chiediAmichevoli = false; onSceltaAmichevoli(false)
+                onAttivita(it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE); amichevoliAperte = true
+            }) { Text("Scelgo io") } }
+        )
+        if (giorno != null) GiornoCard(giorno, { a ->
+            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE && sceltaAmichevoli == null) chiediAmichevoli = true
+            else {
+                onAttivita(a)
+                if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE) amichevoliAperte = true
+            }
+        }, onSalta)
+        val giornoOk = giorno == null || giorno.prossima == null || giorno.giornoPartita
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Chiede 2D o simulazione solo se la tua squadra gioca nella prossima giornata
             PcButton("Prossima giornata", {
@@ -139,10 +167,6 @@ fun CalendarioScreen(
             }
         }
 
-        if (bloccoAmichevoli) {
-            Text("Prima del campionato servono almeno ${Friendlies.MIN} amichevoli fissate e giocate.",
-                color = AC.Text, style = MaterialTheme.typography.bodySmall)
-        }
 
         if (!pending && matches.isNotEmpty()) {
             PcButton("Chiudi stagione e passa alla successiva", { round = 0; onClose() }, Modifier.fillMaxWidth(), main = true)
@@ -158,9 +182,14 @@ fun CalendarioScreen(
                 if (cupMatches.isEmpty()) {
                     Text("Coppa non ancora sorteggiata.", color = AC.Text)
                 }
-                cupMatches.groupBy { Cup.stageOf(it.round) }.toSortedMap().forEach { (stage, ms) ->
+                cupMatches.groupBy { it.league.startsWith("EUROPA|") to Cup.stageOf(it.round) }
+                    .toSortedMap(compareBy({ it.first }, { it.second })).forEach { (chiave, ms) ->
+                    val stage = chiave.second
                     val teamsIn = ms.flatMap { listOf(it.homeTeamId, it.awayTeamId) }.toSet().size
-                    SectionTitle(Cup.stageName(stage, teamsIn))
+                    SectionTitle(if (chiave.first) {
+                        val c = it.androcalcio.engine.CoppeEuropee.Coppa.values().firstOrNull { c -> "EUROPA|${c.sigla}" == ms.first().league }
+                        "${c?.nome ?: "Coppa europea"} · ${it.androcalcio.engine.CoppeEuropee.nomeTurno(stage)}"
+                    } else Cup.stageName(stage, teamsIn))
                     PaperPanel(Modifier.fillMaxWidth()) {
                         ms.sortedBy { it.round }.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
                     }
@@ -172,7 +201,7 @@ fun CalendarioScreen(
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 fun mine(m: MatchResult) = m.homeTeamId == team.id || m.awayTeamId == team.id
                 val league = matches.filter(::mine).sortedBy { it.round }
-                val cups = cupMatches.filter(::mine).sortedBy { it.round }
+                val cups = cupMatches.filter(::mine).sortedBy { Turni.chiave(it) }
                 val friends = friendlyMatches.sortedBy { it.round }
                 if (league.isNotEmpty()) {
                     SectionTitle("Campionato")
@@ -183,7 +212,7 @@ fun CalendarioScreen(
                 if (cups.isNotEmpty()) {
                     SectionTitle("Coppa e supercoppa")
                     PaperPanel(Modifier.fillMaxWidth()) {
-                        cups.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i) }
+                        cups.forEachIndexed { i, m -> MatchLine(m, byId, team.id, i, Turni.testo(DateGiornate.anno(season), Turni.chiave(m))) }
                     }
                 }
                 if (friends.isNotEmpty()) {
@@ -292,13 +321,14 @@ fun CalendarioScreen(
 
 /** Riga di una partita (casa - trasferta, risultato in riquadro nero), evidenziata se è della tua squadra. */
 @Composable
-private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: Int) {
+private fun MatchLine(m: MatchResult, byId: Map<Long, Team>, teamId: Long, i: Int, data: String = "") {
     val h = byId[m.homeTeamId]
     val a = byId[m.awayTeamId]
     val mine = m.homeTeamId == teamId || m.awayTeamId == teamId
     val c = if (mine) AC.ColBlue else AC.PaperText
     val w = if (mine) FontWeight.ExtraBold else FontWeight.Medium
     PaperRow(i, Modifier.then(if (mine) Modifier.background(AC.Mine) else Modifier)) {
+        if (data.isNotEmpty()) Text(data, Modifier.padding(end = 4.dp), fontSize = 10.sp, color = AC.PaperText)
         IconaCompetizione(m, byId[teamId]?.nazione ?: "")
         Text(h?.name ?: "?", Modifier.weight(1f).let { m -> if (h != null) m.apriSquadra(h) else m }, color = c, fontWeight = w,
             textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1)
@@ -338,6 +368,13 @@ private fun Bandiera(nazione: String) {
         "Francia" -> listOf(Color(0xFF002395), Color.White, Color(0xFFED2939))
         "Brasile" -> listOf(Color(0xFF009C3B), Color(0xFFFFDF00), Color(0xFF009C3B))
         "Argentina" -> listOf(Color(0xFF74ACDF), Color.White, Color(0xFF74ACDF))
+        "Giappone" -> listOf(Color.White, Color(0xFFBC002D), Color.White)
+        "Olanda" -> listOf(Color(0xFFAE1C28), Color.White, Color(0xFF21468B))
+        "Portogallo" -> listOf(Color(0xFF006600), Color(0xFFFF0000), Color(0xFFFF0000))
+        "Belgio" -> listOf(Color.Black, Color(0xFFFAE042), Color(0xFFED2939))
+        "Scozia" -> listOf(Color(0xFF005EB8), Color.White, Color(0xFF005EB8))
+        "Turchia" -> listOf(Color(0xFFE30A17), Color.White, Color(0xFFE30A17))
+        "Grecia" -> listOf(Color(0xFF0D5EAF), Color.White, Color(0xFF0D5EAF))
         else -> listOf(Color.Gray, Color.LightGray, Color.Gray)
     }
     Row(Modifier.width(18.dp).height(12.dp).clip(RoundedCornerShape(2.dp))) {

@@ -16,6 +16,8 @@ object Staffing {
     const val GIOVANILI = "GIO"
     const val PREPARATORE = "PRE"
     const val FISIOTERAPISTA = "FIS"
+    const val TUTTOFARE = "GIA"      // giardiniere e tuttofare: cura il manto erboso e lo stadio
+    const val ANALISTA = "ANA"       // analista video: report dettagliato sull'avversario
     const val SCOUT = "SCO"          // osservatori: più di uno, fino a MAX_OSSERVATORI, fuori dai POSTI
     const val MAX_OSSERVATORI = 5
     const val NEUTRAL = 50          // squadre AI e posti vuoti: effetto nullo
@@ -32,7 +34,7 @@ object Staffing {
     const val RECUPERO = "REC"
     const val PREVENZIONE = "PRV"
 
-    val ROLES = listOf(ALLENATORE, ASSISTENTE, GIOVANILI, PREPARATORE, FISIOTERAPISTA, SCOUT)
+    val ROLES = listOf(ALLENATORE, ASSISTENTE, GIOVANILI, PREPARATORE, FISIOTERAPISTA, SCOUT, TUTTOFARE, ANALISTA)
     private val SPEC_PREPARATORI = listOf(GENERALE, FORMA, PORTIERI, ATTACCANTI, CENTROCAMPISTI, DIFENSORI)
     private val SPEC_FISIO = listOf(RECUPERO, PREVENZIONE)
 
@@ -40,7 +42,7 @@ object Staffing {
     data class Posto(val role: String, val specialita: String = "")
 
     val POSTI: List<Posto> = listOf(Posto(ALLENATORE), Posto(ASSISTENTE), Posto(GIOVANILI)) +
-        SPEC_PREPARATORI.map { Posto(PREPARATORE, it) } + SPEC_FISIO.map { Posto(FISIOTERAPISTA, it) }
+        SPEC_PREPARATORI.map { Posto(PREPARATORE, it) } + SPEC_FISIO.map { Posto(FISIOTERAPISTA, it) } + Posto(TUTTOFARE) + Posto(ANALISTA)
 
     fun roleName(role: String, specialita: String = ""): String = when (role) {
         ALLENATORE -> "Allenatore"
@@ -49,6 +51,8 @@ object Staffing {
         PREPARATORE -> "Preparatore atletico · ${specialitaNome(specialita)}"
         FISIOTERAPISTA -> "Fisioterapista · ${specialitaNome(specialita)}"
         SCOUT -> "Osservatore"
+        TUTTOFARE -> "Giardiniere e tuttofare"
+        ANALISTA -> "Analista video"
         else -> ""
     }
 
@@ -79,7 +83,8 @@ object Staffing {
     /** Effetti dello staff medico e atletico, letti una volta per partita. */
     data class Cura(
         val generale: Int, val forma: Int, val recupero: Int, val prevenzione: Int,
-        val ruoli: Map<String, Int>   // preparatore del reparto per P, D, C, A
+        val ruoli: Map<String, Int>,   // preparatore del reparto per P, D, C, A
+        val campo: Int = NEUTRAL       // giardiniere: stato del manto erboso
     ) {
         /** Abilità del preparatore del ruolo dato; neutra se manca. */
         fun perRuolo(role: String): Int = ruoli[role] ?: NEUTRAL
@@ -96,8 +101,11 @@ object Staffing {
         fun fis(s: String) = lista.firstOrNull { it.role == FISIOTERAPISTA && it.specialita == s }?.skill ?: NEUTRAL
         return Cura(
             generale = prep(GENERALE), forma = prep(FORMA),
-            recupero = fis(RECUPERO), prevenzione = fis(PREVENZIONE),
-            ruoli = mapOf("P" to prep(PORTIERI), "D" to prep(DIFENSORI), "C" to prep(CENTROCAMPISTI), "A" to prep(ATTACCANTI))
+            recupero = fis(RECUPERO),
+            // un buon giardiniere tiene il prato in ordine: meno infortuni muscolari (pesa il 20% della prevenzione)
+            prevenzione = (fis(PREVENZIONE) * 0.8 + (lista.firstOrNull { it.role == TUTTOFARE }?.skill ?: NEUTRAL) * 0.2).toInt(),
+            ruoli = mapOf("P" to prep(PORTIERI), "D" to prep(DIFENSORI), "C" to prep(CENTROCAMPISTI), "A" to prep(ATTACCANTI)),
+            campo = lista.firstOrNull { it.role == TUTTOFARE }?.skill ?: NEUTRAL
         )
     }
 
@@ -108,7 +116,22 @@ object Staffing {
     fun injuryChance(prevenzione: Int): Double = 0.05 * (1.0 - (prevenzione - NEUTRAL) / 100.0)
 
     /** Ingaggio annuo in base all'abilità. */
-    fun wage(skill: Int): Long = ((skill - 30).coerceAtLeast(5) * 12_000L / 1_000L) * 1_000L
+    fun wage(skill: Int, scala: Double = 1.0): Long = (((skill - 30).coerceAtLeast(5) * 12_000L * scala).toLong() / 1_000L) * 1_000L
+
+    /**
+     * Scala degli stipendi in base alla categoria del club (dalla forza media della rosa): massima serie ~0,9-1,
+     * Serie B ~0,6, Serie C ~0,4. Un professionista bravo costa in proporzione alla serie, non a un valore unico.
+     */
+    fun scalaCategoria(mediaRosa: Double): Double = ((mediaRosa - 40.0) / 40.0).coerceIn(0.3, 1.0)
+
+    /** Costo di un corso di formazione: cresce con l'abilità, in proporzione alla categoria. */
+    fun costoCorso(skill: Int, scala: Double): Long = (((15_000 + skill * 500L) * (0.4 + 0.6 * scala)).toLong() / 1_000L) * 1_000L
+
+    /** Quanto sale l'abilità con un corso: di più per chi parte da meno. */
+    fun guadagnoCorso(skill: Int): Int = if (skill < 60) 3 else if (skill < 80) 2 else 1
+
+    /** Mezze stelle da 1 a 10 (cioè da 1 a 5 stelle) per un valore 0-100. */
+    fun mezzeStelle(valore: Int): Int = Math.round(valore / 10.0).toInt().coerceIn(1, 10)
 
     /**
      * Staff di una squadra AI per i posti mancanti.
@@ -121,33 +144,33 @@ object Staffing {
                 teamId = teamId, role = posto.role, specialita = posto.specialita,
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+                skill = sk, salary = wage(sk, scalaCategoria(avgOverall)), contract = rng.nextInt(1, 5),
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
         }
 
     /** Candidati da assumere: n per ogni posto, con abilità e contratto casuali. */
-    fun candidates(rng: Random, n: Int = 2): List<Staff> = POSTI.flatMap { posto ->
+    fun candidates(rng: Random, n: Int = 2, scala: Double = 1.0): List<Staff> = POSTI.flatMap { posto ->
         (1..n).map {
             val sk = rng.nextInt(35, 91)
             Staff(
                 teamId = 0, role = posto.role, specialita = posto.specialita,
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+                skill = sk, salary = wage(sk, scala), contract = rng.nextInt(1, 5),
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
         }
     }
 
     /** Osservatori candidati: non sono in POSTI, il club ne può assumere fino a MAX_OSSERVATORI. */
-    fun candidatiOsservatori(rng: Random, n: Int = 3): List<Staff> = List(n) {
+    fun candidatiOsservatori(rng: Random, n: Int = 3, scala: Double = 1.0): List<Staff> = List(n) {
         val sk = rng.nextInt(35, 91)
         Staff(
             teamId = 0, role = SCOUT, specialita = "",
             name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                 SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-            skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+            skill = sk, salary = wage(sk, scala), contract = rng.nextInt(1, 5),
             stile = Stile.values()[rng.nextInt(Stile.values().size)].name
         )
     }
@@ -172,6 +195,15 @@ object Staffing {
             ASSISTENTE -> {
                 if (su) bonus += "Consigli tattici sull'avversario e sull'undici più affidabili"
                 if (giu) malus += "Consigli tattici incerti: undici e avversario meno precisi"
+            }
+            ANALISTA -> {
+                if (su) bonus += "Report sull'avversario più ricco e preciso"
+                if (giu) malus += "Report sull'avversario scarno e poco affidabile"
+            }
+            TUTTOFARE -> {
+                if (su) bonus += "Prato curato: infortuni muscolari ridotti e campo sempre in ordine"
+                if (giu) malus += "Prato rovinato: più infortuni muscolari, buche e zolle che saltano"
+                bonus += "Fa anche piccoli lavori: lampadine, porte, spogliatoi (e il caffè)"
             }
             GIOVANILI -> {
                 if (su) bonus += "Vivaio: giovani con potenziale più alto e giudizi più precisi"

@@ -149,7 +149,7 @@ object Cup {
      * Aggiunge i supplementari e, se serve ancora, i rigori. Idempotente: se i rigori ci sono già
      * restituisce m. Restituisce m invariata se la partita non è decisiva o non è in parità.
      */
-    fun finalize(m: MatchResult, all: List<MatchResult>, rng: Random): MatchResult {
+    fun finalize(m: MatchResult, all: List<MatchResult>, rng: Random, cinici: Map<Long, Int> = emptyMap()): MatchResult {
         if (!m.played || m.homePens >= 0) return m
         val stage = stageOf(m.round)
         val pair = setOf(m.homeTeamId, m.awayTeamId)
@@ -166,7 +166,7 @@ object Cup {
         )
         if (aggregate(others + et, et.homeTeamId) != aggregate(others + et, et.awayTeamId)) return et
 
-        val (ph, pa) = shootout(rng)
+        val (ph, pa) = shootout(rng, cinici[et.homeTeamId] ?: 0, cinici[et.awayTeamId] ?: 0)
         return et.copy(homePens = ph, awayPens = pa)
     }
 
@@ -204,18 +204,24 @@ object Cup {
         return k - 1
     }
 
-    /** Rigori: 5 a testa, poi a oltranza finché il punteggio non cambia. */
-    private fun shootout(rng: Random): Pair<Int, Int> {
+    /**
+     * Rigori: 5 a testa, poi a oltranza finché il punteggio non cambia. Serie simulata senza nomi:
+     * [cinH] e [cinA] sono i Cinici tra i primi cinque rigoristi di ciascuna squadra; ognuno tira
+     * con [Tratti.BONUS_RIGORE] in più (nell'ordine di tiro vengono per primi, e si ripetono a oltranza).
+     */
+    private fun shootout(rng: Random, cinH: Int = 0, cinA: Int = 0): Pair<Int, Int> {
+        fun p(i: Int, cin: Int) =
+            if (i % 5 < cin) minOf(P_PENALTY + Tratti.BONUS_RIGORE, Tratti.RIGORE_MAX) else P_PENALTY
         var h = 0
         var a = 0
-        repeat(5) {
-            if (rng.nextDouble() < P_PENALTY) h++
-            if (rng.nextDouble() < P_PENALTY) a++
+        for (i in 0 until 5) {
+            if (rng.nextDouble() < p(i, cinH)) h++
+            if (rng.nextDouble() < p(i, cinA)) a++
         }
         var rounds = 0
         while (h == a && rounds < 100) {
-            if (rng.nextDouble() < P_PENALTY) h++
-            if (rng.nextDouble() < P_PENALTY) a++
+            if (rng.nextDouble() < p(5 + rounds, cinH)) h++
+            if (rng.nextDouble() < p(5 + rounds, cinA)) a++
             rounds++
         }
         if (h == a) h++   // sicurezza: la serie non può chiudersi in parità

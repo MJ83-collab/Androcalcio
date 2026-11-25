@@ -1,5 +1,9 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.TrofeoIcona
+import it.androcalcio.ui.components.trofeoDa
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -40,8 +44,12 @@ fun AlboScreen(albo: List<AlboEntry>, classifica: List<Allenatori.Riga> = emptyL
             SectionTitle(season)
             PaperPanel(Modifier.fillMaxWidth()) {
                 rows.forEach { r ->
-                    Text("${r.nazione} · ${r.competizione}: ${r.vincitore}", color = AC.PaperText,
-                        modifier = Modifier.padding(vertical = 3.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TrofeoIcona(trofeoDa(r.competizione),
+                            nazione = r.nazione, lato = 28.dp)
+                        Text("${r.nazione} · ${r.competizione}: ${r.vincitore}", color = AC.PaperText,
+                            modifier = Modifier.padding(start = 6.dp, top = 3.dp, bottom = 3.dp))
+                    }
                 }
             }
         }

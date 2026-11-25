@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.MatchResult
 import it.androcalcio.data.Team
+import it.androcalcio.engine.Turni
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.PaperPanel
@@ -80,6 +82,13 @@ fun HomeBanner(team: Team, season: String) {
 fun ProssimaPartitaCard(me: Team, avversario: Team, m: MatchResult, onGioca: () -> Unit) {
     val home = if (m.homeTeamId == me.id) me else avversario
     val away = if (m.homeTeamId == me.id) avversario else me
+    if (AC.pc7) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = onGioca), horizontalAlignment = Alignment.CenterHorizontally) {
+            Turni.banner(m).let { (titolo, numero) -> BannerPartita(home, away, titolo, numero) }
+            Text("Tocca per andare alla partita", color = AC.TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+        }
+        return
+    }
     val shape = RoundedCornerShape(10.dp)
     Column(
         Modifier.fillMaxWidth()
@@ -88,7 +97,7 @@ fun ProssimaPartitaCard(me: Team, avversario: Team, m: MatchResult, onGioca: () 
             .clickable(onClick = onGioca).padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("PROSSIMA PARTITA · GIORNATA ${m.round}", color = AC.Neon, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+        Text("PROSSIMA PARTITA · ${Turni.etichetta(m).uppercase()}", color = AC.Neon, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Crest(home, 44.dp)
@@ -144,10 +153,11 @@ fun OpzioniScreen(op: AndrocalcioViewModel.Opzioni, onDifficolta: (Int) -> Unit,
             PcChip(selected = risparmio, onClick = { onRisparmio(true) }, label = { Text("Risparmio") })
         }
         SectionTitle("Tema")
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PcChip(selected = temaNero == 0, onClick = { onTemaNero(0) }, label = { Text("Blu") })
             PcChip(selected = temaNero == 1, onClick = { onTemaNero(1) }, label = { Text("Nero (meno batteria)") })
             PcChip(selected = temaNero == 2, onClick = { onTemaNero(2) }, label = { Text("Chiaro") })
+            PcChip(selected = temaNero == 3, onClick = { onTemaNero(3) }, label = { Text("Manga") })
         }
         PcChip(selected = false, onClick = onTutorial, label = { Text("Rivedi il tutorial") })
         SectionTitle("Informazione")

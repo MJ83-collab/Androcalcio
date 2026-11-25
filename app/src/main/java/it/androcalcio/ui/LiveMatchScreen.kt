@@ -4,6 +4,8 @@ import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -14,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
@@ -27,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.PaperRow
 import androidx.compose.animation.core.animateFloatAsState
+import kotlinx.coroutines.flow.first
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,90 +63,224 @@ import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Player
 import it.androcalcio.engine.EventType
 import it.androcalcio.engine.MatchEngine
+import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.ui.components.Crest
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.theme.AC
 
 /** Pannello della partita dal vivo aperto dalla barra in basso. */
-private enum class LivePanel { NESSUNO, TATTICA, STAT }
+private enum class LivePanel { NESSUNO, TATTICA, STAT, ASSISTENTE }
 
-/** La tua partita dal vivo, in notturna: tabellone, possesso, campo, gol in evidenza e barra comandi. */
+/** Partita dal vivo: tabellone in alto, campo grande al centro con telecronaca e vice, fascia comandi in basso. */
 @Composable
-fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewModel) {
+fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewModel, onProssima: () -> Unit = {}) {
     val m = info.m
     @Suppress("UNUSED_VARIABLE") val t = info.tick   // ricomposizione a ogni minuto
-    val events = m.events.toList()
-    val last = events.lastOrNull { it.type !in setOf(EventType.YELLOW, EventType.SUB, EventType.TACTIC) }
+    val tutti = m.events.toList()
+    // Telecronaca e cronaca restano sincronizzate con il campo: il testo di un'azione compare quando la palla ha finito il tragitto
+    var mostrati by remember { mutableStateOf(tutti.size) }
+    val events = tutti.take(mostrati.coerceAtMost(tutti.size))
+    val ignorati = setOf(EventType.YELLOW, EventType.SUB, EventType.TACTIC, EventType.RED, EventType.INJURY,
+        EventType.COMMENTO, EventType.VAR)
+    val last = events.lastOrNull { it.type !in ignorati }
     val lastGoal = events.lastOrNull { it.type == EventType.GOAL }
-    val bx by animateFloatAsState(last?.x ?: 0.5f, tween(300), label = "bx")
-    val by by animateFloatAsState(last?.y ?: 0.5f, tween(300), label = "by")
+    val lento = info.tempo == it.androcalcio.engine.Meteo.Tempo.PIOGGIA || info.tempo == it.androcalcio.engine.Meteo.Tempo.NEVE ||
+        info.prato == it.androcalcio.engine.Meteo.Campo.PESANTE || info.prato == it.androcalcio.engine.Meteo.Campo.PESSIMO
+    val palla = rememberPalla(tutti, m.minute, m.possessoCasa, info.speed >= 4, m.homeF, m.awayF, if (lento) 1.25f else 1f)
+    val pallaCorrente = androidx.compose.runtime.rememberUpdatedState(palla)
+    androidx.compose.runtime.LaunchedEffect(tutti.size) {
+        if (tutti.size < mostrati) mostrati = tutti.size
+        if (tutti.size > mostrati) {
+            val nuovi = tutti.subList(mostrati, tutti.size)
+            if (info.speed < 4 && nuovi.any { it.percorso.isNotEmpty() }) {
+                val partita = kotlinx.coroutines.withTimeoutOrNull(900) { androidx.compose.runtime.snapshotFlow { pallaCorrente.value.inVolo }.first { it } }
+                if (partita != null) kotlinx.coroutines.withTimeoutOrNull(7000) { androidx.compose.runtime.snapshotFlow { pallaCorrente.value.inVolo }.first { !it } }
+                kotlinx.coroutines.delay(200)
+            }
+            mostrati = tutti.size
+        }
+    }
+    var replay by remember { mutableStateOf<it.androcalcio.engine.MatchEvent?>(null) }
     var subOpen by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(LivePanel.NESSUNO) }
     val mySubs = if (info.userHome) m.subsH else m.subsA
+    val consiglio by vm.consiglio.collectAsState()
+    val livello by vm.assistenteLivello.collectAsState()
+    // Fischio finale: prima voti e statistiche di ogni giocatore, poi si passa alla partita successiva
+    if (m.finished) { FinePartitaScreen(info, vm, onProssima); return }
 
-    LazyColumn(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AC.Night, AC.NightHi))),
-        contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item { Scoreboard(m.home, m.away, m.hg, m.ag, if (m.finished) "Finale" else "${m.minute}'" + if (info.paused) " · pausa" else "") }
-        item { PossessoBar(m.possessoCasa) }
-        if (lastGoal != null && m.minute - lastGoal.minute <= 3) item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
-        item { Pitch(m.home, m.away, bx, by, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList()) }
-        if (!m.finished) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    NeonTile("Tattica", Icons.Filled.Edit, panel == LivePanel.TATTICA, Modifier.weight(1f)) {
-                        panel = if (panel == LivePanel.TATTICA) LivePanel.NESSUNO else LivePanel.TATTICA
-                    }
-                    NeonTile("Cambio $mySubs/${MatchEngine.MAX_SUBS}", Icons.Filled.Refresh, false, Modifier.weight(1f),
-                        enabled = mySubs < MatchEngine.MAX_SUBS) { vm.setLivePaused(true); subOpen = true }
-                    NeonTile("Stat", Icons.Filled.List, panel == LivePanel.STAT, Modifier.weight(1f)) {
-                        panel = if (panel == LivePanel.STAT) LivePanel.NESSUNO else LivePanel.STAT
-                    }
-                    NeonTile(if (info.paused) "Riprendi" else "Pausa", Icons.Filled.PlayArrow, info.paused, Modifier.weight(1f)) {
-                        vm.setLivePaused(!info.paused)
-                    }
-                }
+    // Momenti chiave a tutto schermo: gol, espulsioni, rigori, VAR (non a velocità ×20)
+    var momento by remember { mutableStateOf<it.androcalcio.engine.MatchEvent?>(null) }
+    var visti by remember { mutableStateOf(events.size) }
+    androidx.compose.runtime.LaunchedEffect(events.size) {
+        if (events.size > visti) {
+            val nuovi = events.subList(visti, events.size)
+            visti = events.size
+            if (info.speed < 20) {
+                val ev = nuovi.lastOrNull { it.type == EventType.VAR && titoloMomento(it) != null }
+                    ?: nuovi.lastOrNull { titoloMomento(it) != null }
+                if (ev != null) momento = ev
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("VELOCITÀ", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                    listOf(1, 2, 4, 20).forEach { x ->
-                        PcChip(selected = info.speed == x, onClick = { vm.setLiveSpeed(x) }, label = { Text("×$x") })
-                    }
-                }
-            }
-            if (panel == LivePanel.TATTICA) {
-                item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
+        }
+    }
+
+    Box(Modifier.fillMaxSize().fondoApp(Brush.verticalGradient(listOf(AC.Night, AC.NightHi)))) {
+    Column(Modifier.fillMaxSize()) {
+        val larga = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 720
+        val colA: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
+            item { Scoreboard(m.home, m.away, if (mostrati >= tutti.size) m.hg else events.count { it.type == EventType.GOAL && it.home }, if (mostrati >= tutti.size) m.ag else events.count { it.type == EventType.GOAL && !it.home }, "${it.androcalcio.engine.etichettaMinuto(m.minute)}'" + if (info.paused) " · pausa" else "") }
+            item { PossessoBar(m.possessoCasa) }
+        }
+        val colB: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
+            consiglio?.let { c ->
                 item {
-                    Column {
+                    AssistenteBubble(c, onApplica = {
+                        val az = vm.applicaConsiglio()
+                        if (az is it.androcalcio.engine.AssistenteLive.Azione.Cambio) { vm.setLivePaused(true); subOpen = true }
+                    }, onChiudi = { vm.chiudiConsiglio() })
+                }
+            }
+            item { Text("Arbitro: ${m.arbitro.nome} · ${m.arbitro.profilo}" + (if (m.varAttivo) " · VAR" else "") +
+                (if (info.atmosfera.isNotEmpty()) " · Stadio ${info.atmosfera}" else ""),
+                color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            if (lastGoal != null && m.minute - lastGoal.minute <= 3) {
+                item { GolBanner("GOL! " + lastGoal.text, lastGoal.minute) }
+                item { PcChip(selected = false, onClick = { vm.setLivePaused(true); replay = lastGoal }, label = { Text("▶ Replay del gol") }) }
+            }
+        }
+        val colC: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
+            item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco, palla.scia, palla.quota, palla.inVolo,
+                info.tempo, info.prato, m.lineH, m.lineA, palla.sim) }
+            item { TelecronacaBubble(events, m.minute) }
+        }
+        val colD: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
+            when (panel) {
+                LivePanel.TATTICA -> {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("MODULO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val attuale = if (info.userHome) m.homeF else m.awayF
+                                listOf(it.androcalcio.engine.Formation.F442, it.androcalcio.engine.Formation.F433,
+                                    it.androcalcio.engine.Formation.F352, it.androcalcio.engine.Formation.F451,
+                                    it.androcalcio.engine.Formation.F433A, it.androcalcio.engine.Formation.F4231A).forEach { f ->
+                                    PcChip(selected = f == attuale, onClick = { vm.liveModulo(f) }, label = { Text(f.label) })
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("RITMO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val attuale = if (info.userHome) m.ritmoH else m.ritmoA
+                                it.androcalcio.engine.Ritmo.values().forEach { r ->
+                                    PcChip(selected = r == attuale, onClick = { vm.liveRitmo(r) }, label = { Text(r.label) })
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        val contro = if (info.userHome) m.contropiedeH else m.contropiedeA
+                        PcChip(selected = contro, onClick = { vm.liveContropiede(!contro) },
+                            label = { Text(if (contro) "Contropiede: attivo" else "Contropiede: off") })
+                    }
+                    item { MentalityPicker(if (info.userHome) m.mH else m.mA) { vm.liveMentality(it) } }
+                    item {
                         TacticsPicker(
                             if (info.userHome) m.pressH else m.pressA, if (info.userHome) m.lineH else m.lineA,
                             { vm.livePressing(it) }, { vm.liveLine(it) }
                         )
                     }
                 }
+                LivePanel.STAT -> item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa, m.extraH, m.extraA) }
+                LivePanel.ASSISTENTE -> item {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("IL TUO VICE", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("Attivo", "Discreto", "Muto").forEachIndexed { i, l ->
+                                PcChip(selected = livello == i, onClick = { vm.setAssistenteLivello(i) }, label = { Text(l) })
+                            }
+                        }
+                        Text(when (livello) {
+                            0 -> "Ti ricorda tutto: cambi, tattica, arbitro."
+                            1 -> "Parla solo per le cose importanti e ferma la partita."
+                            else -> "Non parla. Decidi tutto tu."
+                        }, color = Color.White, fontSize = 12.sp)
+                    }
+                }
+                LivePanel.NESSUNO -> item { CronacaPanel(events.filter { it.type != EventType.COMMENTO }.reversed().take(12)) }
             }
-            if (panel == LivePanel.STAT) item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
             item { PcAction(onClick = { vm.liveSkip() }, modifier = Modifier.fillMaxWidth()) { Text("Termina partita") } }
-        } else {
-            item {
-                PcAction(onClick = { vm.closeLive() }, modifier = Modifier.fillMaxWidth(), enabled = info.saved || info.league == null,
-                    colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)) {
-                    Text(if (info.league != null) "Torna al calendario" else "Chiudi")
+        }
+        if (larga) Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.weight(1.2f).fillMaxHeight(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { colA(); colC() }
+            LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { colB(); colD() }
+        } else LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            colA(); colB(); colC(); colD()
+        }
+        // Fascia comandi fissa in basso
+        Column(Modifier.fillMaxWidth().background(AC.Night).padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                listOf(1, 2, 4, 20).forEach { x ->
+                    PcChip(selected = info.speed == x, onClick = { vm.setLiveSpeed(x) }, label = { Text("×$x", fontSize = 12.sp) })
                 }
             }
-            item { StatPanel(m.tiriCasa, m.tiriOspiti, m.possessoCasa) }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                NeonTile("Tattica", Icons.Filled.Edit, panel == LivePanel.TATTICA, Modifier.weight(1f)) {
+                    panel = if (panel == LivePanel.TATTICA) LivePanel.NESSUNO else LivePanel.TATTICA
+                }
+                NeonTile("Cambi $mySubs/${MatchEngine.MAX_SUBS}", Icons.Filled.Refresh, false, Modifier.weight(1f),
+                    enabled = mySubs < MatchEngine.MAX_SUBS) { vm.setLivePaused(true); subOpen = true }
+                NeonTile(when (livello) { 0 -> "Vice"; 1 -> "Vice·"; else -> "Muto" }, Icons.Filled.Person,
+                    panel == LivePanel.ASSISTENTE, Modifier.weight(1f)) {
+                    panel = if (panel == LivePanel.ASSISTENTE) LivePanel.NESSUNO else LivePanel.ASSISTENTE
+                }
+                NeonTile("Stat", Icons.Filled.List, panel == LivePanel.STAT, Modifier.weight(1f)) {
+                    panel = if (panel == LivePanel.STAT) LivePanel.NESSUNO else LivePanel.STAT
+                }
+                NeonTile(if (info.paused) "Riprendi" else "Pausa", Icons.Filled.PlayArrow, info.paused, Modifier.weight(1f)) {
+                    vm.setLivePaused(!info.paused)
+                }
+            }
         }
-        item { CronacaPanel(events.reversed()) }
+    }
+    replay?.let { ev ->
+        it.androcalcio.ui.ReplayGol(ev, m) { replay = null; vm.setLivePaused(false) }
+    }
+    momento?.let { ev ->
+        val tutti = m.xiH + m.xiA + m.benchH + m.benchA
+        MomentoChiave(titoloMomento(ev) ?: "", ev.text, if (ev.home) m.home else m.away,
+            tutti.firstOrNull { it.id == ev.playerId }, { momento = null }, scenaVar = ev.type == EventType.VAR)
+    }
     }
 
     if (subOpen) SubDialog(
         xi = if (info.userHome) m.xiH.toList() else m.xiA.toList(),
         bench = if (info.userHome) m.benchH.toList() else m.benchA.toList(),
         energy = { (m.energyOf(it) * 100).toInt() },
+        ammoniti = events.filter { it.type == EventType.YELLOW }.map { it.playerId }.toSet(),
         onDone = { out, inP -> if (out != null && inP != null) vm.liveSub(out, inP); subOpen = false }
     )
+}
+
+/** Titolo del momento chiave per un evento, oppure null se l'evento non merita la scena a tutto schermo. */
+private fun titoloMomento(e: it.androcalcio.engine.MatchEvent): String? {
+    val rigore = e.text.contains("rigore", ignoreCase = true)
+    return when {
+        e.type == EventType.VAR -> when {
+            e.text.contains("annullat", true) -> if (rigore) "RIGORE ANNULLATO!" else "GOL ANNULLATO!"
+            e.text.contains("valid", true) || e.text.contains("conferm", true) -> "GOL VALIDO!"
+            else -> "CONTROLLO VAR"
+        }
+        e.type == EventType.GOAL -> if (rigore) "GOL SU RIGORE!" else "GOOOL!"
+        e.type == EventType.RED -> "ESPULSO!"
+        e.type == EventType.INJURY -> "INFORTUNIO!"
+        e.type == EventType.SAVE && rigore -> "RIGORE PARATO!"
+        e.type == EventType.MISS && rigore -> "RIGORE SBAGLIATO!"
+        else -> null
+    }
 }
 
 /** Barra del possesso: ciano per la casa, magenta per gli ospiti. */
@@ -166,7 +305,7 @@ private fun GolBanner(testo: String, minuto: Int) {
         Modifier.fillMaxWidth().background(AC.GoalBanner, RoundedCornerShape(4.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("$testo ($minuto')", color = AC.Night, fontWeight = FontWeight.Black, fontSize = 15.sp,
+        Text("$testo (${it.androcalcio.engine.etichettaMinuto(minuto)}')", color = AC.Night, fontWeight = FontWeight.Black, fontSize = 15.sp,
             maxLines = 2, textAlign = TextAlign.Center)
     }
 }
@@ -190,9 +329,22 @@ private fun NeonTile(label: String, icon: ImageVector, on: Boolean, modifier: Mo
 
 /** Statistiche della partita su carta bianca. */
 @Composable
-private fun StatPanel(tiriCasa: Int, tiriOspiti: Int, possesso: Int) {
+internal fun StatPanel(
+    tiriCasa: Int, tiriOspiti: Int, possesso: Int,
+    extraCasa: it.androcalcio.engine.StatExtra? = null, extraOspiti: it.androcalcio.engine.StatExtra? = null
+) {
     PaperPanel(Modifier.fillMaxWidth()) {
-        listOf("Tiri" to "$tiriCasa - $tiriOspiti", "Possesso" to "$possesso% - ${100 - possesso}%").forEachIndexed { i, (k, v) ->
+        val righe = buildList {
+            add("Tiri" to "$tiriCasa - $tiriOspiti")
+            add("Possesso" to "$possesso% - ${100 - possesso}%")
+            if (extraCasa != null && extraOspiti != null) {
+                add("Passaggi" to "${extraCasa.passaggi} - ${extraOspiti.passaggi}")
+                add("Precisione" to "${extraCasa.precisione}% - ${extraOspiti.precisione}%")
+                add("Duelli vinti" to "${extraCasa.duelliVinti} - ${extraOspiti.duelliVinti}")
+                add("Km percorsi" to "%.1f - %.1f".format(extraCasa.km, extraOspiti.km))
+            }
+        }
+        righe.forEachIndexed { i, (k, v) ->
             PaperRow(i) {
                 Text(k, Modifier.weight(1f), color = AC.PaperText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(v, color = AC.ColBlue, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
@@ -201,28 +353,64 @@ private fun StatPanel(tiriCasa: Int, tiriOspiti: Int, possesso: Int) {
     }
 }
 
-/** Scelta del cambio: prima chi esce (con l'energia), poi chi entra dalla panchina. */
+/** Ruolo dettagliato del giocatore (DC, TS, MED...) o, se manca, la lettera del reparto. */
+private fun posTxt(p: Player) = p.pos.ifEmpty { p.role }
+
+/** Affinità % del giocatore con un ruolo dettagliato; null se non è tra i suoi ruoli. */
+private fun affinita(p: Player, ruolo: String): Int? = when {
+    ruolo.isEmpty() -> null
+    p.pos == ruolo -> 100
+    p.sec2 == ruolo -> p.aff2
+    p.sec3 == ruolo -> p.aff3
+    p.sec4 == ruolo -> p.aff4
+    else -> null
+}
+
+private fun reparto(r: String) = when (r) { "P" -> "portiere"; "D" -> "difensore"; "C" -> "centrocampista"; else -> "attaccante" }
+
+/** Scelta del cambio: prima chi esce (ruolo, energia, ammonizione), poi chi entra con affinità e consigliato. */
 @Composable
 private fun SubDialog(
-    xi: List<Player>, bench: List<Player>, energy: (Player) -> Int,
+    xi: List<Player>, bench: List<Player>, energy: (Player) -> Int, ammoniti: Set<Long>,
     onDone: (Player?, Player?) -> Unit
 ) {
     var out by remember { mutableStateOf<Player?>(null) }
     var inP by remember { mutableStateOf<Player?>(null) }
+    val o = out
+    // Panchina ordinata: stesso reparto prima, poi affinità col ruolo di chi esce, poi livello
+    val ruoloOut = o?.let { TacticalRoles.assigned(it) }.orEmpty()
+    val ordinati = if (o == null) emptyList() else bench.sortedWith(
+        compareByDescending<Player> { it.role == o.role }
+            .thenByDescending { affinita(it, ruoloOut) ?: 0 }
+            .thenByDescending { it.overall }
+    )
+    val consigliato = ordinati.firstOrNull()?.takeIf { o != null && it.role == o.role }
     AlertDialog(
         onDismissRequest = { onDone(null, null) },
-        title = { Text(if (out == null) "Chi esce?" else "Chi entra al posto di ${out!!.name}?") },
+        title = { Text(if (o == null) "Chi esce?" else "Chi entra al posto di ${o.name} (${posTxt(o)})?") },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (out == null) items(xi) { p ->
+                if (o == null) items(xi) { p ->
                     val e = energy(p)
-                    Text("${p.role}  ${p.name}   energia $e%",
-                        Modifier.fillMaxWidth().clickable { out = p }.padding(vertical = 8.dp),
-                        color = if (e < 85) AC.Danger else if (e < 93) AC.Warn else AC.Text)
-                } else items(bench.sortedByDescending { it.role == out!!.role }) { p ->
-                    Text("${p.role}  ${p.name}   LIV ${p.overall}",
-                        Modifier.fillMaxWidth().clickable { inP = p }.padding(vertical = 8.dp),
-                        color = if (p == inP) AC.Accent else if (p.role == out!!.role) AC.Text else AC.TextDim)
+                    Column(Modifier.fillMaxWidth().clickable { out = p }.padding(vertical = 6.dp)) {
+                        Text("${posTxt(p)}  ${p.name}", color = AC.Text, fontWeight = FontWeight.Bold)
+                        Text("energia $e%" + if (p.id in ammoniti) " · ammonito" else "",
+                            color = if (e < 85) AC.Danger else if (e < 93) AC.Warn else AC.TextDim, fontSize = 12.sp)
+                    }
+                } else items(ordinati) { p ->
+                    val aff = affinita(p, ruoloOut)
+                    val stesso = p.role == o.role
+                    val dettaglio = when {
+                        aff != null -> "affinità $aff% come $ruoloOut"
+                        stesso -> "stesso reparto, ruolo naturale ${posTxt(p)}"
+                        else -> "fuori reparto (${reparto(p.role)})"
+                    }
+                    Column(Modifier.fillMaxWidth().clickable { inP = p }.padding(vertical = 6.dp)) {
+                        Text("${posTxt(p)}  ${p.name}   LIV ${p.overall}" + if (p == consigliato) "  ★ consigliato" else "",
+                            color = if (p == inP) AC.Accent else if (stesso) AC.Text else AC.TextDim, fontWeight = FontWeight.Bold)
+                        Text("$dettaglio · condizione ${p.condition}%",
+                            color = if (p == inP) AC.Accent else AC.TextDim, fontSize = 12.sp)
+                    }
                 }
             }
         },

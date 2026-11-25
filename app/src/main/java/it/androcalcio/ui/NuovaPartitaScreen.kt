@@ -42,6 +42,7 @@ import it.androcalcio.ui.theme.AC
 fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (Team, String, String) -> Unit) {
     val nations = teams.map { it.nazione }.distinct()
     var nation by rememberSaveable { mutableStateOf("") }
+    if (nations.isEmpty()) return   // dati non ancora caricati
     val nat = if (nation in nations) nation else nations.first()
     val leagues = teams.filter { it.nazione == nat }.map { it.campionato }.distinct()
     var league by rememberSaveable { mutableStateOf("") }
@@ -51,7 +52,7 @@ fun NuovaPartitaScreen(teams: List<Team>, info: Map<Long, TeamInfo>, onStart: (T
     var nomeAll by rememberSaveable { mutableStateOf("") }
     var cognomeAll by rememberSaveable { mutableStateOf("") }
 
-    Column(Modifier.fillMaxSize().background(AC.Bg).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().fondoApp().statusBarsPadding()) {
         Text("Nuova partita", Modifier.padding(start = 16.dp, top = 16.dp),
             style = MaterialTheme.typography.headlineSmall, color = AC.Text)
         Text("1. Nazione  ·  2. Campionato  ·  3. Squadra", Modifier.padding(start = 16.dp, top = 2.dp),

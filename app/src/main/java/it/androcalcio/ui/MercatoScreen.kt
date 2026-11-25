@@ -1,10 +1,12 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import it.androcalcio.engine.Agenti
 import it.androcalcio.engine.FiltroMercato
 import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.ui.components.PcAction
@@ -88,7 +90,8 @@ fun MercatoScreen(
     clubAccepted: Set<Long> = emptySet(),
     advice: (Player, Int) -> String = { _, _ -> "" },
     onSell: (Player) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    preContratto: (Player) -> Boolean = { false }
 ) {
     if (team == null) return
     val byId = teams.associateBy { it.id }
@@ -116,11 +119,22 @@ fun MercatoScreen(
             StatChip("Rosa", "${mySquad.size} / ${Market.MAX_SQUAD}", Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Acquista") })
-            PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Vendi") })
+            PcChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Acquisti") })
+            PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Vendite") })
+            PcChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Trattative") })
         }
 
-        if (tab == 0) {
+        if (tab == 2) {
+            // Trattative: giocatori per cui il club ha già detto sì; si chiude l'accordo con il giocatore
+            val inTrattativa = market.filter { it.id in clubAccepted }
+            if (inTrattativa.isEmpty()) {
+                Text("Nessuna trattativa aperta. Un club deve prima accettare la tua offerta.", color = AC.TextDim)
+            } else {
+                MarketTable(inTrattativa, { byId[it.teamId]?.name ?: "" }, { Market.value(it) }, Modifier.weight(1f)) {
+                    target = it; amount = Market.value(it); years = 3; wageOffer = wageAsk(it, 3); tab = 0
+                }
+            }
+        } else if (tab == 0) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(roleFilters) { (code, label) ->
                     PcChip(selected = role == code, onClick = { onRole(code) }, label = { Text(label) })
@@ -181,15 +195,28 @@ fun MercatoScreen(
 
     target?.let { p ->
         val step = maxOf(10_000L, Market.value(p) / 20)
-        val libero = p.teamId == Market.SVINCOLATO_ID
+        val pre = preContratto(p)
+        val libero = p.teamId == Market.SVINCOLATO_ID || pre
         val clubOk = p.id in clubAccepted
         AlertDialog(
             onDismissRequest = { target = null },
             title = { Text(p.name) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PassiTrattativa(libero, clubOk, if (libero || clubOk) 1 else 0)
                     Text("${byId[p.teamId]?.name ?: if (libero) "Svincolato" else ""} · ${p.age} anni · valore ${p.overall}")
+                    // Confronto con il tuo titolare nel ruolo
+                    val titolare = mySquad.filter { it.role == p.role }.maxByOrNull { it.overall }
+                    Text(
+                        if (titolare == null) "Non hai nessun ${TacticalRoles.label(p.pos.ifEmpty { p.role })} in rosa."
+                        else "Il tuo migliore nel ruolo: ${titolare.name} (${titolare.overall}). " +
+                            (if (p.overall > titolare.overall) "Questo giocatore è più forte di ${p.overall - titolare.overall}."
+                             else "Questo giocatore non supera il titolare."),
+                        color = AC.Text, fontSize = 12.sp
+                    )
                     Text("Valore di mercato ${money(Market.value(p))}", color = AC.TextDim)
+                    if (pre) Text("Pre-contratto: l'ultimo anno di contratto. Firmi senza pagare il club.",
+                        color = AC.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     if (!libero && !clubOk) {
                         Text("Prezzo al club (risposta alla prossima giornata)", color = AC.TextDim, fontSize = 11.sp)
                         Row(verticalAlignment = Alignment.CenterVertically,
@@ -204,6 +231,11 @@ fun MercatoScreen(
                             color = AC.Accent, fontSize = 12.sp)
                     }
                     Text("Consiglio del vice: ${advice(p, years)}", color = AC.TextDim, fontSize = 11.sp)
+                    RiepilogoCosti(
+                        prezzo = if (libero) 0L else amount,
+                        commissione = Agenti.commissione(p, wageOffer, years),
+                        ingaggio = wageOffer, anni = years, budget = team.budget
+                    )
                     val wStep = maxOf(10_000L, wageAsk(p, years) / 20)
                     Text("Ingaggio annuo (richiesta ~${money(wageAsk(p, years))}, margine ${money(wageRoom.coerceAtLeast(0))})",
                         color = AC.TextDim, fontSize = 11.sp)
@@ -290,7 +322,7 @@ private fun MarketTable(
         }
         LazyColumn(Modifier.fillMaxWidth()) {
             itemsIndexed(ps, key = { _, p -> p.id }) { _, p ->
-                val n = (p.overall / 20).coerceIn(0, 5)
+                val n = (p.overall / 10).coerceIn(0, 10)   // mezze stelle
                 Column(
                     Modifier.fillMaxWidth().padding(vertical = 3.dp, horizontal = 4.dp)
                         .clip(RoundedCornerShape(10.dp))
@@ -302,7 +334,7 @@ private fun MarketTable(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         it.androcalcio.ui.components.Avatar(p.name, 26.dp, Modifier.padding(end = 6.dp))
                         Text(p.name, Modifier.weight(1f).apriScheda(p), maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
-                        Text("★".repeat(n) + "☆".repeat(5 - n), color = Color(0xFFE0A800), fontSize = 12.sp)
+                        Stelle(n, 12.sp, Color(0xFFE0A800))
                         Text("${p.overall}", Modifier.width(30.dp), textAlign = TextAlign.End, fontSize = 13.sp,
                             fontWeight = FontWeight.ExtraBold, color = AC.ColOrange)
                         Text(when (p.role) { "P" -> "POR"; "D" -> "DIF"; "C" -> "CEN"; else -> "ATT" }, Modifier.width(36.dp),
@@ -317,5 +349,49 @@ private fun MarketTable(
                 }
             }
         }
+    }
+}
+
+/** Passaggi della trattativa: club, giocatore, firma. Quello in corso è evidenziato, quelli fatti barrati. */
+@Composable
+private fun PassiTrattativa(libero: Boolean, clubOk: Boolean, corrente: Int) {
+    val passi = if (libero) listOf("Giocatore", "Firma") else listOf("Club", "Giocatore", "Firma")
+    val attuale = if (libero) corrente.coerceAtMost(1) else corrente
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        passi.forEachIndexed { i, nome ->
+            val fatto = i < attuale || (!libero && i == 0 && clubOk)
+            val ora = i == attuale
+            Text(
+                (if (fatto) "✓ " else "${i + 1}. ") + nome,
+                color = if (ora) AC.Accent else if (fatto) AC.Text else AC.TextDim,
+                fontSize = 12.sp, fontWeight = if (ora) FontWeight.ExtraBold else FontWeight.Normal
+            )
+        }
+    }
+    Text(
+        when {
+            libero -> "Svincolato: parli direttamente col giocatore."
+            !clubOk -> "Passo 1: prima il club deve accettare il prezzo (risposta alla prossima giornata)."
+            else -> "Il club ha accettato: ora trattate con il giocatore sull'ingaggio."
+        },
+        color = AC.TextDim, fontSize = 11.sp
+    )
+}
+
+/** Riepilogo unico dei costi: prezzo al club, commissione dell'agente, ingaggio del primo anno e budget che resta. */
+@Composable
+private fun RiepilogoCosti(prezzo: Long, commissione: Long, ingaggio: Long, anni: Int, budget: Long) {
+    val primoAnno = prezzo + commissione + ingaggio
+    val resta = budget - primoAnno
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text("RIEPILOGO", color = AC.NavyText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Prezzo al club: ${money(prezzo)}", color = AC.Text, fontSize = 12.sp)
+        Text("Commissione agente: ${money(commissione)}", color = AC.Text, fontSize = 12.sp)
+        Text("Ingaggio: ${money(ingaggio)} l'anno per $anni ${if (anni == 1) "anno" else "anni"}", color = AC.Text, fontSize = 12.sp)
+        Text("Totale primo anno: ${money(primoAnno)}", color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(
+            if (resta >= 0) "Ti resta in cassa: ${money(resta)}" else "Budget insufficiente: mancano ${money(-resta)}",
+            color = if (resta >= 0) AC.Accent else AC.Danger, fontSize = 12.sp, fontWeight = FontWeight.Bold
+        )
     }
 }

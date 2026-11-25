@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.engine.AssistantCoach
 import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.SectionTitle
+import it.androcalcio.ui.components.Stelle
 import it.androcalcio.ui.theme.AC
 
 /** Stelle della media squadra: una stella ogni 20 punti, con la mezza stella. */
@@ -30,7 +31,7 @@ fun stelle(media: Int): String {
 
 /** Schermata Avversario: undici previsto, schema abituale, media squadra e consigli dell'assistente. */
 @Composable
-fun AvversarioScreen(advice: AssistantCoach.Advice?) {
+fun AvversarioScreen(advice: AssistantCoach.Advice?, analista: Int = -1) {
     LazyColumn(contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         val a = advice
         if (a == null || a.opponent == null) {
@@ -46,7 +47,7 @@ fun AvversarioScreen(advice: AssistantCoach.Advice?) {
                     Text(a.opponent, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("MEDIA SQUADRA", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
-                        Text(stelle(a.opponentMedia), fontSize = 16.sp, color = AC.ColOrange)
+                        Stelle(it.androcalcio.engine.Staffing.mezzeStelle(a.opponentMedia), 16.sp, AC.ColOrange)
                         Text("${a.opponentMedia}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     }
                     a.opponentSchema?.let {
@@ -57,8 +58,16 @@ fun AvversarioScreen(advice: AssistantCoach.Advice?) {
             }
         }
         if (a.opponentXI.isNotEmpty()) {
-            item { LineupTable(orderedXI(a.opponentXI)) }
+            item { LineupTable(orderedXI(a.opponentXI, a.opponentSchema)) }
             a.opponentSchema?.let { f -> item { FormationBoard(a.opponentXI, f, androidx.compose.ui.graphics.Color(0xFF1E3FA0)) } }
+        }
+        item {
+            SectionTitle("Report dell'analista video")
+            if (analista < 0) Text("Assumi un analista video dallo staff (Analisi) per avere il report dettagliato.",
+                color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+            else it.androcalcio.engine.ReportAvversario.righe(a.opponentXI, analista).forEach {
+                Text("• $it", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+            }
         }
         item {
             SectionTitle("Notizie dell'allenatore in seconda")

@@ -1,0 +1,322 @@
+package it.androcalcio.ui
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import it.androcalcio.ui.theme.AC
+import androidx.compose.ui.graphics.drawscope.Stroke
+import it.androcalcio.ui.components.TipoTrofeo
+import it.androcalcio.ui.components.disegnaTrofeo
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import it.androcalcio.data.MatchResult
+import it.androcalcio.data.Team
+import it.androcalcio.ui.components.Crest
+
+/** Colori dei quattro blocchi, come nel menu principale dei manageriali anni '90. */
+private val ColCampionato = Color(0xFF9C5A7E)
+private val ColAllenatore = Color(0xFF4F6E9E)
+private val ColMercato = Color(0xFF4E8A55)
+private val ColFinanze = Color(0xFF9A7A55)
+private val Fondo = Brush.verticalGradient(listOf(Color(0xFF7FA0D4), Color(0xFF5878B2), Color(0xFF3A5A92)))
+
+/** Sfondo azzurro marmorizzato come nel menu originale: gradiente con nuvole chiare e scure. */
+/** Sfondo di schermata: marmo azzurro nel tema PC Calcio 7 blu, altrimenti il fondo scuro di prima. */
+internal fun Modifier.fondoApp(scuro: Brush? = null): Modifier =
+    if (AC.tema == 3) this.marmo() else this.background(scuro ?: Brush.verticalGradient(listOf(AC.Bg, AC.Bg)))
+
+internal fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
+    val w = size.width; val h = size.height
+    listOf(Triple(0.2f, 0.12f, 0.55f), Triple(0.85f, 0.3f, 0.5f), Triple(0.3f, 0.55f, 0.6f), Triple(0.8f, 0.8f, 0.55f), Triple(0.15f, 0.92f, 0.5f)).forEachIndexed { i, (x, y, r) ->
+        val c = if (i % 2 == 0) Color(0x33FFFFFF) else Color(0x2A0A1A44)
+        drawCircle(Brush.radialGradient(listOf(c, Color.Transparent), Offset(w * x, h * y), w * r), w * r, Offset(w * x, h * y))
+    }
+    // vena diagonale
+    drawLine(Color(0x22FFFFFF), Offset(0f, h * 0.35f), Offset(w, h * 0.1f), strokeWidth = 6f)
+    drawLine(Color(0x1A0A1A44), Offset(0f, h * 0.7f), Offset(w, h * 0.5f), strokeWidth = 5f)
+}
+
+/** Colonna dello staff a sinistra: una tessera per ruolo, con pittogramma e sigla ben riconoscibili. Tocca per aprire lo Staff. */
+@Composable
+private fun ColonnaStaff(go: (Screen) -> Unit) {
+    val voci = listOf("ALL" to Color(0xFFE08A12), "ASS" to Color(0xFF3AA0E0), "GIO" to Color(0xFF2F8F4E), "PRE" to Color(0xFFC0392B),
+        "FIS" to Color(0xFFEDEDED), "SCO" to Color(0xFF8E5BC8), "GIA" to Color(0xFF5BA83A), "ANA" to Color(0xFFC9A227))
+    Column(Modifier.width(38.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF14215C)).padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        voci.forEach { (ruolo, c) ->
+            val dest = when (ruolo) {
+                "ALL" -> Screen.TATTICA; "ASS" -> Screen.CALENDARIO; "GIO", "SCO" -> Screen.VIVAIO
+                "PRE" -> Screen.PREPARATORI; "FIS" -> Screen.FISIO; "GIA" -> Screen.GIARDINIERE; else -> Screen.ANALISTA
+            }
+            Column(Modifier.clickable { go(dest) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                Canvas(Modifier.size(28.dp)) {
+                    val w = size.width; val h = size.height
+                    drawCircle(c, w / 2f); drawCircle(Color(0xFF0B1240), w / 2f, style = Stroke(2.5f))
+                    val k = if (ruolo == "FIS") Color(0xFFD32F2F) else Color.White
+                    when (ruolo) {
+                        "ALL" -> { // lavagna tattica con due crocette e freccia
+                            drawRect(k, Offset(w * 0.22f, h * 0.28f), Size(w * 0.56f, h * 0.44f), style = Stroke(2f))
+                            drawLine(k, Offset(w * 0.32f, h * 0.6f), Offset(w * 0.68f, h * 0.38f), 2f)
+                            drawCircle(k, 2.2f, Offset(w * 0.34f, h * 0.4f))
+                        }
+                        "ASS" -> { // cartellina con fischietto
+                            drawRect(k, Offset(w * 0.3f, h * 0.22f), Size(w * 0.4f, h * 0.56f))
+                            for (i in 0..2) drawLine(c, Offset(w * 0.36f, h * (0.34f + i * 0.14f)), Offset(w * 0.64f, h * (0.34f + i * 0.14f)), 1.6f)
+                        }
+                        "GIO" -> { // piccola figura con stella
+                            drawCircle(k, w * 0.12f, Offset(w * 0.5f, h * 0.36f))
+                            drawRect(k, Offset(w * 0.38f, h * 0.5f), Size(w * 0.24f, h * 0.26f))
+                            drawCircle(Color(0xFFFFD54F), w * 0.07f, Offset(w * 0.74f, h * 0.26f))
+                        }
+                        "PRE" -> { // bilanciere
+                            drawLine(k, Offset(w * 0.2f, h * 0.5f), Offset(w * 0.8f, h * 0.5f), 3f)
+                            drawRect(k, Offset(w * 0.2f, h * 0.3f), Size(w * 0.1f, h * 0.4f)); drawRect(k, Offset(w * 0.7f, h * 0.3f), Size(w * 0.1f, h * 0.4f))
+                        }
+                        "FIS" -> { // croce rossa
+                            drawRect(k, Offset(w * 0.42f, h * 0.2f), Size(w * 0.16f, h * 0.6f)); drawRect(k, Offset(w * 0.2f, h * 0.42f), Size(w * 0.6f, h * 0.16f))
+                        }
+                        "SCO" -> { // lente d'ingrandimento
+                            drawCircle(k, w * 0.2f, Offset(w * 0.45f, h * 0.45f), style = Stroke(3f))
+                            drawLine(k, Offset(w * 0.6f, h * 0.6f), Offset(w * 0.78f, h * 0.78f), 4f)
+                        }
+                        "GIA" -> { // filo d'erba
+                            for (i in 0..3) drawLine(k, Offset(w * (0.3f + i * 0.13f), h * 0.76f), Offset(w * (0.26f + i * 0.16f), h * 0.3f), 2.6f)
+                        }
+                        else -> { // schermo con grafico
+                            drawRect(k, Offset(w * 0.2f, h * 0.26f), Size(w * 0.6f, h * 0.42f), style = Stroke(2f))
+                            drawLine(k, Offset(w * 0.28f, h * 0.58f), Offset(w * 0.42f, h * 0.44f), 2f); drawLine(k, Offset(w * 0.42f, h * 0.44f), Offset(w * 0.54f, h * 0.54f), 2f)
+                            drawLine(k, Offset(w * 0.54f, h * 0.54f), Offset(w * 0.72f, h * 0.34f), 2f)
+                        }
+                    }
+                }
+                Text(ruolo, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+/**
+ * Home in stile PC Calcio 7, adattata al telefono: intestazione con la tua squadra contro la prossima avversaria,
+ * quattro blocchi (Campionato, Allenatore, Mercato, Finanze) con pulsanti a nastro, trofeo con la prossima
+ * competizione, le altre voci in fondo e la barra Salva / Notizie / Continua.
+ */
+@Composable
+fun HomePc(team: Team, season: String, prossima: MatchResult?, avversario: Team?, go: (Screen) -> Unit) {
+    Row(Modifier.fillMaxSize().marmo().padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    ColonnaStaff(go)
+    Column(
+        Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Intestazione(team, season, prossima, avversario)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Blocco("CAMPIONATO", ColCampionato, Modifier.weight(1f), team.campionato, listOf(
+                Triple("Risultati", Screen.GIORNALE, Screen.GIORNALE.icon),
+                Triple("Classifica", Screen.CALENDARIO, Screen.STATISTICHE.icon),
+                Triple("Calendario", Screen.CALENDARIO, Screen.CALENDARIO.icon)), go)
+            Blocco("ALLENATORE", ColAllenatore, Modifier.weight(1f), avversario?.let { "vs ${it.name}" } ?: "Nessuna gara", listOf(
+                Triple("Formazione", Screen.TATTICA, Screen.TATTICA.icon),
+                Triple("Tattiche", Screen.TATTICA, Screen.TATTICA.icon),
+                Triple("Avversario", Screen.AVVERSARIO, Screen.AVVERSARIO.icon)), go)
+        }
+        Trofeo(prossima, team)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Blocco("MERCATO", ColMercato, Modifier.weight(1f), "Cassa ${it.androcalcio.ui.components.money(team.budget)}", listOf(
+                Triple("Acquisti", Screen.MERCATO, Screen.MERCATO.icon),
+                Triple("Collaboratori", Screen.STAFF, Screen.STAFF.icon),
+                Triple("Rosa", Screen.ROSA, Screen.ROSA.icon)), go)
+            Blocco("FINANZE", ColFinanze, Modifier.weight(1f), "Stadio ${"%,d".format(team.stadiumCapacity).replace(',', '.')}", listOf(
+                Triple("Cassa", Screen.FINANZE, Screen.FINANZE.icon),
+                Triple("Decisioni", Screen.DIRIGENZA, Screen.DIRIGENZA.icon),
+                Triple("Stadio", Screen.STADIO, Screen.STRUTTURE.icon)), go)
+        }
+        // Altre voci: piccole targhe in due colonne
+        val altre = listOf(Screen.VIVAIO, Screen.PRESTITI, Screen.COMMERCIALE, Screen.MAGLIE, Screen.RELAZIONI, Screen.OBIETTIVI,
+            Screen.SOCIETA, Screen.NAZIONALI, Screen.SQUADRE, Screen.ALBO, Screen.STATISTICHE, Screen.EDITOR, Screen.OPZIONI)
+        altre.chunked(2).forEach { r ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                r.forEach { s -> Targa(s.label, s.tint, Modifier.weight(1f)) { go(s) } }
+            }
+        }
+        BarraInferiore(go)
+    }
+    }
+}
+
+@Composable
+private fun Intestazione(team: Team, season: String, prossima: MatchResult?, avversario: Team?) {
+    val home = prossima == null || avversario == null || prossima.homeTeamId == team.id
+    val (a, b) = if (avversario == null) team to null else if (home) team to avversario else avversario to team
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
+            .background(Brush.verticalGradient(listOf(Color(0xFF8FB0E0), Color(0xFF4A6BA8))))
+            .border(2.dp, Color(0xFF1C2D52), RoundedCornerShape(4.dp)).padding(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Lato(a, Modifier.weight(1f), true)
+        Column(
+            Modifier.width(78.dp).clip(RoundedCornerShape(3.dp)).background(Color.White).border(1.dp, Color(0xFF1C2D52))
+                .padding(vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(season, color = Color(0xFF111111), fontWeight = FontWeight.Black, fontSize = 11.sp)
+            Text(if (prossima == null) "—" else if (tipoGara(prossima) == TipoGara.AMICHEVOLE) "Amichevole"
+                else if (it.androcalcio.engine.Cup.isCup(prossima.round)) "COPPA" else "Giornata",
+                color = Color(0xFFC62828), fontWeight = FontWeight.Black, fontSize = 11.sp)
+            if (prossima != null && tipoGara(prossima) == TipoGara.CAMPIONATO)
+                Text("${prossima.round}", color = Color(0xFF111111), fontWeight = FontWeight.Black, fontSize = 16.sp)
+        }
+        if (b != null) Lato(b, Modifier.weight(1f), false) else Box(Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun Lato(t: Team, modifier: Modifier, sinistra: Boolean) {
+    Row(modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (sinistra) Arrangement.Start else Arrangement.End) {
+        if (sinistra) Crest(t, 40.dp)
+        Text(t.name, Modifier.weight(1f).padding(horizontal = 4.dp)
+            .background(Color(0xFF0E1A33)).padding(horizontal = 4.dp, vertical = 2.dp),
+            color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1,
+            textAlign = if (sinistra) TextAlign.Start else TextAlign.End)
+        if (!sinistra) Crest(t, 40.dp)
+    }
+}
+
+/** Blocco con l'etichetta verticale sul lato e tre pulsanti a nastro. */
+@Composable
+private fun Blocco(titolo: String, colore: Color, modifier: Modifier, info: String,
+                   voci: List<Triple<String, Screen, androidx.compose.ui.graphics.vector.ImageVector>>, go: (Screen) -> Unit) {
+    Row(modifier.clip(RoundedCornerShape(4.dp)).background(Color(0x33000000)).border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(4.dp))) {
+        Box(Modifier.width(18.dp).height(150.dp).background(Color(0xFF0E1A33)), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                titolo.forEach { c -> Text(c.toString(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 9.sp, lineHeight = 10.sp) }
+            }
+        }
+        Column(Modifier.weight(1f).padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(info, Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 4.dp, vertical = 2.dp),
+                color = Color.White, fontSize = 10.sp, maxLines = 1, textAlign = TextAlign.Center)
+            voci.forEach { (n, s, icona) -> Nastro(n, colore, icona) { go(s) } }
+        }
+    }
+}
+
+/** Pulsante a nastro inclinato con riflesso e icona a sinistra. */
+@Composable
+private fun Nastro(testo: String, colore: Color, icona: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth().height(40.dp).clickable(onClick = onClick), contentAlignment = Alignment.CenterStart) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height; val sl = h * 0.35f
+            val p = Path().apply { moveTo(sl, 0f); lineTo(w, 0f); lineTo(w - sl, h); lineTo(0f, h); close() }
+            drawPath(p, Brush.verticalGradient(listOf(colore.copy(alpha = 1f).let { Color(
+                (it.red + 0.25f).coerceAtMost(1f), (it.green + 0.25f).coerceAtMost(1f), (it.blue + 0.25f).coerceAtMost(1f)) }, colore,
+                Color(colore.red * 0.6f, colore.green * 0.6f, colore.blue * 0.6f))))
+            drawPath(p, Color(0xFF0E1A33), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f))
+            drawLine(Color.White.copy(alpha = 0.5f), Offset(sl + 4f, 3f), Offset(w - 6f, 3f), strokeWidth = 2f)
+        }
+        Row(Modifier.padding(start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(28.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF3EBD8)).border(1.dp, Color(0xFF0E1A33), RoundedCornerShape(4.dp)),
+                contentAlignment = Alignment.Center) { Icon(icona, null, tint = colore, modifier = Modifier.size(20.dp)) }
+            Text(testo.uppercase(), Modifier.weight(1f).padding(start = 6.dp), color = Color.White, fontWeight = FontWeight.Black,
+                fontSize = 12.sp, maxLines = 1, style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(Color.Black, Offset(1.5f, 1.5f), 1f)))
+        }
+    }
+}
+
+/** Coppa d'argento al centro con la prossima competizione. */
+private enum class TipoGara { CAMPIONATO, COPPA, AMICHEVOLE }
+
+private fun tipoGara(m: MatchResult): TipoGara = when {
+    m.league.startsWith("AMICHEVOLE|") -> TipoGara.AMICHEVOLE
+    it.androcalcio.engine.Cup.isCup(m.round) -> TipoGara.COPPA
+    else -> TipoGara.CAMPIONATO
+}
+
+/** Centro della Home: coppa (gare di coppa), scudetto della nazione (campionato), stretta di mano (amichevole). */
+@Composable
+private fun Trofeo(prossima: MatchResult?, team: Team) {
+    val tipo = prossima?.let { tipoGara(it) }
+    Row(Modifier.fillMaxWidth().height(70.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(when {
+            tipo == TipoGara.AMICHEVOLE -> "Precampionato"
+            tipo == TipoGara.COPPA && prossima!!.league.startsWith("SUPERCOPPA") -> "Supercoppa"
+            tipo == TipoGara.COPPA && prossima!!.league.startsWith("EUROPA|") ->
+                it.androcalcio.engine.CoppeEuropee.Coppa.values().firstOrNull { c -> "EUROPA|${c.sigla}" == prossima.league }?.nome ?: "Coppa europea"
+            tipo == TipoGara.COPPA -> "Coppa nazionale"
+            else -> team.campionato
+        }, Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, textAlign = TextAlign.End)
+        Canvas(Modifier.width(70.dp).fillMaxHeight()) {
+            when {
+                tipo == TipoGara.COPPA && prossima!!.league.startsWith("SUPERCOPPA") -> disegnaTrofeo(TipoTrofeo.SUPERCOPPA)
+                tipo == TipoGara.COPPA && prossima!!.league.startsWith("EUROPA|") ->
+                    disegnaTrofeo(when (prossima.league) {
+                        "EUROPA|CAMPIONI" -> TipoTrofeo.CAMPIONI
+                        "EUROPA|EUROPA" -> TipoTrofeo.EUROPA
+                        else -> TipoTrofeo.COPPE
+                    })
+                tipo == TipoGara.COPPA -> disegnaTrofeo(TipoTrofeo.COPPA_NAZIONALE)
+                tipo == TipoGara.AMICHEVOLE -> disegnaTrofeo(TipoTrofeo.AMICHEVOLE, manica = Color(team.colorPrimary))
+                else -> disegnaTrofeo(TipoTrofeo.SCUDETTO, team.nazione)
+            }
+        }
+        Text(when {
+            prossima == null -> "Fine stagione"
+            tipo == TipoGara.AMICHEVOLE -> "Amichevole"
+            tipo == TipoGara.COPPA -> "Turno di coppa"
+            else -> "Giornata ${prossima.round}"
+        }, Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+    }
+}
+
+@Composable
+private fun Targa(testo: String, colore: Color, modifier: Modifier, onClick: () -> Unit) {
+    Text(testo.uppercase(), modifier.clip(RoundedCornerShape(3.dp))
+        .background(Brush.verticalGradient(listOf(colore, Color(colore.red * 0.55f, colore.green * 0.55f, colore.blue * 0.55f))))
+        .border(1.dp, Color(0xFF0E1A33), RoundedCornerShape(3.dp)).clickable(onClick = onClick).padding(vertical = 8.dp),
+        color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, textAlign = TextAlign.Center, maxLines = 1)
+}
+
+@Composable
+private fun BarraInferiore(go: (Screen) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(Color(0xFF0E1A33)).padding(4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        listOf("Salvare" to Screen.SALVATAGGI, "Notizie" to Screen.GIORNALE, "Continua" to Screen.PARTITA).forEach { (t, s) ->
+            Row(Modifier.clickable { go(s) }.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(s.icon, null, tint = if (s == Screen.PARTITA) Color(0xFF5BD16B) else Color(0xFF9FC1FF), modifier = Modifier.size(20.dp))
+                Text(t.uppercase(), Modifier.padding(start = 4.dp), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            }
+        }
+    }
+}

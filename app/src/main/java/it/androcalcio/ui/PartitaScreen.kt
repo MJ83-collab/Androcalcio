@@ -1,6 +1,9 @@
 package it.androcalcio.ui
 
 import it.androcalcio.ui.components.PcAction
+import androidx.compose.foundation.verticalScroll
+import it.androcalcio.data.MatchResult
+import it.androcalcio.engine.Friendlies
 import it.androcalcio.ui.components.PcChip
 
 import it.androcalcio.engine.Pressing
@@ -59,7 +62,10 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.data.Player
 import it.androcalcio.data.Team
 import it.androcalcio.engine.EventType
+import it.androcalcio.engine.Cup
 import it.androcalcio.engine.Formation
+import it.androcalcio.engine.Turni
+import it.androcalcio.engine.Lineup
 import it.androcalcio.engine.Mentality
 import it.androcalcio.engine.MatchReport
 import it.androcalcio.ui.components.Crest
@@ -71,140 +77,77 @@ import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.theme.AC
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Prossima partita: si gioca solo dal calendario. Mostra la sfida, il modulo e la mentalità da confermare
+ * e il pulsante per giocarla in 2D (le altre partite della giornata si simulano da sole).
+ */
 @Composable
-fun PartitaScreen(
+fun ProssimaPartitaScreen(
     team: Team?,
     teams: List<Team>,
-    report: MatchReport?,
-    onPlay: (Team, Team, Formation) -> Unit,
-    onReset: () -> Unit,
+    matches: List<MatchResult>,
+    cupMatches: List<MatchResult>,
+    friendlyMatches: List<MatchResult>,
+    onPlay: () -> Unit,
+    onCalendario: () -> Unit,
     mentality: Mentality = Mentality.EQUILIBRATA,
     onMentality: (Mentality) -> Unit = {},
     formation: Formation = Formation.F442,
     onFormation: (Formation) -> Unit = {}
 ) {
     if (team == null) return
-    if (report == null) {
-        val rivals = teams.filter { it.nazione == team.nazione && it.campionato == team.campionato && it.id != team.id }
-        var awayId by rememberSaveable { mutableStateOf(-1L) }
-        val away = rivals.firstOrNull { it.id == awayId } ?: rivals.firstOrNull()
-        Column(
-            Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("Partita", style = MaterialTheme.typography.headlineSmall)
-            SectionTitle("Avversario (${team.campionato})")
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(rivals, key = { it.id }) { t ->
-                    Choice(t.name, t.id == away?.id) { awayId = t.id }
-                }
-            }
-            SectionTitle("Il tuo modulo")
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(Formation.values().toList()) { f ->
-                    Choice(f.label, f == formation) { onFormation(f) }
-                }
-            }
-            MentalityPicker(mentality, onMentality)
-            if (away != null) {
-                GlassCard(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.padding(16.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Crest(team, 56.dp); Text(team.name, textAlign = TextAlign.Center)
-                        }
-                        Text("vs", color = AC.TextDim)
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Crest(away, 56.dp); Text(away.name, textAlign = TextAlign.Center)
-                        }
-                    }
-                }
-                if (AC.pc7) {
-                    PcButton("Gioca partita (in casa)", { onPlay(team, away, formation) },
-                        Modifier.fillMaxWidth(), main = true)
-                } else PcAction(
-                    onClick = { onPlay(team, away, formation) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AC.Accent, contentColor = AC.Bg
-                    )
-                ) { Text("Gioca partita (in casa)") }
-            }
-        }
-        return
-    }
+    val tutte = matches + cupMatches
+    val mia = tutte.filter { !it.played && (it.homeTeamId == team.id || it.awayTeamId == team.id) }
+        .minByOrNull { it0 -> Turni.chiave(it0) }
+    val restano = tutte.any { !it.played }
+    val avversario = mia?.let { m -> teams.firstOrNull { it.id == if (m.homeTeamId == team.id) m.awayTeamId else m.homeTeamId } }
+    // Prima del campionato servono le amichevoli, che si giocano dal calendario
+    val bloccoAmichevoli = false   // le amichevoli non sono obbligatorie
 
-    var minute by remember(report) { mutableIntStateOf(0) }
-    LaunchedEffect(report) {
-        minute = 0
-        while (minute < 90) { delay(70); minute++ }
-    }
-    val seen = report.events.filter { it.minute <= minute }
-    val hg = seen.count { it.type == EventType.GOAL && it.home }
-    val ag = seen.count { it.type == EventType.GOAL && !it.home }
-    val last = seen.lastOrNull { it.type != EventType.YELLOW }
-    val bx by animateFloatAsState(last?.x ?: 0.5f, tween(300), label = "bx")
-    val by by animateFloatAsState(last?.y ?: 0.5f, tween(300), label = "by")
-
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { Scoreboard(report.home, report.away, hg, ag, if (minute >= 90) "Finale" else "$minute'") }
-        item { Pitch(report.home, report.away, bx, by, report.homeFormation, report.awayFormation, report.homeXI, report.awayXI) }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (AC.pc7) {
-                    PcButton("Salta", { minute = 90 })
-                    PcButton("Nuova partita", onReset)
-                } else {
-                    PcAction(onClick = { minute = 90 }) { Text("Salta") }
-                    PcAction(onClick = onReset) { Text("Nuova partita") }
+        Text("Prossima partita", style = MaterialTheme.typography.headlineSmall)
+        when {
+            bloccoAmichevoli -> {
+                Text("Prima del campionato vanno giocate le amichevoli: le trovi nel calendario.", color = AC.Text)
+                Azione("Vai al calendario", onCalendario)
+            }
+            !restano -> {
+                Text("Non ci sono altre partite: la stagione è finita. Chiudila dal calendario.", color = AC.Text)
+                Azione("Vai al calendario", onCalendario)
+            }
+            mia == null || avversario == null -> {
+                Text("Non hai altre partite in programma: le restanti si simulano.", color = AC.Text)
+                Azione("Simula le partite rimaste", onPlay)
+            }
+            else -> {
+                ProssimaPartitaCard(team, avversario, mia, onPlay)
+                SectionTitle("Il tuo modulo")
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(Formation.values().toList()) { f -> Choice(f.label, f == formation) { onFormation(f) } }
                 }
+                MentalityPicker(mentality, onMentality)
+                Azione("Gioca in 2D", onPlay)
             }
         }
-        if (minute >= 90) item {
-            Text(
-                "Tiri ${report.homeShots}-${report.awayShots} · Possesso ${report.homePossession}%-${100 - report.homePossession}%",
-                color = AC.TextDim, style = MaterialTheme.typography.bodySmall
-            )
-        }
-        if (minute >= 90 && report.playerRatings.isNotEmpty()) item {
-            Pagelle(report)
-        }
-        item { CronacaPanel(seen.reversed()) }
-    }
-}
-
-/** Pagelle a fine partita: chi è sceso in campo, dalla migliore alla peggiore, per squadra. */
-@Composable
-private fun Pagelle(report: MatchReport) {
-    Column(Modifier.fillMaxWidth()) {
-        SectionTitle("Pagelle")
-        PagelleTeam(report.home.shortName, report.playedPlayers.filter { it.id in report.homePlayed }, report.playerRatings)
-        PagelleTeam(report.away.shortName, report.playedPlayers.filter { it.id in report.awayPlayed }, report.playerRatings)
     }
 }
 
 @Composable
-private fun PagelleTeam(name: String, ps: List<Player>, ratings: Map<Long, Double>) {
-    Text(name, style = MaterialTheme.typography.titleSmall)
-    ps.sortedByDescending { ratings[it.id] ?: 6.0 }.forEach { p ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(p.name, style = MaterialTheme.typography.bodyMedium)
-            Text("%.1f".format(ratings[p.id] ?: 6.0), style = MaterialTheme.typography.bodyMedium)
-        }
-    }
+private fun Azione(testo: String, onClick: () -> Unit) {
+    if (AC.pc7) PcButton(testo, onClick, Modifier.fillMaxWidth(), main = true)
+    else PcAction(onClick = onClick, modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)) { Text(testo) }
 }
 
 /** Colore del testo della cronaca nello stile PC 7 (su sfondo bianco). */
 private fun pcEventColor(t: EventType): Color = when (t) {
     EventType.GOAL -> AC.ColEn
     EventType.YELLOW -> AC.ColOrange
+    EventType.RED -> Color(0xFFC62828)
+    EventType.INJURY -> AC.ColOrange
     EventType.SAVE -> AC.ColBlue
     EventType.TACTIC -> AC.ColGreen
     else -> AC.PaperText
@@ -221,10 +164,10 @@ private fun Choice(label: String, selected: Boolean, modifier: Modifier = Modifi
  * Giocatori in campo nell'ordine delle posizioni (1 portiere, poi difensori, centrocampisti, attaccanti).
  * Il primo valore è la posizione; il numero mostrato è quello di maglia, se assegnato.
  */
-private fun numbered(xi: List<Player>): List<Pair<Int, Player>> {
+internal fun numbered(xi: List<Player>, f: Formation? = null): List<Pair<Int, Player>> {
     fun rank(role: String) = when (role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
-    return xi.sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }))
-        .mapIndexed { i, p -> (i + 1) to p }
+    val ordinati = if (f != null) Lineup.perPosti(xi, f) else xi.sortedWith(compareBy<Player>({ rank(it.role) }, { -it.overall }))
+    return ordinati.mapIndexed { i, p -> (i + 1) to p }
 }
 
 @Composable
@@ -237,8 +180,8 @@ fun Pitch(
     val awayColor = AC.NeonPink
     val homePos = hf.coords()
     val awayPos = af.coords()
-    val homeNums = numbered(homeXI)
-    val awayNums = numbered(awayXI)
+    val homeNums = numbered(homeXI, hf)
+    val awayNums = numbered(awayXI, af)
     val textMeasurer = rememberTextMeasurer()
     val numStyle = TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
     Canvas(
@@ -351,7 +294,7 @@ fun CronacaPanel(events: List<it.androcalcio.engine.MatchEvent>) {
     PaperPanel(Modifier.fillMaxWidth()) {
         events.forEachIndexed { i, e ->
             PaperRow(i) {
-                Text("${e.minute}'", Modifier.width(30.dp), fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = AC.PaperText)
+                Text("${it.androcalcio.engine.etichettaMinuto(e.minute)}'", Modifier.width(30.dp), fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = AC.PaperText)
                 Text(e.text, color = pcEventColor(e.type), fontSize = 12.sp,
                     fontWeight = if (e.type == EventType.GOAL) FontWeight.ExtraBold else FontWeight.Medium)
             }

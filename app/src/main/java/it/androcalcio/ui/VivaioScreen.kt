@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
 import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
@@ -155,11 +156,13 @@ fun VivaioScreen(
                                     Youths.judge(Youths.perceived(y, team.youthCoachSkill)),
                                 modifier = Modifier.padding(top = 8.dp), color = AC.Accent
                             )
-                            Text(
-                                "Liv. ${ScoutingGiovani.stelleTesto(y.overall)}   Pot. " +
-                                    ScoutingGiovani.stelleTesto(Youths.perceived(y, team.youthCoachSkill)),
-                                color = Color(0xFFFFC24B), fontSize = 13.sp
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Liv. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
+                                Stelle(ScoutingGiovani.mezzeStelle(y.overall), 13.sp, Color(0xFFFFC24B))
+                                Text("   Pot. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
+                                Stelle(
+                                    ScoutingGiovani.mezzeStelle(Youths.perceived(y, team.youthCoachSkill)), 13.sp, Color(0xFFFFC24B))
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 PcAction(onClick = { onScheda(y) }) { Text("Scheda", fontSize = 12.sp) }
                                 if (y.age >= it.androcalcio.engine.Giovanili.ETA_APPARIZIONE && y.id !in inPrima)
@@ -205,11 +208,13 @@ fun VivaioScreen(
                                 }
                                 Text("${r.first}–${r.last}", style = MaterialTheme.typography.titleMedium, color = AC.Accent)
                             }
-                            Text(
-                                "Liv. ${ScoutingGiovani.stelleTesto((r.first + r.last) / 2)}   Pot. ${ScoutingGiovani.stelleTesto(pot)} " +
-                                    "(${Youths.judge(pot)}) · osservazioni: $n",
-                                modifier = Modifier.padding(top = 6.dp), color = Color(0xFFFFC24B), fontSize = 13.sp
-                            )
+                            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("Liv. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
+                                Stelle(ScoutingGiovani.mezzeStelle((r.first + r.last) / 2), 13.sp, Color(0xFFFFC24B))
+                                Text("   Pot. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
+                                Stelle(ScoutingGiovani.mezzeStelle(pot), 13.sp, Color(0xFFFFC24B))
+                                Text(" (${Youths.judge(pot)}) · osservazioni: $n", color = Color(0xFFFFC24B), fontSize = 13.sp)
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 TextButton(onClick = { onFollowGiovane(y) }) {
                                     Text("Osserva ancora (${money(Scouting.FOLLOW_COST)})", fontSize = 12.sp)

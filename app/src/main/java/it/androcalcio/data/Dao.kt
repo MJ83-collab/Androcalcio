@@ -105,7 +105,11 @@ interface AndrocalcioDao {
     suspend fun allTeams(): List<Team>
 
     @Query("SELECT * FROM players")
-    suspend fun allPlayers(): List<Player>
+    suspend fun allPlayersRaw(): List<Player>
+
+    /** Lettura a pagine: una sola lettura di migliaia di righe riempie la finestra del cursore e può fallire se il database cambia nel frattempo. */
+    @Query("SELECT * FROM players WHERE id > :dopo ORDER BY id LIMIT :n")
+    suspend fun playersDopo(dopo: Long, n: Int): List<Player>
 
     @Delete
     suspend fun deletePlayer(p: Player)
@@ -275,6 +279,25 @@ interface AndrocalcioDao {
 
     @Query("DELETE FROM rosa_nazionale WHERE playerId = :playerId") suspend fun deleteRosaNazionale(playerId: Long)
 
+    // Giocatori ritirati: il loro ID passa a un giovane, quindi lo storico legato all'ID si azzera
+    @Query("DELETE FROM player_stats WHERE playerId IN (:ids)") suspend fun deleteStatsDi(ids: List<Long>)
+    @Query("DELETE FROM goals WHERE playerId IN (:ids)") suspend fun deleteGoalsDi(ids: List<Long>)
+    @Query("DELETE FROM convocazioni WHERE playerId IN (:ids)") suspend fun deleteConvocazioniDi(ids: List<Long>)
+    @Query("DELETE FROM nazionale_stats WHERE playerId IN (:ids)") suspend fun deleteNazionaleStatsDi(ids: List<Long>)
+    @Query("DELETE FROM rosa_nazionale WHERE playerId IN (:ids)") suspend fun deleteRosaNazionaleDi(ids: List<Long>)
+    @Query("DELETE FROM scout_reports WHERE playerId IN (:ids)") suspend fun deleteReportsDi(ids: List<Long>)
+
     @Query("DELETE FROM rosa_nazionale") suspend fun clearRosaNazionale()
 }
 
+/** Tutti i giocatori, letti a pagine da 500 (al posto di un'unica lettura enorme). */
+suspend fun AndrocalcioDao.allPlayers(): List<Player> {
+    val out = ArrayList<Player>()
+    var dopo = 0L
+    while (true) {
+        val pag = playersDopo(dopo, 500)
+        if (pag.isEmpty()) return out
+        out += pag
+        dopo = pag.last().id
+    }
+}

@@ -19,6 +19,9 @@ object ScoutingGiovani {
     /** Da 1 a 5 stelle: 30 → 1 stella, 85+ → 5 stelle. */
     fun stelle(v: Int): Int = ((v - 16) / 14).coerceIn(1, 5)
 
+    /** Mezze stelle da 1 a 10 (2 = una stella intera): ogni mezza stella vale 7 punti, 30 → 2 mezze, da 86 → 10. */
+    fun mezzeStelle(v: Int): Int = ((v - 16) / 7).coerceIn(1, 10)
+
     fun stelleTesto(v: Int): String = "★".repeat(stelle(v)) + "☆".repeat(5 - stelle(v))
 
     /** Stima del livello attuale: la forbice si stringe con le osservazioni e con lo scout bravo. */

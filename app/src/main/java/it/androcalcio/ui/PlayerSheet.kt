@@ -1,5 +1,8 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
+import it.androcalcio.engine.Forma
+
 import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
@@ -42,11 +45,12 @@ import it.androcalcio.ui.theme.AC
 /** Bandiera come emoji a partire dal nome della nazione del campionato. */
 fun flagOf(nazione: String): String = when (nazione) {
     "Italia" -> "🇮🇹"; "Spagna" -> "🇪🇸"; "Inghilterra" -> "🏴󠁧󠁢󠁥󠁮󠁧󠁿"; "Germania" -> "🇩🇪"
-    "Francia" -> "🇫🇷"; "Brasile" -> "🇧🇷"; "Argentina" -> "🇦🇷"; else -> "⚽"
+    "Francia" -> "🇫🇷"; "Brasile" -> "🇧🇷"; "Argentina" -> "🇦🇷"; "Giappone" -> "🇯🇵"
+    "Olanda" -> "🇳🇱"; "Portogallo" -> "🇵🇹"; "Belgio" -> "🇧🇪"; "Scozia" -> "🏴󠁧󠁢󠁳󠁣󠁴󠁿"; "Turchia" -> "🇹🇷"; "Grecia" -> "🇬🇷"
+    else -> "⚽"
 }
 
 /** Stelle 0..5 da un valore 1..99 (una stella ogni 20 punti). */
-private fun stars(v: Int): String { val n = (v / 20).coerceIn(0, 5); return "★".repeat(n) + "☆".repeat(5 - n) }
 
 /** Apre la scheda di un giocatore da qualunque schermo: il root dell'app la mostra. */
 val LocalApriGiocatore = compositionLocalOf<(Player) -> Unit> { {} }
@@ -90,7 +94,10 @@ fun PlayerSheet(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.fillMaxWidth().background(AC.ColBlue).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    it.androcalcio.ui.components.Avatar(p.name, 48.dp)
+                    androidx.compose.runtime.CompositionLocalProvider(it.androcalcio.ui.components.LocalMagliaSquadra provides
+                        team?.takeIf { it.id == p.teamId }?.let { androidx.compose.ui.graphics.Color(it.colorPrimary) to androidx.compose.ui.graphics.Color(it.colorSecondary) }) {
+                        it.androcalcio.ui.components.Avatar(p.name, 48.dp)
+                    }
                     Text((if (p.numero > 0) "${p.numero}  " else "") + p.name.uppercase(), color = Color.White,
                         fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, modifier = Modifier.padding(start = 10.dp))
                 }
@@ -98,6 +105,7 @@ fun PlayerSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Tag("${p.age} anni", AC.ColGreen); Tag(p.nationality, AC.ColBlue, Modifier.apriNazione(p.nationality))
                     Tag(Attr.FOOT_NAMES[p.foot] ?: "Destro", AC.ColOrange)
+                    if (it.androcalcio.engine.Tratti.cinico(p)) Tag("Cinico", AC.ColEn)
                 }
                 val squadra = dettaglio?.squadra ?: team?.name
                 if (squadra != null) Text(squadra, Modifier.apriSquadraNome(squadra), fontSize = 12.sp, color = AC.ColBlue, fontWeight = FontWeight.Bold)
@@ -120,22 +128,13 @@ fun PlayerSheet(
                         "FINALIZZAZIONE" to p.fi, "ENTRATE" to p.en, "TIRO" to p.ti, "RIGORI" to p.ri).forEach { (l, v) ->
                         Row(Modifier.fillMaxWidth()) {
                             Text(l, Modifier.weight(1f), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(stars(v), color = Color(0xFFFFE23D), fontSize = 12.sp)
+                            Stelle((v / 10).coerceIn(0, 10), 12.sp, Color(0xFFFFE23D))
                             Text("$v", Modifier.width(30.dp), color = Color(0xFFFFE23D), fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.End, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth().background(AC.PaperAlt).padding(6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column {
-                        Text("INGAGGIO ANNUO", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
-                        Text(money(p.salary), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("ANNI DI CONTRATTO", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
-                        Text("${p.contract}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
-                    }
-                }
+                ContrattoBlock(p)
                 LocalAzioni.current?.let { az ->
                     Titolo("AZIONI")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -179,6 +178,12 @@ fun PlayerSheet(
                     if (dettaglio.stagioni.size > 1) Text("Totale: presenze ${dettaglio.stagioni.sumOf { it.presenze }} · gol ${dettaglio.stagioni.sumOf { it.gol }}",
                         fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
                     dettaglio.minutiPct?.let { Text("Minuti giocati in stagione: $it%", fontSize = 12.sp, color = AC.PaperText) }
+                    Titolo("FORMA E PARAMETRI")
+                    Text("Forma recente: ${Forma.simbolo(Forma.media(dettaglio.forma))}" +
+                        (if (dettaglio.forma.isNotEmpty()) " · ultimi voti ${dettaglio.forma.joinToString(" ") { "%.1f".format(it).replace('.', ',') }}" else ""),
+                        fontSize = 12.sp, color = AC.PaperText)
+                    RadarGiocatore(p)
+                    Text("Rischio infortunio: ${Forma.rischio(p)} (indicativo, dipende da età, condizione e tenuta fisica)", fontSize = 12.sp, color = AC.PaperText)
                     Titolo("INFORTUNI")
                     if (dettaglio.infortuni.isEmpty()) Text("Nessun infortunio registrato.", fontSize = 11.sp, color = AC.PaperText)
                     dettaglio.infortuni.takeLast(8).reversed().forEach { (st, t) -> Text("$st: $t turni di stop", fontSize = 12.sp, color = AC.PaperText) }

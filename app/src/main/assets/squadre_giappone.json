@@ -1,0 +1,362 @@
+[
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Tokyo Ryu",
+  "sigla": "TKR",
+  "colore1": "#C8102E",
+  "colore2": "#111111",
+  "sponsor": "Nihon Cloud"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Osaka Tora",
+  "sigla": "OST",
+  "colore1": "#F2B705",
+  "colore2": "#111111",
+  "sponsor": "Takoyaki Bank"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Yokohama Kai",
+  "sigla": "YKK",
+  "colore1": "#0B3D91",
+  "colore2": "#FFFFFF",
+  "sponsor": "Minato Logistics"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Kobe Sakura",
+  "sigla": "KBS",
+  "colore1": "#E75480",
+  "colore2": "#FFFFFF",
+  "sponsor": "Sakura Mobile"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Nagoya Kaze",
+  "sigla": "NGK",
+  "colore1": "#B22222",
+  "colore2": "#F2B705",
+  "sponsor": "Kaze Motors"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Kawasaki Taiyo",
+  "sigla": "KWT",
+  "colore1": "#1E90FF",
+  "colore2": "#111111",
+  "sponsor": "Taiyo Energia"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Urawa Akai",
+  "sigla": "URA",
+  "colore1": "#D00000",
+  "colore2": "#FFFFFF",
+  "sponsor": "Akai Robot"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Kashima Kuro",
+  "sigla": "KSK",
+  "colore1": "#8B0000",
+  "colore2": "#111111",
+  "sponsor": "Kuro Cafe"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Hiroshima Momiji",
+  "sigla": "HRM",
+  "colore1": "#6A0DAD",
+  "colore2": "#FFFFFF",
+  "sponsor": "Momiji Foods"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Sapporo Yuki",
+  "sigla": "SPY",
+  "colore1": "#E0F0FF",
+  "colore2": "#0B3D91",
+  "sponsor": "Yuki Ramen"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Fukuoka Hoshi",
+  "sigla": "FKH",
+  "colore1": "#003366",
+  "colore2": "#F2B705",
+  "sponsor": "Hoshi Telecom"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Sendai Mori",
+  "sigla": "SND",
+  "colore1": "#2E8B57",
+  "colore2": "#F2B705",
+  "sponsor": "Mori Legno"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Niigata Shiro",
+  "sigla": "NGT",
+  "colore1": "#FF8C00",
+  "colore2": "#FFFFFF",
+  "sponsor": "Shiro Riso"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Kyoto Fuji",
+  "sigla": "KYF",
+  "colore1": "#4B0082",
+  "colore2": "#F2B705",
+  "sponsor": "Fuji Tea"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Shizuoka Cha",
+  "sigla": "SZC",
+  "colore1": "#228B22",
+  "colore2": "#FFFFFF",
+  "sponsor": "Cha Premium"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Chiba Umi",
+  "sigla": "CHU",
+  "colore1": "#00A3E0",
+  "colore2": "#111111",
+  "sponsor": "Umi Surf"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Okayama Momo",
+  "sigla": "OKM",
+  "colore1": "#FF6F91",
+  "colore2": "#111111",
+  "sponsor": "Momo Pharma"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Kumamoto Kuma",
+  "sigla": "KMK",
+  "colore1": "#C41E3A",
+  "colore2": "#111111",
+  "sponsor": "Kuma Auto"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Matsumoto Yama",
+  "sigla": "MTY",
+  "colore1": "#556B2F",
+  "colore2": "#FFFFFF",
+  "sponsor": "Yama Alpi"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J1 League",
+  "squadra": "Nagano Tsuki",
+  "sigla": "NGN",
+  "colore1": "#191970",
+  "colore2": "#FFFFFF",
+  "sponsor": "Tsuki Hotel"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Gifu Oni",
+  "sigla": "GFO",
+  "colore1": "#B22222",
+  "colore2": "#111111",
+  "sponsor": "Oni Games"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Mito Ume",
+  "sigla": "MTU",
+  "colore1": "#8E44AD",
+  "colore2": "#FFFFFF",
+  "sponsor": "Ume Dolci"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Tochigi Ichigo",
+  "sigla": "TCI",
+  "colore1": "#E74C3C",
+  "colore2": "#FFFFFF",
+  "sponsor": "Ichigo Farm"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Toyama Hotaru",
+  "sigla": "TYH",
+  "colore1": "#27AE60",
+  "colore2": "#111111",
+  "sponsor": "Hotaru LED"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Kanazawa Oro",
+  "sigla": "KNO",
+  "colore1": "#D4AF37",
+  "colore2": "#111111",
+  "sponsor": "Oro Foglia"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Fukui Kani",
+  "sigla": "FKK",
+  "colore1": "#C0392B",
+  "colore2": "#FFFFFF",
+  "sponsor": "Kani Express"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Yamagata Sora",
+  "sigla": "YMS",
+  "colore1": "#3498DB",
+  "colore2": "#FFFFFF",
+  "sponsor": "Sora Air"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Akita Inu",
+  "sigla": "AKI",
+  "colore1": "#A0522D",
+  "colore2": "#FFFFFF",
+  "sponsor": "Inu Snack"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Aomori Mela",
+  "sigla": "AOM",
+  "colore1": "#E53935",
+  "colore2": "#FFFFFF",
+  "sponsor": "Mela Juice"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Morioka Soba",
+  "sigla": "MRK",
+  "colore1": "#795548",
+  "colore2": "#FFFFFF",
+  "sponsor": "Soba Tempo"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Tottori Duna",
+  "sigla": "TTD",
+  "colore1": "#F4D03F",
+  "colore2": "#111111",
+  "sponsor": "Duna Sabbia"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Matsue Lago",
+  "sigla": "MTL",
+  "colore1": "#1ABC9C",
+  "colore2": "#111111",
+  "sponsor": "Lago Pesca"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Tokushima Awa",
+  "sigla": "TKA",
+  "colore1": "#2C3E50",
+  "colore2": "#FFFFFF",
+  "sponsor": "Awa Danza"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Kochi Katsuo",
+  "sigla": "KCK",
+  "colore1": "#16A085",
+  "colore2": "#FFFFFF",
+  "sponsor": "Katsuo Mare"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Matsuyama Arancia",
+  "sigla": "MTA",
+  "colore1": "#E67E22",
+  "colore2": "#111111",
+  "sponsor": "Arancia Dolce"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Saga Tessuto",
+  "sigla": "SGT",
+  "colore1": "#9B59B6",
+  "colore2": "#FFFFFF",
+  "sponsor": "Tessuto Moda"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Nagasaki Ponte",
+  "sigla": "NGP",
+  "colore1": "#34495E",
+  "colore2": "#F2B705",
+  "sponsor": "Ponte Cargo"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Oita Onsen",
+  "sigla": "OIO",
+  "colore1": "#E91E63",
+  "colore2": "#FFFFFF",
+  "sponsor": "Onsen Relax"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Miyazaki Sole",
+  "sigla": "MZS",
+  "colore1": "#F39C12",
+  "colore2": "#111111",
+  "sponsor": "Sole Resort"
+ },
+ {
+  "nazione": "Giappone",
+  "campionato": "J2 League",
+  "squadra": "Kagoshima Vulcano",
+  "sigla": "KGV",
+  "colore1": "#7F0000",
+  "colore2": "#F2B705",
+  "sponsor": "Vulcano Tech"
+ }
+]

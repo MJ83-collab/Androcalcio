@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
 import android.app.Activity
 
 import it.androcalcio.ui.components.PcAction
@@ -28,9 +29,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -43,6 +46,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Face
@@ -136,13 +141,21 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     SALVATAGGI("Salvataggi", Icons.Filled.Done, "Salva e carica la partita", Color(0xFF16A085)),
     ALBO("Albo d'oro", Icons.Filled.Star, "Campioni per stagione", Color(0xFFC9A227)),
     STRUTTURE("Stadio e centro", Icons.Filled.Build, "Migliorie, cantieri, ritorni", Color(0xFF00897B)),
+    STADIO("Stadio", Icons.Filled.Home, "Nome, settori, prezzi, atmosfera", Color(0xFF00695C)),
+    MAGLIE("Maglie", Icons.Filled.Star, "Divise, sponsor tecnico, vendite", Color(0xFFC62828)),
+    EUROPA("Coppe europee", Icons.Filled.Star, "Sorteggi, gironi, tabellone", Color(0xFF283593)),
     RELAZIONI("Stampa", Icons.Filled.Person, "Conferenze, colloqui, psicologo", Color(0xFFAD1457)),
-    COMMERCIALE("Marketing", Icons.Filled.ShoppingCart, "Sponsor e prezzi", Color(0xFFEF6C00)),
+    COMMERCIALE("Marketing", Icons.Filled.ShoppingCart, "Sponsor e marketing", Color(0xFFEF6C00)),
     OBIETTIVI("Obiettivi", Icons.Filled.Done, "Dirigenza, premi, trofei", Color(0xFF6A1B9A)),
     GIORNALE("Giornale", Icons.Filled.List, "Pagelle, meteo, xG", Color(0xFF455A64)),
     PRESTITI("Prestiti", Icons.Filled.Refresh, "Finestre e prestiti", Color(0xFF1565C0)),
     SOCIETA("Società", Icons.Filled.Person, "Disciplina, scambi, storia", Color(0xFF00838F)),
-    OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B))
+    OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B)),
+    POSTA("Messaggi", Icons.Filled.Email, "Eventi e avvisi", Color(0xFF3F6FD8)),
+    PREPARATORI("Preparatori", Icons.Filled.Person, "Attività per giocatore", Color(0xFFC0392B)),
+    FISIO("Fisioterapisti", Icons.Filled.Add, "Infermeria e rischi", Color(0xFFD32F2F)),
+    GIARDINIERE("Giardiniere", Icons.Filled.Build, "Campo e cantieri", Color(0xFF5BA83A)),
+    ANALISTA("Analista video", Icons.Filled.Search, "Ultima partita e avversario", Color(0xFFC9A227))
 }
 
 private val bottomTabs = listOf(
@@ -153,10 +166,13 @@ private val bottomTabs = listOf(
 private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var menuAperto by rememberSaveable { mutableStateOf(false) }
+    // Tablet e schermi larghi: menu sempre visibile e contenuto centrato
+    val larga = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 720
     val teams by vm.teams.collectAsStateWithLifecycle()
+    // Gli All Star esistono solo per le amichevoli: non compaiono in carriera, vivai, scouting, mercato, squadre e statistiche
+    val teamsReali = remember(teams) { teams.filter { !AllStar.isAllStar(it) } }
     val team by vm.selectedTeam.collectAsStateWithLifecycle()
     val players by vm.players.collectAsStateWithLifecycle()
-    val report by vm.report.collectAsStateWithLifecycle()
     val matches by vm.matches.collectAsStateWithLifecycle()
     val cupMatches by vm.cupMatches.collectAsStateWithLifecycle()
     val friendlyMatches by vm.friendlyMatches.collectAsStateWithLifecycle()
@@ -195,9 +211,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
             title = { Text("Il presidente") },
             text = { Text(msg) },
             confirmButton = {
-                TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.CALENDARIO }) { Text("Inizia la stagione") }
+                TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.CALENDARIO }) { Text("Fissa le amichevoli") }
             },
-            dismissButton = { TextButton(onClick = { vm.chiudiPresidente() }) { Text("Più tardi") } }
+            dismissButton = { TextButton(onClick = { vm.chiudiPresidente(); screen = Screen.HOME }) { Text("Salta le amichevoli") } }
         )
     }
     val fineStagione by vm.fine.collectAsStateWithLifecycle()
@@ -233,32 +249,74 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
     val started by vm.started.collectAsStateWithLifecycle()
     if (!started && teams.isNotEmpty()) {
         val info by vm.teamInfo.collectAsStateWithLifecycle()
-        NuovaPartitaScreen(teams, info) { t, nome, cognome -> vm.startGame(t, nome, cognome); screen = Screen.HOME }
+        NuovaPartitaScreen(teamsReali, info) { t, nome, cognome -> vm.startGame(t, nome, cognome); screen = Screen.HOME }
         return
     }
 
     BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
 
+    // CONTINUA, sempre visibile in ogni schermata come in Football Manager: nei giorni liberi passa al giorno dopo,
+    // nel giorno della partita porta alla schermata Partita
+    val giornoGlobale by vm.giorno.collectAsStateWithLifecycle()
+    val inDiretta by vm.live.collectAsStateWithLifecycle()
+
     Scaffold(
         containerColor = AC.Bg,
+        bottomBar = {
+            val g = giornoGlobale
+            if (inDiretta == null) {
+                val libero = g != null && g.prossima != null && !g.giornoPartita
+                val haPartita = g != null && g.prossima != null
+                val testo = when {
+                    libero && g!!.giorniMancanti == 1 -> "CONTINUA ▶ partita"
+                    libero -> "CONTINUA ▶ prossimo evento"
+                    haPartita -> "CONTINUA ▶ vai alla partita"
+                    else -> "CONTINUA ▶ calendario"
+                }
+                Box(
+                    Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.55f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp).navigationBarsPadding()
+                ) {
+                    val nonLetti = vm.posta.collectAsStateWithLifecycle().value.count { !it.letto }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (nonLetti > 0) PcButton("✉ $nonLetti", { screen = Screen.POSTA }, Modifier)
+                        PcButton(testo, {
+                            when {
+                                libero -> vm.continuaGiorno()
+                                haPartita -> screen = Screen.PARTITA
+                                else -> screen = Screen.CALENDARIO
+                            }
+                        }, Modifier.weight(1f), main = true)
+                    }
+                }
+            }
+        }
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().background(
-                if (AC.pc7) androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(Color(0xFF4652B8), Color(0xFF2A3A8C), Color(0xFF1B2461)))
-                else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.Bg, AC.Surface))
-            )
+            Modifier.padding(padding).fillMaxSize().let { m ->
+                if (AC.tema == 3) m.marmo()
+                else m.background(
+                    if (AC.pc7) androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFF4652B8), Color(0xFF2A3A8C), Color(0xFF1B2461)))
+                    else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AC.Bg, AC.Surface)))
+            }
         ) {
         HeaderBar(team, season, screen)
         Row(Modifier.weight(1f)) {
-        Box(Modifier.weight(1f).fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.widthIn(max = 1400.dp).fillMaxSize()) {
             val liveInfo by vm.live.collectAsStateWithLifecycle()
             val li = liveInfo
-            if (li != null) LiveMatchScreen(li, vm) else when (screen) {
+            if (li != null) LiveMatchScreen(li, vm) { screen = Screen.PARTITA } else when (screen) {
                 Screen.HOME -> {
                     val tm = team
-                    val next = if (tm == null) null else matches
+                    val amichevoli by vm.friendlyMatches.collectAsStateWithLifecycle()
+                    val nextLega = if (tm == null) null else matches
                         .filter { !it.played && (it.homeTeamId == tm.id || it.awayTeamId == tm.id) }.minByOrNull { it.round }
+                    // Prima della 1ª giornata, se ci sono amichevoli da giocare, la prossima partita è l'amichevole
+                    val iniziato = matches.any { m -> m.played && !it.androcalcio.engine.Cup.isCup(m.round) }
+                    val nextAm = if (iniziato) null else amichevoli.filter { !it.played }.minByOrNull { it.round }
+                    val next = nextAm ?: nextLega
                     val oppId = next?.let { if (it.homeTeamId == tm?.id) it.awayTeamId else it.homeTeamId }
                     HomeScreen(team, players, season, next, teams.firstOrNull { it.id == oppId }) { screen = it }
                 }
@@ -266,6 +324,22 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val mig by vm.migliorie.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }
                     MigliorieScreen(team, mig) { vm.avviaMiglioria(it) }
+                }
+                Screen.EUROPA -> {
+                    val eu by vm.europa.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id, matches.size, cupMatches.size) { vm.aggiornaEuropa() }
+                    EuropaScreen(eu, teams, team?.id ?: 0L)
+                }
+                Screen.STADIO -> {
+                    val sta by vm.stadio.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id) { vm.aggiornaStadio() }
+                    StadioScreen(sta, { vm.setNomeStadio(it) }, { vm.setColoreStadio(it) }, { s, p -> vm.setPrezzo(s, p) },
+                        { screen = Screen.STRUTTURE })
+                }
+                Screen.MAGLIE -> {
+                    val mg by vm.maglie.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id, season) { vm.aggiornaMaglie() }
+                    MaglieScreen(mg, { vm.tieniMaglie() }, { vm.scegliMaglie(it) }, { vm.setPrezzoMaglie(it) })
                 }
                 Screen.SOCIETA -> {
                     val soc by vm.societa.collectAsStateWithLifecycle()
@@ -297,12 +371,31 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val ex by vm.extra.collectAsStateWithLifecycle()
                     val cl by vm.club.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
-                    ObiettiviScreen(ex, cl)
+                    ObiettiviScreen(ex, cl, vm.posizioneOggi.collectAsStateWithLifecycle().value)
+                }
+                Screen.PREPARATORI -> SchedaPreparatori(vm.staff.collectAsStateWithLifecycle().value, players, giornoGlobale) { screen = Screen.STAFF }
+                Screen.ANALISTA -> {
+                    val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
+                    val ex by vm.extra.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id) { vm.aggiornaExtra() }
+                    SchedaAnalista(vm.staff.collectAsStateWithLifecycle().value, vm.analisiUltima.collectAsStateWithLifecycle().value,
+                        { screen = Screen.STAFF }) { AvversarioScreen(consigli, ex.analista) }
+                }
+                Screen.FISIO -> SchedaFisio(vm.staff.collectAsStateWithLifecycle().value, players) { screen = Screen.STAFF }
+                Screen.GIARDINIERE -> {
+                    val mig by vm.migliorie.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }
+                    SchedaGiardiniere(vm.staff.collectAsStateWithLifecycle().value, mig) { screen = Screen.STAFF }
+                }
+                Screen.POSTA -> {
+                    val msgs by vm.posta.collectAsStateWithLifecycle()
+                    LaunchedEffect(msgs.count { !it.letto }) { if (msgs.any { !it.letto }) { kotlinx.coroutines.delay(1500); vm.segnaPostaLetta() } }
+                    PostaScreen(msgs) { v -> screen = Screen.values().firstOrNull { it.name == v } ?: Screen.HOME }
                 }
                 Screen.GIORNALE -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
-                    GiornaleScreen(ex)
+                    GiornaleScreen(ex, { vm.scegliSfida(it) }, { vm.coreografia() })
                 }
                 Screen.PRESTITI -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
@@ -322,32 +415,55 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val linea by vm.line.collectAsStateWithLifecycle()
                     val allen by vm.training.collectAsStateWithLifecycle()
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
-                    RosaScreen(team, players, { p, y -> vm.renew(p, y) },
+                    RosaScreen(team, players, { p, y, b, r -> vm.renew(p, y, b, r) },
                         modulo, { vm.setFormation(it) }, { vm.toggleStarter(it) }, { vm.coachLineup() },
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         allen, { vm.setTraining(it) }, { p, r -> vm.setRuoloPartita(p, r) },
-                        consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() })
+                        consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
+                        onCercaVice = { _ -> vm.staffFocus.value = it.androcalcio.engine.Staffing.Posto(it.androcalcio.engine.Staffing.ASSISTENTE); screen = Screen.STAFF },
+                        forme = vm.formeRosa.collectAsStateWithLifecycle().value,
+                        mese = vm.giocatoreDelMese.collectAsStateWithLifecycle().value,
+                        capoAuto = vm.extra.collectAsStateWithLifecycle().value.prepAuto,
+                        capoAssunto = vm.extra.collectAsStateWithLifecycle().value.prepAssunto,
+                        capoReport = vm.extra.collectAsStateWithLifecycle().value.prepReport,
+                        onCapoAuto = { vm.setPrepAuto(it) },
+                        squadraB = vm.extra.collectAsStateWithLifecycle().value.squadraB,
+                        onSquadraB = { p, l -> vm.setSquadraB(p, l) },
+                        risultatiB = vm.extra.collectAsStateWithLifecycle().value.risultatiB)
                 }
                 Screen.SQUADRE -> {   // solo consultazione: la panchina cambia con le offerte
                     var scheda by remember { mutableStateOf<Team?>(null) }
-                    TeamList(teams, team?.id) { scheda = it }
+                    TeamList(teamsReali, team?.id) { scheda = it }
                     scheda?.let { t -> SquadraSchedaDialog(t, { x -> vm.infoSquadra(x) }, { scheda = null }) }
                 }
                 Screen.PARTITA -> {
                     val ment by vm.mentality.collectAsStateWithLifecycle()
                     val modulo by vm.formation.collectAsStateWithLifecycle()
-                    PartitaScreen(team, teams, report, { h, a, f -> vm.play(h, a, f) }, { vm.resetMatch() },
+                    ProssimaPartitaScreen(team, teams, matches, cupMatches, friendlyMatches,
+                        { vm.playNextRoundLive() }, { screen = Screen.CALENDARIO },
                         ment, { vm.setMentality(it) }, modulo, { vm.setFormation(it) })
                 }
                 Screen.CALENDARIO -> {
                     val ment by vm.mentality.collectAsStateWithLifecycle()
+                    val sceltaAmich by vm.sceltaAmichevoli.collectAsStateWithLifecycle()
                     CalendarioScreen(team, teams, matches, { vm.playNextRound() }, season,
                         { vm.closeSeason() }, ment, { vm.setMentality(it) }, { vm.playNextRoundLive() },
                         cupMatches = cupMatches,
                         friendlyMatches = friendlyMatches,
                         onRequestFriendly = { vm.requestFriendly(it) },
                         onPlayFriendlies = { vm.playFriendlies() },
-                        onSimulaFino = { vm.simulaFino(it) })
+                        inviti = vm.extra.collectAsStateWithLifecycle().value.inviti,
+                        onInvito = { vm.accettaInvito(it) },
+                        onSimulaFino = { vm.simulaFino(it) },
+                        giorno = vm.giorno.collectAsStateWithLifecycle().value,
+                        onAttivita = { a ->
+                            vm.viviGiorno(a)
+                            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE && sceltaAmich == "ASS") vm.delegaAmichevoli()
+                        },
+                        onSalta = { vm.saltaAllaPartita() },
+                        onMercato = { screen = Screen.MERCATO },
+                        sceltaAmichevoli = sceltaAmich,
+                        onSceltaAmichevoli = { vm.scegliAmichevoli(it) })
                 }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsStateWithLifecycle()
@@ -355,11 +471,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val offer by vm.offerResult.collectAsStateWithLifecycle()
                     val clubOk by vm.clubAccepted.collectAsStateWithLifecycle()
                     MercatoScreen(
-                        team, teams, players, market, role, offer,
+                        team, teamsReali, players, market, role, offer,
                         { vm.setMarketRole(it) }, { p, price, w, y -> vm.offer(p, price, w, y) },
                         { p, y -> vm.wageAsk(p, y) }, vm.wageRoom(),
                         clubOk, { p, y -> vm.consiglioVice(p, y) },
-                        { vm.sell(it) }, { vm.clearOffer() }
+                        { vm.sell(it) }, { vm.clearOffer() }, { vm.preContratto(it) }
                     )
                 }
                 Screen.VIVAIO -> {
@@ -372,7 +488,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val schedaViv by vm.scheda.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
                     VivaioScreen(
-                        team, teams, players, youths, scouted, reports, notice, season,
+                        team, teamsReali, players, youths, scouted, reports, notice, season,
                         { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
                         { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() },
                         exViv.inPrima, schedaViv, { vm.richiediScheda(it) }, { vm.apparizione(it) }, { vm.chiudiScheda() },
@@ -420,12 +536,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val statAttiva by vm.statSeasonAttiva.collectAsStateWithLifecycle()
                     val statGiocatori by vm.playerStats.collectAsStateWithLifecycle()
                     val clausoleAll by vm.clausole.collectAsStateWithLifecycle()
-                    StatsScreen(team, teams, matches, goals, everyone, season, statGiocatori, statStagioni,
+                    StatsScreen(team, teamsReali, matches, goals, everyone, season, statGiocatori, statStagioni,
                         statAttiva, { vm.pickStatSeason(it) }, clausoleAll)
                 }
                 Screen.DIRIGENZA -> {
                     val c by vm.club.collectAsStateWithLifecycle()
-                    DirigenzaScreen(team, c, teams, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) },
+                    DirigenzaScreen(team, c, teamsReali, { tipo, importo -> vm.requestFunds(tipo, importo) }, { o, ask -> vm.acceptOffer(o, ask) },
                         { vm.acceptSponsor(it) }, { vm.rejectSponsors() }, { vm.dimettiti() })
                 }
                 Screen.STAFF -> {
@@ -437,8 +553,18 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         team, staffList, cands,
                         { vm.hire(it) }, { vm.fire(it) }, { vm.refreshCandidates() },
                         missioni, { s, area -> vm.inviaOsservatore(s, area) },
-                        allenatore = allenatoreNome
+                        allenatore = allenatoreNome,
+                        annunci = vm.annunci.collectAsStateWithLifecycle().value,
+                        risposte = vm.candidatiAnnunci.collectAsStateWithLifecycle().value,
+                        onPubblica = { r, sp -> vm.pubblicaAnnuncio(r, sp) },
+                        onRitira = { vm.ritiraAnnuncio(it) },
+                        onRinnova = { s, a -> vm.rinnovaStaff(s, a) },
+                        focus = vm.staffFocus.collectAsStateWithLifecycle().value,
+                        onFocusUsato = { vm.staffFocus.value = null },
+                        scala = vm.scalaStipendi.collectAsStateWithLifecycle().value,
+                        onCorso = { vm.faiCorso(it) }
                     )
+                    androidx.compose.runtime.LaunchedEffect(Unit) { vm.aggiornaCandidatiStaff() }
                 }
                 Screen.TATTICA -> {
                     val modulo by vm.formation.collectAsStateWithLifecycle()
@@ -456,11 +582,14 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         vm.trappola.collectAsStateWithLifecycle().value, { vm.setTrappola(it) },
                         vm.formazioniSalvate.collectAsStateWithLifecycle().value, { vm.salvaFormazione(it) }, { vm.caricaFormazione(it) },
                         vm.premioPromesso.collectAsStateWithLifecycle().value,
-                        PremioPartita.costo(players.sumOf { p -> p.salary }), { vm.promettiPremio(it) })
+                        PremioPartita.costo(players.sumOf { p -> p.salary }), { vm.promettiPremio(it) },
+                        cambioCond = vm.cambioCond.collectAsStateWithLifecycle().value, onCambioCond = { vm.setCambioCond(it) },
+                        fasce = vm.fasce.collectAsStateWithLifecycle().value, onFasce = { vm.setFasce(it) },
+                        schema = vm.schemaPiazzati.collectAsStateWithLifecycle().value, onSchema = { vm.setSchemaPiazzati(it) })
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
-                    AvversarioScreen(consigli)
+                    AvversarioScreen(consigli, vm.extra.collectAsStateWithLifecycle().value.analista)
                 }
                 Screen.ALBO -> {
                     val albo by vm.albo.collectAsStateWithLifecycle()
@@ -476,9 +605,12 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 else -> ComingSoon(screen)
             }
         }
+        }
         // Menu laterale a scomparsa: chiuso resta solo una linguetta, così le schermate hanno tutto lo spazio
-        MenuLinguetta(menuAperto) { menuAperto = !menuAperto }
-        if (menuAperto) SideMenu(screen) { screen = it; menuAperto = false }
+        if (larga) SideMenu(screen) { screen = it } else {
+            MenuLinguetta(menuAperto) { menuAperto = !menuAperto }
+            if (menuAperto) SideMenu(screen) { screen = it; menuAperto = false }
+        }
         }
         }
     }
@@ -648,6 +780,8 @@ fun HomeScreen(
         }
         return
     }
+    // Home in stile PC Calcio 7 (menu a quattro blocchi); la vecchia home resta sotto, non più usata
+    if (true) { HomePc(team, season, prossima, avversario, go); return }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(if (AC.pc7) 10.dp else 16.dp),
         verticalArrangement = Arrangement.spacedBy(if (AC.pc7) 10.dp else 12.dp)
@@ -696,8 +830,8 @@ fun HomeScreen(
         val tiles = listOf(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
-            Screen.STRUTTURE, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
-            Screen.SOCIETA, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
+            Screen.STRUTTURE, Screen.STADIO, Screen.EUROPA, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
+            Screen.POSTA, Screen.SOCIETA, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {
@@ -819,14 +953,18 @@ private fun roleColor(role: String): Color = when (role) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RosaScreen(
-    team: Team?, players: List<Player>, onRenew: (Player, Int) -> Unit,
+    team: Team?, players: List<Player>, onRenew: (Player, Int, Boolean, Boolean) -> Unit,
     formation: Formation, onFormation: (Formation) -> Unit,
     onToggleStarter: (Player) -> Unit, onCoach: () -> Unit,
     press: Pressing, line: DefLine, onPress: (Pressing) -> Unit, onLine: (DefLine) -> Unit,
     training: TrainingPlan, onTraining: (TrainingPlan) -> Unit,
     onRole: (Player, String) -> Unit = { _, _ -> },
     advice: it.androcalcio.engine.AssistantCoach.Advice? = null, onApplyXI: () -> Unit = {},
-    onApplyTattica: () -> Unit = {}
+    onApplyTattica: () -> Unit = {},
+    onCercaVice: (Unit) -> Unit = {},
+    forme: Map<Long, Double> = emptyMap(), mese: String? = null,
+    capoAuto: Boolean = true, capoAssunto: Boolean = false, capoReport: List<String> = emptyList(), onCapoAuto: (Boolean) -> Unit = {},
+    squadraB: Map<Long, Int> = emptyMap(), onSquadraB: (Player, Int?) -> Unit = { _, _ -> }, risultatiB: List<String> = emptyList()
 ) {
     if (team == null) return
     var renew by remember { mutableStateOf<Player?>(null) }
@@ -834,6 +972,8 @@ fun RosaScreen(
     sheet?.let { p -> SchedaGiocatore(p, team, onClose = { sheet = null }, onRenew = { renew = p; sheet = null }) }
     renew?.let { p ->
         var years by remember(p) { mutableStateOf(3) }
+        var cBonus by remember(p) { mutableStateOf(false) }
+        var cResc by remember(p) { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { renew = null },
             title = { Text("Rinnovo ${p.name}") },
@@ -846,9 +986,11 @@ fun RosaScreen(
                             PcChip(selected = years == y, onClick = { years = y }, label = { Text("$y") })
                         }
                     }
+                    PcChip(selected = cBonus, onClick = { cBonus = !cBonus }, label = { Text("Bonus gol doppio (ingaggio -6%)") })
+                    PcChip(selected = cResc, onClick = { cResc = !cResc }, label = { Text("Clausola rescissoria (ingaggio -8%)") })
                 }
             },
-            confirmButton = { PcAction(onClick = { onRenew(p, years); renew = null }) { Text("Rinnova") } },
+            confirmButton = { PcAction(onClick = { onRenew(p, years, cBonus, cResc); renew = null; cBonus = false; cResc = false }) { Text("Rinnova") } },
             dismissButton = { TextButton(onClick = { renew = null }) { Text("Annulla") } }
         )
     }
@@ -857,11 +999,34 @@ fun RosaScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item { MediaSquadraBar(team, players) }
-        item { AssistantCard(advice, onApplyXI, onApplyTattica) }
-        item { RosaTable(players, onToggleStarter, { sheet = it }, onRole) }
+        item { AssistantCard(advice, onApplyXI, onApplyTattica, onCerca = { onCercaVice(Unit) }) }
+        item {
+            // Turnover: titolari stanchi e panchinari in forma dello stesso ruolo
+            val stanchi = players.filter { it.starter && it.injuredRounds == 0 && it.condition < 70 }
+            if (stanchi.isNotEmpty()) {
+                val suggerimenti = stanchi.mapNotNull { s ->
+                    players.filter { !it.starter && it.injuredRounds == 0 && it.condition >= 85 && it.role == s.role }
+                        .maxByOrNull { it.overall }?.let { "${s.name} → ${it.name}" }
+                }
+                PaperPanel(Modifier.fillMaxWidth()) {
+                    Text("🔄 TURNOVER CONSIGLIATO  " + stanchi.joinToString(", ") { "${it.name} (${it.condition}%)" },
+                        Modifier.padding(10.dp), fontWeight = FontWeight.ExtraBold, color = AC.PaperText, fontSize = 12.sp)
+                    if (suggerimenti.isNotEmpty()) Text("Possibili cambi: " + suggerimenti.joinToString("; "),
+                        Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), color = AC.PaperText, fontSize = 12.sp)
+                }
+            }
+        }
+        if (mese != null) item {
+            PaperPanel(Modifier.fillMaxWidth()) {
+                Text("⭐ GIOCATORE DEL MESE  " + mese, Modifier.padding(10.dp), fontWeight = FontWeight.ExtraBold, color = AC.PaperText, fontSize = 13.sp)
+            }
+        }
+        item { RosaTable(players, onToggleStarter, { sheet = it }, onRole, forme, Color(team.colorPrimary) to Color(team.colorSecondary)) }
         item { FormazioneCard(players, formation, onFormation, onCoach) }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TacticsPicker(press, line, onPress, onLine) } } }
         item { GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { TrainingPicker(training, onTraining) } } }
+        item { PreparatoreCapoCard(capoAuto, capoAssunto, capoReport, onCapoAuto) }
+        item { SquadraBCard(players, squadraB, onSquadraB, risultatiB) }
     }
 }
 
@@ -881,7 +1046,7 @@ private fun MediaSquadraBar(team: Team, players: List<Player>) {
             Text(team.name.uppercase(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
             Text("MEDIA SQUADRA", color = AC.NavyText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
-        Text(stelle(media), color = AC.Accent, fontSize = 16.sp)
+        Stelle(it.androcalcio.engine.Staffing.mezzeStelle(media), 16.sp, AC.Accent)
         Text(" $media", color = AC.Neon, fontWeight = FontWeight.Black, fontSize = 18.sp)
     }
 }
@@ -898,7 +1063,8 @@ private fun ruoloTag(r: String) = "[$r]"
 @Composable
 private fun RosaTable(
     players: List<Player>, onToggleStarter: (Player) -> Unit, onOpen: (Player) -> Unit,
-    onRole: (Player, String) -> Unit
+    onRole: (Player, String) -> Unit, forme: Map<Long, Double> = emptyMap(),
+    maglia: Pair<Color, Color>? = null
 ) {
     val stats = listOf("EN", "VE", "RE", "AG", "QU", "SF", "MO", "ME")
     val statColor = listOf(AC.ColEn, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColBlue, AC.ColGreen, AC.ColOrange)
@@ -933,6 +1099,7 @@ private fun RosaTable(
                 HeadCell("GIOCATORE", AC.PaperText, Modifier.width(118.dp), TextAlign.Start)
                 HeadCell("", AC.PaperText, Modifier.width(62.dp))
                 stats.forEachIndexed { i, h -> HeadCell(h, statColor[i], Modifier.width(30.dp)) }
+                HeadCell("CT", AC.ColGreen, Modifier.width(28.dp))
                 HeadCell("RUOLO", AC.PaperText, Modifier.width(74.dp))
             }
             // Sezioni come nell'originale: titolari, convocati (panchina), non convocati (infortunati)
@@ -959,18 +1126,23 @@ private fun RosaTable(
                         textAlign = TextAlign.Center, fontSize = 14.sp)
                     Text(if (p.numero > 0) "${p.numero}" else "-", Modifier.width(26.dp), textAlign = TextAlign.Center,
                         fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
-                    it.androcalcio.ui.components.Avatar(p.name, 22.dp, Modifier.padding(end = 3.dp))
-                    Text(ruoloTag(p.role) + "  " + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
+                    androidx.compose.runtime.CompositionLocalProvider(it.androcalcio.ui.components.LocalMagliaSquadra provides maglia) {
+                        it.androcalcio.ui.components.Avatar(p.name, 22.dp, Modifier.padding(end = 3.dp))
+                    }
+                    Text(ruoloTag(p.role) + "  " + it.androcalcio.engine.Forma.icona(forme[p.id]) + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    val st = (p.overall / 20).coerceIn(0, 5)
-                    Text("★".repeat(st) + "☆".repeat(5 - st), Modifier.width(62.dp), fontSize = 11.sp, color = Color(0xFFE0A800))
+                    Stelle((p.overall / 10).coerceIn(0, 10), 11.sp, Color(0xFFE0A800), Modifier.width(62.dp))
                     val values = listOf(p.condition, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall)
                     values.forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
                             fontWeight = if (k == 7) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (k == 0 && v < 60) AC.ColEn else if (k == 0 && v < 80) AC.ColOrange else AC.PaperText)
+                            color = if (k == 0) (if (v < 60) AC.ColEn else if (v < 80) AC.ColOrange else AC.PaperText)
+                                    else if (k == 6) (if (v < 50) AC.ColEn else if (v < 65) AC.ColOrange else AC.PaperText)
+                                    else coloreValore(v))
                     }
+                    Text("${p.contract}", Modifier.width(28.dp), textAlign = TextAlign.Center, fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold, color = coloreContratto(p.contract))
                     // Ruolo in campo con l'affinità: tocca per passare al ruolo affine successivo
                     val opts = TacticalRoles.options(p)
                     val cur = TacticalRoles.assigned(p)
@@ -1048,7 +1220,7 @@ fun FinanzeScreen(
 
                 SectionTitle("Sponsor e merchandising")
                 Text(
-                    "Incassati a fine stagione. Merchandising: ${money(Sponsorship.merch(team.stadiumCapacity))} l'anno.",
+                    "Incassati a fine stagione. Maglie e merchandising: vedi la schermata Maglie.",
                     color = AC.TextDim, style = MaterialTheme.typography.bodySmall
                 )
                 Text("Gli sponsor si gestiscono in Dirigenza (fino a 5 contratti pluriennali).",
@@ -1161,6 +1333,8 @@ fun FinanzeScreen(
                 }
             }
         }
+
+        GraficoCassa(movimenti)
 
         // Movimenti di cassa
         SectionTitle("Movimenti di cassa")

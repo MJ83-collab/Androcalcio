@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -58,8 +59,9 @@ import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.theme.AC
 
 /** Undici ordinato per linee (portiere, difesa, centrocampo, attacco), come le posizioni del modulo. */
-fun orderedXI(xi: List<Player>): List<Player> =
-    xi.sortedBy { when (it.role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 } }
+fun orderedXI(xi: List<Player>, formation: Formation? = null): List<Player> =
+    if (formation != null) Lineup.perPosti(xi, formation)
+    else xi.sortedBy { when (it.role) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 } }
 
 private fun dem(role: String) = when (role) { "P" -> "POR"; "D" -> "DIF"; "C" -> "MED"; else -> "ATT" }
 
@@ -74,6 +76,10 @@ private fun roleSpot(code: String, role: String): Offset = when (code) {
     "INT" -> Offset(0.55f, 0.28f)
     "MP" -> Offset(0.70f, 0.5f)
     "ES" -> Offset(0.70f, 0.14f)
+    "FD" -> Offset(0.50f, 0.85f)
+    "FS" -> Offset(0.50f, 0.15f)
+    "AD" -> Offset(0.75f, 0.85f)
+    "AS" -> Offset(0.75f, 0.15f)
     "CA" -> Offset(0.88f, 0.5f)
     else -> when (role) {
         "P" -> Offset(0.10f, 0.5f); "D" -> Offset(0.28f, 0.5f); "C" -> Offset(0.50f, 0.5f); else -> Offset(0.85f, 0.5f)
@@ -145,7 +151,7 @@ fun LineupTable(xi: List<Player>, onRole: ((Player) -> Unit)? = null, onOpen: ((
 @Composable
 fun TacticPitch(xi: List<Player>, formation: Formation, modifier: Modifier = Modifier) {
     val measurer = rememberTextMeasurer()
-    val ordered = orderedXI(xi)
+    val ordered = orderedXI(xi, formation)
     val coords = formation.coords()
     Canvas(modifier.fillMaxWidth().aspectRatio(1.7f).background(AC.PitchB)) {
         // strisce del prato
@@ -207,9 +213,13 @@ fun TatticaScreen(
     trappola: Boolean = false, onTrappola: (Boolean) -> Unit = {},
     formazioni: List<it.androcalcio.engine.FormazioniSalvate.Preset?> = emptyList(),
     onSalvaFormazione: (Int) -> Unit = {}, onCaricaFormazione: (Int) -> Unit = {},
-    premio: Boolean = false, costoPremio: Long = 0L, onPremio: (Boolean) -> Unit = {}
+    premio: Boolean = false, costoPremio: Long = 0L, onPremio: (Boolean) -> Unit = {},
+    cambioCond: Int = 0, onCambioCond: (Int) -> Unit = {},
+    fasce: it.androcalcio.engine.Fasce = it.androcalcio.engine.Fasce.MISTO, onFasce: (it.androcalcio.engine.Fasce) -> Unit = {},
+    schema: it.androcalcio.engine.SchemaPiazzati = it.androcalcio.engine.SchemaPiazzati.NORMALE,
+    onSchema: (it.androcalcio.engine.SchemaPiazzati) -> Unit = {}
 ) {
-    val xi = orderedXI(Lineup.resolve(players, formation).xi)
+    val xi = orderedXI(Lineup.resolve(players, formation).xi, formation)
     var roleFor by remember { mutableStateOf<Player?>(null) }
     var tiriAperti by remember { mutableStateOf(false) }
     if (tiriAperti) TiriDialog(players, tiri, { tiriAperti = false }, { onSalvaTiri(it); tiriAperti = false })
@@ -282,9 +292,27 @@ fun TatticaScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 it.androcalcio.engine.Ampiezza.values().forEach { a -> PcChip(ampiezza == a, { onAmpiezza(a) }, { Text(a.label) }) }
             }
+            SectionTitle("Gioco sulle fasce")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                it.androcalcio.engine.Fasce.values().forEach { f -> PcChip(fasce == f, { onFasce(f) }, { Text(f.label) }) }
+            }
+            Text(fasce.descrizione, color = AC.TextDim, fontSize = 12.sp)
+            SectionTitle("Schema calci piazzati")
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                it.androcalcio.engine.SchemaPiazzati.values().forEach { s -> PcChip(schema == s, { onSchema(s) }, { Text(s.label) }) }
+            }
+            Text(schema.descrizione, color = AC.TextDim, fontSize = 12.sp)
             SectionTitle("Cambio programmato")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(0 to "Spento", 60 to "60'", 70 to "70'", 80 to "80'").forEach { (m, l) -> PcChip(cambioPronto == m, { onCambioPronto(m) }, { Text(l) }) }
+            }
+            SectionTitle("Cambi con condizioni")
+            Text("Un cambio ogni 5 minuti al massimo, dal 30'. Puoi sceglierne più di una.", color = AC.TextDim, fontSize = 12.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                it.androcalcio.engine.CambiCondizioni.TUTTE.forEach { (bit, l) ->
+                    val on = cambioCond and bit != 0
+                    PcChip(on, { onCambioCond(if (on) cambioCond and bit.inv() else cambioCond or bit) }, { Text(l) }, Modifier.fillMaxWidth())
+                }
             }
             SectionTitle("Trappola del fuorigioco")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -317,7 +345,7 @@ private fun Modifier.border2(): Modifier =
 /** Formazione verticale come le grafiche TV: campo in prospettiva, giocatori con maglia, numero e nome in etichetta. */
 @Composable
 fun FormationBoard(xi: List<Player>, formation: Formation, shirt: Color, modifier: Modifier = Modifier) {
-    val ordered = orderedXI(xi)
+    val ordered = orderedXI(xi, formation)
     val coords = formation.coords()
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier.fillMaxWidth().aspectRatio(0.8f)
@@ -341,7 +369,7 @@ fun FormationBoard(xi: List<Player>, formation: Formation, shirt: Color, modifie
             val yf = 0.90f - (c.first - 0.05f) / 0.41f * 0.80f
             val xf = c.second
             Column(
-                Modifier.padding(start = w * xf - 34.dp, top = h * yf - 22.dp).width(68.dp),
+                Modifier.offset(x = w * xf - 34.dp, y = h * yf - 22.dp).width(68.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(Modifier.size(30.dp).background(if (p.role == "P") Color(0xFF29B6F6) else shirt,

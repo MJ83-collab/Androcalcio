@@ -18,13 +18,16 @@ object DataIO {
         "prestiti", "achievement", "avanzate", "giornale", "premi", "conf_g", "giornata_mercato",
         "c_stagioni", "c_titoli", "c_coppe", "c_prom", "c_vittorie", "c_gol", "c_derby", "c_obiettivi", "c_giovani",
         "c_colloqui", "c_conferenze", "c_prestiti", "c_partite", "apparizioni", "avatar",
-        "scontri", "storia_rec", "storia_hall", "ffp_perdite", "ffp_blocco", "auto_ultimo", "mutui", "rate_mercato", "capitano", "preferiti", "allen_ind",
+        "scontri", "storia_rec", "storia_hall", "ffp_perdite", "ffp_blocco", "auto_ultimo", "mutui", "rate_mercato", "capitano", "preferiti", "allen_ind", "tratti",
         "proprietario", "salvataggi", "cartellini", "rivendite", "crediti_mercato", "plusvalenze", "nuovo_stadio", "prato", "prato_cura",
-        "minuti", "minuti_partite", "voti", "storia_inf", "formazioni_salvate", "vicecapitano", "premio_partita")
+        "minuti", "minuti_partite", "voti", "storia_inf", "formazioni_salvate", "vicecapitano", "premio_partita", "fedelta", "sfide_offerte", "sfide_serie", "sfida",
+        "stadio_nome", "stadio_colore", "maglie", "maglie_stagione", "maglie_novita", "maglie_proposte", "maglie_prezzo")
 
     suspend fun wipe(dao: AndrocalcioDao) {
         dao.clearMatches(); dao.clearYouths(); dao.clearReports()
         dao.clearStaff(); dao.clearGoals(); dao.clearStats(); dao.clearClausole(); dao.clearMissions(); dao.clearConvocazioni(); dao.clearNazionaleStats(); dao.clearRosaNazionale(); dao.clearPlayers(); dao.clearTeams(); dao.clearMovimenti(); dao.clearStato(); dao.clearAlbo()
+        // le scelte tenute in memoria appartengono alla carriera cancellata
+        it.androcalcio.engine.Tratti.decode(null); it.androcalcio.engine.Training.individuali = emptyMap()
     }
 
     suspend fun export(dao: AndrocalcioDao): String {
@@ -105,6 +108,17 @@ object DataIO {
         val root = JSONObject(text)
         require(root.optString("formato") == FORMAT) { "formato sconosciuto" }
         val arr = root.getJSONArray("squadre")
+        // Gli id del file si mantengono (squadre, giocatori, staff) se sono validi e non si ripetono: così il file si può
+        // modificare a mano e reimportare senza che cambi nulla. Id mancanti (0) o doppi: li assegna il database.
+        fun idUnici(ids: List<Long>): Set<Long> = ids.filter { it > 0 }.groupingBy { it }.eachCount().filter { it.value == 1 }.keys
+        val idSquadreOk = idUnici((0 until arr.length()).map { arr.getJSONObject(it).optLong("id", 0L) })
+        val tuttiG = ArrayList<Long>(); val tuttiS = ArrayList<Long>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            o.optJSONArray("giocatori")?.let { a -> for (j in 0 until a.length()) tuttiG += a.getJSONObject(j).optLong("id", 0L) }
+            o.optJSONArray("staff")?.let { a -> for (j in 0 until a.length()) tuttiS += a.getJSONObject(j).optLong("id", 0L) }
+        }
+        val idGiocatoriOk = idUnici(tuttiG); val idStaffOk = idUnici(tuttiS)
         val teams = ArrayList<Team>()
         val squads = ArrayList<List<Player>>()
         val staffs = ArrayList<List<Staff>>()
@@ -115,6 +129,7 @@ object DataIO {
             val o = arr.getJSONObject(i)
             oldTeamIds += o.optLong("id", 0L)
             teams += Team(
+                id = o.optLong("id", 0L).takeIf { it in idSquadreOk } ?: 0L,
                 name = o.getString("name"), shortName = o.getString("shortName"),
                 colorPrimary = o.getLong("colorPrimary"), colorSecondary = o.getLong("colorSecondary"),
                 budget = o.getLong("budget"), stadiumCapacity = o.getInt("stadiumCapacity"),
@@ -130,6 +145,7 @@ object DataIO {
             squads += (0 until ga.length()).map { j ->
                 val g = ga.getJSONObject(j)
                 val base = Player(
+                    id = g.optLong("id", 0L).takeIf { it in idGiocatoriOk } ?: 0L,
                     teamId = 0, name = g.getString("name"),
                     role = g.getString("role").takeIf { it in listOf("P", "D", "C", "A") } ?: "C",
                     age = g.getInt("age"), overall = g.getInt("overall").coerceIn(1, 99),
@@ -160,6 +176,7 @@ object DataIO {
             staffs += if (sa == null) emptyList() else (0 until sa.length()).map { k ->
                 val s = sa.getJSONObject(k)
                 Staff(
+                    id = s.optLong("id", 0L).takeIf { it in idStaffOk } ?: 0L,
                     teamId = 0,
                     role = s.getString("role").takeIf { it in Staffing.ROLES } ?: Staffing.ALLENATORE,
                     name = s.getString("name"),
@@ -174,10 +191,13 @@ object DataIO {
         wipe(dao)
         val ids = dao.insertTeams(teams)
         val tMap = oldTeamIds.zip(ids).toMap()
-        val pIds = dao.insertPlayers(squads.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
-        val pMap = oldPlayerIds.flatten().zip(pIds).toMap()
-        val sIds = dao.insertStaffs(staffs.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } })
-        val sMap = oldStaffIds.flatten().zip(sIds).toMap()
+        // Prima chi ha un id esplicito, poi chi lo riceve dal database: così non ci sono scontri di numeri
+        val gioc = squads.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } }.zip(oldPlayerIds.flatten()).sortedBy { if (it.first.id > 0) 0 else 1 }
+        val pIds = dao.insertPlayers(gioc.map { it.first })
+        val pMap = gioc.map { it.second }.zip(pIds).toMap()
+        val stf = staffs.flatMapIndexed { i, l -> l.map { it.copy(teamId = ids[i]) } }.zip(oldStaffIds.flatten()).sortedBy { if (it.first.id > 0) 0 else 1 }
+        val sIds = dao.insertStaffs(stf.map { it.first })
+        val sMap = stf.map { it.second }.zip(sIds).toMap()
         // Statistiche, clausole e missioni: i riferimenti vecchi vengono rimappati sui nuovi id
         root.optJSONArray("statistiche")?.let { a ->
             dao.upsertStats((0 until a.length()).mapNotNull { k ->
@@ -225,6 +245,8 @@ object DataIO {
         root.optJSONObject("stato")?.let { o ->
             CHIAVI_STATO.forEach { k -> if (o.has(k)) dao.setStato(Stato(k, o.optString(k))) }
         }
+        it.androcalcio.engine.Tratti.decode(dao.stato("tratti"))
+        it.androcalcio.engine.Training.individuali = it.androcalcio.engine.Training.decodeInd(dao.stato("allen_ind"))
         root.optString("nazioneAllenata", "").takeIf { it.isNotEmpty() }?.let { dao.setStato(Stato("nazione_allenata", it)) }
         root.optJSONArray("nazionaleStats")?.let { a ->
             dao.upsertNazionaleStats((0 until a.length()).mapNotNull { k ->

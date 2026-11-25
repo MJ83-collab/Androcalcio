@@ -58,7 +58,10 @@ object Presidente {
     /** Messaggio di benvenuto del presidente all'inizio della carriera. */
     fun benvenuto(squadra: String, nome: String, cognome: String): String =
         "Buongiorno mister $cognome, benvenuto alla $squadra. " +
-            "Il club conta su di lei. Prima dell'inizio del campionato fissi le amichevoli di precampionato " +
-            "dal Calendario: sono facoltative, ma aiutano gli incassi e la forma dei giocatori. " +
+            "Il club conta su di lei.\n\n" +
+            "Prima della 1ª giornata può giocare le amichevoli di precampionato: sono facoltative, " +
+            "ma portano incassi e mettono in forma i giocatori.\n\n" +
+            "• Fissa le amichevoli: apre il Calendario per sceglierle.\n" +
+            "• Salta le amichevoli: si parte subito con la 1ª giornata di campionato.\n\n" +
             "Buon lavoro, $nome."
 }

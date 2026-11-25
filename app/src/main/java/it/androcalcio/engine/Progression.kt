@@ -14,7 +14,7 @@ object Progression {
      * Fino a 28 anni l'allenatore aggiunge o toglie fino a 2 punti (skill 1..99).
      * Gli infortuni si esauriscono in bassa stagione.
      */
-    fun advance(p: Player, rng: Random, coach: Int = Staffing.NEUTRAL, struttura: Int = 0): Player {
+    fun advance(p: Player, rng: Random, coach: Int = Staffing.NEUTRAL, struttura: Int = 0, mentore: Int = 0): Player {
         val age = p.age + 1
         val delta = when {
             age < 20 -> rng.nextInt(2, 7)          // giovani: crescita decisa
@@ -24,7 +24,7 @@ object Progression {
         }
         val coachBonus = if (age <= 28) (coach - Staffing.NEUTRAL) / 20 else 0
         val extra = if (age <= 28 && rng.nextInt(100) < struttura) 1 else 0   // centro di allenamento
-        var ov = p.overall + delta + coachBonus + extra
+        var ov = p.overall + delta + coachBonus + extra + mentore
         if (age <= 28) ov = ov.coerceAtMost(maxOf(p.potential, p.overall))
         ov = ov.coerceIn(30, 99)
         val pot = if (age > 28) ov else maxOf(p.potential, ov)
@@ -40,13 +40,13 @@ object Progression {
     fun renewAI(p: Player, rng: Random): Player =
         p.copy(contract = rng.nextInt(1, 5), salary = wage(p))
 
-    fun newYoung(t: Team, rng: Random, forceGoalkeeper: Boolean): Player {
+    fun newYoung(t: Team, rng: Random, forceGoalkeeper: Boolean, ruolo: String? = null): Player {
         val ov = rng.nextInt(38, 56)
         return Attr.fill(Player(
             teamId = t.id,
             name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                 SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-            role = if (forceGoalkeeper) "P" else listOf("D", "C", "A", "D", "C").random(rng),
+            role = ruolo ?: if (forceGoalkeeper) "P" else listOf("D", "C", "A", "D", "C").random(rng),
             age = rng.nextInt(17, 20), overall = ov, morale = 70, salary = 30_000,
             nationality = t.nazione.ifEmpty { "Italia" },
             potential = (ov + rng.nextInt(5, 26)).coerceAtMost(95),

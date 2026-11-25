@@ -54,6 +54,13 @@ object RoseFisse {
         "Germania" -> if (tier == 0) 82 to 69 else 67 to 59
         "Francia" -> if (tier == 0) 80 to 67 else 66 to 58
         "Brasile", "Argentina" -> if (tier == 0) 74 to 63 else 64 to 55
+        // v0.7: campionati nuovi (solo massima serie): forza dalla prima all'ultima squadra
+        "Olanda" -> 77 to 64
+        "Portogallo" -> 76 to 63
+        "Belgio" -> 74 to 62
+        "Turchia" -> 74 to 62
+        "Grecia" -> 71 to 61
+        "Scozia" -> 70 to 60
         else -> if (tier == 0) 72 to 62 else 62 to 54
     }
 

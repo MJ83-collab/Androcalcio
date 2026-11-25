@@ -27,23 +27,29 @@ object AC {
     /** 5 = chiaro: sfondi e riquadri chiari, testo scuro. I pannelli navy e i pulsanti neri restano scuri. */
     val chiaro get() = tema == 5
 
-    private fun pick(a: Long, b: Long, c: Long, d: Long = c, e: Long = d, f: Long = d) =
-        Color(when (tema) { 1 -> b; 2 -> c; 3 -> d; 4 -> e; 5 -> f; else -> a })
+    /** 6 = manga: blu notte, rosso shōnen, bordi a china e ombre da vignetta di fumetto. */
+    val manga get() = tema == 6
 
-    /** Da preferenza (0 = blu PC Calcio 7, 1 = nero, 2 = chiaro) a tema interno. */
-    fun daPreferenza(v: Int) = when (v) { 1 -> 4; 2 -> 5; else -> 3 }
+    private fun pick(a: Long, b: Long, c: Long, d: Long = c, e: Long = d, f: Long = d, g: Long = a) =
+        Color(when (tema) { 1 -> b; 2 -> c; 3 -> d; 4 -> e; 5 -> f; 6 -> g; else -> a })
 
-    val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740, 0xFF2A3A8C, 0xFF000000, 0xFFEEF1F7)
-    val Surface get() = pick(0xFF131A22, 0xFF0C5A60, 0xFF14307A, 0xFF27358A, 0xFF0A0A0F, 0xFFFFFFFF)
-    val SurfaceHi get() = pick(0xFF1B2530, 0xFF14787D, 0xFF2243A0, 0xFF3B4FA6, 0xFF171A2B, 0xFFDDE3F0)
-    val Border get() = pick(0x1FFFFFFF, 0x80A5F2EC, 0x80B4C8FF, 0xFFA9B9EA, 0xFFA9B9EA, 0xFF9AA4C4)
-    val Accent get() = pick(0xFFB6FF3C, 0xFFFFE14A, 0xFFFFD21F, 0xFFFFE23D, 0xFFFFE23D, 0xFFC27A00)
-    val Accent2 get() = pick(0xFF4FD1FF, 0xFF5FF5E6, 0xFF7FC4FF, 0xFF9CCBFF, 0xFF9CCBFF, 0xFF1565C0)
-    val Ok get() = pick(0xFF3DDC84, 0xFF7CF08A, 0xFF7CF08A, 0xFF7CF08A, 0xFF7CF08A, 0xFF2E7D32)
+    /** Da preferenza (0 = blu PC Calcio 7, 1 = nero, 2 = chiaro, 3 = manga) a tema interno. */
+    fun daPreferenza(v: Int) = when (v) { 1 -> 4; 2 -> 5; 3 -> 6; else -> 3 }
+
+    /** Preferenza predefinita: blu PC Calcio 7 (v0.7: prima era manga). */
+    const val PREFERENZA_PREDEFINITA = 0
+
+    val Bg get() = pick(0xFF0A0E13, 0xFF053A40, 0xFF0A1740, 0xFF2A3A8C, 0xFF000000, 0xFFEEF1F7, g = 0xFF12152B)
+    val Surface get() = pick(0xFF131A22, 0xFF0C5A60, 0xFF14307A, 0xFF27358A, 0xFF0A0A0F, 0xFFFFFFFF, g = 0xFF1D2245)
+    val SurfaceHi get() = pick(0xFF1B2530, 0xFF14787D, 0xFF2243A0, 0xFF3B4FA6, 0xFF171A2B, 0xFFDDE3F0, g = 0xFF2A3166)
+    val Border get() = pick(0x1FFFFFFF, 0x80A5F2EC, 0x80B4C8FF, 0xFFA9B9EA, 0xFFA9B9EA, 0xFF9AA4C4, g = 0xFFFFFFFF)
+    val Accent get() = pick(0xFFB6FF3C, 0xFFFFE14A, 0xFFFFD21F, 0xFFFFE23D, 0xFFFFE23D, 0xFFC27A00, g = 0xFFFF4040)
+    val Accent2 get() = pick(0xFF4FD1FF, 0xFF5FF5E6, 0xFF7FC4FF, 0xFF9CCBFF, 0xFF9CCBFF, 0xFF1565C0, g = 0xFF46C2FF)
+    val Ok get() = pick(0xFF3DDC84, 0xFF7CF08A, 0xFF7CF08A, 0xFF7CF08A, 0xFF7CF08A, 0xFF2E7D32, g = 0xFF5BE37D)
     val Warn get() = Color(0xFFFFC24B)
-    val Danger get() = pick(0xFFFF5C72, 0xFFFF6B6B, 0xFFFF7A5C, 0xFFFF6B5C, 0xFFFF6B5C, 0xFFC62828)
-    val Text get() = pick(0xFFE8EEF4, 0xFFF2FBFA, 0xFFF4F7FF, 0xFFF6F8FF, 0xFFF6F8FF, 0xFF101418)
-    val TextDim get() = pick(0xFF8FA0B2, 0xFFA9DAD6, 0xFFB4C4EE, 0xFFD9E1FF, 0xFFD9E1FF, 0xFF4A5468)
+    val Danger get() = pick(0xFFFF5C72, 0xFFFF6B6B, 0xFFFF7A5C, 0xFFFF6B5C, 0xFFFF6B5C, 0xFFC62828, g = 0xFFFF5C5C)
+    val Text get() = pick(0xFFE8EEF4, 0xFFF2FBFA, 0xFFF4F7FF, 0xFFF6F8FF, 0xFFF6F8FF, 0xFF101418, g = 0xFFFFFFFF)
+    val TextDim get() = pick(0xFF8FA0B2, 0xFFA9DAD6, 0xFFB4C4EE, 0xFFD9E1FF, 0xFFD9E1FF, 0xFF4A5468, g = 0xFFC8D0F0)
 
     // Tabelle su carta bianca (stile PC Calcio 7): valgono per tutti i temi, le usano le tabelle dei passi successivi.
     val Paper = Color(0xFFFFFFFF)

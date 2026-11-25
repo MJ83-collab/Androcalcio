@@ -5,7 +5,7 @@ import it.androcalcio.data.Team
 import kotlin.math.pow
 import kotlin.random.Random
 
-enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC, SUB, OFFSIDE }
+enum class EventType { KICKOFF, GOAL, SAVE, MISS, YELLOW, HALFTIME, FULLTIME, TACTIC, SUB, OFFSIDE, RED, INJURY, VAR, COMMENTO }
 
 data class MatchEvent(
     val minute: Int,
@@ -14,7 +14,9 @@ data class MatchEvent(
     val text: String,
     val x: Float,   // 0..1, la squadra di casa attacca verso destra
     val y: Float,
-    val playerId: Long = 0
+    val playerId: Long = 0,
+    val assistId: Long = 0,   // per i gol: chi ha fatto l'assist (0 = nessuno)
+    val percorso: List<Pair<Float, Float>> = emptyList()   // tappe della palla fino a (x, y), per animare l'azione
 )
 
 data class MatchReport(
@@ -33,7 +35,11 @@ data class MatchReport(
     val homeXI: List<Player> = emptyList(),   // gli 11 in campo a fine partita, per i numeri sul campo
     val awayXI: List<Player> = emptyList(),
     val playedPlayers: List<Player> = emptyList(),  // tutti quelli scesi in campo, titolari e subentrati, per le pagelle
-    val playerRatings: Map<Long, Double> = emptyMap()  // pagella 3..10 per id giocatore
+    val playerRatings: Map<Long, Double> = emptyMap(),  // pagella 3..10 per id giocatore
+    val infortunati: Set<Long> = emptySet(),  // infortunati durante la partita
+    val espulsi: Set<Long> = emptySet(),      // espulsi (rosso diretto o doppia ammonizione)
+    val extraCasa: StatExtra? = null,         // passaggi, duelli e km (solo partita dal vivo)
+    val extraOspiti: StatExtra? = null
 )
 
 /**
@@ -93,12 +99,12 @@ object MatchEngine {
 
     internal fun shooter(ps: List<Player>, rng: Random): Player? {
         val weights = ps.map {
-            when (it.role) {
+            (when (it.role) {
                 "A" -> (it.fi + it.ti) / 2.0 * 3.0
                 "C" -> (it.fi + it.ti + it.pa) / 3.0 * 1.5
                 "D" -> it.ti * 0.4
                 else -> 0.0
-            }
+            }) * Tratti.pesoTiro(it)
         }
         val total = weights.sum()
         if (total <= 0.0) return null

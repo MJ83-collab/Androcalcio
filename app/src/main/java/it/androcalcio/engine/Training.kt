@@ -75,6 +75,13 @@ object Training {
         if (p.injuredRounds > 0) return p
         val plan = individuali[p.id]?.let { plan0.copy(focus = it) } ?: plan0
         var out = p.copy(condition = (p.condition + plan.condDelta()).coerceIn(35, 100))
+        // Imparare ruoli nuovi, usare l'altro piede, diventare più cinici davanti al gol
+        val base = BASE * plan.intensity.growth * ageFactor(p.age) * (1.0 + (coach - Staffing.NEUTRAL) / 100.0)
+        if (plan.focus == TrainFocus.TATTICA && p.role != "P") {
+            if (rng.nextDouble() < base * 0.6) out = TacticalRoles.impara(out, rng)
+            if (!Tratti.cinico(out) && rng.nextDouble() < base * 0.12) Tratti.acquisisci(out.id)
+        }
+        if (plan.focus == TrainFocus.TECNICA && out.foot != "A" && p.role != "P" && rng.nextDouble() < base * 0.15) out = out.copy(foot = "A")
         val list = attrs(plan.focus, p.role)
         if (list.isEmpty()) return out
         val chance = BASE * plan.intensity.growth * ageFactor(p.age) * (1.0 + (coach - Staffing.NEUTRAL) / 100.0)

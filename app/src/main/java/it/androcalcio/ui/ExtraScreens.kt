@@ -41,6 +41,7 @@ import it.androcalcio.engine.Relazioni
 import it.androcalcio.engine.SponsorDeal
 import it.androcalcio.engine.Sponsors
 import it.androcalcio.ui.components.GlassCard
+import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcButton
 import it.androcalcio.ui.components.PcChip
 import it.androcalcio.ui.components.SectionTitle
@@ -177,21 +178,7 @@ fun CommercialeScreen(
             }
         }
 
-        SectionTitle("Prezzi per settore")
-        Text("Prezzo in % del biglietto standard: più alto = più incasso a pieno stadio, ma meno pubblico. Abbonati stimati: ${ex.abbonatiPct}% dei posti.",
-            color = AC.TextDim, fontSize = 12.sp)
-        Abbonamenti.SETTORI.forEach { s ->
-            var v by remember(ex.prezzi[s.id]) { mutableStateOf((ex.prezzi[s.id] ?: 100).toFloat()) }
-            GlassCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(8.dp)) {
-                    Riga(s.nome, "${v.toInt()}%", true)
-                    Slider(value = v, onValueChange = { v = (Math.round(it / 5f) * 5).toFloat() },
-                        valueRange = Abbonamenti.PREZZO_MIN.toFloat()..Abbonamenti.PREZZO_MAX.toFloat(),
-                        onValueChangeFinished = { onPrezzo(s.id, v.toInt()) })
-                }
-            }
-        }
-        Text("L'effetto si somma agli incassi a fine stagione.", color = AC.TextDim, fontSize = 11.sp)
+        Text("I prezzi dei settori ora si trovano nella schermata Stadio (Home → Finanze → Stadio).", color = AC.TextDim, fontSize = 11.sp)
     }
 }
 
@@ -200,7 +187,7 @@ fun CommercialeScreen(
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun ObiettiviScreen(ex: ExtraStato, c: ClubState) {
+fun ObiettiviScreen(ex: ExtraStato, c: ClubState, posizione: Int? = null) {
     Pagina {
         SectionTitle("Obiettivo della dirigenza")
         GlassCard(Modifier.fillMaxWidth()) {
@@ -212,6 +199,14 @@ fun ObiettiviScreen(ex: ExtraStato, c: ClubState) {
                     Text("Chiudere almeno ${o.posizioneMax}º (posizione attesa per la tua forza: ${ex.posizioneAttesa}º).", color = AC.Text, fontSize = 13.sp)
                     Text("Se riesci: bonus ${money(o.bonus)} e più fiducia. Se manchi: la fiducia scende di ${o.penale}.", color = AC.TextDim, fontSize = 12.sp)
                     Text("Fiducia attuale della dirigenza: ${c.fiducia}", color = AC.TextDim, fontSize = 12.sp)
+                    if (posizione != null) {
+                        val ok = posizione <= o.posizioneMax
+                        Text(
+                            if (ok) "In linea: sei ${posizione}º in classifica, obiettivo ${o.posizioneMax}º o meglio."
+                            else "Fuori obiettivo: sei ${posizione}º, serve almeno il ${o.posizioneMax}º posto.",
+                            color = if (ok) AC.Accent else AC.ColEn, fontSize = 13.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -243,8 +238,17 @@ fun ObiettiviScreen(ex: ExtraStato, c: ClubState) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun GiornaleScreen(ex: ExtraStato) {
+fun GiornaleScreen(ex: ExtraStato, onSceltaSfida: (Int) -> Unit = {}, onCoreo: () -> Unit = {}) {
     Pagina {
+        SectionTitle("Ultras")
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp)) {
+                Text("Umore degli ultras: ${ex.ultras}/100" + if (ex.ultras < 25) " · in contestazione" else "", color = AC.Text, fontWeight = FontWeight.Bold)
+                Text("Le vittorie li scaldano, le sconfitte li raffreddano: sotto 25 contestano e abbassano tifosi e fiducia. Una coreografia (15.000 €) carica l'atmosfera della prossima partita in casa.",
+                    color = AC.TextDim, fontSize = 11.sp)
+                PcAction(onClick = onCoreo, enabled = !ex.coreo) { Text(if (ex.coreo) "Coreografia pronta" else "Organizza coreografia") }
+            }
+        }
         SectionTitle("Prossima partita")
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(10.dp)) {
@@ -263,6 +267,33 @@ fun GiornaleScreen(ex: ExtraStato) {
                 Text(g.titolo, color = AC.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                 Text(g.sommario, color = AC.Text, fontSize = 13.sp)
                 g.pagelle.forEach { Riga(it.nome, "${"%.1f".format(it.voto)} · ${it.commento}", it.voto >= 7.0) }
+            }
+        }
+
+        SectionTitle("Sfida della settimana")
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val sf = ex.sfida
+                Text(sf?.let { "Prossima partita: ${it.testo} (premio: +${it.fiducia} fiducia, +${it.tifosi} tifosi)" }
+                    ?: "La prima sfida arriva dopo la prossima partita.", color = AC.Text, fontWeight = FontWeight.Bold)
+                if (ex.sfidaEsito.isNotEmpty()) Text(ex.sfidaEsito, color = AC.TextDim, fontSize = 12.sp)
+                if (ex.sfideOfferte.isNotEmpty()) {
+                    Text("Scegli la sfida (più è difficile, più rende):", color = AC.TextDim, fontSize = 12.sp)
+                    ex.sfideOfferte.forEach { o ->
+                        PcChip(ex.sfida?.id == o.id, { onSceltaSfida(o.id) }, {
+                            Text("${it.androcalcio.engine.Sfide.livello(o.id)}: ${o.testo} (+${o.fiducia} fiducia, +${o.tifosi} tifosi)", fontSize = 12.sp)
+                        }, Modifier.fillMaxWidth())
+                    }
+                }
+                Text("Sfide riuscite: ${ex.sfideVinte} · serie in corso: ${ex.sfideSerie} (ogni 3 di fila, premio extra)", color = AC.TextDim, fontSize = 12.sp)
+            }
+        }
+
+        SectionTitle("Il social del club")
+        if (ex.social.isEmpty()) Text("Dopo la prossima partita tifosi, giornalisti e presidente dicono la loro.", color = AC.TextDim, fontSize = 12.sp)
+        else GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ex.social.forEach { Text(it, color = AC.Text, fontSize = 13.sp) }
             }
         }
 
