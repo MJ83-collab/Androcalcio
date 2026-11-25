@@ -1047,6 +1047,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun salvaAnalisi(me: Team, mioHome: Boolean, r: MatchReport) {
         val sk = dao.allStaff().firstOrNull { it.teamId == me.id && it.role == Staffing.ANALISTA }?.skill ?: return
         dao.setStato(Stato(AnalistaPartita.KEY, AnalistaPartita.encode(AnalistaPartita.analizza(r, mioHome, me.id, sk))))
+        // Confidenza tattica: +1 di affinità ai ruoli secondari di chi ha giocato (dati freschi dal database)
+        val giocati = r.playedPlayers.filter { it.teamId == me.id }.map { it.id }.toSet()
+        val agg = dao.playersOnce(me.id).filter { it.id in giocati }.map { AnalistaPartita.confidenza(it) }
+            .filter { it.aff2 > 0 || it.aff3 > 0 || it.aff4 > 0 }
+        if (agg.isNotEmpty()) dao.updatePlayers(agg)
     }
 
     val analisiUltima: StateFlow<AnalistaPartita.Analisi> = osserva("stato") { AnalistaPartita.decode(dao.stato(AnalistaPartita.KEY)) }

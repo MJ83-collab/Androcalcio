@@ -45,6 +45,13 @@ object AnalistaPartita {
         return "lavorare su ${peggio.first} (${peggio.second}) in allenamento"
     }
 
+    /** Confidenza tattica: dopo ogni partita analizzata ogni ruolo secondario sotto il 100% guadagna 1 punto di affinità. */
+    fun confidenza(p: it.androcalcio.data.Player): it.androcalcio.data.Player = p.copy(
+        aff2 = if (p.sec2.isNotEmpty()) (p.aff2 + 1).coerceAtMost(100) else p.aff2,
+        aff3 = if (p.sec3.isNotEmpty()) (p.aff3 + 1).coerceAtMost(100) else p.aff3,
+        aff4 = if (p.sec4.isNotEmpty()) (p.aff4 + 1).coerceAtMost(100) else p.aff4
+    )
+
     fun encode(a: Analisi) = (a.bene.map { "B:$it" } + a.male.map { "M:$it" } + a.migliorare.map { "G:$it" }).joinToString("\n")
 
     fun decode(s: String?): Analisi {
