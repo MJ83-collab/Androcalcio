@@ -1,11 +1,22 @@
-# Androcalcio — report (aggiornato 25/11/2026, mattina)
+# Androcalcio — report (aggiornato 26/11/2026)
 
 Repo: https://github.com/MJ83-collab/Androcalcio — `main` = v0.8.0 (tattica FM, squadre storiche, forza reale dei club, forza avversario nelle amichevoli). Ramo precedente `feat/tattica-fm` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
 Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato sul telefono.
 
 ## COMANDO PER RIPARTIRE (da incollare nella nuova chat insieme a questo file)
-> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `main` (v0.8.0). Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/profondita-fm27` (in prova da Marco; `main` = v0.8.0). Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+
+## Sessione 26/11: profondità FM27 + immediatezza PC Calcio 7 (ramo feat/profondita-fm27, 4 blocchi, NON provata sul telefono)
+Stato: sono al 4 di 4 blocchi. Merge su `main` solo dopo la prova di Marco.
+- **Blocco 1:** preparatori leggibili (testo scuro su carta, motivo per ogni giocatore); rosa a fasce TITOLARI / PANCHINA / INFERMERIA; sigle ruolo colorate (POR, DC, TS…); voto medio in Statistiche (colonna ordinabile) e nella scheda giocatore; banner notizie lampeggiante in alto finché non leggi; posta con "DA LEGGERE" e colori per categoria; cambi in partita a due colonne con "CAMBIO CONSIGLIATO" e ripresa automatica; Pausa ❚❚ diversa da Riprendi ▶.
+- **Blocco 2:** in Tattica, tocco sul giocatore = alternative compatibili per quel ruolo, scambio con un tocco; conferenze stampa su fatti veri (ultimo risultato, voti, prossimo avversario, classifica, mercato, infortuni) e mai su partite non giocate; nomi vari per 19 nazioni (`engine/Nomi.kt`, rosa predefinita rinominata in modo fisso).
+- **Blocco 3:** potenziale nascosto: lo stima il vice (tuoi), l'allenatore giovanili (tuo vivaio), gli scout (altri) con conoscenza % e forbice che si stringe; carattere e affinità con la squadra; ogni vivaio ha specialità e qualità diverse; "Osserva €" sul vivaio di un club con rapporto in posta (`engine/Conoscenza.kt`).
+- **Blocco 4:** fragilità nascosta per giocatore (pesa su chi si infortuna); test a pagamento dal fisio della prevenzione (costo e precisione dalla sua abilità); operazione per gli infortunati con 2+ turni (costo, turni risparmiati dal fisio del recupero, rischio ricaduta, una per stagione); messaggio di infortunio porta a Fisioterapia (`engine/Fisio.kt`, Stato `test_fisio_<id>`, `operato_<id>`).
+- **Note:** i nomi nuovi valgono solo per le nuove carriere. Il potenziale non è più visibile senza staff.
+- **Da fare da Marco:** provare l'APK del ramo sul telefono e dire cosa ritoccare (screenshot).
+- **Decisioni aperte:** nessuna.
+- Modello: Sonnet basta.
 
 ## Release v0.8.0 (25/11/2026 sera, autorizzata da Marco prima della prova sul telefono)
 - Versione 0.8.0 (versionCode 8): include tattica FM, squadre storiche, forza reale dei club, valori reali, ritiri/ricambio, CONTINUA, schede staff.
