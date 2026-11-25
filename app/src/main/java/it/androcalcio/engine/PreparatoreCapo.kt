@@ -30,6 +30,25 @@ object PreparatoreCapo {
         else CalendarioGiorni.Attivita.ALLENAMENTO
     }
 
+    /** Attività di un singolo giocatore: il capo guarda forma, morale e quanto manca alla partita. */
+    fun attivitaGiocatore(p: Player, giorno: LocalDate, partita: LocalDate, skill: Int): CalendarioGiorni.Attivita {
+        if (p.injuredRounds > 0) return CalendarioGiorni.Attivita.RIPOSO
+        if (giorno.plusDays(1) == partita)
+            return if (p.condition < 80) CalendarioGiorni.Attivita.RIPOSO else CalendarioGiorni.Attivita.RIFINITURA
+        val soglia = 60 + (skill - 50) / 8
+        return if (p.condition < soglia || p.morale < 40) CalendarioGiorni.Attivita.RIPOSO else CalendarioGiorni.Attivita.ALLENAMENTO
+    }
+
+    /** Vive un giorno: ogni giocatore fa la sua attività. Restituisce la rosa aggiornata e l'attività prevalente (per diario e preparazione). */
+    fun giornata(rosa: List<Player>, giorno: LocalDate, partita: LocalDate, skill: Int,
+                 rng: kotlin.random.Random = kotlin.random.Random.Default): Pair<List<Player>, CalendarioGiorni.Attivita> {
+        val att = rosa.map { attivitaGiocatore(it, giorno, partita, skill) }
+        val nuova = rosa.mapIndexed { i, p -> CalendarioGiorni.applica(p, att[i], rng) }
+        val sani = rosa.indices.filter { rosa[it].injuredRounds == 0 }.map { att[it] }
+        val prevalente = sani.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: CalendarioGiorni.Attivita.RIPOSO
+        return nuova to prevalente
+    }
+
     /** Piano di squadra per la prossima partita: intensità in base alla fatica, focus a rotazione. */
     fun piano(rosa: List<Player>, skill: Int, giornata: Int): TrainingPlan {
         val ok = rosa.filter { it.injuredRounds == 0 }

@@ -3,6 +3,8 @@ package it.androcalcio.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +20,7 @@ import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Player
 import it.androcalcio.data.Staff
 import it.androcalcio.engine.Migliorie
+import it.androcalcio.engine.PreparatoreCapo
 import it.androcalcio.engine.Staffing
 import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.PcButton
@@ -51,19 +54,23 @@ private fun Pagina(content: @Composable () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
 }
 
-/** Capo preparatori: stato di ogni giocatore e attività consigliata per oggi. */
+/** Capo preparatori: ogni giorno assegna a ogni giocatore la sua attività, in base a forma, morale e partita. */
 @Composable
-fun SchedaPreparatori(staff: List<Staff>, rosa: List<Player>, onStaff: () -> Unit) {
+fun SchedaPreparatori(staff: List<Staff>, rosa: List<Player>, giorno: AndrocalcioViewModel.GiornoStato?, onStaff: () -> Unit) {
+    val capo = staff.firstOrNull { it.role == Staffing.PREPARATORE }
     Pagina {
-        CapoRuolo("Capo preparatori", staff.firstOrNull { it.role == Staffing.PREPARATORE }, onStaff)
-        SectionTitle("Attività consigliata oggi")
+        CapoRuolo("Capo preparatori", capo, onStaff)
+        Text("Coordina gli altri preparatori: ogni giorno decide l'attività di ciascun giocatore. Con CONTINUA il piano si applica da solo.",
+            color = AC.TextDim, fontSize = 11.sp)
+        SectionTitle("Programma di oggi")
+        val partita = giorno?.prossima
         rosa.sortedBy { it.condition }.forEach { p ->
-            val att = when {
-                p.injuredRounds > 0 -> "Recupero in infermeria"
-                p.condition < 65 -> "Riposo"
-                p.morale < 45 -> "Svago e colloquio"
-                p.condition < 85 -> "Carico leggero"
-                else -> "Allenamento mirato"
+            val att = if (giorno == null || partita == null) null
+                else PreparatoreCapo.attivitaGiocatore(p, giorno.oggi, partita, capo?.skill ?: Staffing.VUOTO)
+            val testo = when {
+                p.injuredRounds > 0 -> "🩹 Recupero"
+                att == null -> "—"
+                else -> "${att.icona} ${att.label}"
             }
             PaperPanel(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -71,7 +78,7 @@ fun SchedaPreparatori(staff: List<Staff>, rosa: List<Player>, onStaff: () -> Uni
                         Text("${p.name} (${p.role})", color = AC.Text, fontSize = 13.sp)
                         Text("Forma ${p.condition} · Morale ${p.morale}", color = AC.TextDim, fontSize = 11.sp)
                     }
-                    Text(att, color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(testo, color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -109,5 +116,29 @@ fun SchedaGiardiniere(staff: List<Staff>, mig: AndrocalcioViewModel.MigliorieSta
             val m = Migliorie.trova(id)
             Text("${m?.icona ?: ""} ${m?.nome ?: id}: mancano $gg giornate", color = AC.Text, fontSize = 13.sp)
         }
+    }
+}
+
+/** Analista video: ultima partita (cosa ha funzionato e cosa no, chi deve migliorare) e, sotto, l'avversario che verrà. */
+@Composable
+fun SchedaAnalista(staff: List<Staff>, analisi: it.androcalcio.engine.AnalistaPartita.Analisi, onStaff: () -> Unit,
+                   avversario: @Composable () -> Unit) {
+    val a = staff.firstOrNull { it.role == Staffing.ANALISTA }
+    Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Column(Modifier.fillMaxWidth().heightIn(max = 330.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        CapoRuolo("Analista video", a, onStaff)
+        if (a != null) {
+            SectionTitle("Ultima partita")
+            if (analisi.bene.isEmpty() && analisi.male.isEmpty()) Text("Nessuna partita analizzata ancora.", color = AC.TextDim, fontSize = 12.sp)
+            analisi.bene.forEach { Text("✔ $it", color = AC.Text, fontSize = 13.sp) }
+            analisi.male.forEach { Text("✘ $it", color = AC.Text, fontSize = 13.sp) }
+            if (analisi.migliorare.isNotEmpty()) {
+                SectionTitle("Da migliorare")
+                analisi.migliorare.forEach { Text("• $it", color = AC.Text, fontSize = 13.sp) }
+            }
+        }
+      }
+      SectionTitle("Prossima partita")
+      Box(Modifier.weight(1f)) { avversario() }
     }
 }

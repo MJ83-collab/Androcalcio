@@ -7,6 +7,7 @@ import it.androcalcio.engine.SquadraB
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
 import it.androcalcio.engine.Posta
+import it.androcalcio.engine.AnalistaPartita
 import it.androcalcio.engine.Migliorie
 import it.androcalcio.engine.Maglie
 import it.androcalcio.engine.Abbonamenti
@@ -1041,6 +1042,15 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Dopo una partita della tua squadra: statistiche avanzate, giornale, contatori di carriera, trofei. */
+    /** Analista video: salva il report dell'ultima partita (se l'hai assunto). */
+    private suspend fun salvaAnalisi(me: Team, mioHome: Boolean, r: MatchReport) {
+        val sk = dao.allStaff().firstOrNull { it.teamId == me.id && it.role == Staffing.ANALISTA }?.skill ?: return
+        dao.setStato(Stato(AnalistaPartita.KEY, AnalistaPartita.encode(AnalistaPartita.analizza(r, mioHome, me.id, sk))))
+    }
+
+    val analisiUltima: StateFlow<AnalistaPartita.Analisi> = osserva("stato") { AnalistaPartita.decode(dao.stato(AnalistaPartita.KEY)) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AnalistaPartita.Analisi(emptyList(), emptyList(), emptyList()))
+
     private suspend fun registraPartita(me: Team, opp: Team, mioHome: Boolean, r: MatchReport, live: Boolean = false) {
         val gf = if (mioHome) r.homeGoals else r.awayGoals
         val gs = if (mioHome) r.awayGoals else r.homeGoals
@@ -1052,6 +1062,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             r.playerRatings[p.id]?.let { p.name to (Math.round(it * 2) / 2.0) }
         }
         dao.setStato(Stato("giornale", Giornale.encode(Giornale.crea(me.name, opp.name, gf, gs, derby, voti))))
+        salvaAnalisi(me, mioHome, r)
         // Ultras: umore in base ai risultati; sotto 25 contestano la squadra
         val ultras = ((dao.stato("ultras")?.toIntOrNull() ?: 60) + (if (gf > gs) 4 else if (gf == gs) 0 else -5)).coerceIn(0, 100)
         dao.setStato(Stato("ultras", ultras.toString()))
@@ -4394,9 +4405,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         if (g.giornoPartita) return false
         val rosa = dao.playersOnce(t.id)
         val capo = capoAttivo()
-        val a = if (capo != null) PreparatoreCapo.attivita(g.oggi, partita, rosa, capo.first) else CalendarioGiorni.automatica(g.oggi, partita)
+        val (nuova, a) = if (capo != null) PreparatoreCapo.giornata(rosa, g.oggi, partita, capo.first)
+            else CalendarioGiorni.automatica(g.oggi, partita).let { x -> rosa.map { CalendarioGiorni.applica(it, x) } to x }
         val diario = g.diario.toMutableMap().also { it[g.oggi.toEpochDay()] = a }
-        salvaGiorni(rosa.map { CalendarioGiorni.applica(it, a) }, CalendarioGiorni.prep(g.prep, a), diario, g.oggi.plusDays(1))
+        salvaGiorni(nuova, CalendarioGiorni.prep(g.prep, a), diario, g.oggi.plusDays(1))
         return true
     }
 
@@ -4446,8 +4458,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             var n = 0
             val capo = capoAttivo()
             while (d.isBefore(partita)) {
-                val a = if (capo != null) PreparatoreCapo.attivita(d, partita, rosa, capo.first) else CalendarioGiorni.automatica(d, partita)
-                rosa = rosa.map { CalendarioGiorni.applica(it, a) }
+                val (nuova, a) = if (capo != null) PreparatoreCapo.giornata(rosa, d, partita, capo.first)
+                    else CalendarioGiorni.automatica(d, partita).let { x -> rosa.map { CalendarioGiorni.applica(it, x) } to x }
+                rosa = nuova
                 prep = CalendarioGiorni.prep(prep, a)
                 diario[d.toEpochDay()] = a
                 d = d.plusDays(1); n++

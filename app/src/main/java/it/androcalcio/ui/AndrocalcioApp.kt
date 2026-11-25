@@ -153,7 +153,8 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     POSTA("Messaggi", Icons.Filled.Email, "Eventi e avvisi", Color(0xFF3F6FD8)),
     PREPARATORI("Preparatori", Icons.Filled.Person, "Attività per giocatore", Color(0xFFC0392B)),
     FISIO("Fisioterapisti", Icons.Filled.Add, "Infermeria e rischi", Color(0xFFD32F2F)),
-    GIARDINIERE("Giardiniere", Icons.Filled.Build, "Campo e cantieri", Color(0xFF5BA83A))
+    GIARDINIERE("Giardiniere", Icons.Filled.Build, "Campo e cantieri", Color(0xFF5BA83A)),
+    ANALISTA("Analista video", Icons.Filled.Search, "Ultima partita e avversario", Color(0xFFC9A227))
 }
 
 private val bottomTabs = listOf(
@@ -371,7 +372,14 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
                     ObiettiviScreen(ex, cl, vm.posizioneOggi.collectAsStateWithLifecycle().value)
                 }
-                Screen.PREPARATORI -> SchedaPreparatori(vm.staff.collectAsStateWithLifecycle().value, players) { screen = Screen.STAFF }
+                Screen.PREPARATORI -> SchedaPreparatori(vm.staff.collectAsStateWithLifecycle().value, players, giornoGlobale) { screen = Screen.STAFF }
+                Screen.ANALISTA -> {
+                    val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
+                    val ex by vm.extra.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id) { vm.aggiornaExtra() }
+                    SchedaAnalista(vm.staff.collectAsStateWithLifecycle().value, vm.analisiUltima.collectAsStateWithLifecycle().value,
+                        { screen = Screen.STAFF }) { AvversarioScreen(consigli, ex.analista) }
+                }
                 Screen.FISIO -> SchedaFisio(vm.staff.collectAsStateWithLifecycle().value, players) { screen = Screen.STAFF }
                 Screen.GIARDINIERE -> {
                     val mig by vm.migliorie.collectAsStateWithLifecycle()

@@ -75,7 +75,7 @@ private fun ColonnaStaff(go: (Screen) -> Unit) {
         voci.forEach { (ruolo, c) ->
             val dest = when (ruolo) {
                 "ALL" -> Screen.TATTICA; "ASS" -> Screen.CALENDARIO; "GIO", "SCO" -> Screen.VIVAIO
-                "PRE" -> Screen.PREPARATORI; "FIS" -> Screen.FISIO; "GIA" -> Screen.GIARDINIERE; else -> Screen.AVVERSARIO
+                "PRE" -> Screen.PREPARATORI; "FIS" -> Screen.FISIO; "GIA" -> Screen.GIARDINIERE; else -> Screen.ANALISTA
             }
             Column(Modifier.clickable { go(dest) }, horizontalAlignment = Alignment.CenterHorizontally) {
                 Canvas(Modifier.size(28.dp)) {
