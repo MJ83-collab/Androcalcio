@@ -39,6 +39,25 @@ object PreparatoreCapo {
         return if (p.condition < soglia || p.morale < 40) CalendarioGiorni.Attivita.RIPOSO else CalendarioGiorni.Attivita.ALLENAMENTO
     }
 
+    /** Perché il capo ha scelto quell'attività: frase breve da mostrare nella scheda. */
+    fun motivo(p: Player, giorno: LocalDate, partita: LocalDate?, skill: Int): String {
+        if (p.injuredRounds > 0) return "Infortunato: ancora ${p.injuredRounds} turni"
+        if (partita == null) return "Nessuna partita in vista: lavoro normale"
+        val soglia = 60 + (skill - 50) / 8
+        return when {
+            giorno.plusDays(1) == partita && p.condition < 80 -> "Domani si gioca e la forma è sotto 80"
+            giorno.plusDays(1) == partita -> "Vigilia: rifinitura su tecnica e schemi"
+            p.condition < soglia -> "Forma sotto $soglia: deve recuperare"
+            p.morale < 40 -> "Morale basso: giornata di scarico"
+            else -> "In condizione: lavora con il preparatore ${repartoDi(p.role)}"
+        }
+    }
+
+    /** Quale preparatore segue il giocatore in campo. */
+    fun repartoDi(role: String): String = when (role) {
+        "P" -> "dei portieri"; "D" -> "dei difensori"; "C" -> "dei centrocampisti"; "A" -> "degli attaccanti"; else -> "della forma"
+    }
+
     /** Vive un giorno: ogni giocatore fa la sua attività. Restituisce la rosa aggiornata e l'attività prevalente (per diario e preparazione). */
     fun giornata(rosa: List<Player>, giorno: LocalDate, partita: LocalDate, skill: Int,
                  rng: kotlin.random.Random = kotlin.random.Random.Default): Pair<List<Player>, CalendarioGiorni.Attivita> {

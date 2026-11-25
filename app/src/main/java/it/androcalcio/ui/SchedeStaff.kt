@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,10 +21,12 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Player
 import it.androcalcio.data.Staff
+import it.androcalcio.engine.CalendarioGiorni
 import it.androcalcio.engine.Migliorie
 import it.androcalcio.engine.PreparatoreCapo
 import it.androcalcio.engine.Staffing
 import it.androcalcio.ui.components.PaperPanel
+import it.androcalcio.ui.components.RuoloChip
 import it.androcalcio.ui.components.PcButton
 import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.components.Stelle
@@ -33,16 +37,16 @@ import it.androcalcio.ui.theme.AC
 private fun CapoRuolo(titolo: String, s: Staff?, onStaff: () -> Unit) {
     PaperPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(titolo, color = AC.Text, fontWeight = FontWeight.Bold)
+            Text(titolo, color = AC.PaperText, fontWeight = FontWeight.Bold)
             if (s == null) {
-                Text("Ruolo scoperto: nessun effetto. Assumi una figura dallo Staff.", color = AC.TextDim, fontSize = 12.sp)
+                Text("Ruolo scoperto: nessun effetto. Assumi una figura dallo Staff.", color = AC.PaperDim, fontSize = 12.sp)
                 PcButton("Vai allo Staff", onStaff, Modifier.fillMaxWidth())
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(s.name, color = AC.Text)
+                    Text(s.name, color = AC.PaperText)
                     Stelle(Staffing.mezzeStelle(s.skill))
                 }
-                Text("Contratto ${s.contract} anni", color = AC.TextDim, fontSize = 11.sp)
+                Text("Contratto ${s.contract} anni", color = AC.PaperDim, fontSize = 11.sp)
             }
         }
     }
@@ -54,31 +58,60 @@ private fun Pagina(content: @Composable () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
 }
 
-/** Capo preparatori: ogni giorno assegna a ogni giocatore la sua attività, in base a forma, morale e partita. */
+/** Capo preparatori: riepilogo del giorno, poi i giocatori raggruppati per attività con il motivo della scelta. */
 @Composable
 fun SchedaPreparatori(staff: List<Staff>, rosa: List<Player>, giorno: AndrocalcioViewModel.GiornoStato?, onStaff: () -> Unit) {
-    val capo = staff.firstOrNull { it.role == Staffing.PREPARATORE }
+    val capo = staff.firstOrNull { it.role == Staffing.PREPARATORE && it.specialita == Staffing.GENERALE }
+        ?: staff.firstOrNull { it.role == Staffing.PREPARATORE }
+    val skill = capo?.skill ?: Staffing.VUOTO
+    val partita = giorno?.prossima
+    data class Riga(val p: Player, val gruppo: String, val icona: String, val motivo: String)
+    val righe = rosa.map { p ->
+        val att = if (giorno == null || partita == null) null else PreparatoreCapo.attivitaGiocatore(p, giorno.oggi, partita, skill)
+        val (g, i) = when {
+            p.injuredRounds > 0 -> "Infermeria" to "🩹"
+            att == null -> "Senza programma" to "•"
+            else -> att.label to att.icona
+        }
+        Riga(p, g, i, if (giorno == null) "" else PreparatoreCapo.motivo(p, giorno.oggi, partita, skill))
+    }
     Pagina {
         CapoRuolo("Capo preparatori", capo, onStaff)
-        Text("Coordina gli altri preparatori: ogni giorno decide l'attività di ciascun giocatore. Con CONTINUA il piano si applica da solo.",
-            color = AC.TextDim, fontSize = 11.sp)
-        SectionTitle("Programma di oggi")
-        val partita = giorno?.prossima
-        rosa.sortedBy { it.condition }.forEach { p ->
-            val att = if (giorno == null || partita == null) null
-                else PreparatoreCapo.attivitaGiocatore(p, giorno.oggi, partita, capo?.skill ?: Staffing.VUOTO)
-            val testo = when {
-                p.injuredRounds > 0 -> "🩹 Recupero"
-                att == null -> "—"
-                else -> "${att.icona} ${att.label}"
-            }
-            PaperPanel(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column(Modifier.weight(1f)) {
-                        Text("${p.name} (${p.role})", color = AC.Text, fontSize = 13.sp)
-                        Text("Forma ${p.condition} · Morale ${p.morale}", color = AC.TextDim, fontSize = 11.sp)
+        if (giorno != null) Text(
+            "Oggi: ${CalendarioGiorni.nomeGiorno(giorno.oggi)}" +
+                (partita?.let { " · prossima partita: " + CalendarioGiorni.nomeGiorno(it) } ?: ""),
+            color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        // Riepilogo: quanti giocatori per attività
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            righe.groupBy { it.gruppo }.toList().sortedByDescending { it.second.size }.forEach { (g, l) ->
+                PaperPanel(Modifier.weight(1f)) {
+                    Column(Modifier.padding(6.dp)) {
+                        Text("${l.first().icona} ${l.size}", color = AC.PaperText, fontWeight = FontWeight.Bold)
+                        Text(g, color = AC.PaperDim, fontSize = 10.sp, maxLines = 1)
                     }
-                    Text(testo, color = AC.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        Text("Il capo decide in base a forma, morale e distanza dalla partita. Forma bassa = riposo; vigilia = rifinitura.",
+            color = AC.TextDim, fontSize = 11.sp)
+        righe.groupBy { it.gruppo }.toList().sortedBy { (g, _) -> if (g == "Infermeria") 0 else 1 }.forEach { (g, l) ->
+            SectionTitle("${l.first().icona} $g (${l.size})")
+            PaperPanel(Modifier.fillMaxWidth()) {
+                l.sortedBy { it.p.condition }.forEachIndexed { idx, r ->
+                    Row(Modifier.fillMaxWidth().background(if (idx % 2 == 1) AC.PaperAlt else AC.Paper).padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        RuoloChip(r.p.role, r.p.pos)
+                        Column(Modifier.weight(1f).padding(start = 6.dp)) {
+                            Text(r.p.name, color = AC.PaperText, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(r.motivo, color = AC.PaperDim, fontSize = 11.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Forma ${r.p.condition}", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                                color = when { r.p.condition >= 80 -> AC.ColGreen; r.p.condition >= 60 -> AC.ColOrange; else -> AC.ColEn })
+                            Text("Morale ${r.p.morale}", fontSize = 11.sp,
+                                color = when { r.p.morale >= 70 -> AC.ColGreen; r.p.morale >= 45 -> AC.ColOrange; else -> AC.ColEn })
+                        }
+                    }
                 }
             }
         }

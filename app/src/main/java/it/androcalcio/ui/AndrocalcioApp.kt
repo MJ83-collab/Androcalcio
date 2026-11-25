@@ -17,6 +17,7 @@ import it.androcalcio.engine.Lineup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.unit.sp
@@ -302,6 +303,25 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
             }
         ) {
         HeaderBar(team, season, screen)
+        // Notizie in alto: avviso lampeggiante finché non le leggi (non in partita e non nella casella stessa)
+        run {
+            val msgs = vm.posta.collectAsStateWithLifecycle().value
+            val nuovi = msgs.filter { !it.letto }
+            if (nuovi.isNotEmpty() && screen != Screen.POSTA && inDiretta == null) {
+                val ultimo = nuovi.last()
+                val lampo by androidx.compose.animation.core.rememberInfiniteTransition(label = "notizie").animateFloat(
+                    0.55f, 1f, androidx.compose.animation.core.infiniteRepeatable(
+                        androidx.compose.animation.core.tween(700), androidx.compose.animation.core.RepeatMode.Reverse), label = "a")
+                Row(Modifier.fillMaxWidth().background(coloreCategoria(ultimo.cat).copy(alpha = lampo))
+                    .clickable { screen = Screen.POSTA }.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("📩 ${nuovi.size}", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                    Text("  ${ultimo.testo}", Modifier.weight(1f), color = Color.White, fontSize = 12.sp, maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text("LEGGI ▸", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                }
+            }
+        }
         Row(Modifier.weight(1f)) {
         Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Box(Modifier.widthIn(max = 1400.dp).fillMaxSize()) {
@@ -537,8 +557,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val statAttiva by vm.statSeasonAttiva.collectAsStateWithLifecycle()
                     val statGiocatori by vm.playerStats.collectAsStateWithLifecycle()
                     val clausoleAll by vm.clausole.collectAsStateWithLifecycle()
+                    val votiMedi by vm.votiMedi.collectAsStateWithLifecycle()
                     StatsScreen(team, teamsReali, matches, goals, everyone, season, statGiocatori, statStagioni,
-                        statAttiva, { vm.pickStatSeason(it) }, clausoleAll)
+                        statAttiva, { vm.pickStatSeason(it) }, clausoleAll, votiMedi)
                 }
                 Screen.DIRIGENZA -> {
                     val c by vm.club.collectAsStateWithLifecycle()
@@ -1081,8 +1102,6 @@ private fun roleName(r: String) = when (r) { "P" -> "POR"; "D" -> "DIF"; "C" -> 
 /** Ordine dei gruppi di ruolo in rosa: portieri, difensori, centrocampisti, attaccanti. */
 private fun ordineRuolo(r: String) = when (r) { "P" -> 0; "D" -> 1; "C" -> 2; else -> 3 }
 private fun ruoloTitolo(r: String) = when (r) { "P" -> "PORTIERI"; "D" -> "DIFENSORI"; "C" -> "CENTROCAMPISTI"; else -> "ATTACCANTI" }
-/** Sigla di ruolo accanto al nome: P, D, C, A. */
-private fun ruoloTag(r: String) = "[$r]"
 
 /** Rosa a tabella su carta bianca (stile PC Calcio 7). Scorre in orizzontale per mostrare tutte le colonne. */
 @Composable
@@ -1131,11 +1150,17 @@ private fun RosaTable(
             val tit = players.filter { it.starter && it.injuredRounds == 0 }
             val conv = players.filter { !it.starter && it.injuredRounds == 0 }
             val fuori = players.filter { it.injuredRounds > 0 }
-            val sezioni = listOf("TITOLARI" to tit, "GIOCATORI CONVOCATI" to conv, "GIOCATORI NON CONVOCATI" to fuori)
+            // Tre fasce colorate ben distinte: in campo (verde), in panchina (arancio), indisponibili (rosso)
+            val sezioni = listOf(
+                Triple("IN CAMPO · TITOLARI ${tit.size}/11", tit, AC.ColGreen),
+                Triple("A DISPOSIZIONE · PANCHINA ${conv.size}", conv, AC.ColOrange),
+                Triple("INDISPONIBILI · INFERMERIA ${fuori.size}", fuori, AC.ColEn))
+            Text("Tocca il quadratino a sinistra per mettere un giocatore in campo o in panchina.",
+                Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = AC.PaperDim)
             var idx = 0
-            sezioni.forEach { (titolo, lista) -> if (lista.isNotEmpty()) {
-                Text("⚽  $titolo", Modifier.fillMaxWidth().background(AC.PaperAlt).padding(vertical = 4.dp),
-                    textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
+            sezioni.forEach { (titolo, lista, colSez) -> if (lista.isNotEmpty()) {
+                Text(titolo, Modifier.fillMaxWidth().background(colSez).padding(vertical = 5.dp),
+                    textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
             var ruoloCorrente = ""
             lista.sortedBy { ordineRuolo(it.role) }.forEach { p ->
                 if (p.role != ruoloCorrente) {   // intestazione per ogni gruppo di ruolo
@@ -1145,16 +1170,17 @@ private fun RosaTable(
                 }
                 val i = idx++
                 PaperRow(i, Modifier.clickable { onOpen(p) }) {
-                    Text(if (p.starter) "●" else "○",
-                        Modifier.width(24.dp).clickable { onToggleStarter(p) },
-                        color = if (p.starter) AC.ColGreen else AC.PaperLine,
-                        textAlign = TextAlign.Center, fontSize = 14.sp)
+                    Text(when { p.injuredRounds > 0 -> "✚"; p.starter -> "T"; else -> "P" },
+                        Modifier.width(24.dp).padding(2.dp).background(when { p.injuredRounds > 0 -> AC.ColEn; p.starter -> AC.ColGreen; else -> AC.ColOrange })
+                            .clickable(enabled = p.injuredRounds == 0) { onToggleStarter(p) },
+                        color = Color.White, textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     Text(if (p.numero > 0) "${p.numero}" else "-", Modifier.width(26.dp), textAlign = TextAlign.Center,
                         fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     androidx.compose.runtime.CompositionLocalProvider(it.androcalcio.ui.components.LocalMagliaSquadra provides maglia) {
                         it.androcalcio.ui.components.Avatar(p.name, 22.dp, Modifier.padding(end = 3.dp))
                     }
-                    Text(ruoloTag(p.role) + "  " + it.androcalcio.engine.Forma.icona(forme[p.id]) + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
+                    it.androcalcio.ui.components.RuoloChip(p.role, p.pos, Modifier.padding(end = 3.dp))
+                    Text(it.androcalcio.engine.Forma.icona(forme[p.id]) + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(88.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Stelle((p.overall / 10).coerceIn(0, 10), 11.sp, Color(0xFFE0A800), Modifier.width(62.dp))
@@ -1487,4 +1513,13 @@ fun AndrocalcioApp(vm: AndrocalcioViewModel = viewModel()) {
             NazioneSchedaDialog(n, tutti.filter { it.teamId !in asIds }, squadre, { nazioneAperta = null })
         }
     }
+}
+
+
+/** Colore di ogni categoria di messaggi (come in FM27): partita blu, mercato verde, giocatori arancio, staff viola. */
+fun coloreCategoria(c: it.androcalcio.engine.Posta.Cat): Color = when (c) {
+    it.androcalcio.engine.Posta.Cat.PARTITA -> Color(0xFF1E5FC8)
+    it.androcalcio.engine.Posta.Cat.MERCATO -> Color(0xFF2E8B3A)
+    it.androcalcio.engine.Posta.Cat.GIOCATORI -> Color(0xFFD96A00)
+    it.androcalcio.engine.Posta.Cat.STAFF -> Color(0xFF7B3FC4)
 }

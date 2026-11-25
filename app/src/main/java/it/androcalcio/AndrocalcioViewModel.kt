@@ -158,6 +158,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -1796,6 +1797,17 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     val playerStats: StateFlow<List<PlayerStat>> = statSeasonAttiva.flatMapLatest { s ->
         osserva("player_stats") { dao.statsOf(s) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** Voto medio per giocatore nella stagione mostrata (solo la tua squadra: i voti si registrano nelle tue partite). */
+    val votiMedi: StateFlow<Map<Long, Double>> = combine(statSeasonAttiva, playerStats) { s, _ -> s }.mapLatest { s ->
+        dao.stato("voti").orEmpty().split(";").mapNotNull { e ->
+            val x = e.split(":")
+            if (x.size == 4 && x[0] == s) {
+                val n = (x[3].toDoubleOrNull() ?: 0.0)
+                val id = x[1].toLongOrNull()
+                if (id != null && n > 0) id to (x[2].toDouble() / 10.0 / n) else null
+            } else null
+        }.toMap()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
     val statSeasons: StateFlow<List<String>> = osserva("player_stats") { dao.statsSeasons() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val clausole: StateFlow<List<Clausola>> = osserva("clausole") { dao.clausoleOnce() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val scoutMissions: StateFlow<List<ScoutMission>> = osserva("scout_missions") { dao.missionsOnce() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

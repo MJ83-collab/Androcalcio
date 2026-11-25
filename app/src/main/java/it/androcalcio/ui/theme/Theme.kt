@@ -55,6 +55,7 @@ object AC {
     val Paper = Color(0xFFFFFFFF)
     val PaperAlt = Color(0xFFE6EAF6)
     val PaperText = Color(0xFF101418)
+    val PaperDim = Color(0xFF4A5468)
     val PaperLine = Color(0xFF9AA4C4)
     val Mine = Color(0xFFFFF0A8)   // riga della tua squadra
     /** Colori delle intestazioni: EN rosso, VE/RE/AG/QU blu, SF/MO verde, ME arancio. */

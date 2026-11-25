@@ -29,6 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
 import it.androcalcio.ui.components.Avatar
 import it.androcalcio.data.Clausola
 import it.androcalcio.data.Goal
@@ -54,7 +57,8 @@ fun StatsScreen(
     statSeasons: List<String>,
     statSeasonAttiva: String,
     onStatSeason: (String) -> Unit,
-    clausole: List<Clausola>
+    clausole: List<Clausola>,
+    votiMedi: Map<Long, Double> = emptyMap()
 ) {
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -74,7 +78,7 @@ fun StatsScreen(
             PcChip(selected = tab == 3, onClick = { tab = 3 }, label = { Text("Clausole") })
         }
         if (tab == 2) {
-            GiocatoriPane(team, teams, players, playerStats, statSeasons, statSeasonAttiva, onStatSeason)
+            GiocatoriPane(team, teams, players, playerStats, statSeasons, statSeasonAttiva, onStatSeason, votiMedi)
             return@Column
         }
         if (tab == 3) {
@@ -139,13 +143,18 @@ fun StatsScreen(
 @Composable
 private fun ColumnScope.GiocatoriPane(
     team: Team, teams: List<Team>, players: List<Player>, stats: List<PlayerStat>,
-    stagioni: List<String>, attiva: String, onStagione: (String) -> Unit
+    stagioni: List<String>, attiva: String, onStagione: (String) -> Unit, voti: Map<Long, Double> = emptyMap()
 ) {
+    var ordina by rememberSaveable { mutableStateOf(0) }   // 0 gol, 1 presenze, 2 voto medio
     var soloMia by rememberSaveable { mutableStateOf(true) }
     val byTeam = teams.associateBy { it.id }
     val byPlayer = players.associateBy { it.id }
     val elenco = stats.filter { !soloMia || it.teamId == team.id }
-        .sortedWith(compareByDescending<PlayerStat> { it.gol }.thenByDescending { it.presenze })
+        .sortedWith(when (ordina) {
+            1 -> compareByDescending<PlayerStat> { it.presenze }.thenByDescending { it.gol }
+            2 -> compareByDescending<PlayerStat> { voti[it.playerId] ?: 0.0 }.thenByDescending { it.presenze }
+            else -> compareByDescending<PlayerStat> { it.gol }.thenByDescending { it.presenze }
+        })
         .take(80)
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items((stagioni + attiva).distinct().sortedDescending()) { s ->
@@ -157,9 +166,11 @@ private fun ColumnScope.GiocatoriPane(
     if (elenco.isEmpty()) Text("Nessuna statistica per questa stagione: si registra giocando.", color = AC.TextDim)
     Row(Modifier.fillMaxWidth()) {
         Text("GIOCATORE", Modifier.weight(1f), color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
-        Text("PRESENZE", Modifier.width(72.dp), color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
-        Text("GOL", Modifier.width(44.dp), color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
+        Text("PRES." + if (ordina == 1) " ▼" else "", Modifier.width(56.dp).clickable { ordina = 1 }, color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
+        Text("GOL" + if (ordina == 0) " ▼" else "", Modifier.width(44.dp).clickable { ordina = 0 }, color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
+        Text("VOTO" + if (ordina == 2) " ▼" else "", Modifier.width(50.dp).clickable { ordina = 2 }, color = AC.TextDim, style = MaterialTheme.typography.labelSmall)
     }
+    Text("Tocca PRES., GOL o VOTO per ordinare. Il voto medio c'è solo per i giocatori della tua squadra.", color = AC.TextDim, fontSize = 10.sp)
     LazyColumn(Modifier.weight(1f)) {
         items(elenco, key = { it.playerId }) { st ->
             Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -171,8 +182,11 @@ private fun ColumnScope.GiocatoriPane(
                     Text(byTeam[st.teamId]?.name ?: "", color = AC.TextDim,
                         style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
-                Text("${st.presenze}", Modifier.width(72.dp), color = AC.Text)
+                Text("${st.presenze}", Modifier.width(56.dp), color = AC.Text)
                 Text("${st.gol}", Modifier.width(44.dp), fontWeight = FontWeight.Bold, color = AC.Accent)
+                val v = voti[st.playerId]
+                Text(v?.let { "%.2f".format(it).replace('.', ',') } ?: "–", Modifier.width(50.dp), fontWeight = FontWeight.Bold,
+                    color = when { v == null -> AC.TextDim; v >= 7.0 -> Color(0xFF7CE38B); v >= 6.0 -> AC.Text; else -> Color(0xFFFF8A80) })
             }
         }
     }

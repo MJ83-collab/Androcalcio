@@ -121,6 +121,11 @@ fun PlayerSheet(
                         Text("MEDIA", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
                         Text("${p.overall}", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                         Text("pot. ${p.potential}", fontSize = 10.sp, color = AC.PaperText)
+                        val ultimo = dettaglio?.votiStagioni?.maxByOrNull { it.key }
+                        Text("VOTO MEDIO", Modifier.padding(top = 6.dp), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
+                        Text(ultimo?.value?.let { "%.2f".format(it).replace('.', ',') } ?: "–", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold,
+                            color = when { ultimo == null -> AC.PaperDim; ultimo.value >= 7.0 -> AC.ColGreen; ultimo.value >= 6.0 -> AC.PaperText; else -> AC.ColEn })
+                        if (ultimo != null) Text(ultimo.key, fontSize = 9.sp, color = AC.PaperDim)
                     }
                 }
                 Column(Modifier.fillMaxWidth().background(Color(0xFF0B0B10)).padding(6.dp)) {
@@ -172,7 +177,7 @@ fun PlayerSheet(
                     if (dettaglio.stagioni.isEmpty()) Text("Nessuna partita registrata.", fontSize = 11.sp, color = AC.PaperText)
                     dettaglio.stagioni.forEach { st ->
                         val sq = dettaglio.squadreStagioni[st.teamId]?.let { " · $it" } ?: ""
-                        val voto = dettaglio.votiStagioni[st.season]?.let { " · voto %.1f".format(it) } ?: ""
+                        val voto = dettaglio.votiStagioni[st.season]?.let { " · voto medio " + "%.2f".format(it).replace('.', ',') } ?: ""
                         Text("${st.season}$sq: presenze ${st.presenze} · gol ${st.gol}$voto", fontSize = 12.sp, color = AC.PaperText)
                     }
                     if (dettaglio.stagioni.size > 1) Text("Totale: presenze ${dettaglio.stagioni.sumOf { it.presenze }} · gol ${dettaglio.stagioni.sumOf { it.gol }}",

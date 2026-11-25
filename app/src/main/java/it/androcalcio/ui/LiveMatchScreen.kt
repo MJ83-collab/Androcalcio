@@ -102,6 +102,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
     }
     var replay by remember { mutableStateOf<it.androcalcio.engine.MatchEvent?>(null) }
     var subOpen by remember { mutableStateOf(false) }
+    var pausaPrima by remember { mutableStateOf(false) }   // per riprendere da sola dopo il cambio
     var panel by remember { mutableStateOf(LivePanel.NESSUNO) }
     val mySubs = if (info.userHome) m.subsH else m.subsA
     val consiglio by vm.consiglio.collectAsState()
@@ -136,7 +137,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 item {
                     AssistenteBubble(c, onApplica = {
                         val az = vm.applicaConsiglio()
-                        if (az is it.androcalcio.engine.AssistenteLive.Azione.Cambio) { vm.setLivePaused(true); subOpen = true }
+                        if (az is it.androcalcio.engine.AssistenteLive.Azione.Cambio) { pausaPrima = info.paused; vm.setLivePaused(true); subOpen = true }
                     }, onChiudi = { vm.chiudiConsiglio() })
                 }
             }
@@ -233,7 +234,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                     panel = if (panel == LivePanel.TATTICA) LivePanel.NESSUNO else LivePanel.TATTICA
                 }
                 NeonTile("Cambi $mySubs/${MatchEngine.MAX_SUBS}", Icons.Filled.Refresh, false, Modifier.weight(1f),
-                    enabled = mySubs < MatchEngine.MAX_SUBS) { vm.setLivePaused(true); subOpen = true }
+                    enabled = mySubs < MatchEngine.MAX_SUBS) { pausaPrima = info.paused; vm.setLivePaused(true); subOpen = true }
                 NeonTile(when (livello) { 0 -> "Vice"; 1 -> "Vice·"; else -> "Muto" }, Icons.Filled.Person,
                     panel == LivePanel.ASSISTENTE, Modifier.weight(1f)) {
                     panel = if (panel == LivePanel.ASSISTENTE) LivePanel.NESSUNO else LivePanel.ASSISTENTE
@@ -241,7 +242,8 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
                 NeonTile("Stat", Icons.Filled.List, panel == LivePanel.STAT, Modifier.weight(1f)) {
                     panel = if (panel == LivePanel.STAT) LivePanel.NESSUNO else LivePanel.STAT
                 }
-                NeonTile(if (info.paused) "Riprendi" else "Pausa", Icons.Filled.PlayArrow, info.paused, Modifier.weight(1f)) {
+                NeonTile(if (info.paused) "Riprendi" else "Pausa", Icons.Filled.PlayArrow, info.paused, Modifier.weight(1f),
+                    glifo = if (info.paused) null else "❚❚", colore = if (info.paused) AC.Ok else null) {
                     vm.setLivePaused(!info.paused)
                 }
             }
@@ -262,7 +264,7 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         bench = if (info.userHome) m.benchH.toList() else m.benchA.toList(),
         energy = { (m.energyOf(it) * 100).toInt() },
         ammoniti = events.filter { it.type == EventType.YELLOW }.map { it.playerId }.toSet(),
-        onDone = { out, inP -> if (out != null && inP != null) vm.liveSub(out, inP); subOpen = false }
+        onDone = { out, inP -> if (out != null && inP != null) vm.liveSub(out, inP); subOpen = false; if (!pausaPrima) vm.setLivePaused(false) }
     )
 }
 
@@ -314,16 +316,17 @@ private fun GolBanner(testo: String, minuto: Int) {
 /** Pulsante della barra comandi: icona sopra, scritta sotto, bordo ciano se attivo. */
 @Composable
 private fun NeonTile(label: String, icon: ImageVector, on: Boolean, modifier: Modifier = Modifier,
-                     enabled: Boolean = true, onClick: () -> Unit) {
+                     enabled: Boolean = true, glifo: String? = null, colore: Color? = null, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    val col = if (!enabled) AC.TextDim else if (on) AC.Neon else Color.White
+    val col = colore ?: if (!enabled) AC.TextDim else if (on) AC.Neon else Color.White
     Column(
         modifier.clip(shape).background(Brush.verticalGradient(listOf(AC.NightHi, AC.Night)))
             .border(1.5.dp, if (on) AC.Neon else AC.Neon.copy(alpha = 0.3f), shape)
             .clickable(enabled = enabled, onClick = onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(icon, contentDescription = label, tint = col)
+        if (glifo != null) Text(glifo, color = col, fontSize = 18.sp, fontWeight = FontWeight.Black)
+        else Icon(icon, contentDescription = label, tint = col)
         Text(label.uppercase(), color = col, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     }
 }
@@ -369,7 +372,11 @@ private fun affinita(p: Player, ruolo: String): Int? = when {
 
 private fun reparto(r: String) = when (r) { "P" -> "portiere"; "D" -> "difensore"; "C" -> "centrocampista"; else -> "attaccante" }
 
-/** Scelta del cambio: prima chi esce (ruolo, energia, ammonizione), poi chi entra con affinità e consigliato. */
+/**
+ * Cambi in un colpo d'occhio: a sinistra chi è in campo (energia a barra), a destra la panchina.
+ * In alto il cambio consigliato (il più stanco con il miglior sostituto) applicabile con un tocco.
+ * Toccando chi esce, la panchina si ordina e si colora per compatibilità col suo ruolo.
+ */
 @Composable
 private fun SubDialog(
     xi: List<Player>, bench: List<Player>, energy: (Player) -> Int, ammoniti: Set<Long>,
@@ -377,51 +384,76 @@ private fun SubDialog(
 ) {
     var out by remember { mutableStateOf<Player?>(null) }
     var inP by remember { mutableStateOf<Player?>(null) }
+    fun compat(p: Player, o: Player): Int = affinita(p, TacticalRoles.assigned(o)) ?: if (p.role == o.role) 60 else 0
+    fun ordina(o: Player) = bench.sortedWith(compareByDescending<Player> { compat(it, o) }.thenByDescending { it.overall })
+    // Consiglio del vice: il più stanco (non portiere) e il suo miglior sostituto compatibile
+    val stanco = xi.filter { it.role != "P" }.minByOrNull { energy(it) - if (it.id in ammoniti) 8 else 0 }
+    val sostituto = stanco?.let { s -> ordina(s).firstOrNull { compat(it, s) >= 60 } }
     val o = out
-    // Panchina ordinata: stesso reparto prima, poi affinità col ruolo di chi esce, poi livello
-    val ruoloOut = o?.let { TacticalRoles.assigned(it) }.orEmpty()
-    val ordinati = if (o == null) emptyList() else bench.sortedWith(
-        compareByDescending<Player> { it.role == o.role }
-            .thenByDescending { affinita(it, ruoloOut) ?: 0 }
-            .thenByDescending { it.overall }
-    )
-    val consigliato = ordinati.firstOrNull()?.takeIf { o != null && it.role == o.role }
     AlertDialog(
         onDismissRequest = { onDone(null, null) },
-        title = { Text(if (o == null) "Chi esce?" else "Chi entra al posto di ${o.name} (${posTxt(o)})?") },
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier.fillMaxWidth(0.96f),
+        title = { Text("CAMBI · la partita è in pausa", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) },
         text = {
-            LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (o == null) items(xi) { p ->
-                    val e = energy(p)
-                    Column(Modifier.fillMaxWidth().clickable { out = p }.padding(vertical = 6.dp)) {
-                        Text("${posTxt(p)}  ${p.name}", color = AC.Text, fontWeight = FontWeight.Bold)
-                        Text("energia $e%" + if (p.id in ammoniti) " · ammonito" else "",
-                            color = if (e < 85) AC.Danger else if (e < 93) AC.Warn else AC.TextDim, fontSize = 12.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (stanco != null && sostituto != null && o == null) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(AC.Accent.copy(alpha = 0.18f))
+                        .clickable { onDone(stanco, sostituto) }.padding(8.dp)) {
+                        Text("⚡ CAMBIO CONSIGLIATO (tocca per farlo)", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.Accent)
+                        Text("Esce ${stanco.name} (${energy(stanco)}%) → entra ${sostituto.name} (${posTxt(sostituto)}, ${compat(sostituto, stanco)}%)",
+                            fontSize = 13.sp, color = AC.Text, fontWeight = FontWeight.Bold)
                     }
-                } else items(ordinati) { p ->
-                    val aff = affinita(p, ruoloOut)
-                    val stesso = p.role == o.role
-                    val dettaglio = when {
-                        aff != null -> "affinità $aff% come $ruoloOut"
-                        stesso -> "stesso reparto, ruolo naturale ${posTxt(p)}"
-                        else -> "fuori reparto (${reparto(p.role)})"
+                }
+                Text(if (o == null) "1) Tocca chi esce a sinistra" else "2) Tocca chi entra a destra: verde = adatto al ruolo di ${o.name}",
+                    fontSize = 12.sp, color = AC.TextDim)
+                Row(Modifier.fillMaxWidth().heightIn(max = 400.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        item { Text("IN CAMPO", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.Ok) }
+                        items(xi) { p ->
+                            val e = energy(p)
+                            val sel = p == o
+                            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
+                                .background(if (sel) AC.Danger.copy(alpha = 0.35f) else AC.Surface)
+                                .clickable { out = if (sel) null else p; inP = null }.padding(5.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    it.androcalcio.ui.components.RuoloChip(p.role, posTxt(p))
+                                    Text(" ${p.name}", fontSize = 12.sp, color = AC.Text, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Row(Modifier.fillMaxWidth().padding(top = 2.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x33FFFFFF))) {
+                                    Box(Modifier.weight(e.coerceIn(1, 100).toFloat()).fillMaxHeight()
+                                        .background(if (e < 80) AC.Danger else if (e < 90) AC.Warn else AC.Ok))
+                                    if (e < 100) Box(Modifier.weight((100 - e).toFloat()).fillMaxHeight())
+                                }
+                                Text("energia $e%" + if (p.id in ammoniti) " · 🟨" else "", fontSize = 10.sp, color = AC.TextDim)
+                            }
+                        }
                     }
-                    Column(Modifier.fillMaxWidth().clickable { inP = p }.padding(vertical = 6.dp)) {
-                        Text("${posTxt(p)}  ${p.name}   LIV ${p.overall}" + if (p == consigliato) "  ★ consigliato" else "",
-                            color = if (p == inP) AC.Accent else if (stesso) AC.Text else AC.TextDim, fontWeight = FontWeight.Bold)
-                        Text("$dettaglio · condizione ${p.condition}%",
-                            color = if (p == inP) AC.Accent else AC.TextDim, fontSize = 12.sp)
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        item { Text("PANCHINA", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.Warn) }
+                        items(if (o == null) bench.sortedBy { it.role } else ordina(o)) { p ->
+                            val c = o?.let { compat(p, it) }
+                            val sel = p == inP
+                            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
+                                .background(when { sel -> AC.Ok.copy(alpha = 0.4f); c != null && c >= 80 -> AC.Ok.copy(alpha = 0.15f); else -> AC.Surface })
+                                .clickable(enabled = o != null) { inP = p }.padding(5.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    it.androcalcio.ui.components.RuoloChip(p.role, posTxt(p))
+                                    Text(" ${p.name}", fontSize = 12.sp, color = AC.Text, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Text("liv ${p.overall} · cond ${p.condition}%" + (c?.let { " · ${it}%" } ?: ""), fontSize = 10.sp,
+                                    color = when { c == null -> AC.TextDim; c >= 80 -> AC.Ok; c >= 50 -> AC.Warn; else -> AC.Danger })
+                            }
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            PcAction(onClick = { onDone(out, inP) }, enabled = out != null && inP != null) { Text("Conferma cambio") }
-        },
-        dismissButton = {
-            TextButton(onClick = { if (out != null) { out = null; inP = null } else onDone(null, null) }) {
-                Text(if (out != null) "Indietro" else "Annulla")
+            PcAction(onClick = { onDone(out, inP) }, enabled = out != null && inP != null) {
+                Text(if (out != null && inP != null) "⇄ ${out!!.name} → ${inP!!.name}" else "Conferma cambio", maxLines = 1)
             }
-        }
+        },
+        dismissButton = { TextButton(onClick = { onDone(null, null) }) { Text("Chiudi") } }
     )
 }
