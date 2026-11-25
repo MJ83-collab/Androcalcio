@@ -24,15 +24,26 @@ Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, ico
 - **Merge su `main` e release v0.7.0**: solo dopo il via di Marco dopo la prova.
 - **Bug da tenere d'occhio:** crash "Couldn't read row 1444 … CursorWindow" nella prova su emulatore (visto 2 volte, poi corretto con letture a pagine). Se ricompare, cercare un'altra lettura grande.
 
-## Decisioni aperte (chiedere a Marco)
-Dal punto 5 (Cinico, Opus):
-1. Base dei rigori in partita abbassata da 0,70 a 0,64 (+0,20 × fi/99): cambia anche i non Cinici (prima 84,8% di gol sui rigori, ora 79,7%; obiettivo 75-80%). Va bene?
-2. Serie di rigori simulate (`Cup.shootout`): il Cinico non conta (non ci sono giocatori). Portarli dentro richiede di cambiare `Cup.finalize`. Lo vuoi?
-3. "In bilico" nei finali: conta anche se la squadra è sotto di molti gol (es. 0-4 all'85'). Va bene o limitare a 1-2 gol?
-4. Attributo `ri` (rigori) non usato dal motore: il rigore dipende da `fi`. Usarlo?
-Altre:
-5. Giocatori di ruolo D con FD non vengono mai messi in automatico nella linea C (limite noto della scelta per posti).
-6. Salvataggi vecchi: le coppe già calendarizzate "recuperano" i turni.
+## Decisioni (aggiornate 25/11 pomeriggio)
+Prese da Marco il 25/11:
+1. Base rigori 0,64: **confermata**.
+2. Cinico nelle serie simulate: **fatto** (vedi sotto).
+3. "In bilico" conta anche i punteggi larghi: **confermato, nessuna modifica** (oggi `VANTAGGIO_MAX_BILICO` conta anche i pari e i sotto di molti gol).
+5. Bonus analista (+1 affinità): **fatto**.
+6. D con FD mai in linea C: **lasciato com'è** (limite noto).
+7. Scala stipendi staff sulla media della TUA rosa: **confermata**.
+8. Messaggi: report mensile, staff, sponsor: **fatto**.
+**Ancora aperte:**
+- 4. Attributo `ri` (rigori) non usato dal motore: il rigore dipende da `fi`. Usarlo? (nessuna risposta)
+- Salvataggi vecchi: le coppe già calendarizzate "recuperano" i turni.
+- Stelle intere in vivaio/scouting giovani e maglie.
+
+## Sessione 25/11 pomeriggio (2): decisioni attuate (ramo feat/stadio, commit 00b0aa0, build verde, non provata sul telefono)
+- **Controllo repo:** nessun bug certo trovato (letture grandi già a pagine, niente `!!` a rischio). Controllo non esaustivo: lettura mirata del motore.
+- **Cinico nei rigori simulati:** `Cup.finalize(m, all, rng, cinici)`; `cinici` = per squadra, quanti Cinici tra i 5 rigoristi (migliori per `fi`, portiere escluso, `AndrocalcioViewModel.ciniciRigori`). Ognuno tira con +0,04 (75% → 79%). Usato da `finalizeKey` e `avanzaEuropa`. La finale dal vivo usa già i nomi. Test `CinicoRigoriSimulatiTest`.
+- **Analista video:** dopo ogni partita analizzata, chi ha giocato guadagna +1 di affinità a ogni ruolo secondario sotto 100 (`AnalistaPartita.confidenza`, in `salvaAnalisi`). Test `AnalistaConfidenzaTest`.
+- **Messaggi:** nuovi avvisi per contratto staff in scadenza, sponsor in scadenza (apre Marketing), report mensile del preparatore capo (apre Rosa). `Posta.Snapshot` ha tre campi nuovi con valore predefinito. Test in `PostaTest`.
+- Modello: Sonnet basta.
 
 ## Sessione 25/11 mattina: test stagioni, ritiri e ricambio dal vivaio (ramo feat/stadio, build verde, non provata sul telefono)
 - **Test `StagioniDiFilaTest`:** tre stagioni in memoria per le 11 nazioni europee: campionati, coppa nazionale, Supercoppa, qualificate europee dalla stagione prima, gironi e turni delle tre coppe, nessuna squadra due volte nello stesso turno. Non copre il database vero (`closeSeason`).
@@ -292,9 +303,8 @@ Sonnet basta per la prova, il merge e la grafica; Opus solo per nuove tarature.
 - CI verde (test motore, build, emulatore).
 
 ## Da decidere / fare
-- Bonus "confidenza tattica" dell'analista (proposta: +1 affinità tattica per partita analizzata): serve tua decisione.
 - Prova su telefono di tutto `feat/stadio`; graphics tweaks (7); avatar (8); OK per merge su main + release v0.7.0 (9).
-- Messaggi: mancano report mensile, scadenza contratti staff, sponsor.
+- Messaggi: fatti anche report mensile, staff e sponsor (25/11 pomeriggio).
 - Decisioni aperte precedenti: Cinico (rigori base 0.64, Cup.shootout, "in bilico"), D con FD mai in linea C, vecchi salvataggi e turni coppa, scala stipendi staff sulla tua rosa, stelle youth/scouting/maglie ancora intere.
 
 ## Per ripartire in una nuova chat
