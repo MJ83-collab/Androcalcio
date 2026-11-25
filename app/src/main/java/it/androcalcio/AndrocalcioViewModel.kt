@@ -3053,6 +3053,32 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         else "Senza allenatore in seconda, i numeri di maglia li ha assegnati la società."
     }
 
+    /** Bonus di rendimento di fine stagione: aggiorna le clausole e restituisce quanto paga ogni club. */
+    private suspend fun pagaClausole(
+        s: String, teamsNow: List<Team>, byTeam: Map<Long, List<Player>>, campioni: Set<Long>, coppeVinte: Set<Long>
+    ): HashMap<Long, Long> {
+        val statAll = dao.statsOf(s).associateBy { it.playerId }
+        val clausoleGia = dao.clausoleOnce().associateBy { it.playerId }
+        val clauseNuove = ArrayList<Clausola>()
+        val pagaSquadra = HashMap<Long, Long>()
+        for (t in teamsNow) {
+            for (p in byTeam[t.id].orEmpty()) {
+                val base = maxOf(p.salary, 100_000L)
+                val c = (clausoleGia[p.id] ?: Clausola(p.id, t.id, base / 2, base / 2, base, base / 2)).copy(teamId = t.id)
+                clauseNuove += c
+                val st = statAll[p.id]
+                var pay = 0L
+                if ((st?.presenze ?: 0) >= 30) pay += c.bonusPresenze
+                if ((st?.gol ?: 0) >= 20) pay += c.bonusGol
+                if (t.id in campioni) pay += c.bonusCampionato
+                if (t.id in coppeVinte) pay += c.bonusCoppa
+                if (pay > 0) pagaSquadra[t.id] = (pagaSquadra[t.id] ?: 0L) + pay
+            }
+        }
+        dao.upsertClausole(clauseNuove)
+        return pagaSquadra
+    }
+
     /** I giocatori ritirati lasciano l'ID a un giovane nuovo: cancella tutto ciò che nel gioco era legato a quell'ID. */
     private suspend fun dimenticaGiocatori(ids: Set<Long>) {
         if (ids.isEmpty()) return
@@ -3461,26 +3487,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val livDif = _opzioni.value.difficolta
             val profDif = profiloPersonalizzato()
             // Clausole di rendimento per tutti i giocatori (anche IA): a fine stagione il club paga i bonus raggiunti
-            val campioni = finals.values.mapNotNull { it.firstOrNull()?.team?.id }.toSet()
-            val statAll = dao.statsOf(s).associateBy { it.playerId }
-            val clausoleGia = dao.clausoleOnce().associateBy { it.playerId }
-            val clauseNuove = ArrayList<Clausola>()
-            val pagaSquadra = HashMap<Long, Long>()
-            for (t in teamsNow) {
-                for (p in byTeam[t.id].orEmpty()) {
-                    val base = maxOf(p.salary, 100_000L)
-                    val c = (clausoleGia[p.id] ?: Clausola(p.id, t.id, base / 2, base / 2, base, base / 2)).copy(teamId = t.id)
-                    clauseNuove += c
-                    val st = statAll[p.id]
-                    var pay = 0L
-                    if ((st?.presenze ?: 0) >= 30) pay += c.bonusPresenze
-                    if ((st?.gol ?: 0) >= 20) pay += c.bonusGol
-                    if (t.id in campioni) pay += c.bonusCampionato
-                    if (t.id in coppeVinte) pay += c.bonusCoppa
-                    if (pay > 0) pagaSquadra[t.id] = (pagaSquadra[t.id] ?: 0L) + pay
-                }
-            }
-            dao.upsertClausole(clauseNuove)
+            val pagaSquadra = pagaClausole(s, teamsNow, byTeam, finals.values.mapNotNull { it.firstOrNull()?.team?.id }.toSet(), coppeVinte)
             val clausePay = pagaSquadra[me.id] ?: 0L
             val prelazioneIds = SquadraB.decode(dao.stato(SquadraB.KEY)).filterValues { it == 1 }.keys
             // Ritiri: per età, o per infortunio grave in età avanzata (in questo caso a volte si scende di categoria
