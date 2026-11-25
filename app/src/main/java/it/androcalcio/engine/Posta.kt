@@ -21,7 +21,13 @@ object Posta {
         val richieste: Int,
         val candidati: Int,
         val cantieri: Int,
-        val partiteCoppa: Int
+        val partiteCoppa: Int,
+        /** "Ruolo Nome" dello staff assunto con contratto all'ultimo anno. */
+        val staffInScadenza: Set<String> = emptySet(),
+        /** Nomi degli sponsor attivi all'ultimo anno di contratto. */
+        val sponsorInScadenza: Set<String> = emptySet(),
+        /** Ultimo mese elaborato dal preparatore capo (aaaa-mm): cambia quando esce il report mensile. */
+        val reportMese: String = ""
     )
 
     fun diff(prima: Snapshot, dopo: Snapshot, nomi: Map<Long, String>, giorno: Long): List<Messaggio> {
@@ -45,6 +51,12 @@ object Posta {
             out += Messaggio(giorno, Cat.STAFF, "Nuovi candidati hanno risposto all'annuncio.", "STAFF")
         if (dopo.cantieri < prima.cantieri)
             out += Messaggio(giorno, Cat.STAFF, "Un cantiere è terminato.", "STRUTTURE")
+        for (x in (dopo.staffInScadenza - prima.staffInScadenza).sorted())
+            out += Messaggio(giorno, Cat.STAFF, "Contratto in scadenza nello staff: $x.", "STAFF")
+        for (x in (dopo.sponsorInScadenza - prima.sponsorInScadenza).sorted())
+            out += Messaggio(giorno, Cat.GIOCATORI, "Sponsor in scadenza: $x.", "COMMERCIALE")
+        if (dopo.reportMese.isNotEmpty() && dopo.reportMese != prima.reportMese)
+            out += Messaggio(giorno, Cat.STAFF, "Report mensile del preparatore capo disponibile (scheda Rosa).", "ROSA")
         return out
     }
 

@@ -4394,7 +4394,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             richieste = Personalita.decode(dao.stato("richieste")).size,
             candidati = Annunci.decodeCand(dao.stato(Annunci.KEY_CAND + t.id)).size,
             cantieri = Migliorie.decodeCantieri(dao.stato("migliorie_cantieri")).size,
-            partiteCoppa = coppe
+            partiteCoppa = coppe,
+            staffInScadenza = dao.allStaff().filter { it.teamId == t.id && it.contract <= 1 }
+                .map { Staffing.roleName(it.role, it.specialita) + " " + it.name }.toSet(),
+            sponsorInScadenza = SponsorDeal.decode(dao.stato("sponsor")).filter { it.years <= 1 }.map { it.name }.toSet(),
+            reportMese = dao.stato(PreparatoreCapo.KEY_MESE).orEmpty()
         )
     }
 
