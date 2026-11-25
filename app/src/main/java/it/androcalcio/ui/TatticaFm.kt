@@ -95,7 +95,7 @@ private fun coloreLinea(codice: String): Color = when (codice) {
 
 private fun <T> List<T>.prossimo(corrente: T): T = this[(indexOf(corrente) + 1).mod(size)]
 
-private fun coloreValore(v: Int): Color = when {
+private fun coloreAttributo(v: Int): Color = when {
     v >= 75 -> Fm.Verde
     v >= 60 -> Color(0xFFB9D96B)
     v >= 45 -> Fm.Oro
@@ -454,7 +454,7 @@ private fun DialogRuolo(
                     val v = f(p)
                     Row {
                         Text(nome, Modifier.weight(1f), color = Fm.Testo, fontSize = 13.sp)
-                        Text("$v", color = coloreValore(v), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("$v", color = coloreAttributo(v), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
