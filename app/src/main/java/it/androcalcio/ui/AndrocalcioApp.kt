@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -246,8 +247,38 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
 
     BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
 
+    // CONTINUA, sempre visibile in ogni schermata come in Football Manager: nei giorni liberi passa al giorno dopo,
+    // nel giorno della partita porta alla schermata Partita
+    val giornoGlobale by vm.giorno.collectAsStateWithLifecycle()
+    val inDiretta by vm.live.collectAsStateWithLifecycle()
+
     Scaffold(
         containerColor = AC.Bg,
+        bottomBar = {
+            val g = giornoGlobale
+            if (inDiretta == null) {
+                val libero = g != null && g.prossima != null && !g.giornoPartita
+                val haPartita = g != null && g.prossima != null
+                val testo = when {
+                    libero && g!!.giorniMancanti == 1 -> "CONTINUA ▶ giorno della partita"
+                    libero -> "CONTINUA ▶ domani"
+                    haPartita -> "CONTINUA ▶ vai alla partita"
+                    else -> "CONTINUA ▶ calendario"
+                }
+                Box(
+                    Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.55f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp).navigationBarsPadding()
+                ) {
+                    PcButton(testo, {
+                        when {
+                            libero -> vm.continuaGiorno()
+                            haPartita -> screen = Screen.PARTITA
+                            else -> screen = Screen.CALENDARIO
+                        }
+                    }, Modifier.fillMaxWidth(), main = true)
+                }
+            }
+        }
     ) { padding ->
         Column(
             Modifier.padding(padding).fillMaxSize().let { m ->
@@ -395,7 +426,6 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         giorno = vm.giorno.collectAsStateWithLifecycle().value,
                         onAttivita = { vm.viviGiorno(it) },
                         onSalta = { vm.saltaAllaPartita() },
-                        onContinua = { vm.continuaGiorno() },
                         onMercato = { screen = Screen.MERCATO })
                 }
                 Screen.MERCATO -> {

@@ -84,8 +84,7 @@ fun CalendarioScreen(
     giorno: it.androcalcio.AndrocalcioViewModel.GiornoStato? = null,
     onAttivita: (it.androcalcio.engine.CalendarioGiorni.Attivita) -> Unit = {},
     onSalta: () -> Unit = {},
-    onMercato: () -> Unit = {},
-    onContinua: () -> Unit = {}
+    onMercato: () -> Unit = {}
 ) {
     var askNext by remember { mutableStateOf(false) }
     var amichevoliAperte by rememberSaveable { mutableStateOf(false) }
@@ -130,18 +129,10 @@ fun CalendarioScreen(
         val giornoOk = giorno == null || giorno.prossima == null || giorno.giornoPartita
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Chiede 2D o simulazione solo se la tua squadra gioca nella prossima giornata
-            // CONTINUA come in Football Manager: nei giorni liberi passa al giorno dopo (con l'attività automatica),
-            // nel giorno della partita porta alla partita
-            val giornoLibero = giorno != null && giorno.prossima != null && !giorno.giornoPartita
-            val etichetta = when {
-                !giornoLibero -> "CONTINUA ▶ vai alla partita"
-                giorno!!.giorniMancanti == 1 -> "CONTINUA ▶ giorno della partita"
-                else -> "CONTINUA ▶ domani"
-            }
-            PcButton(etichetta, {
+            PcButton("Prossima giornata", {
                 round = 0
-                if (giornoLibero) onContinua() else if (miaProssima) { askNext = true } else { onNext() }
-            }, Modifier.fillMaxWidth(), main = true, enabled = (pending || giornoLibero) && !bloccoAmichevoli)
+                if (miaProssima) { askNext = true } else { onNext() }
+            }, Modifier.fillMaxWidth(), main = true, enabled = pending && !bloccoAmichevoli)
         }
         // Simula fino a: 5 giornate, apertura del mercato invernale, vigilia del prossimo derby
         if (nextRound != null && !bloccoAmichevoli) {
