@@ -3053,6 +3053,71 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         else "Senza allenatore in seconda, i numeri di maglia li ha assegnati la società."
     }
 
+    /** Rosa dopo la fine della stagione: crescita, ritiri (con ricambio dal vivaio sullo stesso ID), contratti. */
+    private class RosaFineStagione(
+        val updated: ArrayList<Player>, val removed: ArrayList<Player>, val added: ArrayList<Player>,
+        val leavers: ArrayList<String>, val ritirati: ArrayList<Player>, val declino: MutableSet<Long>
+    )
+
+    private fun rinnovaRosa(
+        t: Team, me: Team, rng: kotlin.random.Random, r: RosaFineStagione, byTeam: Map<Long, List<Player>>,
+        staffBy: Map<Long, List<Staff>>, bonusMio: Int, prelazioneIds: Set<Long>, inferiori: Map<String, List<Team>>
+    ): List<Player> {
+        val updated = r.updated; val removed = r.removed; val added = r.added
+        val leavers = r.leavers; val ritirati = r.ritirati; val declino = r.declino
+        val primeDiv = CoppeEuropee.PRIME_DIVISIONI
+        val keep = ArrayList<Player>()
+        val ritiratiPrima = ritirati.size
+        (byTeam[t.id] ?: emptyList()).forEach { p ->
+            val a = Progression.advance(p, rng, Staffing.skill(staffBy, t.id, Staffing.ALLENATORE),
+                if (t.id == me.id) bonusMio else 0,
+                mentore = Mentori.bonus(p, byTeam[t.id] ?: emptyList()))
+            val infortunioGrave = p.age >= 33 && p.injuredRounds >= 20 && a.id !in declino
+            val scendeDiCategoria = infortunioGrave && t.campionato == primeDiv[t.nazione] &&
+                inferiori[t.nazione].orEmpty().isNotEmpty() && rng.nextBoolean()
+            when {
+                a.age >= Progression.retireAge(a) || (a.id in declino && a.contract <= 0) -> {
+                    removed += p; ritirati += p; declino -= p.id
+                    if (t.id == me.id) leavers += "${p.name} (ritiro)"
+                }
+                scendeDiCategoria -> {
+                    val dest = inferiori[t.nazione].orEmpty().random(rng)
+                    val f = a.copy(teamId = dest.id, contract = rng.nextInt(1, 3), salary = (a.salary / 3).coerceAtLeast(30_000L))
+                    updated += f; declino += f.id
+                    if (t.id == me.id) leavers += "${p.name} (infortunio grave: scende in ${dest.campionato})"
+                    if (dest.id == me.id) avviso("${p.name} arriva da una categoria superiore dopo un infortunio grave: 1-2 anni, poi si ritira.")
+                }
+                infortunioGrave -> {
+                    removed += p; ritirati += p
+                    if (t.id == me.id) leavers += "${p.name} (ritiro per infortunio)"
+                }
+                a.contract <= 0 && t.id == me.id && a.id in prelazioneIds && a.age <= SquadraB.ETA_MAX -> {
+                    // Prelazione sul satellite: contratto in scadenza, rinnovo automatico di 3 anni allo stesso ingaggio
+                    val f = a.copy(contract = 3)
+                    updated += f; keep += f
+                    avviso("Prelazione: ${p.name} (satellite) resta con te per 3 anni, stesso ingaggio.")
+                }
+                a.contract <= 0 && t.id == me.id -> {
+                    removed += p
+                    leavers += "${p.name} (contratto scaduto)"
+                }
+                else -> {
+                    val f = if (a.contract <= 0) Progression.renewAI(a, rng) else a
+                    updated += f
+                    keep += f
+                }
+            }
+        }
+        // Chi si è ritirato viene sostituito da un giovane del vivaio dello stesso ruolo, con lo stesso ID
+        val loro = ritirati.drop(ritiratiPrima)
+        loro.forEach { r -> added += Progression.newYoung(t, rng, false, r.role).copy(id = r.id) }
+        val noKeeper = keep.none { it.role == "P" } && loro.none { it.role == "P" }
+        repeat((16 - keep.size - loro.size).coerceAtLeast(0)) { i ->
+            added += Progression.newYoung(t, rng, i == 0 && noKeeper)
+        }
+        return keep
+    }
+
     /** Bonus di rendimento di fine stagione: aggiorna le clausole e restituisce quanto paga ogni club. */
     private suspend fun pagaClausole(
         s: String, teamsNow: List<Team>, byTeam: Map<Long, List<Player>>, campioni: Set<Long>, coppeVinte: Set<Long>
@@ -3499,55 +3564,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val primeDiv = CoppeEuropee.PRIME_DIVISIONI
             val inferiori = teamsNow.groupBy { it.nazione }.mapValues { (n, l) -> l.filter { primeDiv[n] != null && it.campionato != primeDiv[n] } }
             val newTeams = teamsNow.map { t ->
-                val keep = ArrayList<Player>()
-                val ritiratiPrima = ritirati.size
-                (byTeam[t.id] ?: emptyList()).forEach { p ->
-                    val a = Progression.advance(p, rng, Staffing.skill(staffBy, t.id, Staffing.ALLENATORE),
-                        if (t.id == me.id) Strutture.bonusAllenamento(livAll) + effMig.crescitaPct else 0,
-                        mentore = Mentori.bonus(p, byTeam[t.id] ?: emptyList()))
-                    val infortunioGrave = p.age >= 33 && p.injuredRounds >= 20 && a.id !in declino
-                    val scendeDiCategoria = infortunioGrave && t.campionato == primeDiv[t.nazione] &&
-                        inferiori[t.nazione].orEmpty().isNotEmpty() && rng.nextBoolean()
-                    when {
-                        a.age >= Progression.retireAge(a) || (a.id in declino && a.contract <= 0) -> {
-                            removed += p; ritirati += p; declino -= p.id
-                            if (t.id == me.id) leavers += "${p.name} (ritiro)"
-                        }
-                        scendeDiCategoria -> {
-                            val dest = inferiori[t.nazione].orEmpty().random(rng)
-                            val f = a.copy(teamId = dest.id, contract = rng.nextInt(1, 3), salary = (a.salary / 3).coerceAtLeast(30_000L))
-                            updated += f; declino += f.id
-                            if (t.id == me.id) leavers += "${p.name} (infortunio grave: scende in ${dest.campionato})"
-                            if (dest.id == me.id) avviso("${p.name} arriva da una categoria superiore dopo un infortunio grave: 1-2 anni, poi si ritira.")
-                        }
-                        infortunioGrave -> {
-                            removed += p; ritirati += p
-                            if (t.id == me.id) leavers += "${p.name} (ritiro per infortunio)"
-                        }
-                        a.contract <= 0 && t.id == me.id && a.id in prelazioneIds && a.age <= SquadraB.ETA_MAX -> {
-                            // Prelazione sul satellite: contratto in scadenza, rinnovo automatico di 3 anni allo stesso ingaggio
-                            val f = a.copy(contract = 3)
-                            updated += f; keep += f
-                            avviso("Prelazione: ${p.name} (satellite) resta con te per 3 anni, stesso ingaggio.")
-                        }
-                        a.contract <= 0 && t.id == me.id -> {
-                            removed += p
-                            leavers += "${p.name} (contratto scaduto)"
-                        }
-                        else -> {
-                            val f = if (a.contract <= 0) Progression.renewAI(a, rng) else a
-                            updated += f
-                            keep += f
-                        }
-                    }
-                }
-                // Chi si è ritirato viene sostituito da un giovane del vivaio dello stesso ruolo, con lo stesso ID
-                val loro = ritirati.drop(ritiratiPrima)
-                loro.forEach { r -> added += Progression.newYoung(t, rng, false, r.role).copy(id = r.id) }
-                val noKeeper = keep.none { it.role == "P" } && loro.none { it.role == "P" }
-                repeat((16 - keep.size - loro.size).coerceAtLeast(0)) { i ->
-                    added += Progression.newYoung(t, rng, i == 0 && noKeeper)
-                }
+                val keep = rinnovaRosa(t, me, rng, RosaFineStagione(updated, removed, added, leavers, ritirati, declino), byTeam, staffBy,
+                    Strutture.bonusAllenamento(livAll) + effMig.crescitaPct, prelazioneIds, inferiori)
                 val wages = keep.sumOf { it.salary } + (staffBy[t.id]?.sumOf { it.salary } ?: 0L)
                 // Solo le squadre della stessa nazione: "Serie A" e "Primera" esistono in più paesi
                 val lg = teamsNow.filter { it.nazione == t.nazione && it.campionato == t.campionato }.associate { x ->
