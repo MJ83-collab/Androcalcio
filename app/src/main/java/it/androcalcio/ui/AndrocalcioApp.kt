@@ -401,7 +401,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     SchedaAnalista(vm.staff.collectAsStateWithLifecycle().value, vm.analisiUltima.collectAsStateWithLifecycle().value,
                         { screen = Screen.STAFF }) { AvversarioScreen(consigli, ex.analista) }
                 }
-                Screen.FISIO -> SchedaFisio(vm.staff.collectAsStateWithLifecycle().value, players) { screen = Screen.STAFF }
+                Screen.FISIO -> {
+                    LaunchedEffect(Unit) { vm.caricaFisio() }
+                    SchedaFisio(vm.staff.collectAsStateWithLifecycle().value, players, { screen = Screen.STAFF },
+                        vm.fisio.collectAsStateWithLifecycle().value, { vm.testFisio(it) }, { vm.operaGiocatore(it) })
+                }
                 Screen.GIARDINIERE -> {
                     val mig by vm.migliorie.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }

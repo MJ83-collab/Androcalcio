@@ -40,7 +40,7 @@ object Posta {
         if (!dopo.finestraAperta && prima.finestraAperta)
             out += Messaggio(giorno, Cat.MERCATO, "La finestra di mercato si è chiusa.", "MERCATO")
         for (id in (dopo.infortunati - prima.infortunati).sorted())
-            out += Messaggio(giorno, Cat.GIOCATORI, "${n(id)} si è infortunato.", "ROSA")
+            out += Messaggio(giorno, Cat.GIOCATORI, "${n(id)} si è infortunato: valuta l'operazione in Fisioterapia.", "FISIO")
         for (id in (dopo.scadenze - prima.scadenze).sorted())
             out += Messaggio(giorno, Cat.GIOCATORI, "Contratto in scadenza: ${n(id)}.", "ROSA")
         if (dopo.offerte > prima.offerte)

@@ -272,7 +272,7 @@ object Medical {
         if (rng.nextDouble() >= Staffing.injuryChance(cura.prevenzione) * (plan?.injuryFactor() ?: 1.0)) return healed
         val ok = healed.indices.filter { healed[it].injuredRounds == 0 }
         if (ok.isEmpty()) return healed
-        val i = ok[rng.nextInt(ok.size)]
+        val i = Fisio.sceltaPesata(ok, rng) { Fisio.peso(healed[it]) }
         val turni = (1 + rng.nextInt(3) - (cura.recupero - Staffing.NEUTRAL) / 25).coerceAtLeast(1)
         return healed.mapIndexed { j, p -> if (j == i) p.copy(injuredRounds = turni) else p }
     }

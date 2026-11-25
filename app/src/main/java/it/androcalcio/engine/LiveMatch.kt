@@ -625,7 +625,7 @@ class LiveMatch(
         val xi = if (homeSide) xiH else xiA
         val ps = xi.filter { it.role != "P" }
         if (ps.isEmpty()) return
-        val p = ps[rng.nextInt(ps.size)]
+        val p = Fisio.sceltaPesata(ps, rng) { Fisio.peso(it) }
         infortunati += p.id
         val t = if (homeSide) home else away
         events += MatchEvent(minute, EventType.INJURY, homeSide, "Infortunio per ${p.name} (${t.shortName})", 0.5f, 0.5f, p.id)

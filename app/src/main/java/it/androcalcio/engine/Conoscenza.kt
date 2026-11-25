@@ -107,7 +107,8 @@ object VivaioClub {
     fun qualita(t: Team): Int {
         val soldi = (t.budget / 5_000_000L).toInt().coerceIn(0, 10)
         val stadio = (t.stadiumCapacity / 8_000).coerceIn(0, 8)
-        val v = t.youthCoachSkill / 10 + soldi / 2 + stadio / 2
+        // l'allenatore delle giovanili conta già a parte: qui solo soldi, stadio e tradizione del club
+        val v = soldi + stadio + Math.floorMod(t.name.hashCode() * 31, 7)
         return (v / 2).coerceIn(2, 10)
     }
 

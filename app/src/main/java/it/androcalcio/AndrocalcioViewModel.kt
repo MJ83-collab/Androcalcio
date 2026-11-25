@@ -114,6 +114,7 @@ import it.androcalcio.engine.Economia
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Forma
 import it.androcalcio.engine.Conoscenza
+import it.androcalcio.engine.Fisio
 import it.androcalcio.engine.VivaioClub
 import it.androcalcio.engine.Mentori
 import it.androcalcio.engine.Ritmo
@@ -2592,7 +2593,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val vice = staff.firstOrNull { it.role == Staffing.ASSISTENTE }
             val st = if (vice == null) Conoscenza.Stima("Nessun allenatore in seconda", 0, null, Personalita.tipo(p).nome)
                 else Conoscenza.stima(p, "All. in seconda ${vice.name}", Conoscenza.daStaff(vice.skill)).copy(carattere = Personalita.tipo(p).nome)
-            d.copy(stima = st, parereRosa = if (vice == null) "" else Conoscenza.ruoloInRosa(p, rosa, st.forbice), mio = true)
+            d.copy(stima = st, parereRosa = if (vice == null) "" else Conoscenza.ruoloInRosa(p, rosa, st.forbice), mio = true,
+                testFisio = Fisio.testo(dao.stato(Fisio.chiaveTest(p.id))))
         } else {
             val obs = dao.report(me.id, p.id)?.observations ?: 0
             val c = Conoscenza.daScout(obs, me.scoutSkill)
@@ -2743,6 +2745,60 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
      * Missione mirata nel vivaio di un solo club (metà prezzo): lo scout osserva i 3 ragazzi più interessanti
      * e manda il rapporto nella posta, con le stime già dentro il messaggio (come in FM27).
      */
+    /** Esiti dei test fisici e giocatori già operati in questa stagione (per la scheda Fisioterapisti). */
+    data class FisioStato(val test: Map<Long, String> = emptyMap(), val operati: Set<Long> = emptySet())
+    private val _fisio = MutableStateFlow(FisioStato())
+    val fisio: StateFlow<FisioStato> = _fisio
+
+    fun caricaFisio() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val rosa = dao.playersOnce(me.id)
+            _fisio.value = FisioStato(
+                rosa.mapNotNull { p -> Fisio.testo(dao.stato(Fisio.chiaveTest(p.id)))?.let { p.id to it } }.toMap(),
+                rosa.filter { dao.stato(Fisio.chiaveOperato(it.id)) == _season.value }.map { it.id }.toSet())
+        }
+    }
+
+    private suspend fun fisioSkill(spec: String): Int =
+        dao.staffOnce(selectedTeam.value?.id ?: 0).firstOrNull { it.role == Staffing.FISIOTERAPISTA && it.specialita == spec }?.skill ?: Staffing.NEUTRAL
+
+    /** Test a pagamento sulla propensione agli infortuni: più bravo il fisio della prevenzione, più preciso. */
+    fun testFisio(p: Player) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = dao.team(selectedTeam.value?.id ?: return@launch)
+            val sk = fisioSkill(Staffing.PREVENZIONE)
+            val cost = Fisio.costoTest(sk)
+            if (cost > me.budget) { _notice.value = "Budget insufficiente (servono ${money(cost)})."; return@launch }
+            val esito = Fisio.esegui(p, sk, kotlin.random.Random.Default)
+            dao.setStato(Stato(Fisio.chiaveTest(p.id), esito))
+            dao.updateTeam(me.copy(budget = me.budget - cost))
+            registra(me.id, "Test fisico ${p.name}", -cost, me.budget - cost)
+            _notice.value = "${p.name}: ${Fisio.testo(esito)} (${money(cost)})."
+            caricaFisio()
+        }
+    }
+
+    /** Operazione: costa, accorcia lo stop secondo il fisio del recupero, ma può esserci una ricaduta. Una per stagione. */
+    fun operaGiocatore(p: Player) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = dao.team(selectedTeam.value?.id ?: return@launch)
+            val fresco = dao.playerById(p.id) ?: return@launch
+            if (fresco.injuredRounds < 2 || dao.stato(Fisio.chiaveOperato(p.id)) == _season.value) return@launch
+            val sk = fisioSkill(Staffing.RECUPERO)
+            val cost = Fisio.costoOperazione(fresco, fresco.injuredRounds)
+            if (cost > me.budget) { _notice.value = "Budget insufficiente (servono ${money(cost)})."; return@launch }
+            val (turni, ricaduta) = Fisio.opera(fresco.injuredRounds, sk, kotlin.random.Random.Default)
+            dao.updatePlayers(listOf(fresco.copy(injuredRounds = turni)))
+            dao.setStato(Stato(Fisio.chiaveOperato(p.id), _season.value))
+            dao.updateTeam(me.copy(budget = me.budget - cost))
+            registra(me.id, "Operazione ${p.name}", -cost, me.budget - cost)
+            _notice.value = if (ricaduta) "${p.name}: complicazioni, ricaduta. Stop di $turni turni."
+                else "${p.name} operato: rientra tra $turni turni invece di ${fresco.injuredRounds}."
+            caricaFisio()
+        }
+    }
+
     fun sendScoutVivaio(clubId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             val me = selectedTeam.value ?: return@launch

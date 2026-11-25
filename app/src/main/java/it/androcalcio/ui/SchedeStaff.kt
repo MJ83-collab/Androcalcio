@@ -22,6 +22,7 @@ import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Player
 import it.androcalcio.data.Staff
 import it.androcalcio.engine.CalendarioGiorni
+import it.androcalcio.engine.Fisio
 import it.androcalcio.engine.Migliorie
 import it.androcalcio.engine.PreparatoreCapo
 import it.androcalcio.engine.Staffing
@@ -29,6 +30,7 @@ import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.RuoloChip
 import it.androcalcio.ui.components.PcButton
 import it.androcalcio.ui.components.SectionTitle
+import it.androcalcio.ui.components.money
 import it.androcalcio.ui.components.Stelle
 import it.androcalcio.ui.theme.AC
 
@@ -120,13 +122,57 @@ fun SchedaPreparatori(staff: List<Staff>, rosa: List<Player>, giorno: Androcalci
 
 /** Fisioterapisti: infortunati con i turni di stop e giocatori a rischio per stanchezza. */
 @Composable
-fun SchedaFisio(staff: List<Staff>, rosa: List<Player>, onStaff: () -> Unit) {
+fun SchedaFisio(
+    staff: List<Staff>, rosa: List<Player>, onStaff: () -> Unit,
+    fisio: AndrocalcioViewModel.FisioStato = AndrocalcioViewModel.FisioStato(),
+    onTest: (Player) -> Unit = {}, onOpera: (Player) -> Unit = {}
+) {
+    fun sk(spec: String) = staff.firstOrNull { it.role == Staffing.FISIOTERAPISTA && it.specialita == spec }?.skill ?: Staffing.NEUTRAL
+    val rec = sk(Staffing.RECUPERO); val prv = sk(Staffing.PREVENZIONE)
     Pagina {
         CapoRuolo("Fisioterapisti", staff.firstOrNull { it.role == Staffing.FISIOTERAPISTA }, onStaff)
         val infortunati = rosa.filter { it.injuredRounds > 0 }.sortedByDescending { it.injuredRounds }
         SectionTitle("Infermeria (${infortunati.size})")
         if (infortunati.isEmpty()) Text("Nessun infortunato.", color = AC.TextDim, fontSize = 12.sp)
-        infortunati.forEach { Text("${it.name}: ancora ${it.injuredRounds} turni di stop", color = AC.Text, fontSize = 13.sp) }
+        if (infortunati.isNotEmpty()) PaperPanel(Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                infortunati.forEach { p ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RuoloChip(p.role, p.pos)
+                        Text(" ${p.name}", color = AC.PaperText, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text("✚ ${p.injuredRounds} turni", color = AC.ColEn, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    when {
+                        p.id in fisio.operati -> Text("Già operato in questa stagione.", color = AC.PaperDim, fontSize = 11.sp)
+                        p.injuredRounds < 2 -> Text("Stop breve: operazione non utile.", color = AC.PaperDim, fontSize = 11.sp)
+                        else -> {
+                            val salva = Fisio.turniRisparmiati(p.injuredRounds, rec)
+                            Text("Operazione: ${money(Fisio.costoOperazione(p, p.injuredRounds))} · −$salva turni · ricaduta ${Fisio.rischioRicaduta(rec)}%",
+                                color = AC.PaperText, fontSize = 11.sp)
+                            PcButton("OPERA", { onOpera(p) }, compatto = true)
+                        }
+                    }
+                }
+            }
+        }
+        SectionTitle("Test di propensione agli infortuni")
+        Text("Costo ${money(Fisio.costoTest(prv))} a giocatore · precisione ±${Fisio.errore(prv)} (dipende dal fisio della prevenzione).",
+            color = AC.TextDim, fontSize = 11.sp)
+        PaperPanel(Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                rosa.sortedBy { it.name }.forEach { p ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RuoloChip(p.role, p.pos)
+                        Text(" ${p.name}", color = AC.PaperText, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        val t = fisio.test[p.id]
+                        if (t != null) Text(t, color = when {
+                            t.contains("ALTA") -> AC.ColEn; t.contains("MEDIA") -> AC.PaperText; else -> AC.Ok
+                        }, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        else PcButton("TEST", { onTest(p) }, compatto = true)
+                    }
+                }
+            }
+        }
         val rischio = rosa.filter { it.injuredRounds == 0 && it.condition < 60 }
         SectionTitle("A rischio per stanchezza (${rischio.size})")
         rischio.forEach { Text("${it.name}: forma ${it.condition}", color = AC.Text, fontSize = 13.sp) }

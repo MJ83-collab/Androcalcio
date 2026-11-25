@@ -16,5 +16,6 @@ data class DettaglioGiocatore(
     val stima: it.androcalcio.engine.Conoscenza.Stima? = null,   // potenziale stimato da chi lo conosce
     val parereRosa: String = "",                                  // parere del vice per la prima squadra (solo i tuoi)
     val affinita: Pair<String, String>? = null,                   // affinità di carattere con la tua squadra
-    val mio: Boolean = false
+    val mio: Boolean = false,
+    val testFisio: String? = null                                 // esito del test del fisioterapista, se fatto
 )
