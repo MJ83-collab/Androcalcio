@@ -29,11 +29,12 @@ object Giovanili {
         return List(n) { i ->
             val eta = rng.nextInt(etaMin, etaMax + 1)
             val pot = (52 + q / 2 + vivaio + bonusVivaio + rng.nextInt(-8, 25)).coerceIn(45, 95)
+            val nazY = if (rng.nextInt(100) < 85) nat else SeedData.codes.keys.random(rng)
             Youth(
                 teamId = team.id, season = season,
-                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " + SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                name = Nomi.genera(rng, nazY),
                 role = ruoli[i % ruoli.size], age = eta, overall = overallAllEta(pot, eta, rng), potential = pot,
-                nationality = if (rng.nextInt(100) < 85) nat else SeedData.codes.keys.random(rng)
+                nationality = nazY
             )
         }
     }

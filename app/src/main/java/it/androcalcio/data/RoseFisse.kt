@@ -1,5 +1,6 @@
 package it.androcalcio.data
 
+import it.androcalcio.engine.Nomi
 import it.androcalcio.engine.Attr
 import it.androcalcio.engine.Market
 import it.androcalcio.engine.Talenti
@@ -144,7 +145,8 @@ object RoseFisse {
                     }
                 }
                 ov = ov.coerceIn(40, 91)
-                val nome = "${initials[rng.nextInt(initials.length)]}. ${surnames[rng.nextInt(surnames.size)]}"
+                val nazG = if (rng.nextInt(100) < 75) nat else codes.keys.random(rng)
+                val nome = Nomi.genera(rng, nazG)
                 val giocatore = Attr.fill(Player(
                     teamId = 0L,
                     name = nome,
@@ -153,7 +155,7 @@ object RoseFisse {
                     overall = ov,
                     morale = rng.nextInt(50, 91),
                     salary = Market.wageAt(ov, age),
-                    nationality = if (rng.nextInt(100) < 75) nat else codes.keys.random(rng),
+                    nationality = nazG,
                     potential = pot.coerceIn(ov, 99),
                     contract = rng.nextInt(1, 5)
                 ), rng)
@@ -173,7 +175,7 @@ object RoseFisse {
         val rngSvincolati = Random(SEME_SVINCOLATI)
         repeat(40) { i ->
             val ovr = rngSvincolati.nextInt(55, 80)
-            val nome = "${initials[rngSvincolati.nextInt(initials.length)]}. ${surnames[rngSvincolati.nextInt(surnames.size)]}"
+            val nome = Nomi.genera(rngSvincolati, "Italia")
             val giocatore = Player(
                 teamId = 0L,
                 name = nome,

@@ -1017,7 +1017,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val prezzi = Abbonamenti.decode(dao.stato("prezzi"))
         _extra.value = ExtraStato(
             psicologo = dao.statoInt("psicologo"), marketing = dao.statoInt("marketing"),
-            domanda = Relazioni.domanda(g), conferenzaFatta = dao.stato("conf_g")?.toIntOrNull() == g,
+            domanda = Relazioni.domandaDelGiorno(contestoStampa(t), g), conferenzaFatta = dao.stato("conf_g")?.toIntOrNull() == g,
             colloquiFatti = rosa.filter { dao.stato("col_${it.id}")?.toIntOrNull() == g }.map { it.id }.toSet(),
             obiettivo = Obiettivi.decode(dao.stato("obiettivo")), posizioneAttesa = dao.statoInt("obiettivo_pos"),
             prezzi = prezzi,
@@ -1172,18 +1172,61 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Fatti del momento per la conferenza stampa: niente domande su partite che non hai giocato. */
+    private suspend fun contestoStampa(t: Team): Relazioni.Contesto {
+        val s = _season.value
+        val ms = dao.matchesOnce(key(t), s)
+        val mie = ms.filter { it.homeTeamId == t.id || it.awayTeamId == t.id }
+        val ultima = mie.filter { it.played }.maxByOrNull { it.round }
+        val prossima = mie.filter { !it.played }.minByOrNull { it.round }
+        val rosa = dao.playersOnce(t.id)
+        val forzaMia = rosa.filter { it.injuredRounds == 0 }.sortedByDescending { it.overall }.take(11).map { it.overall }.ifEmpty { listOf(60) }.average().toInt()
+        val nomeAvv: suspend (MatchResult) -> String = { m -> dao.team(if (m.homeTeamId == t.id) m.awayTeamId else m.homeTeamId).name }
+        val voti = if (ultima == null) emptyList() else rosa.mapNotNull { p ->
+            dao.stato(Forma.key(p.id)).orEmpty().split(",").mapNotNull { it.toIntOrNull() }.lastOrNull()?.let { p to it / 10.0 }
+        }
+        val lega = ms.filter { !Cup.isCup(it.round) }
+        val squadre = dao.teamsOfLeague(t.nazione, t.campionato)
+        val pos = if (lega.any { it.played }) standings(squadre, lega).indexOfFirst { it.team.id == t.id }.takeIf { it >= 0 }?.plus(1) else null
+        val giovane = dao.youthsOnce(t.id).filter { it.season == s }.maxByOrNull { it.overall + it.potential / 2 }?.name
+        val avvId = prossima?.let { if (it.homeTeamId == t.id) it.awayTeamId else it.homeTeamId }
+        return Relazioni.Contesto(
+            squadra = t.name,
+            ultima = ultima?.let { m ->
+                val casa = m.homeTeamId == t.id
+                Triple(nomeAvv(m), if (casa) m.homeGoals else m.awayGoals, if (casa) m.awayGoals else m.homeGoals)
+            },
+            prossimo = prossima?.let { nomeAvv(it) },
+            divario = if (avvId == null) 0 else dao.playersOnce(avvId).filter { it.injuredRounds == 0 }.sortedByDescending { it.overall }
+                .take(11).map { it.overall }.ifEmpty { listOf(60) }.average().toInt() - forzaMia,
+            migliore = voti.maxByOrNull { it.second }, peggiore = voti.minByOrNull { it.second },
+            giovane = giovane, posizione = pos, squadre = squadre.size,
+            attesa = dao.statoInt("obiettivo_pos").takeIf { it > 0 },
+            finestraAperta = Finestre.stato(prossima?.round ?: 1, lega.maxOfOrNull { it.round } ?: 38).aperta,
+            infortunati = rosa.filter { it.injuredRounds > 0 }.map { it.name },
+            moraleMedio = rosa.map { it.morale }.ifEmpty { listOf(70) }.average().toInt()
+        )
+    }
+
     fun rispondiConferenza(i: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val g = dao.statoInt(MK.GIORNATA)
             if (dao.stato("conf_g")?.toIntOrNull() == g) { _notice.value = "Hai già parlato alla stampa in questa giornata."; return@launch }
-            val r = Relazioni.domanda(g).risposte.getOrNull(i) ?: return@launch
             val me = selectedTeam.value ?: return@launch
+            val d = Relazioni.domandaDelGiorno(contestoStampa(dao.team(me.id)), g)
+            val r = d.risposte.getOrNull(i) ?: return@launch
             dao.setStato(Stato("conf_g", g.toString()))
             dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + r.tifosi)
             dao.setStatoInt(StatoKeys.FIDUCIA, dao.statoInt(StatoKeys.FIDUCIA) + r.fiducia)
-            if (r.morale != 0) dao.updatePlayers(dao.playersOnce(me.id).map { it.copy(morale = (it.morale + r.morale).coerceIn(0, 100)) })
+            if (r.morale != 0 || (r.singolo != 0 && d.playerId != null))
+                dao.updatePlayers(dao.playersOnce(me.id).map {
+                    val extra = if (it.id == d.playerId) r.singolo else 0
+                    it.copy(morale = (it.morale + r.morale + extra).coerceIn(0, 100))
+                })
             inc("c_conferenze")
-            _notice.value = "Conferenza stampa: morale ${segno(r.morale)}, tifosi ${segno(r.tifosi)}, dirigenza ${segno(r.fiducia)}."
+            val chi = d.playerId?.let { id -> dao.playerById(id)?.name }
+            _notice.value = "Conferenza stampa: morale ${segno(r.morale)}, tifosi ${segno(r.tifosi)}, dirigenza ${segno(r.fiducia)}" +
+                (if (chi != null && r.singolo != 0) ", $chi ${segno(r.singolo)}." else ".")
             aggiornaTrofei(); caricaExtra(); refreshClub()
         }
     }
@@ -2816,6 +2859,25 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun saveTeam(t: Team) { viewModelScope.launch { dao.updateTeam(t) } }
     fun savePlayer(p: Player) { viewModelScope.launch { dao.updatePlayer(p) } }
     /** Ruolo in cui il giocatore scende in campo (uno dei tre ruoli: naturale o affine). */
+    /**
+     * Tattica: mette [entra] al posto di [esce] nello stesso ruolo. L'undici attuale diventa la scelta esplicita
+     * (titolari = undici mostrato, meno chi esce, più chi entra).
+     */
+    fun scambiaTitolare(undici: List<Long>, esce: Player, entra: Player) {
+        viewModelScope.launch {
+            val ruolo = TacticalRoles.assigned(esce)
+            val tit = (undici.toSet() - esce.id) + entra.id
+            val rosa = dao.playersOnce(esce.teamId)
+            dao.updatePlayers(rosa.map { p ->
+                when (p.id) {
+                    entra.id -> p.copy(starter = true, ruoloPartita = if (p.pos == ruolo) "" else ruolo, compito = "")
+                    else -> p.copy(starter = p.id in tit)
+                }
+            })
+            _notice.value = "${entra.name} entra al posto di ${esce.name} come ${TacticalRoles.label(ruolo)}."
+        }
+    }
+
     fun setRuoloPartita(p: Player, ruolo: String) { viewModelScope.launch { dao.updatePlayer(p.copy(ruoloPartita = ruolo, compito = "")) } }
     /** Compito di ruolo scelto per il giocatore nel ruolo in cui gioca ("" = nessuno). */
     fun setCompito(p: Player, codice: String) { viewModelScope.launch { dao.updatePlayer(p.copy(compito = codice)) } }

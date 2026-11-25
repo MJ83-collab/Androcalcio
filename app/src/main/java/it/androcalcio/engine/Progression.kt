@@ -44,8 +44,7 @@ object Progression {
         val ov = rng.nextInt(38, 56)
         return Attr.fill(Player(
             teamId = t.id,
-            name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+            name = Nomi.genera(rng, t.nazione.ifEmpty { "Italia" }),
             role = ruolo ?: if (forceGoalkeeper) "P" else listOf("D", "C", "A", "D", "C").random(rng),
             age = rng.nextInt(17, 20), overall = ov, morale = 70, salary = 30_000,
             nationality = t.nazione.ifEmpty { "Italia" },

@@ -52,8 +52,7 @@ object Annunci {
             val sk = (rng.nextInt(30, 56) + (fascino * 0.45).toInt() + rng.nextInt(-6, 7)).coerceIn(30, 92)
             lista += Staff(
                 teamId = 0, role = a.role, specialita = a.specialita,
-                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                    SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                name = Nomi.genera(rng),
                 skill = sk, salary = Staffing.wage(sk, scala), contract = rng.nextInt(1, 4),
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )

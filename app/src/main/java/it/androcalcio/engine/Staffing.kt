@@ -142,8 +142,7 @@ object Staffing {
             val sk = (avgOverall - 25 + rng.nextInt(-10, 11)).toInt().coerceIn(30, 90)
             Staff(
                 teamId = teamId, role = posto.role, specialita = posto.specialita,
-                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                    SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                name = Nomi.genera(rng),
                 skill = sk, salary = wage(sk, scalaCategoria(avgOverall)), contract = rng.nextInt(1, 5),
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
@@ -155,8 +154,7 @@ object Staffing {
             val sk = rng.nextInt(35, 91)
             Staff(
                 teamId = 0, role = posto.role, specialita = posto.specialita,
-                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                    SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                name = Nomi.genera(rng),
                 skill = sk, salary = wage(sk, scala), contract = rng.nextInt(1, 5),
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
@@ -168,8 +166,7 @@ object Staffing {
         val sk = rng.nextInt(35, 91)
         Staff(
             teamId = 0, role = SCOUT, specialita = "",
-            name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+            name = Nomi.genera(rng),
             skill = sk, salary = wage(sk, scala), contract = rng.nextInt(1, 5),
             stile = Stile.values()[rng.nextInt(Stile.values().size)].name
         )

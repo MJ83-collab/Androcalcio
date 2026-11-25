@@ -81,11 +81,13 @@ fun RelazioniScreen(
                 val d = ex.domanda
                 if (d == null) Text("Nessuna domanda per ora.", color = AC.TextDim)
                 else {
+                    if (d.testata.isNotEmpty()) Text("🎙 ${d.testata}" + if (d.perche.isNotEmpty()) " · ${d.perche}" else "", color = AC.TextDim, fontSize = 11.sp)
                     Text(d.testo, color = AC.Text, fontWeight = FontWeight.Bold)
                     if (ex.conferenzaFatta) Text("Hai già parlato alla stampa in questa giornata.", color = AC.TextDim, fontSize = 12.sp)
                     else d.risposte.forEachIndexed { i, r ->
                         Text("“${r.testo}”", color = AC.Text, fontSize = 13.sp)
-                        Text("morale ${segnato(r.morale)} · tifosi ${segnato(r.tifosi)} · dirigenza ${segnato(r.fiducia)}",
+                        Text("morale ${segnato(r.morale)} · tifosi ${segnato(r.tifosi)} · dirigenza ${segnato(r.fiducia)}" +
+                            (if (d.playerId != null && r.singolo != 0) " · solo lui ${segnato(r.singolo)}" else ""),
                             color = AC.TextDim, fontSize = 11.sp)
                         PcButton("Rispondi così", { onRisposta(i) }, Modifier.fillMaxWidth(), compatto = true)
                     }

@@ -125,7 +125,8 @@ fun TatticaFmScreen(
     onRoleConPalla: (Player, String) -> Unit,
     onRoleSenzaPalla: (Player, String) -> Unit,
     onCompito: (Player, String) -> Unit,
-    onIstr: (Player, IstrGiocatore) -> Unit = { _, _ -> }
+    onIstr: (Player, IstrGiocatore) -> Unit = { _, _ -> },
+    onScambia: (List<Long>, Player, Player) -> Unit = { _, _, _ -> }
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi, formation)
     var tab by remember { mutableStateOf(0) }
@@ -140,7 +141,9 @@ fun TatticaFmScreen(
             DialogRuolo(
                 p, piano, if (fase == FaseVista.SENZA) 1 else 0,
                 onChiudi = { giocatoreId = null },
-                onRoleConPalla = onRoleConPalla, onRoleSenzaPalla = onRoleSenzaPalla, onCompito = onCompito, onIstr = onIstr
+                onRoleConPalla = onRoleConPalla, onRoleSenzaPalla = onRoleSenzaPalla, onCompito = onCompito, onIstr = onIstr,
+                alternative = players.filter { q -> q.id != p.id && q.injuredRounds == 0 && xi.none { it.id == q.id } },
+                onScambia = { entra -> onScambia(xi.map { it.id }, p, entra); giocatoreId = null }
             )
         }
     }
@@ -418,7 +421,9 @@ private fun DialogRuolo(
     onRoleConPalla: (Player, String) -> Unit,
     onRoleSenzaPalla: (Player, String) -> Unit,
     onCompito: (Player, String) -> Unit,
-    onIstr: (Player, IstrGiocatore) -> Unit
+    onIstr: (Player, IstrGiocatore) -> Unit,
+    alternative: List<Player> = emptyList(),
+    onScambia: (Player) -> Unit = {}
 ) {
     var fase by remember { mutableStateOf(faseIniziale) }
     val conPalla = TacticalRoles.assigned(p)
@@ -436,6 +441,29 @@ private fun DialogRuolo(
         ) {
             Text(p.name, color = Fm.Testo, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
             Text("${TacticalRoles.label(p.pos)} naturale · età ${p.age} · media ${p.overall}", color = Fm.Dim, fontSize = 12.sp)
+            // Alternative dalla rosa per questo posto, ordinate per stelle nel ruolo (come in FM)
+            val compatibili = alternative.map { it to mezzeStelle(it, conPalla) }
+                .filter { (q, m) -> m >= 4 || q.role == p.role }.sortedByDescending { it.second }.take(6)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Fm.Carta).border(1.dp, Fm.Bordo, RoundedCornerShape(8.dp)).padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("ALTERNATIVE COME ${TacticalRoles.label(conPalla).uppercase()} (tocca per farlo entrare)", color = Fm.Dim, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                if (compatibili.isEmpty()) Text("Nessun altro giocatore disponibile adatto a questo ruolo.", color = Fm.Dim, fontSize = 12.sp)
+                Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Ora: ${p.name}", Modifier.weight(1f), color = Fm.Testo, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Stelle(mezzeStelle(p, conPalla), 12.sp, Fm.Oro)
+                }
+                compatibili.forEach { (q, m) ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (m > mezzeStelle(p, conPalla)) Fm.Verde.copy(alpha = 0.18f) else Fm.CartaAlta)
+                        .clickable { onScambia(q) }.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(q.name, color = Fm.Testo, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("${TacticalRoles.label(q.pos.ifEmpty { q.role })} · media ${q.overall} · forma ${q.condition}%", color = Fm.Dim, fontSize = 11.sp)
+                        }
+                        Stelle(m, 12.sp, Fm.Oro)
+                        Text(" ⇄", color = Fm.Verde, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Scheda("Ruolo con la palla", fase == 0, Modifier.weight(1f)) { fase = 0 }
                 Scheda("Ruolo senza palla", fase == 1, Modifier.weight(1f)) { fase = 1 }

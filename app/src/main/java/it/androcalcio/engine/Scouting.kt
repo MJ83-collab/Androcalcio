@@ -41,12 +41,12 @@ object Youths {
             val vivaio = (team.youthCoachSkill - Staffing.NEUTRAL) / 10
             val pot = (52 + q / 2 + vivaio + bonusVivaio + rng.nextInt(-8, 25)).coerceIn(45, 95)
             val ov = (pot - rng.nextInt(15, 36)).coerceIn(30, 80)
+            val nazY = if (rng.nextInt(100) < 85) nat else SeedData.codes.keys.random(rng)
             Youth(
                 teamId = team.id, season = season,
-                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                    SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                name = Nomi.genera(rng, nazY),
                 role = role, age = rng.nextInt(15, 19), overall = ov, potential = pot,
-                nationality = if (rng.nextInt(100) < 85) nat else SeedData.codes.keys.random(rng)
+                nationality = nazY
             )
         }
     }
@@ -92,16 +92,16 @@ object Missioni {
         return List(n) {
             val ovr = (rng.nextInt(a.min, a.max + 1) + (skill - 50) / 10).coerceIn(40, 90)
             val pot = if (a.giovani) (rng.nextInt(72, 90) + (skill - 50) / 8).coerceIn(65, 96) else (ovr + rng.nextInt(0, 9)).coerceAtMost(95)
+            val nazA = a.nazioni[rng.nextInt(a.nazioni.size)]
             Player(
                 teamId = Market.SVINCOLATO_ID,
-                name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                    SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
+                name = Nomi.genera(rng, nazA),
                 role = listOf("P", "D", "C", "A")[rng.nextInt(4)],
                 age = if (a.giovani) rng.nextInt(16, 21) else rng.nextInt(18, 32),
                 overall = ovr,
                 morale = 60,
                 salary = 0L,
-                nationality = a.nazioni[rng.nextInt(a.nazioni.size)],
+                nationality = nazA,
                 potential = pot,
                 contract = 1
             )
@@ -126,8 +126,7 @@ object Talenti {
     /** Ogni stagione: n talenti in club a caso, di cui il nome resta da scoprire. */
     fun genera(squadre: List<Team>, rng: Random, n: Int = 3): List<Player> =
         squadre.shuffled(rng).take(n).map { t ->
-            nuovo(t.id, "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
-                SeedData.surnames[rng.nextInt(SeedData.surnames.size)], rng)
+            nuovo(t.id, Nomi.genera(rng, t.nazione.ifEmpty { "Italia" }), rng)
         }
 }
 

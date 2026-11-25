@@ -612,7 +612,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                                     vm.schemaPiazzati.collectAsStateWithLifecycle().value, { vm.setSchemaPiazzati(it) },
                                     vm.trappola.collectAsStateWithLifecycle().value, { vm.setTrappola(it) },
                                     { p, r -> vm.setRuoloPartita(p, r) }, { p, r -> vm.setRuoloSenzaPalla(p, r) }, { p, c -> vm.setCompito(p, c) },
-                                    { p, i -> vm.setIstrGiocatore(p, i) }
+                                    { p, i -> vm.setIstrGiocatore(p, i) },
+                                    { xiIds, esce, entra -> vm.scambiaTitolare(xiIds, esce, entra) }
                                 )
                             } else {
                                 TatticaScreen(players, modulo, { vm.setFormation(it) }, { vm.coachLineup() },

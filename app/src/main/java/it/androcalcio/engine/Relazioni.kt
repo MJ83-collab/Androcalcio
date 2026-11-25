@@ -6,8 +6,108 @@ import kotlin.random.Random
 /** Conferenze stampa, colloqui individuali e psicologo: tutto ciò che muove morale, tifosi e fiducia a parole. */
 object Relazioni {
 
-    data class Risposta(val testo: String, val morale: Int, val tifosi: Int, val fiducia: Int)
-    data class Domanda(val id: Int, val testo: String, val risposte: List<Risposta>)
+    /** [singolo] = morale in più o in meno al solo giocatore della domanda (se c'è). */
+    data class Risposta(val testo: String, val morale: Int, val tifosi: Int, val fiducia: Int, val singolo: Int = 0)
+    data class Domanda(val id: Int, val testo: String, val risposte: List<Risposta>,
+                       val playerId: Long? = null, val testata: String = "", val perche: String = "")
+
+    /** Quello che sa la stampa oggi: serve a fare domande vere, mai su partite che non hai giocato. */
+    data class Contesto(
+        val squadra: String,
+        val ultima: Triple<String, Int, Int>? = null,   // avversario, gol fatti, gol subiti (null = nessuna partita giocata)
+        val prossimo: String? = null,
+        val divario: Int = 0,                           // forza avversario − nostra (punti media)
+        val migliore: Pair<Player, Double>? = null,     // miglior voto dell'ultima partita
+        val peggiore: Pair<Player, Double>? = null,     // peggior voto dell'ultima partita
+        val giovane: String? = null,                    // giovane del vivaio più promettente
+        val posizione: Int? = null, val squadre: Int = 20, val attesa: Int? = null,
+        val finestraAperta: Boolean = false,
+        val infortunati: List<String> = emptyList(),
+        val moraleMedio: Int = 70
+    )
+
+    private val TESTATE = listOf("Gazzetta del Pallone", "Corriere della Panchina", "Tuttocalcio Express", "Radio Spogliatoio",
+        "Il Fuorigioco Quotidiano", "SportClick 24", "Calcio & Clic", "Il Tifoso Digitale")
+
+    /**
+     * Domanda del giorno costruita sui fatti: risultato vero dell'ultima partita, nomi veri dei giocatori,
+     * prossimo avversario, classifica, mercato, infermeria. Le domande generiche restano solo come riserva.
+     */
+    fun domandaDelGiorno(c: Contesto, seme: Int): Domanda {
+        val pool = mutableListOf<Domanda>()
+        val testata = TESTATE[Math.floorMod(seme * 7, TESTATE.size)]
+        c.ultima?.let { (avv, gf, gs) ->
+            val esito = when { gf > gs -> "la vittoria"; gf < gs -> "la sconfitta"; else -> "il pareggio" }
+            pool += Domanda(100, "Dopo $esito $gf-$gs contro $avv: che giudizio dà alla squadra?", when {
+                gf > gs -> listOf(Risposta("Grande prova, ma restiamo con i piedi per terra.", 2, 1, 1),
+                    Risposta("Bene, però abbiamo concesso troppo.", 0, 0, 2),
+                    Risposta("Siamo i più forti, lo sanno tutti.", 1, 3, -2))
+                gf < gs -> listOf(Risposta("La colpa è mia, non dei ragazzi.", 2, 0, -1),
+                    Risposta("Così non va: voglio una reazione subito.", -2, 1, 2),
+                    Risposta("L'arbitro ha deciso la partita.", 1, 2, -2))
+                else -> listOf(Risposta("Un punto che fa morale.", 1, 0, 0),
+                    Risposta("Potevamo vincerla, peccato.", 0, 1, 1),
+                    Risposta("Pareggio giusto, nient'altro da dire.", 0, -1, 0))
+            }, testata = testata, perche = "Ultima partita: $gf-$gs contro $avv")
+            c.peggiore?.takeIf { it.second < 5.8 }?.let { (p, v) ->
+                pool += Domanda(101, "${p.name} ha preso ${"%.1f".format(v)} in pagella ed è finito nel mirino dei social. Lo difende?", listOf(
+                    Risposta("Lo difendo: è un professionista serio.", 0, 0, 0, 6),
+                    Risposta("Le critiche fanno crescere, deve reagire.", 0, 0, 1, -1),
+                    Risposta("Ha sbagliato e lo sa.", 0, 1, 0, -6)),
+                    playerId = p.id, testata = testata, perche = "Voto basso nell'ultima partita")
+            }
+            c.migliore?.takeIf { it.second >= 7.0 }?.let { (p, v) ->
+                pool += Domanda(102, "${p.name} è stato il migliore (${"%.1f".format(v)}). Si parla già di grandi club interessati: lo blinda?", listOf(
+                    Risposta("Resta qui, è il cuore di questa squadra.", 0, 2, -1, 5),
+                    Risposta("Deve pensare solo a lavorare.", 0, 0, 1, -1),
+                    Risposta("Il mercato non lo commento.", 0, -1, 1, 0)),
+                    playerId = p.id, testata = testata, perche = "Miglior voto nell'ultima partita")
+            }
+        }
+        c.prossimo?.let { avv ->
+            pool += if (c.divario >= 4) Domanda(103, "Arriva il $avv, sulla carta più forte di voi. Teme la sfida?", listOf(
+                Risposta("Nessun timore: ce la giochiamo.", 2, 2, -1),
+                Risposta("Rispetto per loro, ma abbiamo i nostri punti di forza.", 1, 1, 1),
+                Risposta("Siamo sfavoriti, inutile negarlo.", -2, -1, 1)), testata = testata, perche = "Prossimo avversario più forte")
+            else if (c.divario <= -4) Domanda(104, "Contro il $avv siete favoriti. Rischio di sottovalutarli?", listOf(
+                Risposta("Nessuna partita è facile, massima concentrazione.", 1, 0, 2),
+                Risposta("Dobbiamo vincere e basta.", 0, 2, 0),
+                Risposta("Faremo turnover per far rifiatare qualcuno.", 1, -1, 0)), testata = testata, perche = "Prossimo avversario più debole")
+            else Domanda(105, "Sfida equilibrata con il $avv. Cambierà qualcosa?", listOf(
+                Risposta("Squadra che vince non si cambia.", 1, 0, 1),
+                Risposta("Ho in mente qualche sorpresa.", 1, 1, 0),
+                Risposta("Lo vedrete in campo.", 0, -1, 0)), testata = testata, perche = "Prossimo avversario alla pari")
+        }
+        if (c.posizione != null && c.attesa != null) {
+            pool += if (c.posizione > c.attesa + 3) Domanda(106, "Siete ${c.posizione}° ma la società si aspettava di più. Si sente in discussione?", listOf(
+                Risposta("Ho la fiducia della società, ne usciremo.", 1, 0, 1),
+                Risposta("Giudicatemi a fine stagione.", 0, -1, 0),
+                Risposta("Con questa rosa non si può fare miracoli.", -2, 1, -3)), testata = testata, perche = "Classifica sotto le attese")
+            else if (c.posizione < c.attesa - 2) Domanda(107, "Siete ${c.posizione}°, oltre le attese. Si può sognare?", listOf(
+                Risposta("Sognare è gratis: ci proviamo.", 2, 3, -1),
+                Risposta("Testa bassa, l'obiettivo resta quello.", 1, 0, 2),
+                Risposta("È presto per i bilanci.", 0, 0, 1)), testata = testata, perche = "Classifica sopra le attese")
+            else Domanda(108, "Classifica in linea con le attese (${c.posizione}°). Soddisfatto?", listOf(
+                Risposta("Sì, ma voglio di più.", 1, 1, 1),
+                Risposta("Stiamo lavorando bene.", 1, 0, 1),
+                Risposta("Mai soddisfatto.", 0, 1, 0)), testata = testata, perche = "Classifica in linea")
+        }
+        if (c.finestraAperta) pool += DOMANDE[1].copy(testo = "Mercato aperto: i tifosi chiedono rinforzi. Arriverà qualcuno?", testata = testata, perche = "Finestra di mercato aperta")
+        if (c.infortunati.size >= 3) pool += Domanda(109, "Infermeria piena (${c.infortunati.take(3).joinToString(", ")}…): colpa della preparazione?", listOf(
+            Risposta("Il mio staff è il migliore, è solo sfortuna.", 1, 0, 0),
+            Risposta("Faremo verifiche sui carichi di lavoro.", 0, 0, 2),
+            Risposta("Giochiamo troppo, il calendario è assurdo.", 1, 1, -1)), testata = testata, perche = "Molti infortunati")
+        c.giovane?.let { g ->
+            pool += Domanda(110, "Dal vivaio si parla molto di $g. Lo vedremo in prima squadra?", listOf(
+                Risposta("Se continua così, avrà la sua occasione.", 1, 2, 0),
+                Risposta("È ancora presto, deve crescere.", -1, 0, 1),
+                Risposta("Il campo premia chi se lo merita.", 1, 1, 0)), testata = testata, perche = "Giovane promettente nel vivaio")
+        }
+        if (c.moraleMedio < 50) pool += DOMANDE[2].copy(testata = testata, perche = "Morale della squadra basso")
+        if (c.ultima == null) pool += DOMANDE[3].copy(testo = "Stagione al via per il ${c.squadra}: qual è l'obiettivo?", testata = testata, perche = "Inizio stagione")
+        if (pool.isEmpty()) pool += DOMANDE[6].copy(testata = testata)
+        return pool[Math.floorMod(seme, pool.size)]
+    }
 
     val DOMANDE: List<Domanda> = listOf(
         Domanda(0, "Dopo l'ultima partita: come giudica la prestazione?", listOf(
