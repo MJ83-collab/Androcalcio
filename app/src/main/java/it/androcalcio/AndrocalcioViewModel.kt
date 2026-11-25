@@ -2783,7 +2783,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val t = selectedTeam.value ?: return@launch
             dao.insertPlayer(Attr.fill(Player(teamId = t.id, name = "Nuovo giocatore", role = "C", age = 22,
-                overall = 60, morale = 70, salary = 50_000, nationality = "ITA"), kotlin.random.Random))
+                overall = 60, morale = 70, salary = 50_000, nationality = t.nazione.ifEmpty { "Italia" }), kotlin.random.Random))
         }
     }
 

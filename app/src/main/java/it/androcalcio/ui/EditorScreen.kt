@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +41,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import it.androcalcio.AndrocalcioViewModel
 import it.androcalcio.data.Player
+import it.androcalcio.data.SeedData
 import it.androcalcio.data.Team
+import it.androcalcio.engine.Nazionali
+import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.components.SectionTitle
 import it.androcalcio.ui.theme.AC
@@ -59,6 +65,29 @@ private fun NumF(label: String, value: String, onChange: (String) -> Unit) {
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+/** Posizioni naturali ammesse per ruolo (P, D, C, A). */
+private val POS_PER_RUOLO = mapOf(
+    "P" to listOf("POR"), "D" to listOf("TD", "TS", "DC", "CS", "CD"),
+    "C" to listOf("MED", "REG", "INT", "MP"), "A" to listOf("ES", "CA")
+)
+private val PIEDI = listOf("D" to "Destro", "S" to "Mancino", "A" to "Ambidestro")
+
+/** Menu a tendina: il pulsante mostra la scelta attuale, [opzioni] sono coppie (codice, nome). */
+@Composable
+private fun Scelta(titolo: String, valore: String, opzioni: List<Pair<String, String>>, onScelta: (String) -> Unit) {
+    var aperto by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { aperto = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(titolo + ": " + (opzioni.firstOrNull { o -> o.first == valore }?.second ?: valore.ifEmpty { "—" }))
+        }
+        DropdownMenu(expanded = aperto, onDismissRequest = { aperto = false }) {
+            opzioni.forEach { (codice, nome) ->
+                DropdownMenuItem(text = { Text(nome) }, onClick = { onScelta(codice); aperto = false })
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -171,6 +200,21 @@ fun EditorScreen(
         var mo by remember(p) { mutableStateOf(p.morale.toString()) }
         var sal by remember(p) { mutableStateOf(p.salary.toString()) }
         var nat by remember(p) { mutableStateOf(p.nationality) }
+        var foot by remember(p) { mutableStateOf(p.foot) }
+        var pos by remember(p) { mutableStateOf(p.pos) }
+        var s2 by remember(p) { mutableStateOf(p.sec2) }
+        var a2 by remember(p) { mutableStateOf(p.aff2.toString()) }
+        var s3 by remember(p) { mutableStateOf(p.sec3) }
+        var a3 by remember(p) { mutableStateOf(p.aff3.toString()) }
+        var s4 by remember(p) { mutableStateOf(p.sec4) }
+        var a4 by remember(p) { mutableStateOf(p.aff4.toString()) }
+        val nazioni = (SeedData.codes.keys + Nazionali.EUROPA + p.nationality).toSortedSet().map { n -> n to n }
+        val ruoliOpz = listOf("" to "— nessuno —") + TacticalRoles.NAMES.filterKeys { k -> k != pos }.map { e -> e.key to e.value }
+        fun daPosizione(nuova: String) {   // ruoli affini di partenza per la posizione scelta
+            pos = nuova
+            val (r2, f2) = TacticalRoles.affine(nuova, 0); val (r3, f3) = TacticalRoles.affine(nuova, 1)
+            s2 = r2; a2 = f2.toString(); s3 = r3; a3 = f3.toString(); s4 = ""; a4 = "0"
+        }
         AlertDialog(
             onDismissRequest = { editing = null },
             title = { Text("Modifica giocatore") },
@@ -179,7 +223,22 @@ fun EditorScreen(
                     TextF("Nome", pn) { pn = it }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("P", "D", "C", "A").forEach { r ->
-                            PcChip(selected = role == r, onClick = { role = r }, label = { Text(r) })
+                            PcChip(selected = role == r, onClick = {
+                                role = r
+                                if (pos !in POS_PER_RUOLO.getValue(r)) daPosizione(POS_PER_RUOLO.getValue(r).first())
+                            }, label = { Text(r) })
+                        }
+                    }
+                    Text("Posizione preferita", style = MaterialTheme.typography.labelMedium, color = AC.TextDim)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        POS_PER_RUOLO.getValue(role).forEach { c ->
+                            PcChip(selected = pos == c, onClick = { daPosizione(c) }, label = { Text(c) })
+                        }
+                    }
+                    Text("Piede preferito", style = MaterialTheme.typography.labelMedium, color = AC.TextDim)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PIEDI.forEach { (c, nome) ->
+                            PcChip(selected = foot == c, onClick = { foot = c }, label = { Text(nome) })
                         }
                     }
                     NumF("Età", age) { age = it }
@@ -187,12 +246,25 @@ fun EditorScreen(
                     NumF("Potenziale (1-99, non sotto il valore)", pot) { pot = it }
                     NumF("Morale (0-100)", mo) { mo = it }
                     NumF("Ingaggio annuo (€)", sal) { sal = it }
-                    TextF("Nazionalità", nat) { nat = it }
+                    Scelta("Nazionale", nat, nazioni) { nat = it }
+                    Text("Ruoli affini (con l'affinità in %). Cambiando la posizione si ripartono i ruoli di default.",
+                        style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+                    Scelta("Ruolo 2", s2, ruoliOpz) { s2 = it; if (it.isEmpty()) a2 = "0" else if (a2 == "0") a2 = "50" }
+                    if (s2.isNotEmpty()) NumF("Affinità ruolo 2 (0-100)", a2) { a2 = it }
+                    Scelta("Ruolo 3", s3, ruoliOpz) { s3 = it; if (it.isEmpty()) a3 = "0" else if (a3 == "0") a3 = "50" }
+                    if (s3.isNotEmpty()) NumF("Affinità ruolo 3 (0-100)", a3) { a3 = it }
+                    Scelta("Ruolo 4", s4, ruoliOpz) { s4 = it; if (it.isEmpty()) a4 = "0" else if (a4 == "0") a4 = "50" }
+                    if (s4.isNotEmpty()) NumF("Affinità ruolo 4 (0-100)", a4) { a4 = it }
                 }
             },
             confirmButton = {
                 PcAction(onClick = {
                     val newOv = (ov.toIntOrNull() ?: p.overall).coerceIn(1, 99)
+                    // Ruoli affini: mai uguali alla posizione o tra loro; affinità 0 se il ruolo è vuoto
+                    val usati = mutableSetOf(pos)
+                    fun ruolo(r: String) = if (r.isNotEmpty() && usati.add(r)) r else ""
+                    fun aff(r: String, a: String) = if (r.isEmpty()) 0 else (a.toIntOrNull() ?: 50).coerceIn(0, 100)
+                    val r2 = ruolo(s2); val r3 = ruolo(s3); val r4 = ruolo(s4)
                     vm.savePlayer(p.copy(
                         name = pn.ifBlank { p.name }, role = role,
                         age = (age.toIntOrNull() ?: p.age).coerceIn(15, 45),
@@ -200,7 +272,12 @@ fun EditorScreen(
                         potential = (pot.toIntOrNull() ?: p.potential).coerceIn(newOv, 99),
                         morale = (mo.toIntOrNull() ?: p.morale).coerceIn(0, 100),
                         salary = sal.toLongOrNull() ?: p.salary,
-                        nationality = nat.ifBlank { p.nationality }
+                        nationality = nat.ifBlank { p.nationality },
+                        foot = foot, pos = pos,
+                        sec2 = r2, aff2 = aff(r2, a2), sec3 = r3, aff3 = aff(r3, a3), sec4 = r4, aff4 = aff(r4, a4),
+                        // il ruolo scelto per la partita deve restare uno dei suoi ruoli
+                        ruoloPartita = if (p.ruoloPartita in setOf(pos, r2, r3, r4)) p.ruoloPartita else "",
+                        compito = if (p.ruoloPartita in setOf(pos, r2, r3, r4)) p.compito else ""
                     ))
                     editing = null
                 }) { Text("Salva") }
