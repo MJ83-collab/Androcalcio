@@ -1,4 +1,4 @@
-# Androcalcio — report (aggiornato 24/11/2026, notte 12)
+# Androcalcio — report (aggiornato 25/11/2026, mattina)
 
 Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/stadio` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
@@ -33,6 +33,15 @@ Dal punto 5 (Cinico, Opus):
 Altre:
 5. Giocatori di ruolo D con FD non vengono mai messi in automatico nella linea C (limite noto della scelta per posti).
 6. Salvataggi vecchi: le coppe già calendarizzate "recuperano" i turni.
+
+## Sessione 25/11 mattina: test stagioni, ritiri e ricambio dal vivaio (ramo feat/stadio, build verde, non provata sul telefono)
+- **Test `StagioniDiFilaTest`:** tre stagioni in memoria per le 11 nazioni europee: campionati, coppa nazionale, Supercoppa, qualificate europee dalla stagione prima, gironi e turni delle tre coppe, nessuna squadra due volte nello stesso turno. Non copre il database vero (`closeSeason`).
+- **Ritiri a fine stagione (`closeSeason`):** per età come prima (38-45). Nuovo: 33+ anni con stop di 20+ turni a fine stagione. In prima divisione, nel 50% dei casi scende per 1-2 anni in una squadra di categoria inferiore della stessa nazione (stipendio un terzo, chiave `declino`) e poi si ritira alla scadenza; altrimenti si ritira subito. Nelle nazioni con una sola serie si ritira subito.
+- **Ricambio:** ogni ritirato è sostituito da un giovane (17-19 anni) dello stesso ruolo e della stessa squadra, con nome e caratteristiche casuali e **lo stesso ID**, quindi il database non cresce. Il ricambio conta nel numero dei 16 minimi. Test `RicambioGiovaniTest`.
+- **Storico azzerato per l'ID riusato** (`dimenticaGiocatori`): statistiche, gol, convocazioni e rosa nazionale, scouting, clausole, capitano/vice, preferiti, squalifiche e ammonizioni, allenamento individuale, apparizioni, squadra B, voti, tratti (Cinico). Nomi e premi dell'albo restano come testo.
+- **Ordine delle partite in `closeSeason`:** dentro ogni competizione l'ordine per giornata coincide con quello dei turni; le coppe si giocano dopo l'intero campionato. Lasciato così: nulla nei risultati dipende da questo ordine.
+- **Tecnico:** `closeSeason` era arrivato al limite di dimensione del metodo (errore "Method too large"). Spostati in funzioni a parte `pagaClausole` e `rinnovaRosa`. Qualsiasi aggiunta futura va in funzioni separate.
+- **Da provare sul telefono:** chiudere una stagione e controllare ritiri, ricambi e la scheda dei nuovi giovani.
 
 ## Sessione 24/11 notte (12): punti 4, 6, 3, 5 (ramo feat/stadio, build verde, non provata sul telefono)
 - **Punto 4 – schemi con ruoli:** `Formation.posti` = 10 posti per modulo (TS, DC, FS, FD, AS, AD...). Nuovi moduli in fondo all'enum (ordinal salvato): 4-3-3 ali, 4-2-3-1 ali, 3-4-3 ali. Scelta automatica `Lineup.scegliPerPosti` (con `AFFINITA_MIN=100`, fuori posto x0,95), panchina `coachPickConPanchina`; ordine in campo `Lineup.perPosti`. Nel motore mai id (nei test sono 0): solo riferimenti. Test `PostiModuloTest`.
