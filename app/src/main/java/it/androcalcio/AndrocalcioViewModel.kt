@@ -481,8 +481,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val key = CoppeEuropee.key(c)
             var tutte = dao.matchesOnce(key, s)
             if (tutte.isEmpty()) return@forEach
+            val cin = ciniciRigori(tutte.filter { it.played && it.homePens < 0 })
             val ch = tutte.filter { it.played && it.homePens < 0 }.mapNotNull { m ->
-                CoppeEuropee.finalizza(m, tutte, rng).takeIf { it != m }
+                CoppeEuropee.finalizza(m, tutte, rng, cin).takeIf { it != m }
             }
             if (ch.isNotEmpty()) { dao.updateMatches(ch); tutte = dao.matchesOnce(key, s) }
             val gironi = CoppeEuropee.decodeGironi(dao.stato("eu_gironi_${s}_${c.sigla}"))
@@ -3039,11 +3040,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun finalizeCup(nazione: String, s: String, rng: kotlin.random.Random): List<MatchResult> =
         finalizeKey(Cup.key(nazione), s, rng)
 
+    /** Per ogni squadra delle partite date: quanti Cinici ci sono tra i suoi cinque rigoristi (migliori per fi, portiere escluso). */
+    private suspend fun ciniciRigori(partite: List<MatchResult>): Map<Long, Int> =
+        partite.flatMap { listOf(it.homeTeamId, it.awayTeamId) }.distinct().associateWith { id ->
+            dao.playersOnce(id).filter { it.role != "P" }.sortedByDescending { it.fi }.take(5)
+                .count { Tratti.cinico(it) }
+        }
+
     /** Come finalizeCup, per una qualunque chiave di competizione a eliminazione (coppa o supercoppa). */
     private suspend fun finalizeKey(key: String, s: String, rng: kotlin.random.Random): List<MatchResult> {
         val all = dao.matchesOnce(key, s)
+        val cin = ciniciRigori(all.filter { it.played && it.homePens < 0 })
         val changed = all.filter { it.played && it.homePens < 0 }.mapNotNull { m ->
-            Cup.finalize(m, all, rng).takeIf { it != m }
+            Cup.finalize(m, all, rng, cin).takeIf { it != m }
         }
         if (changed.isNotEmpty()) dao.updateMatches(changed)
         return changed

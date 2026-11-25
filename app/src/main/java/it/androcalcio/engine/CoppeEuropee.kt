@@ -236,8 +236,8 @@ object CoppeEuropee {
      * Supplementari e rigori, solo per le fasi a eliminazione: nei gironi un pareggio resta un pareggio.
      * Restituisce la partita invariata se non serve nulla.
      */
-    fun finalizza(m: MatchResult, tutte: List<MatchResult>, rng: Random): MatchResult =
-        if (Cup.stageOf(m.round) < STAGE_OTTAVI) m else Cup.finalize(m, tutte, rng)
+    fun finalizza(m: MatchResult, tutte: List<MatchResult>, rng: Random, cinici: Map<Long, Int> = emptyMap()): MatchResult =
+        if (Cup.stageOf(m.round) < STAGE_OTTAVI) m else Cup.finalize(m, tutte, rng, cinici)
 
     /** Vincitrice e finalista della coppa, a finale giocata. */
     fun finale(partite: List<MatchResult>, forza: Map<Long, Double>): Pair<Long, Long>? {
