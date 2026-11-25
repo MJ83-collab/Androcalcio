@@ -395,6 +395,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         giorno = vm.giorno.collectAsStateWithLifecycle().value,
                         onAttivita = { vm.viviGiorno(it) },
                         onSalta = { vm.saltaAllaPartita() },
+                        onContinua = { vm.continuaGiorno() },
                         onMercato = { screen = Screen.MERCATO })
                 }
                 Screen.MERCATO -> {

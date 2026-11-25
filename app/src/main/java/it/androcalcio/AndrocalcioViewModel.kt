@@ -4315,6 +4315,22 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** CONTINUA: passa al giorno dopo con l'attività automatica (o quella del preparatore capo). */
+    fun continuaGiorno() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val g = calcolaGiorno() ?: return@launch
+            val t = selectedTeam.value ?: return@launch
+            val partita = g.prossima ?: return@launch
+            if (g.giornoPartita) return@launch
+            val rosa = dao.playersOnce(t.id)
+            val capo = capoAttivo()
+            val a = if (capo != null) PreparatoreCapo.attivita(g.oggi, partita, rosa, capo.first) else CalendarioGiorni.automatica(g.oggi, partita)
+            val diario = g.diario.toMutableMap().also { it[g.oggi.toEpochDay()] = a }
+            salvaGiorni(rosa.map { CalendarioGiorni.applica(it, a) }, CalendarioGiorni.prep(g.prep, a), diario, g.oggi.plusDays(1))
+            _notice.value = "${a.icona} ${a.label} · ${CalendarioGiorni.nomeGiorno(g.oggi)}"
+        }
+    }
+
     /** Salta al giorno della partita: allenamento, con riposo ogni tre giorni e il giorno prima. */
     fun saltaAllaPartita() {
         viewModelScope.launch(Dispatchers.IO) { portaAlGiornoPartita(true) }
