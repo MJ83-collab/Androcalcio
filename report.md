@@ -273,3 +273,13 @@ Nota: nel primo report avevo scritto che le 20 non c'erano nel codice. Due esist
 
 ## Modello
 Sonnet basta per la prova, il merge e la grafica; Opus solo per nuove tarature.
+
+## 25/11 — CONTINUA ibrido + Messaggi
+- Barra CONTINUA sempre visibile in ogni schermata; passa i giorni da sola (attività automatica o preparatore capo) e si ferma al prossimo evento o al giorno della partita (max 120 giorni).
+- Nuova schermata **Messaggi** (menu + pulsante "✉ n" accanto a CONTINUA se ci sono non letti). Un tocco apre la schermata giusta.
+- Eventi: Partita e coppe (nuovi turni di coppa), Mercato (apre/chiude), Giocatori e società (infortuni, contratti in scadenza, offerte, richieste), Staff e strutture (candidati, cantieri finiti).
+- Codice: `engine/Posta.kt` (diff snapshot, test `PostaTest`), `ui/PostaScreen.kt`, VM `continuaGiorno()`.
+- Non incluso: report mensile, scadenza contratti staff, sponsor (da aggiungere se servono).
+- CI verde (emulatore: primo tentativo morto per DeadSystemException, ripetuto OK).
+- Da fare da te: prova su telefono; OK per merge su main e release v0.7.0.
+- Suggerimento: apri una nuova chat con questo report.md (limite 5 domande superato).
