@@ -283,3 +283,19 @@ Sonnet basta per la prova, il merge e la grafica; Opus solo per nuove tarature.
 - CI verde (emulatore: primo tentativo morto per DeadSystemException, ripetuto OK).
 - Da fare da te: prova su telefono; OK per merge su main e release v0.7.0.
 - Suggerimento: apri una nuova chat con questo report.md (limite 5 domande superato).
+
+## 25/11 pomeriggio — Schede staff, amichevoli, capo preparatori, analista
+- Icone staff della home (ALL, ASS, GIO, PRE, FIS, SCO, GIA, ANA) aprono la scheda del ruolo: ALL→Tattica, ASS→Calendario, GIO/SCO→Vivaio, PRE→Preparatori, FIS→Fisioterapisti, GIA→Giardiniere (campo + cantieri), ANA→Analista. Contratti restano in Staff (menu). Codice: `ui/SchedeStaff.kt`, enum `Screen` (PREPARATORI, FISIO, GIARDINIERE, ANALISTA).
+- Amichevoli: al primo tocco di "Amichevole" in stagione chiede "delego all'allenatore in seconda o scelgo io" (Stato `amich_scelta_<stagione>`); delega = `vm.delegaAmichevoli()` (squadre di forza simile, stessa nazione).
+- Capo preparatori: `PreparatoreCapo.giornata/attivitaGiocatore` — attività per singolo giocatore (recupero, riposo, allenamento, rifinitura il giorno prima), usata da CONTINUA e giorni saltati.
+- Analista video: `engine/AnalistaPartita.kt`, report dell'ultima partita salvato in Stato `ana_ultima` (✔ bene, ✘ male, da migliorare) + avversario sotto. Compare solo dopo una partita giocata con l'analista assunto.
+- CI verde (test motore, build, emulatore).
+
+## Da decidere / fare
+- Bonus "confidenza tattica" dell'analista (proposta: +1 affinità tattica per partita analizzata): serve tua decisione.
+- Prova su telefono di tutto `feat/stadio`; graphics tweaks (7); avatar (8); OK per merge su main + release v0.7.0 (9).
+- Messaggi: mancano report mensile, scadenza contratti staff, sponsor.
+- Decisioni aperte precedenti: Cinico (rigori base 0.64, Cup.shootout, "in bilico"), D con FD mai in linea C, vecchi salvataggi e turni coppa, scala stipendi staff sulla tua rosa, stelle youth/scouting/maglie ancora intere.
+
+## Per ripartire in una nuova chat
+Repo: https://github.com/MJ83-collab/Androcalcio, branch `feat/stadio`. Niente SDK locale: compilazione e test solo con GitHub Actions (`gh run list --branch feat/stadio`). Regole di Marco: risposte brevi e precise, chiedere prima di modificare, report.md ogni 5 domande.
