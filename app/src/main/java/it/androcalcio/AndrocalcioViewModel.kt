@@ -3093,6 +3093,29 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         return changed
     }
 
+    /** Partita di campionato simulata in chiusura stagione (fuori da closeSeason, che è al limite di dimensione). */
+    private suspend fun simChiusura(
+        h: Team, a: Team, me: Team, hx: List<Player>, ax: List<Player>, hb: List<Player>?, ab: List<Player>?,
+        staffBy: Map<Long, List<Staff>>
+    ): MatchReport = MatchEngine.simulate(
+        h, hx, a, ax,
+        if (h.id == me.id) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
+        if (a.id == me.id) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
+        Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
+        Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
+        homeMent = if (h.id == me.id) _mentality.value else null,
+        awayMent = if (a.id == me.id) _mentality.value else null,
+        homeBench = hb, awayBench = ab,
+        homePress = if (h.id == me.id) _pressing.value else null,
+        awayPress = if (a.id == me.id) _pressing.value else null,
+        homeLine = if (h.id == me.id) _line.value else null,
+        awayLine = if (a.id == me.id) _line.value else null,
+        homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
+        awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id),
+        homePiano = if (h.id == me.id) _piano.value else pianoAi(h, hx, staffBy, grandi()),
+        awayPiano = if (a.id == me.id) _piano.value else pianoAi(a, ax, staffBy, grandi())
+    )
+
     /** Simula una partita di coppa in chiusura stagione: stesse regole delle giornate di campionato. */
     private suspend fun simCupMatch(
         h: Team, a: Team, me: Team, cache: HashMap<Long, List<Player>>,
@@ -3306,24 +3329,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         fun bench(id: Long, xi: List<Player>) =
                             if (id == me.id) Medical.available(cache[id].orEmpty().filter { it.id !in assenti }) - xi.toSet() else null
                         val hx = xi(h.id); val ax = xi(a.id)
-                        val r = MatchEngine.simulate(
-                            h, hx, a, ax,
-                            if (h.id == me.id) _formation.value else schemaInPartita(h.id, kotlin.random.Random.Default),
-                            if (a.id == me.id) _formation.value else schemaInPartita(a.id, kotlin.random.Random.Default),
-                            Staffing.skill(staffBy, h.id, Staffing.ALLENATORE),
-                            Staffing.skill(staffBy, a.id, Staffing.ALLENATORE),
-                            homeMent = if (h.id == me.id) _mentality.value else null,
-                            awayMent = if (a.id == me.id) _mentality.value else null,
-                            homeBench = bench(h.id, hx), awayBench = bench(a.id, ax),
-                            homePress = if (h.id == me.id) _pressing.value else null,
-                            awayPress = if (a.id == me.id) _pressing.value else null,
-                            homeLine = if (h.id == me.id) _line.value else null,
-                            awayLine = if (a.id == me.id) _line.value else null,
-                            homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
-                            awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id),
-                            homePiano = if (h.id == me.id) _piano.value else pianoAi(h, hx, staffBy, grandi()),
-                            awayPiano = if (a.id == me.id) _piano.value else pianoAi(a, ax, staffBy, grandi())
-                        )
+                        val r = simChiusura(h, a, me, hx, ax, bench(h.id, hx), bench(a.id, ax), staffBy)
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
                             Staffing.cura(staffBy, h.id), rng,
                             planFor(h.id, me.id), Staffing.skill(staffBy, h.id, Staffing.ALLENATORE))
