@@ -420,7 +420,7 @@ private fun TabAnalisi(team: Team, rosa: List<Player>, s: SocietaStato, onRiposo
     val pr = Analisi.promesse(rosa)
     if (pr.isNotEmpty()) {
         SectionTitle("Giovani promesse")
-        pr.forEach { RigaGiocatore(it, "pot. ${it.potential}") }
+        pr.forEach { RigaGiocatore(it, "${it.age} anni · potenziale: vedi parere del vice nella scheda") }
     }
 
     if (s.mutui.isNotEmpty()) {
@@ -466,7 +466,7 @@ private fun ConfrontoGiocatori(base: List<Player>, tutti: List<Player> = emptyLi
                     Text(pb.name, Modifier.weight(1f), color = AC.Accent2, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                 }
                 listOf<Triple<String, Int, Int>>(
-                    Triple("Media", pa.overall, pb.overall), Triple("Potenziale", pa.potential, pb.potential),
+                    Triple("Media", pa.overall, pb.overall),
                     Triple("Morale", pa.morale, pb.morale), Triple("Velocità", pa.ve, pb.ve), Triple("Resistenza", pa.re, pb.re),
                     Triple("Qualità", pa.qu, pb.qu), Triple("Passaggio", pa.pa, pb.pa), Triple("Dribbling", pa.dr, pb.dr),
                     Triple("Finalizzazione", pa.fi, pb.fi), Triple("Entrate", pa.en, pb.en), Triple("Tiro", pa.ti, pb.ti),

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -120,7 +121,7 @@ fun PlayerSheet(
                     Column(Modifier.padding(start = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("MEDIA", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
                         Text("${p.overall}", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
-                        Text("pot. ${p.potential}", fontSize = 10.sp, color = AC.PaperText)
+                        Text("pot. " + (dettaglio?.stima?.forbice?.let { "${it.first}–${it.last}" } ?: "?"), fontSize = 10.sp, color = AC.PaperText)
                         val ultimo = dettaglio?.votiStagioni?.maxByOrNull { it.key }
                         Text("VOTO MEDIO", Modifier.padding(top = 6.dp), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
                         Text(ultimo?.value?.let { "%.2f".format(it).replace('.', ',') } ?: "–", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold,
@@ -138,6 +139,23 @@ fun PlayerSheet(
                                 textAlign = androidx.compose.ui.text.style.TextAlign.End, fontWeight = FontWeight.ExtraBold)
                         }
                     }
+                }
+                dettaglio?.stima?.let { st ->
+                    Titolo("VALUTAZIONE DELLO STAFF")
+                    Text("Fonte: ${st.chi} · conoscenza ${st.conoscenza}%", fontSize = 11.sp, color = AC.PaperDim)
+                    Row(Modifier.fillMaxWidth().height(6.dp).background(AC.PaperAlt)) {
+                        if (st.conoscenza > 0) Box(Modifier.weight(st.conoscenza.coerceIn(1, 100).toFloat()).fillMaxHeight().background(AC.ColBlue))
+                        if (st.conoscenza < 100) Box(Modifier.weight((100 - st.conoscenza).coerceAtLeast(1).toFloat()).fillMaxHeight())
+                    }
+                    Text("Potenziale stimato: ${st.testo}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AC.PaperText)
+                    if (dettaglio.parereRosa.isNotEmpty()) Text("Parere per la prima squadra: ${dettaglio.parereRosa}", fontSize = 12.sp, color = AC.PaperText)
+                    Text("Carattere: " + (st.carattere?.let { c -> c + " · " + (it.androcalcio.engine.Personalita.Tipo.values().firstOrNull { t -> t.nome == c }?.descrizione ?: "") }
+                        ?: "sconosciuto (serve conoscerlo almeno al ${it.androcalcio.engine.Conoscenza.MIN_CARATTERE}%)"), fontSize = 12.sp, color = AC.PaperText)
+                    dettaglio.affinita?.let { (liv, motivo) ->
+                        Text("Affinità con la tua squadra: $liv · $motivo", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                            color = when (liv) { "Alta" -> AC.ColGreen; "Media" -> AC.ColOrange; else -> AC.ColEn })
+                    }
+                    if (!dettaglio.mio && st.conoscenza < 100) Text("Per saperne di più: osservalo con gli scout (Vivaio → Scouting).", fontSize = 10.sp, color = AC.PaperDim)
                 }
                 ContrattoBlock(p)
                 LocalAzioni.current?.let { az ->

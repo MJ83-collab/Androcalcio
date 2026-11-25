@@ -1,6 +1,9 @@
 package it.androcalcio.ui
 
 import it.androcalcio.ui.components.Stelle
+import it.androcalcio.engine.Conoscenza
+import it.androcalcio.engine.VivaioClub
+import androidx.compose.foundation.layout.heightIn
 import it.androcalcio.ui.components.PcAction
 import it.androcalcio.ui.components.PcChip
 
@@ -102,7 +105,8 @@ fun VivaioScreen(
     scoutedGiovani: List<Youth> = emptyList(),
     onScoutGiovani: (String, String) -> Unit = { _, _ -> },
     onFollowGiovane: (Youth) -> Unit = {},
-    onIngaggia: (Youth) -> Unit = {}
+    onIngaggia: (Youth) -> Unit = {},
+    onScoutClub: (Long) -> Unit = {}
 ) {
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -124,6 +128,11 @@ fun VivaioScreen(
             PcChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Scouting") })
             PcChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Vivai") })
         }
+        Text(when (tab) {
+            0 -> "Il potenziale dei tuoi ragazzi lo stima l'allenatore delle giovanili: più è bravo, più la forbice è stretta."
+            1 -> "Giocatori degli altri club: potenziale e carattere si scoprono osservandoli. Conoscenza 100% = stima quasi esatta."
+            else -> "Ogni club ha un vivaio diverso (qualità e specialità). Osserva un club o tutto il campionato."
+        }, color = AC.TextDim, fontSize = 11.sp)
 
         if (tab == 0) {
             if (team.youthClaimed != season) {
@@ -151,17 +160,16 @@ fun VivaioScreen(
                                         style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
                                 }
                             }
+                            val stG = Conoscenza.stimaGiovane(y, "All. giovanili", Conoscenza.daStaff(team.youthCoachSkill))
                             Text(
-                                "Livello: ${Youths.judge(y.overall)} · Potenziale: " +
-                                    Youths.judge(Youths.perceived(y, team.youthCoachSkill)),
-                                modifier = Modifier.padding(top = 8.dp), color = AC.Accent
+                                "Livello: ${Youths.judge(y.overall)} · Parere dell'allenatore delle giovanili: pot. ${stG.testo}",
+                                modifier = Modifier.padding(top = 8.dp), color = AC.Accent, fontSize = 13.sp
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Liv. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
                                 Stelle(ScoutingGiovani.mezzeStelle(y.overall), 13.sp, Color(0xFFFFC24B))
                                 Text("   Pot. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
-                                Stelle(
-                                    ScoutingGiovani.mezzeStelle(Youths.perceived(y, team.youthCoachSkill)), 13.sp, Color(0xFFFFC24B))
+                                Stelle(ScoutingGiovani.mezzeStelle(stG.forbice?.let { (it.first + it.last) / 2 } ?: y.overall), 13.sp, Color(0xFFFFC24B))
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 PcAction(onClick = { onScheda(y) }) { Text("Scheda", fontSize = 12.sp) }
@@ -184,18 +192,41 @@ fun VivaioScreen(
                 onClick = { val (n, c) = active.split("|"); onScoutGiovani(n, c) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AC.Accent, contentColor = AC.Bg)
-            ) { Text("Missione nei vivai (${money(Scouting.cost(team.scoutSkill))})") }
+            ) { Text("Missione in tutti i vivai del campionato (${money(Scouting.cost(team.scoutSkill))})") }
+            val clubLega = teams.filter { "${it.nazione}|${it.campionato}" == active && it.id != team.id }
+            val idLega = clubLega.map { it.id }.toSet()
+            var mostraClub by rememberSaveable { mutableStateOf(true) }
+            PcChip(selected = mostraClub, onClick = { mostraClub = !mostraClub },
+                label = { Text(if (mostraClub) "▼ Vivai del campionato (${clubLega.size})" else "▶ Vivai del campionato (${clubLega.size})") })
+            if (mostraClub) LazyColumn(Modifier.fillMaxWidth().heightIn(max = 220.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                items(clubLega.sortedByDescending { VivaioClub.qualita(it) }, key = { it.id }) { c ->
+                    GlassCard(Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(c.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Stelle(VivaioClub.qualita(c), 11.sp, Color(0xFFFFC24B))
+                                    Text("  ${VivaioClub.specialita(c).nome}", color = AC.TextDim, fontSize = 11.sp, maxLines = 1)
+                                }
+                            }
+                            PcAction(onClick = { onScoutClub(c.id) }) { Text("Osserva ${money(Scouting.cost(team.scoutSkill) / 2)}", fontSize = 11.sp) }
+                        }
+                    }
+                }
+            }
             FiltroRuolo(ruolo) { ruolo = it }
             val obsG = reports.associate { it.playerId to it.observations }
-            if (scoutedGiovani.isEmpty()) Text("Nessun ragazzo osservato: manda gli scout nei vivai di un campionato.", color = AC.TextDim)
+            val visti = scoutedGiovani.filter { it.teamId in idLega && (ruolo.isEmpty() || it.role == ruolo) }
+            if (visti.isEmpty()) Text("Nessun ragazzo osservato in questo campionato: osserva un vivaio o tutto il campionato.", color = AC.TextDim)
             LazyColumn(
                 Modifier.weight(1f), contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(scoutedGiovani.filter { ruolo.isEmpty() || it.role == ruolo }, key = { it.id }) { y ->
+                items(visti, key = { it.id }) { y ->
                     val n = obsG[ScoutingGiovani.chiave(y)] ?: 1
                     val r = ScoutingGiovani.rangeLivello(y, team.scoutSkill, n)
-                    val pot = ScoutingGiovani.potenzialeStimato(y, team.scoutSkill, n)
+                    val stY = Conoscenza.stimaGiovane(y, "Scout", Conoscenza.daScout(n, team.scoutSkill))
+                    val pot = stY.forbice?.let { (it.first + it.last) / 2 } ?: r.last
                     GlassCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -213,8 +244,9 @@ fun VivaioScreen(
                                 Stelle(ScoutingGiovani.mezzeStelle((r.first + r.last) / 2), 13.sp, Color(0xFFFFC24B))
                                 Text("   Pot. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
                                 Stelle(ScoutingGiovani.mezzeStelle(pot), 13.sp, Color(0xFFFFC24B))
-                                Text(" (${Youths.judge(pot)}) · osservazioni: $n", color = Color(0xFFFFC24B), fontSize = 13.sp)
                             }
+                            Text("Potenziale ${stY.testo} · conoscenza ${stY.conoscenza}% · osservazioni $n",
+                                color = Color(0xFFFFC24B), fontSize = 12.sp)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 TextButton(onClick = { onFollowGiovane(y) }) {
                                     Text("Osserva ancora (${money(Scouting.FOLLOW_COST)})", fontSize = 12.sp)
@@ -247,10 +279,15 @@ fun VivaioScreen(
                 Modifier.weight(1f), contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(scouted.filter { ruolo.isEmpty() || it.role == ruolo }, key = { it.id }) { p ->
+                val idLega = teams.filter { "${it.nazione}|${it.campionato}" == active }.map { it.id }.toSet()
+                val lista = scouted.filter { it.teamId in idLega && (ruolo.isEmpty() || it.role == ruolo) }
+                if (lista.isEmpty()) item { Text("Nessun giocatore osservato in questo campionato: invia uno scout.", color = AC.TextDim) }
+                items(lista, key = { it.id }) { p ->
                     val n = obs[p.id] ?: 1
                     val r = Scouting.range(p, team.scoutSkill, n)
                     val mid = (r.first + r.last) / 2
+                    val conosc = Conoscenza.daScout(n, team.scoutSkill)
+                    val stP = Conoscenza.stima(p, "Scout", conosc)
                     GlassCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -266,10 +303,17 @@ fun VivaioScreen(
                                     style = MaterialTheme.typography.titleMedium, color = AC.Accent)
                             }
                             Text(
-                                "${Scouting.fit(mid, p.role, squad)} · osservazioni: $n",
+                                "${Scouting.fit(mid, p.role, squad)} · conoscenza $conosc% · osservazioni: $n",
                                 modifier = Modifier.padding(top = 6.dp),
                                 style = MaterialTheme.typography.bodySmall, color = AC.Accent2
                             )
+                            Text("Potenziale: ${stP.testo}", fontSize = 12.sp, color = Color(0xFFFFC24B))
+                            if (stP.carattere != null) {
+                                val (liv, motivo) = Conoscenza.affinita(p, squad, team.budget >= 30_000_000L)
+                                Text("Carattere: ${stP.carattere} · affinità con la squadra: $liv", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                    color = when (liv) { "Alta" -> Color(0xFF7CE38B); "Media" -> Color(0xFFFFC24B); else -> Color(0xFFFF8A80) })
+                                Text(motivo, fontSize = 11.sp, color = AC.TextDim)
+                            } else Text("Carattere: da scoprire (serve conoscenza ${Conoscenza.MIN_CARATTERE}%)", fontSize = 11.sp, color = AC.TextDim)
                             TextButton(onClick = { onFollow(p) }) {
                                 Text("Osserva ancora (${money(Scouting.FOLLOW_COST)})")
                             }

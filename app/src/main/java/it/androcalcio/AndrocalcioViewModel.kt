@@ -113,6 +113,8 @@ import it.androcalcio.engine.Strutture
 import it.androcalcio.engine.Economia
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Forma
+import it.androcalcio.engine.Conoscenza
+import it.androcalcio.engine.VivaioClub
 import it.androcalcio.engine.Mentori
 import it.androcalcio.engine.Ritmo
 import it.androcalcio.engine.Atmosfera
@@ -2577,6 +2579,28 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         return licenziati.distinct()
     }
 
+    /**
+     * Potenziale e carattere visti dal tuo staff: i tuoi li valuta l'allenatore in seconda, gli altri gli scout
+     * (in base alle osservazioni). Senza valutazione il potenziale resta nascosto.
+     */
+    private suspend fun conStima(d: DettaglioGiocatore, p: Player): DettaglioGiocatore {
+        val me = selectedTeam.value ?: return d
+        val staff = dao.staffOnce(me.id)
+        val rosa = dao.playersOnce(me.id)
+        val ricca = me.budget >= 30_000_000L
+        return if (p.teamId == me.id) {
+            val vice = staff.firstOrNull { it.role == Staffing.ASSISTENTE }
+            val st = if (vice == null) Conoscenza.Stima("Nessun allenatore in seconda", 0, null, Personalita.tipo(p).nome)
+                else Conoscenza.stima(p, "All. in seconda ${vice.name}", Conoscenza.daStaff(vice.skill)).copy(carattere = Personalita.tipo(p).nome)
+            d.copy(stima = st, parereRosa = if (vice == null) "" else Conoscenza.ruoloInRosa(p, rosa, st.forbice), mio = true)
+        } else {
+            val obs = dao.report(me.id, p.id)?.observations ?: 0
+            val c = Conoscenza.daScout(obs, me.scoutSkill)
+            val st = Conoscenza.stima(p, if (obs == 0) "Mai osservato" else "Scout ($obs osservazioni)", c)
+            d.copy(stima = st, affinita = if (c >= Conoscenza.MIN_CARATTERE) Conoscenza.affinita(p, rosa, ricca) else null)
+        }
+    }
+
     /** Scheda completa di un giocatore: squadra, clausola, stagioni, nazionale e convocazioni. */
     suspend fun dettaglioGiocatore(p: Player): DettaglioGiocatore {
         val fresco = dao.playerById(p.id) ?: p
@@ -2596,7 +2620,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             infortuni = StoricoInfortuni.decode(dao.stato(StoricoInfortuni.KEY)).filter { it.playerId == p.id }.map { it.stagione to it.turni },
             minutiPct = if (fresco.teamId == selectedTeam.value?.id) Minutaggio.percentuale(Minutaggio.decode(dao.stato(Minutaggio.KEY))[p.id] ?: 0, dao.statoInt(Minutaggio.KEY_PARTITE)) else null,
             forma = dao.stato(Forma.key(p.id)).orEmpty().split(",").mapNotNull { it.toIntOrNull()?.let { v -> v / 10.0 } }
-        )
+        ).let { d -> conStima(d, fresco) }
     }
 
     /** Storico infortuni della tua squadra (per la scheda giocatore). */
@@ -2712,6 +2736,43 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.updateTeam(me.copy(budget = me.budget - cost))
             registra(me.id, "Scouting vivai (${picks.size} ragazzi)", -cost, me.budget - cost)
             _notice.value = "Lo scout ha visto ${picks.size} ragazzi nei vivai di $campionato (${money(cost)})."
+        }
+    }
+
+    /**
+     * Missione mirata nel vivaio di un solo club (metà prezzo): lo scout osserva i 3 ragazzi più interessanti
+     * e manda il rapporto nella posta, con le stime già dentro il messaggio (come in FM27).
+     */
+    fun sendScoutVivaio(clubId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val cost = Scouting.cost(me.scoutSkill) / 2
+            if (cost > me.budget) { _notice.value = "Budget insufficiente (servono ${money(cost)})."; return@launch }
+            val c = dao.team(clubId)
+            val s = _season.value
+            var l = dao.youthsOnce(c.id)
+            if (l.size < ScoutingGiovani.MIN_VIVAIO_AI) {
+                dao.insertYouths(if (l.isEmpty()) Giovanili.iniziale(c, s) else Giovanili.nuovaLeva(c, s))
+                l = dao.youthsOnce(c.id)
+            }
+            // Lo scout bravo trova i migliori: ordina per potenziale "visto" con un errore che cala con la sua abilità
+            val rng = kotlin.random.Random.Default
+            val err = (100 - me.scoutSkill) / 4 + 2
+            val picks = l.sortedByDescending { it.potential + rng.nextInt(-err, err + 1) }.take(3)
+            if (picks.isEmpty()) { _notice.value = "Vivaio vuoto."; return@launch }
+            val righe = picks.map { y ->
+                val k = ScoutingGiovani.chiave(y)
+                val obs = (dao.report(me.id, k)?.observations ?: 0) + 1
+                dao.upsertReports(listOf(ScoutReport(me.id, k, obs)))
+                val st = Conoscenza.stimaGiovane(y, "Scout", Conoscenza.daScout(obs, me.scoutSkill))
+                "${y.name} (${y.role}, ${y.age} anni): pot. ${st.testo}"
+            }
+            dao.updateTeam(me.copy(budget = me.budget - cost))
+            registra(me.id, "Scouting vivaio ${c.name}", -cost, me.budget - cost)
+            val giorno = calcolaGiorno()?.oggi?.toEpochDay() ?: java.time.LocalDate.now().toEpochDay()
+            salvaPosta(listOf(Posta.Messaggio(giorno, Posta.Cat.MERCATO,
+                "Rapporto scout sul vivaio ${c.name} (${VivaioClub.specialita(c).nome}): " + righe.joinToString(" · "), "VIVAIO")))
+            _notice.value = "Rapporto sul vivaio ${c.name} arrivato nella posta (${money(cost)})."
         }
     }
 

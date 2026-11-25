@@ -513,7 +513,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         { vm.generateYouths() }, { vm.promote(it) }, { vm.discard(it) },
                         { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() },
                         exViv.inPrima, schedaViv, { vm.richiediScheda(it) }, { vm.apparizione(it) }, { vm.chiudiScheda() },
-                        scoutedGio, { n, c -> vm.sendScoutGiovani(n, c) }, { vm.followGiovane(it) }, { vm.ingaggiaGiovane(it) }
+                        scoutedGio, { n, c -> vm.sendScoutGiovani(n, c) }, { vm.followGiovane(it) }, { vm.ingaggiaGiovane(it) },
+                        { vm.sendScoutVivaio(it) }
                     )
                 }
                 Screen.EDITOR -> {
