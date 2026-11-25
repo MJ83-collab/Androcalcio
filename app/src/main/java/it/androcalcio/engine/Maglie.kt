@@ -173,6 +173,9 @@ object Maglie {
 
     fun stelle(b: Int) = (b / 20).coerceIn(1, 5)
 
+    /** Mezze stelle da 1 a 10 (2 = una stella intera): una mezza stella ogni 10 punti di bellezza. */
+    fun mezzeStelle(b: Int) = (b / 10).coerceIn(1, 10)
+
     // ---------------------------------------------------------------------------------------------
     // Merchandising
     // ---------------------------------------------------------------------------------------------

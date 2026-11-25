@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
 import android.app.Activity
 
 import it.androcalcio.ui.components.PcAction
@@ -1045,7 +1046,7 @@ private fun MediaSquadraBar(team: Team, players: List<Player>) {
             Text(team.name.uppercase(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
             Text("MEDIA SQUADRA", color = AC.NavyText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
-        it.androcalcio.ui.components.Stelle(it.androcalcio.engine.Staffing.mezzeStelle(media), 16.sp, AC.Accent)
+        Stelle(it.androcalcio.engine.Staffing.mezzeStelle(media), 16.sp, AC.Accent)
         Text(" $media", color = AC.Neon, fontWeight = FontWeight.Black, fontSize = 18.sp)
     }
 }
@@ -1131,8 +1132,7 @@ private fun RosaTable(
                     Text(ruoloTag(p.role) + "  " + it.androcalcio.engine.Forma.icona(forme[p.id]) + p.name + if (p.injuredRounds > 0) " ✚" else "", Modifier.width(118.dp), maxLines = 1,
                         color = if (p.injuredRounds > 0) AC.ColEn else AC.PaperText,
                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    val st = (p.overall / 20).coerceIn(0, 5)
-                    Text("★".repeat(st) + "☆".repeat(5 - st), Modifier.width(62.dp), fontSize = 11.sp, color = Color(0xFFE0A800))
+                    Stelle((p.overall / 10).coerceIn(0, 10), 11.sp, Color(0xFFE0A800), Modifier.width(62.dp))
                     val values = listOf(p.condition, p.ve, p.re, p.ag, p.qu, p.fo, p.morale, p.overall)
                     values.forEachIndexed { k, v ->
                         Text("$v", Modifier.width(30.dp), textAlign = TextAlign.Center, fontSize = 12.sp,

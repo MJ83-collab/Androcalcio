@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.foundation.layout.heightIn
@@ -321,7 +322,7 @@ private fun MarketTable(
         }
         LazyColumn(Modifier.fillMaxWidth()) {
             itemsIndexed(ps, key = { _, p -> p.id }) { _, p ->
-                val n = (p.overall / 20).coerceIn(0, 5)
+                val n = (p.overall / 10).coerceIn(0, 10)   // mezze stelle
                 Column(
                     Modifier.fillMaxWidth().padding(vertical = 3.dp, horizontal = 4.dp)
                         .clip(RoundedCornerShape(10.dp))
@@ -333,7 +334,7 @@ private fun MarketTable(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         it.androcalcio.ui.components.Avatar(p.name, 26.dp, Modifier.padding(end = 6.dp))
                         Text(p.name, Modifier.weight(1f).apriScheda(p), maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
-                        Text("★".repeat(n) + "☆".repeat(5 - n), color = Color(0xFFE0A800), fontSize = 12.sp)
+                        Stelle(n, 12.sp, Color(0xFFE0A800))
                         Text("${p.overall}", Modifier.width(30.dp), textAlign = TextAlign.End, fontSize = 13.sp,
                             fontWeight = FontWeight.ExtraBold, color = AC.ColOrange)
                         Text(when (p.role) { "P" -> "POR"; "D" -> "DIF"; "C" -> "CEN"; else -> "ATT" }, Modifier.width(36.dp),

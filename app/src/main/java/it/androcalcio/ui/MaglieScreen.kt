@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,8 +58,12 @@ fun MaglieScreen(st: MaglieStato, onTieni: () -> Unit, onScegli: (Int) -> Unit, 
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     TreMaglie(d, 74)
-                    Text("Bellezza: ${"★".repeat(Maglie.stelle(Maglie.bellezza(d)))}${"☆".repeat(5 - Maglie.stelle(Maglie.bellezza(d)))} (${Maglie.bellezza(d)}/100)" +
-                        if (st.novita) " · nuove quest'anno: +20% vendite" else "", color = AC.Text, fontSize = 13.sp)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Text("Bellezza: ", color = AC.Text, fontSize = 13.sp)
+                        Stelle(Maglie.mezzeStelle(Maglie.bellezza(d)), 13.sp)
+                        Text(" (${Maglie.bellezza(d)}/100)" + if (st.novita) " · nuove quest'anno: +20% vendite" else "",
+                            color = AC.Text, fontSize = 13.sp)
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
 package it.androcalcio.ui
 
+import it.androcalcio.ui.components.Stelle
 import it.androcalcio.engine.Forma
 
 import it.androcalcio.ui.components.PcAction
@@ -50,7 +51,6 @@ fun flagOf(nazione: String): String = when (nazione) {
 }
 
 /** Stelle 0..5 da un valore 1..99 (una stella ogni 20 punti). */
-private fun stars(v: Int): String { val n = (v / 20).coerceIn(0, 5); return "★".repeat(n) + "☆".repeat(5 - n) }
 
 /** Apre la scheda di un giocatore da qualunque schermo: il root dell'app la mostra. */
 val LocalApriGiocatore = compositionLocalOf<(Player) -> Unit> { {} }
@@ -128,7 +128,7 @@ fun PlayerSheet(
                         "FINALIZZAZIONE" to p.fi, "ENTRATE" to p.en, "TIRO" to p.ti, "RIGORI" to p.ri).forEach { (l, v) ->
                         Row(Modifier.fillMaxWidth()) {
                             Text(l, Modifier.weight(1f), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(stars(v), color = Color(0xFFFFE23D), fontSize = 12.sp)
+                            Stelle((v / 10).coerceIn(0, 10), 12.sp, Color(0xFFFFE23D))
                             Text("$v", Modifier.width(30.dp), color = Color(0xFFFFE23D), fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.End, fontWeight = FontWeight.ExtraBold)
                         }
