@@ -44,7 +44,7 @@ class StaffRifinituraTest {
         val prima = p.pa + p.dr + p.ti
         repeat(40) { p = CalendarioGiorni.applica(p, CalendarioGiorni.Attivita.RIFINITURA, rng) }
         assertTrue(p.pa + p.dr + p.ti > prima)
-        assertEquals(90, p.aff2 + 0 * 40 + 0 - 0 + 0 - 0 + 0 - 0)   // 50 + 40, fermo a 100 al massimo
-        assertEquals(50, p.condition.coerceAtLeast(50))
+        assertEquals(90, p.aff2)   // +1 a ogni rifinitura: 50 + 40
+        assertEquals(50, p.condition)   // −1 a ogni rifinitura, mai sotto 50
     }
 }

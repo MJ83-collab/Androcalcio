@@ -43,6 +43,11 @@ Altre:
 - **Tecnico:** `closeSeason` era arrivato al limite di dimensione del metodo (errore "Method too large"). Spostati in funzioni a parte `pagaClausole` e `rinnovaRosa`. Qualsiasi aggiunta futura va in funzioni separate.
 - **Da provare sul telefono:** chiudere una stagione e controllare ritiri, ricambi e la scheda dei nuovi giovani.
 
+- **Giornata (Calendario):** tolta la voce Mercato dalla scheda "Cosa fai oggi?"; aggiunta **Rifinitura** (condizione −1, preparazione +1; 30% di probabilità di +1 a passaggio/dribbling/tiro fino a 90; +1 di affinità a ogni ruolo secondario sotto 100). I vecchi "Mercato" nel diario vengono ignorati.
+- **Stelle:** nuovo componente `ui/components/Stelle.kt`, da 1 a 5 stelle con mezza stella disegnata (non più il pallino ◐). Usato per staff (lista, candidati, dettaglio) e media squadra (Home e Avversario). Restano a stelle intere vivaio/scouting giovani e bellezza maglie.
+- **Staff:** ogni annuncio dà **minimo 3 risposte** (fino a 5). Stipendi in scala con la categoria (`Staffing.scalaCategoria` dalla forza media della rosa: A ~0,9-1, B ~0,6, C ~0,4) per candidati, risposte, rinnovi e staff IA. **Corso di formazione** pagato dal club (dettaglio staff, una volta a stagione per persona: +3/+2/+1 abilità, costo in scala con la categoria). Test `StaffRifinituraTest`.
+- **Da decidere/provare:** la scala usa la media della TUA rosa, non la media del campionato; gli staff già assunti mantengono lo stipendio fino al rinnovo.
+
 ## Sessione 24/11 notte (12): punti 4, 6, 3, 5 (ramo feat/stadio, build verde, non provata sul telefono)
 - **Punto 4 – schemi con ruoli:** `Formation.posti` = 10 posti per modulo (TS, DC, FS, FD, AS, AD...). Nuovi moduli in fondo all'enum (ordinal salvato): 4-3-3 ali, 4-2-3-1 ali, 3-4-3 ali. Scelta automatica `Lineup.scegliPerPosti` (con `AFFINITA_MIN=100`, fuori posto x0,95), panchina `coachPickConPanchina`; ordine in campo `Lineup.perPosti`. Nel motore mai id (nei test sono 0): solo riferimenti. Test `PostiModuloTest`.
 - **Punto 6 – calendario a turni** (`engine/Turni.kt`): campionato chiave 2*giornata, coppe a metà settimana (mercoledì) tra le giornate; coppa nazionale e coppe europee senza sovrapposizioni e mai nei turni delle nazionali. `runRounds`, partita dal vivo e Calendario usano le chiavi. Test `TurniTest`.
