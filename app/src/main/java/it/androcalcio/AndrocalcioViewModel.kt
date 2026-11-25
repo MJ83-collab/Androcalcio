@@ -3045,10 +3045,10 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun finalizeCup(nazione: String, s: String, rng: kotlin.random.Random): List<MatchResult> =
         finalizeKey(Cup.key(nazione), s, rng)
 
-    /** Per ogni squadra delle partite date: quanti Cinici ci sono tra i suoi cinque rigoristi (migliori per fi, portiere escluso). */
+    /** Per ogni squadra delle partite date: quanti Cinici ci sono tra i suoi cinque rigoristi (migliori per ri, portiere escluso). */
     private suspend fun ciniciRigori(partite: List<MatchResult>): Map<Long, Int> =
         partite.flatMap { listOf(it.homeTeamId, it.awayTeamId) }.distinct().associateWith { id ->
-            dao.playersOnce(id).filter { it.role != "P" }.sortedByDescending { it.fi }.take(5)
+            dao.playersOnce(id).filter { it.role != "P" }.sortedByDescending { it.ri }.take(5)
                 .count { Tratti.cinico(it) }
         }
 

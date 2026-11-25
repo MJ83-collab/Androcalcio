@@ -13,11 +13,12 @@ import kotlin.random.Random
  */
 private const val ANGOLO_QUOTA = 0.4
 /**
- * Rigore in partita: probabilità di segnare RIGORE_BASE + RIGORE_FI * fi / 99 (più il bonus del Cinico).
+ * Rigore in partita: probabilità di segnare RIGORE_BASE + RIGORE_RI * ri / 99 (più il bonus del Cinico).
+ * Dal 25/11 conta l'attributo ri (rigori), non più fi: ri ha meno scarto tra i ruoli (A +2, C -5, D -12 sul livello; fi A +8, C -8, D -22).
  * Era 0,70 + 0,2: la conversione misurata era 84,8%, sopra le medie reali (75-80%); con 0,64 scende a circa 79%.
  */
 internal const val RIGORE_BASE = 0.64
-internal const val RIGORE_FI = 0.20
+internal const val RIGORE_RI = 0.20
 
 class LiveMatch(
     val home: Team, homePlayers: List<Player>,
@@ -536,7 +537,7 @@ class LiveMatch(
         val scena = scenaPiazzato(homeAtt, penalty, angolo, x to y)
         val zona = if (immersivo) zonaTiro() else ""
         val pGoal = when {
-            penalty -> Tratti.rigore(RIGORE_BASE + RIGORE_FI * taker.fi / 99.0, taker)   // il Cinico sbaglia meno
+            penalty -> Tratti.rigore(RIGORE_BASE + RIGORE_RI * taker.ri / 99.0, taker)   // il Cinico sbaglia meno
             // punizioni e angoli: stessa probabilità, così la taratura non cambia (lo schema scelto la sposta)
             else -> (0.04 + 0.08 * taker.ti / 99.0) * (if (angolo) schema.angoli else schema.punizioni)
         }
@@ -554,7 +555,7 @@ class LiveMatch(
 
     /**
      * Rigoristi per una serie di rigori dopo la partita: prima quelli della lista dei tiri in campo, poi gli altri
-     * per finalizzazione, il portiere per ultimo. Confronto per riferimento (nei test gli id sono 0).
+     * per rigori (ri), il portiere per ultimo. Confronto per riferimento (nei test gli id sono 0).
      */
     fun rigoristi(homeSide: Boolean): List<Player> {
         val xi = if (homeSide) xiH else xiA
@@ -562,7 +563,7 @@ class LiveMatch(
             .mapNotNull { id -> xi.firstOrNull { it.id == id && id != 0L } }
             .fold(emptyList<Player>()) { acc, p -> if (acc.any { it === p }) acc else acc + p }
         val altri = xi.filter { p -> lista.none { it === p } }
-            .sortedWith(compareBy<Player> { it.role == "P" }.thenByDescending { it.fi })
+            .sortedWith(compareBy<Player> { it.role == "P" }.thenByDescending { it.ri })
         return lista + altri
     }
 

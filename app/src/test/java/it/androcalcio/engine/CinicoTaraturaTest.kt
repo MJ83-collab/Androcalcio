@@ -122,7 +122,7 @@ class CinicoTaraturaTest {
     fun rigoreCinicoSegnaDiPiu() {
         val c = gioc(42, "Cinico"); val n = gioc(43, "Normale")
         Tratti.acquisiti = setOf(42L)
-        val base = RIGORE_BASE + RIGORE_FI * 70 / 99.0
+        val base = RIGORE_BASE + RIGORE_RI * 70 / 99.0
         assertTrue(Tratti.rigore(base, c) > Tratti.rigore(base, n))
         assertEquals(base, Tratti.rigore(base, n), 1e-9)
         assertEquals(base, Tratti.rigore(base, null), 1e-9)

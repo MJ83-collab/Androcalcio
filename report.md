@@ -34,7 +34,6 @@ Prese da Marco il 25/11:
 7. Scala stipendi staff sulla media della TUA rosa: **confermata**.
 8. Messaggi: report mensile, staff, sponsor: **fatto**.
 **Ancora aperte:**
-- 4. Attributo `ri` (rigori) non usato dal motore: il rigore dipende da `fi`. Usarlo? (nessuna risposta)
 - Salvataggi vecchi: le coppe già calendarizzate "recuperano" i turni.
 - Stelle intere in vivaio/scouting giovani e maglie.
 
@@ -44,6 +43,8 @@ Prese da Marco il 25/11:
 - **Analista video:** dopo ogni partita analizzata, chi ha giocato guadagna +1 di affinità a ogni ruolo secondario sotto 100 (`AnalistaPartita.confidenza`, in `salvaAnalisi`). Test `AnalistaConfidenzaTest`.
 - **Messaggi:** nuovi avvisi per contratto staff in scadenza, sponsor in scadenza (apre Marketing), report mensile del preparatore capo (apre Rosa). `Posta.Snapshot` ha tre campi nuovi con valore predefinito. Test in `PostaTest`.
 - Modello: Sonnet basta.
+
+- **Rigori con `ri` (scelta di Claude su delega di Marco, 25/11):** probabilità di segnare = `0,64 + 0,20 × ri/99` (prima `fi`). Anche i rigoristi si ordinano per `ri` (portiere ultimo). Motivo: `ri` ha meno scarto tra i ruoli (A +2, C -5, D -12 sul livello, contro fi A +8, C -8, D -22), quindi un difensore o centrocampista bravo dagli 11 metri non è più penalizzato. Stima: conversione quasi invariata (circa -1 punto, resta nel 75-80%); il test `CinicoTaraturaTest` la verifica (74-83%). Costante rinominata `RIGORE_RI`.
 
 ## Sessione 25/11 mattina: test stagioni, ritiri e ricambio dal vivaio (ramo feat/stadio, build verde, non provata sul telefono)
 - **Test `StagioniDiFilaTest`:** tre stagioni in memoria per le 11 nazioni europee: campionati, coppa nazionale, Supercoppa, qualificate europee dalla stagione prima, gironi e turni delle tre coppe, nessuna squadra due volte nello stesso turno. Non copre il database vero (`closeSeason`).
