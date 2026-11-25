@@ -6,6 +6,7 @@ import it.androcalcio.engine.PreparatoreCapo
 import it.androcalcio.engine.SquadraB
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
+import it.androcalcio.engine.Posta
 import it.androcalcio.engine.Migliorie
 import it.androcalcio.engine.Maglie
 import it.androcalcio.engine.Abbonamenti
@@ -4315,19 +4316,80 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** CONTINUA: passa al giorno dopo con l'attività automatica (o quella del preparatore capo). */
+    /** Casella messaggi (persistita in Stato "posta"). */
+    val posta: StateFlow<List<Posta.Messaggio>> =
+        osserva("stato") { Posta.decode(dao.stato(Posta.KEY)) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private suspend fun fotoPosta(): Posta.Snapshot? {
+        val t = selectedTeam.value ?: return null
+        val s = _season.value
+        val rosa = dao.playersOnce(t.id)
+        val coppe = dao.matchesOnce(Cup.key(t.nazione), s).size + europaMia(t, s).size
+        return Posta.Snapshot(
+            finestraAperta = mercatoAperto(),
+            infortunati = rosa.filter { it.injuredRounds > 0 }.map { it.id }.toSet(),
+            scadenze = rosa.filter { it.contract <= 1 }.map { it.id }.toSet(),
+            offerte = ClubOffer.decode(dao.stato("offerte")).size,
+            richieste = Personalita.decode(dao.stato("richieste")).size,
+            candidati = Annunci.decodeCand(dao.stato(Annunci.KEY_CAND + t.id)).size,
+            cantieri = Migliorie.decodeCantieri(dao.stato("migliorie_cantieri")).size,
+            partiteCoppa = coppe
+        )
+    }
+
+    private suspend fun salvaPosta(nuovi: List<Posta.Messaggio>) {
+        if (nuovi.isEmpty()) return
+        val P = Posta
+        dao.setStato(Stato(P.KEY, P.encode(P.decode(dao.stato(P.KEY)) + nuovi)))
+    }
+
+    fun segnaPostaLetta() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val P = Posta
+            dao.setStato(Stato(P.KEY, P.encode(P.decode(dao.stato(P.KEY)).map { it.copy(letto = true) })))
+        }
+    }
+
+    /** Un giorno con l'attività automatica (o del preparatore capo). Restituisce false se è giorno di partita. */
+    private suspend fun vivi1Giorno(): Boolean {
+        val g = calcolaGiorno() ?: return false
+        val t = selectedTeam.value ?: return false
+        val partita = g.prossima ?: return false
+        if (g.giornoPartita) return false
+        val rosa = dao.playersOnce(t.id)
+        val capo = capoAttivo()
+        val a = if (capo != null) PreparatoreCapo.attivita(g.oggi, partita, rosa, capo.first) else CalendarioGiorni.automatica(g.oggi, partita)
+        val diario = g.diario.toMutableMap().also { it[g.oggi.toEpochDay()] = a }
+        salvaGiorni(rosa.map { CalendarioGiorni.applica(it, a) }, CalendarioGiorni.prep(g.prep, a), diario, g.oggi.plusDays(1))
+        return true
+    }
+
+    /** CONTINUA ibrido: passa i giorni da solo e si ferma al prossimo evento o alla partita. */
     fun continuaGiorno() {
         viewModelScope.launch(Dispatchers.IO) {
-            val g = calcolaGiorno() ?: return@launch
-            val t = selectedTeam.value ?: return@launch
-            val partita = g.prossima ?: return@launch
-            if (g.giornoPartita) return@launch
-            val rosa = dao.playersOnce(t.id)
-            val capo = capoAttivo()
-            val a = if (capo != null) PreparatoreCapo.attivita(g.oggi, partita, rosa, capo.first) else CalendarioGiorni.automatica(g.oggi, partita)
-            val diario = g.diario.toMutableMap().also { it[g.oggi.toEpochDay()] = a }
-            salvaGiorni(rosa.map { CalendarioGiorni.applica(it, a) }, CalendarioGiorni.prep(g.prep, a), diario, g.oggi.plusDays(1))
-            _notice.value = "${a.icona} ${a.label} · ${CalendarioGiorni.nomeGiorno(g.oggi)}"
+            var giorni = 0
+            val nuovi = mutableListOf<Posta.Messaggio>()
+            while (giorni < 120) {
+                val prima = fotoPosta()
+                if (!vivi1Giorno()) break
+                giorni++
+                val dopo = fotoPosta()
+                val g = calcolaGiorno()
+                if (prima != null && dopo != null && g != null) {
+                    val nomi = dao.playersOnce(selectedTeam.value!!.id).associate { it.id to it.name }
+                    nuovi += Posta.diff(prima, dopo, nomi, g.oggi.toEpochDay())
+                }
+                if (nuovi.isNotEmpty()) break
+            }
+            salvaPosta(nuovi)
+            val g = calcolaGiorno()
+            _notice.value = when {
+                giorni == 0 -> "Oggi si gioca: vai alla partita."
+                nuovi.isNotEmpty() -> "${nuovi.size} nuovi messaggi · $giorni giorni passati"
+                g?.giornoPartita == true -> "Giorno della partita ($giorni giorni passati)."
+                else -> "$giorni giorni passati."
+            }
         }
     }
 

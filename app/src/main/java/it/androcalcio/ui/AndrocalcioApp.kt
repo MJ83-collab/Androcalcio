@@ -45,6 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Face
@@ -147,7 +148,8 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     GIORNALE("Giornale", Icons.Filled.List, "Pagelle, meteo, xG", Color(0xFF455A64)),
     PRESTITI("Prestiti", Icons.Filled.Refresh, "Finestre e prestiti", Color(0xFF1565C0)),
     SOCIETA("Società", Icons.Filled.Person, "Disciplina, scambi, storia", Color(0xFF00838F)),
-    OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B))
+    OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B)),
+    POSTA("Messaggi", Icons.Filled.Email, "Eventi e avvisi", Color(0xFF3F6FD8))
 }
 
 private val bottomTabs = listOf(
@@ -260,8 +262,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 val libero = g != null && g.prossima != null && !g.giornoPartita
                 val haPartita = g != null && g.prossima != null
                 val testo = when {
-                    libero && g!!.giorniMancanti == 1 -> "CONTINUA ▶ giorno della partita"
-                    libero -> "CONTINUA ▶ domani"
+                    libero && g!!.giorniMancanti == 1 -> "CONTINUA ▶ partita"
+                    libero -> "CONTINUA ▶ prossimo evento"
                     haPartita -> "CONTINUA ▶ vai alla partita"
                     else -> "CONTINUA ▶ calendario"
                 }
@@ -269,13 +271,17 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.55f))
                         .padding(horizontal = 10.dp, vertical = 6.dp).navigationBarsPadding()
                 ) {
-                    PcButton(testo, {
-                        when {
-                            libero -> vm.continuaGiorno()
-                            haPartita -> screen = Screen.PARTITA
-                            else -> screen = Screen.CALENDARIO
-                        }
-                    }, Modifier.fillMaxWidth(), main = true)
+                    val nonLetti = vm.posta.collectAsStateWithLifecycle().value.count { !it.letto }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (nonLetti > 0) PcButton("✉ $nonLetti", { screen = Screen.POSTA }, Modifier)
+                        PcButton(testo, {
+                            when {
+                                libero -> vm.continuaGiorno()
+                                haPartita -> screen = Screen.PARTITA
+                                else -> screen = Screen.CALENDARIO
+                            }
+                        }, Modifier.weight(1f), main = true)
+                    }
                 }
             }
         }
@@ -360,6 +366,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val cl by vm.club.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
                     ObiettiviScreen(ex, cl, vm.posizioneOggi.collectAsStateWithLifecycle().value)
+                }
+                Screen.POSTA -> {
+                    val msgs by vm.posta.collectAsStateWithLifecycle()
+                    LaunchedEffect(msgs.count { !it.letto }) { if (msgs.any { !it.letto }) { kotlinx.coroutines.delay(1500); vm.segnaPostaLetta() } }
+                    PostaScreen(msgs) { v -> screen = Screen.values().firstOrNull { it.name == v } ?: Screen.HOME }
                 }
                 Screen.GIORNALE -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
@@ -794,7 +805,7 @@ fun HomeScreen(
             Screen.ROSA, Screen.TATTICA, Screen.PARTITA, Screen.AVVERSARIO, Screen.MERCATO, Screen.VIVAIO,
             Screen.CALENDARIO, Screen.FINANZE, Screen.DIRIGENZA, Screen.STAFF, Screen.STATISTICHE, Screen.NAZIONALI, Screen.EDITOR,
             Screen.STRUTTURE, Screen.STADIO, Screen.EUROPA, Screen.RELAZIONI, Screen.COMMERCIALE, Screen.OBIETTIVI, Screen.GIORNALE, Screen.PRESTITI,
-            Screen.SOCIETA, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
+            Screen.POSTA, Screen.SOCIETA, Screen.SQUADRE, Screen.SALVATAGGI, Screen.ALBO, Screen.OPZIONI
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(if (AC.pc7) 8.dp else 12.dp)) {
