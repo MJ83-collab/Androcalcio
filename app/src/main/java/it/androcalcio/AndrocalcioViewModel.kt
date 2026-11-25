@@ -3487,7 +3487,9 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val livDif = _opzioni.value.difficolta
             val profDif = profiloPersonalizzato()
             // Clausole di rendimento per tutti i giocatori (anche IA): a fine stagione il club paga i bonus raggiunti
-            val pagaSquadra = pagaClausole(s, teamsNow, byTeam, finals.values.mapNotNull { it.firstOrNull()?.team?.id }.toSet(), coppeVinte)
+            val campioni = finals.values.mapNotNull { it.firstOrNull()?.team?.id }.toSet()
+            val statAll = dao.statsOf(s).associateBy { it.playerId }
+            val pagaSquadra = pagaClausole(s, teamsNow, byTeam, campioni, coppeVinte)
             val clausePay = pagaSquadra[me.id] ?: 0L
             val prelazioneIds = SquadraB.decode(dao.stato(SquadraB.KEY)).filterValues { it == 1 }.keys
             // Ritiri: per età, o per infortunio grave in età avanzata (in questo caso a volte si scende di categoria
