@@ -37,6 +37,13 @@ Prese da Marco il 25/11:
 - Salvataggi vecchi: le coppe già calendarizzate "recuperano" i turni.
 - Stelle intere in vivaio/scouting giovani e maglie.
 
+## Release v0.7.0 (25/11/2026, autorizzata da Marco a voce prima della prova sul telefono)
+- Versione 0.7.0 (versionCode 7), merge di `feat/stadio` su `main` (lineare, `main` era ferma a v0.6.0). Il workflow `release.yml` crea la release `v0.7.0` con un solo APK.
+- ⚠️ Prima installazione: esportare i salvataggi e disinstallare la vecchia versione una volta (chiave di firma nuova).
+- Mezze stelle (0,5) ovunque: vivaio, scouting giovani, maglie, Rosa, Mercato, scheda giocatore (`Stelle`, `ScoutingGiovani.mezzeStelle`, `Maglie.mezzeStelle`). Avatar: restano disegnati in codice (deciso). Coppe già calendarizzate nei vecchi salvataggi: continuano a recuperare i turni (deciso).
+- **Editor giocatore:** nazionale a tendina, piede (destro/mancino/ambidestro), posizione preferita per ruolo, ruoli affini 2-4 con affinità %. Corretto: "Aggiungi giocatore" metteva "ITA" invece del nome della nazione. Esportazione/importazione e "Usa come predefinito" salvavano già questi campi.
+- Ritocchi grafici generici: non fatti (senza screenshot non so quali schermate sistemare): dire quali.
+
 ## Sessione 25/11 pomeriggio (2): decisioni attuate (ramo feat/stadio, commit 00b0aa0, build verde, non provata sul telefono)
 - **Controllo repo:** nessun bug certo trovato (letture grandi già a pagine, niente `!!` a rischio). Controllo non esaustivo: lettura mirata del motore.
 - **Cinico nei rigori simulati:** `Cup.finalize(m, all, rng, cinici)`; `cinici` = per squadra, quanti Cinici tra i 5 rigoristi (migliori per `fi`, portiere escluso, `AndrocalcioViewModel.ciniciRigori`). Ognuno tira con +0,04 (75% → 79%). Usato da `finalizeKey` e `avanzaEuropa`. La finale dal vivo usa già i nomi. Test `CinicoRigoriSimulatiTest`.
