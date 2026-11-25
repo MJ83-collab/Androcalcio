@@ -492,7 +492,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         onRitira = { vm.ritiraAnnuncio(it) },
                         onRinnova = { s, a -> vm.rinnovaStaff(s, a) },
                         focus = vm.staffFocus.collectAsStateWithLifecycle().value,
-                        onFocusUsato = { vm.staffFocus.value = null }
+                        onFocusUsato = { vm.staffFocus.value = null },
+                        scala = vm.scalaStipendi.collectAsStateWithLifecycle().value,
+                        onCorso = { vm.faiCorso(it) }
                     )
                     androidx.compose.runtime.LaunchedEffect(Unit) { vm.aggiornaCandidatiStaff() }
                 }
@@ -976,7 +978,7 @@ private fun MediaSquadraBar(team: Team, players: List<Player>) {
             Text(team.name.uppercase(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
             Text("MEDIA SQUADRA", color = AC.NavyText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
-        Text(stelle(media), color = AC.Accent, fontSize = 16.sp)
+        it.androcalcio.ui.components.Stelle(it.androcalcio.engine.Staffing.mezzeStelle(media), 16.sp, AC.Accent)
         Text(" $media", color = AC.Neon, fontWeight = FontWeight.Black, fontSize = 18.sp)
     }
 }

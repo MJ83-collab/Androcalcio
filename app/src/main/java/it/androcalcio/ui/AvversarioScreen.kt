@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import it.androcalcio.engine.AssistantCoach
 import it.androcalcio.ui.components.PaperPanel
 import it.androcalcio.ui.components.SectionTitle
+import it.androcalcio.ui.components.Stelle
 import it.androcalcio.ui.theme.AC
 
 /** Stelle della media squadra: una stella ogni 20 punti, con la mezza stella. */
@@ -46,7 +47,7 @@ fun AvversarioScreen(advice: AssistantCoach.Advice?, analista: Int = -1) {
                     Text(a.opponent, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("MEDIA SQUADRA", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AC.ColBlue)
-                        Text(stelle(a.opponentMedia), fontSize = 16.sp, color = AC.ColOrange)
+                        Stelle(it.androcalcio.engine.Staffing.mezzeStelle(a.opponentMedia), 16.sp, AC.ColOrange)
                         Text("${a.opponentMedia}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AC.PaperText)
                     }
                     a.opponentSchema?.let {

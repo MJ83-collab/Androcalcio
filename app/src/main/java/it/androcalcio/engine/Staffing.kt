@@ -116,7 +116,22 @@ object Staffing {
     fun injuryChance(prevenzione: Int): Double = 0.05 * (1.0 - (prevenzione - NEUTRAL) / 100.0)
 
     /** Ingaggio annuo in base all'abilità. */
-    fun wage(skill: Int): Long = ((skill - 30).coerceAtLeast(5) * 12_000L / 1_000L) * 1_000L
+    fun wage(skill: Int, scala: Double = 1.0): Long = (((skill - 30).coerceAtLeast(5) * 12_000L * scala).toLong() / 1_000L) * 1_000L
+
+    /**
+     * Scala degli stipendi in base alla categoria del club (dalla forza media della rosa): massima serie ~0,9-1,
+     * Serie B ~0,6, Serie C ~0,4. Un professionista bravo costa in proporzione alla serie, non a un valore unico.
+     */
+    fun scalaCategoria(mediaRosa: Double): Double = ((mediaRosa - 40.0) / 40.0).coerceIn(0.3, 1.0)
+
+    /** Costo di un corso di formazione: cresce con l'abilità, in proporzione alla categoria. */
+    fun costoCorso(skill: Int, scala: Double): Long = (((15_000 + skill * 500L) * (0.4 + 0.6 * scala)).toLong() / 1_000L) * 1_000L
+
+    /** Quanto sale l'abilità con un corso: di più per chi parte da meno. */
+    fun guadagnoCorso(skill: Int): Int = if (skill < 60) 3 else if (skill < 80) 2 else 1
+
+    /** Mezze stelle da 1 a 10 (cioè da 1 a 5 stelle) per un valore 0-100. */
+    fun mezzeStelle(valore: Int): Int = Math.round(valore / 10.0).toInt().coerceIn(1, 10)
 
     /**
      * Staff di una squadra AI per i posti mancanti.
@@ -129,33 +144,33 @@ object Staffing {
                 teamId = teamId, role = posto.role, specialita = posto.specialita,
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+                skill = sk, salary = wage(sk, scalaCategoria(avgOverall)), contract = rng.nextInt(1, 5),
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
         }
 
     /** Candidati da assumere: n per ogni posto, con abilità e contratto casuali. */
-    fun candidates(rng: Random, n: Int = 2): List<Staff> = POSTI.flatMap { posto ->
+    fun candidates(rng: Random, n: Int = 2, scala: Double = 1.0): List<Staff> = POSTI.flatMap { posto ->
         (1..n).map {
             val sk = rng.nextInt(35, 91)
             Staff(
                 teamId = 0, role = posto.role, specialita = posto.specialita,
                 name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                     SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-                skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+                skill = sk, salary = wage(sk, scala), contract = rng.nextInt(1, 5),
                 stile = Stile.values()[rng.nextInt(Stile.values().size)].name
             )
         }
     }
 
     /** Osservatori candidati: non sono in POSTI, il club ne può assumere fino a MAX_OSSERVATORI. */
-    fun candidatiOsservatori(rng: Random, n: Int = 3): List<Staff> = List(n) {
+    fun candidatiOsservatori(rng: Random, n: Int = 3, scala: Double = 1.0): List<Staff> = List(n) {
         val sk = rng.nextInt(35, 91)
         Staff(
             teamId = 0, role = SCOUT, specialita = "",
             name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                 SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-            skill = sk, salary = wage(sk), contract = rng.nextInt(1, 5),
+            skill = sk, salary = wage(sk, scala), contract = rng.nextInt(1, 5),
             stile = Stile.values()[rng.nextInt(Stile.values().size)].name
         )
     }

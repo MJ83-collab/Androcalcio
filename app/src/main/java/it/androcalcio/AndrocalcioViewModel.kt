@@ -2847,8 +2847,45 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     private val _candidates = MutableStateFlow(Staffing.candidates(kotlin.random.Random.Default))
     val candidates: StateFlow<List<Staff>> = _candidates
 
+    // Scala degli stipendi dello staff in base alla categoria del club (vedi Staffing.scalaCategoria)
+    private val _scalaStipendi = MutableStateFlow(1.0)
+    val scalaStipendi: StateFlow<Double> = _scalaStipendi
+    private var candidatiScalati = false
+
+    private suspend fun scalaDi(me: Team): Double {
+        val media = dao.playersOnce(me.id).map { it.overall }.average().takeIf { !it.isNaN() } ?: 55.0
+        return Staffing.scalaCategoria(media).also { _scalaStipendi.value = it }
+    }
+
+    private suspend fun nuoviCandidati(me: Team) {
+        val sc = scalaDi(me)
+        _candidates.value = Staffing.candidates(kotlin.random.Random.Default, 2, sc) +
+            Staffing.candidatiOsservatori(kotlin.random.Random.Default, 3, sc)
+    }
+
     fun refreshCandidates() {
-        _candidates.value = Staffing.candidates(kotlin.random.Random.Default) + Staffing.candidatiOsservatori(kotlin.random.Random.Default)
+        viewModelScope.launch(Dispatchers.IO) { selectedTeam.value?.let { nuoviCandidati(it) } }
+    }
+
+    /** Corso di formazione pagato dal club: l'abilità sale un po', una volta a stagione per persona. */
+    fun faiCorso(s: Staff) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val chiave = "corso_staff_${_season.value}"
+            val fatti = decodeIds(dao.stato(chiave))
+            if (s.id in fatti) { _notice.value = "${s.name} ha già fatto un corso questa stagione."; return@launch }
+            if (s.skill >= 95) { _notice.value = "${s.name} è già al massimo."; return@launch }
+            val costo = Staffing.costoCorso(s.skill, scalaDi(me))
+            val tt = dao.team(me.id)
+            if (tt.budget < costo) { _notice.value = "Budget insufficiente per il corso (${money(costo)})."; return@launch }
+            dao.updateTeam(tt.copy(budget = tt.budget - costo))
+            registra(tt.id, "Corso di formazione: ${s.name}", -costo, tt.budget - costo)
+            val nuova = (s.skill + Staffing.guadagnoCorso(s.skill)).coerceAtMost(95)
+            dao.updateStaffs(listOf(s.copy(skill = nuova)))
+            if (s.role == Staffing.SCOUT) syncScoutSkill(me.id) else syncTeamSkill(me.id, s.role, nuova)
+            dao.setStato(Stato(chiave, (fatti + s.id).joinToString(";")))
+            _notice.value = "${s.name} ha fatto il corso (${money(costo)}): abilità $nuova."
+        }
     }
 
     // ---- Annunci per lo staff: pubblichi, rispondono gli interessati, le risposte si rinnovano ogni mese ----
@@ -2871,7 +2908,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val mese = meseChiave()
         val media = dao.playersOnce(me.id).map { it.overall }.average().takeIf { !it.isNaN() } ?: 55.0
         val f = Annunci.fascino(media, me.budget)
-        return lista.flatMap { Annunci.risposte(me.id, it, mese, f) }
+        val sc = scalaDi(me)
+        return lista.flatMap { Annunci.risposte(me.id, it, mese, f, sc) }
     }
 
     /** Pubblica un annuncio per un posto: costa poco e le risposte arrivano subito. */
@@ -2908,6 +2946,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun aggiornaCandidatiStaff() {
         viewModelScope.launch(Dispatchers.IO) {
             val me = selectedTeam.value ?: return@launch
+            if (!candidatiScalati) { candidatiScalati = true; nuoviCandidati(me) }
             val mese = meseChiave()
             if (dao.stato(Annunci.KEY_MESE + me.id) == mese) return@launch
             val att = Annunci.decodeAnnunci(dao.stato(Annunci.KEY_ANNUNCI + me.id))
@@ -2930,7 +2969,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     /** Rinnovo del contratto di un membro dello staff: scegli gli anni, l'ingaggio dipende da bravura e durata. */
     fun rinnovaStaff(s: Staff, anni: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val nuovo = s.copy(contract = anni, salary = Annunci.nuovoIngaggio(s, anni))
+            val me = selectedTeam.value
+            val nuovo = s.copy(contract = anni, salary = Annunci.nuovoIngaggio(s, anni, if (me != null) scalaDi(me) else 1.0))
             dao.updateStaffs(listOf(nuovo))
             _notice.value = "${s.name} rinnova per $anni ${if (anni == 1) "anno" else "anni"}: ${money(nuovo.salary)} l'anno."
         }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import it.androcalcio.ui.components.Avatar
 import androidx.compose.foundation.layout.Arrangement
@@ -40,17 +41,10 @@ import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Stile
 import it.androcalcio.ui.components.GlassCard
 import it.androcalcio.ui.components.SectionTitle
+import it.androcalcio.ui.components.Stelle
 import it.androcalcio.ui.components.money
 import it.androcalcio.ui.theme.AC
 import java.util.Locale
-
-/** Cinque stelle per un'abilità 1-99 (scala 0-10), con mezze stelle. */
-private fun stelleTesto(skill: Int): String {
-    val s = Staffing.stelle(skill)
-    val piene = s.toInt()
-    val mezza = s - piene >= 0.5
-    return "★".repeat(piene) + (if (mezza) "◐" else "") + "☆".repeat(5 - piene - (if (mezza) 1 else 0))
-}
 
 private fun punteggio(skill: Int): String = String.format(Locale.ITALY, "%.1f/10", skill / 10.0)
 
@@ -71,7 +65,9 @@ fun StaffScreen(
     onRitira: (Annunci.Annuncio) -> Unit = {},
     onRinnova: (Staff, Int) -> Unit = { _, _ -> },
     focus: Staffing.Posto? = null,
-    onFocusUsato: () -> Unit = {}
+    onFocusUsato: () -> Unit = {},
+    scala: Double = 1.0,
+    onCorso: (Staff) -> Unit = {}
 ) {
     if (team == null) return
     var aperto by remember { mutableStateOf<Staff?>(null) }
@@ -98,7 +94,7 @@ fun StaffScreen(
                     Text("Più anni firmi, meno chiede all'anno:", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
                     (1..3).forEach { a ->
                         PcAction(onClick = { onRinnova(s, a); rinnovo = null }, modifier = Modifier.fillMaxWidth()) {
-                            Text("$a ${if (a == 1) "anno" else "anni"} · ${money(Annunci.nuovoIngaggio(s, a))}")
+                            Text("$a ${if (a == 1) "anno" else "anni"} · ${money(Annunci.nuovoIngaggio(s, a, scala))}")
                         }
                     }
                 }
@@ -112,6 +108,7 @@ fun StaffScreen(
             onHire = { onHire(s); aperto = null },
             onFire = { onFire(s); aperto = null },
             onRinnova = { rinnovo = s; aperto = null },
+            scala = scala, onCorso = { onCorso(s); aperto = null },
             onClose = { aperto = null },
             missione = missioni.firstOrNull { it.staffId == s.id },
             onInvia = { area -> onInvia(s, area); aperto = null }
@@ -160,7 +157,7 @@ fun StaffScreen(
                             Text("vacante · tocca per cercare", color = AC.Accent, style = MaterialTheme.typography.bodySmall)
                         } else {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stelleTesto(s.skill), color = AC.Accent)
+                                Stelle(Staffing.mezzeStelle(s.skill), 14.sp)
                                 Text("${punteggio(s.skill)} · ${s.name}", color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
                             }
                             Text(if (s.contract <= 1) "⚠ contratto in scadenza: tocca per rinnovare" else "contratto ${s.contract} anni · ${money(s.salary)} l'anno",
@@ -188,7 +185,7 @@ fun StaffScreen(
                 Avatar(s.name, 44.dp)
                 Column(Modifier.padding(start = 12.dp)) {
                     Text("Osservatore · ${s.name}", style = MaterialTheme.typography.titleSmall)
-                    Text(stelleTesto(s.skill), color = AC.Accent)
+                    Stelle(Staffing.mezzeStelle(s.skill), 14.sp)
                     Text(
                         if (m == null) "Disponibile" else "In missione in ${m.area}: rientro tra ${m.giornate} giornate",
                         color = if (m == null) AC.Ok else AC.TextDim, style = MaterialTheme.typography.bodySmall
@@ -236,8 +233,11 @@ fun StaffScreen(
                                 Avatar(c.name, 36.dp)
                                 Column(Modifier.padding(start = 10.dp)) {
                                     Text(c.name, style = MaterialTheme.typography.bodyMedium)
-                                    Text("${stelleTesto(c.skill)} · ${money(c.salary)} l'anno · ${c.contract} anni",
-                                        color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Stelle(Staffing.mezzeStelle(c.skill), 13.sp)
+                                        Text(" · ${money(c.salary)} l'anno · ${c.contract} anni",
+                                            color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             }
                         }
@@ -251,6 +251,7 @@ fun StaffScreen(
 @Composable
 private fun DettaglioStaff(
     s: Staff, candidato: Boolean, onHire: () -> Unit, onFire: () -> Unit, onRinnova: () -> Unit = {}, onClose: () -> Unit,
+    scala: Double = 1.0, onCorso: () -> Unit = {},
     missione: ScoutMission?, onInvia: (String) -> Unit
 ) {
     val (bonus, malus) = Staffing.effetti(s)
@@ -260,7 +261,11 @@ private fun DettaglioStaff(
         title = { Text(Staffing.roleName(s.role, s.specialita)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${s.name} · ${stelleTesto(s.skill)} · ${punteggio(s.skill)}")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${s.name} · ")
+                    Stelle(Staffing.mezzeStelle(s.skill), 14.sp)
+                    Text(" · ${punteggio(s.skill)}")
+                }
                 Text("${money(s.salary)} l'anno · contratto ${s.contract} anni", color = AC.TextDim)
                 if (s.role == Staffing.ALLENATORE) Text(stile.descrizione(), color = AC.TextDim, style = MaterialTheme.typography.bodySmall)
                 Text("Bonus", style = MaterialTheme.typography.titleSmall)
@@ -269,6 +274,11 @@ private fun DettaglioStaff(
                 Text("Malus", style = MaterialTheme.typography.titleSmall)
                 if (malus.isEmpty()) Text("Nessun malus", color = AC.TextDim)
                 malus.forEach { Text("− $it", color = AC.Danger) }
+                if (!candidato) {
+                    PcAction(onClick = onCorso, modifier = Modifier.fillMaxWidth()) {
+                        Text("🎓 Corso di formazione · ${money(Staffing.costoCorso(s.skill, scala))} (+${Staffing.guadagnoCorso(s.skill)} abilità)")
+                    }
+                }
                 if (s.role == Staffing.SCOUT && !candidato) {
                     Text("Missione", style = MaterialTheme.typography.titleSmall)
                     if (missione != null) {

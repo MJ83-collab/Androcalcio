@@ -125,7 +125,6 @@ fun CalendarioScreen(
         if (giorno != null) GiornoCard(giorno, { a ->
             onAttivita(a)
             if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE) amichevoliAperte = true
-            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.MERCATO) onMercato()
         }, onSalta)
         val giornoOk = giorno == null || giorno.prossima == null || giorno.giornoPartita
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
