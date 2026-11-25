@@ -84,9 +84,12 @@ fun CalendarioScreen(
     giorno: it.androcalcio.AndrocalcioViewModel.GiornoStato? = null,
     onAttivita: (it.androcalcio.engine.CalendarioGiorni.Attivita) -> Unit = {},
     onSalta: () -> Unit = {},
-    onMercato: () -> Unit = {}
+    onMercato: () -> Unit = {},
+    sceltaAmichevoli: String? = "IO",
+    onSceltaAmichevoli: (Boolean) -> Unit = {}
 ) {
     var askNext by remember { mutableStateOf(false) }
+    var chiediAmichevoli by remember { mutableStateOf(false) }
     var amichevoliAperte by rememberSaveable { mutableStateOf(false) }
     if (askNext) AlertDialog(
         onDismissRequest = { askNext = false },
@@ -122,9 +125,25 @@ fun CalendarioScreen(
             PcButton("Coppa", { tab = 2 }, Modifier.weight(1f), main = tab == 2)
             PcButton("Tutte", { tab = 3 }, Modifier.weight(1f), main = tab == 3)
         }
+        if (chiediAmichevoli) androidx.compose.material3.AlertDialog(
+            onDismissRequest = { chiediAmichevoli = false },
+            title = { Text("Amichevoli di quest'anno") },
+            text = { Text("Vuoi delegare la scelta delle squadre all'allenatore in seconda o sceglierle tu? La domanda si ripete a ogni inizio stagione.") },
+            confirmButton = { androidx.compose.material3.TextButton({
+                chiediAmichevoli = false; onSceltaAmichevoli(true)
+                onAttivita(it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE); amichevoliAperte = true
+            }) { Text("Delego all'allenatore in seconda") } },
+            dismissButton = { androidx.compose.material3.TextButton({
+                chiediAmichevoli = false; onSceltaAmichevoli(false)
+                onAttivita(it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE); amichevoliAperte = true
+            }) { Text("Scelgo io") } }
+        )
         if (giorno != null) GiornoCard(giorno, { a ->
-            onAttivita(a)
-            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE) amichevoliAperte = true
+            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE && sceltaAmichevoli == null) chiediAmichevoli = true
+            else {
+                onAttivita(a)
+                if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE) amichevoliAperte = true
+            }
         }, onSalta)
         val giornoOk = giorno == null || giorno.prossima == null || giorno.giornoPartita
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

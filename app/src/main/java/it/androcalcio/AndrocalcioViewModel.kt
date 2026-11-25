@@ -3764,6 +3764,41 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private fun kScelta(s: String) = "amich_scelta_$s"
+
+    /** Come si scelgono le amichevoli quest'anno: "ASS" (delega all'allenatore in seconda), "IO" o null se non ancora chiesto. */
+    val sceltaAmichevoli: StateFlow<String?> = osserva("stato") { dao.stato(kScelta(_season.value)) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun scegliAmichevoli(delega: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.setStato(Stato(kScelta(_season.value), if (delega) "ASS" else "IO"))
+            if (delega) delegaAmichevoli()
+        }
+    }
+
+    /** L'allenatore in seconda fissa le amichevoli mancanti con squadre di forza simile della stessa nazione. */
+    fun delegaAmichevoli() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val s = _season.value
+            val booked = dao.matchesOnce(Friendlies.key(me.id), s).toMutableList()
+            val forza = strengthOf()
+            val mia = forza[me.id] ?: 0.0
+            val candidati = dao.allTeams().filter { it.id != me.id && it.nazione == me.nazione && !AllStar.isAllStar(it) }
+                .sortedBy { Math.abs((forza[it.id] ?: 0.0) - mia) }.toMutableList()
+            var fissate = 0
+            for (opp in candidati) {
+                if (booked.size >= Friendlies.COUNT) break
+                if (booked.any { it.homeTeamId == opp.id || it.awayTeamId == opp.id }) continue
+                if (!Friendlies.accepts(mia, forza[opp.id] ?: 0.0, kotlin.random.Random.Default)) continue
+                val m = Friendlies.fixture(me.id, opp.id, booked.size, s)
+                dao.insertMatches(listOf(m)); booked += m; fissate++
+            }
+            _notice.value = "L'allenatore in seconda ha fissato $fissate amichevoli."
+        }
+    }
+
     /** Assegna un giovane (max 23 anni) alla squadra B, al satellite (livello 1) o lo toglie (null). */
     fun setSquadraB(p: Player, livello: Int?) {
         viewModelScope.launch(Dispatchers.IO) {

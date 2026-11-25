@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Face
@@ -149,7 +150,10 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     PRESTITI("Prestiti", Icons.Filled.Refresh, "Finestre e prestiti", Color(0xFF1565C0)),
     SOCIETA("Società", Icons.Filled.Person, "Disciplina, scambi, storia", Color(0xFF00838F)),
     OPZIONI("Opzioni", Icons.Filled.Settings, "Difficoltà e velocità", Color(0xFF607D8B)),
-    POSTA("Messaggi", Icons.Filled.Email, "Eventi e avvisi", Color(0xFF3F6FD8))
+    POSTA("Messaggi", Icons.Filled.Email, "Eventi e avvisi", Color(0xFF3F6FD8)),
+    PREPARATORI("Preparatori", Icons.Filled.Person, "Attività per giocatore", Color(0xFFC0392B)),
+    FISIO("Fisioterapisti", Icons.Filled.Add, "Infermeria e rischi", Color(0xFFD32F2F)),
+    GIARDINIERE("Giardiniere", Icons.Filled.Build, "Campo e cantieri", Color(0xFF5BA83A))
 }
 
 private val bottomTabs = listOf(
@@ -367,6 +371,13 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     LaunchedEffect(team?.id) { vm.aggiornaExtra() }
                     ObiettiviScreen(ex, cl, vm.posizioneOggi.collectAsStateWithLifecycle().value)
                 }
+                Screen.PREPARATORI -> SchedaPreparatori(vm.staff.collectAsStateWithLifecycle().value, players) { screen = Screen.STAFF }
+                Screen.FISIO -> SchedaFisio(vm.staff.collectAsStateWithLifecycle().value, players) { screen = Screen.STAFF }
+                Screen.GIARDINIERE -> {
+                    val mig by vm.migliorie.collectAsStateWithLifecycle()
+                    LaunchedEffect(team?.id) { vm.aggiornaMigliorie() }
+                    SchedaGiardiniere(vm.staff.collectAsStateWithLifecycle().value, mig) { screen = Screen.STAFF }
+                }
                 Screen.POSTA -> {
                     val msgs by vm.posta.collectAsStateWithLifecycle()
                     LaunchedEffect(msgs.count { !it.letto }) { if (msgs.any { !it.letto }) { kotlinx.coroutines.delay(1500); vm.segnaPostaLetta() } }
@@ -425,6 +436,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 }
                 Screen.CALENDARIO -> {
                     val ment by vm.mentality.collectAsStateWithLifecycle()
+                    val sceltaAmich by vm.sceltaAmichevoli.collectAsStateWithLifecycle()
                     CalendarioScreen(team, teams, matches, { vm.playNextRound() }, season,
                         { vm.closeSeason() }, ment, { vm.setMentality(it) }, { vm.playNextRoundLive() },
                         cupMatches = cupMatches,
@@ -435,9 +447,14 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         onInvito = { vm.accettaInvito(it) },
                         onSimulaFino = { vm.simulaFino(it) },
                         giorno = vm.giorno.collectAsStateWithLifecycle().value,
-                        onAttivita = { vm.viviGiorno(it) },
+                        onAttivita = { a ->
+                            vm.viviGiorno(a)
+                            if (a == it.androcalcio.engine.CalendarioGiorni.Attivita.AMICHEVOLE && sceltaAmich == "ASS") vm.delegaAmichevoli()
+                        },
                         onSalta = { vm.saltaAllaPartita() },
-                        onMercato = { screen = Screen.MERCATO })
+                        onMercato = { screen = Screen.MERCATO },
+                        sceltaAmichevoli = sceltaAmich,
+                        onSceltaAmichevoli = { vm.scegliAmichevoli(it) })
                 }
                 Screen.MERCATO -> {
                     val market by vm.market.collectAsStateWithLifecycle()

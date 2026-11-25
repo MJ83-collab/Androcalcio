@@ -70,10 +70,14 @@ internal fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
 private fun ColonnaStaff(go: (Screen) -> Unit) {
     val voci = listOf("ALL" to Color(0xFFE08A12), "ASS" to Color(0xFF3AA0E0), "GIO" to Color(0xFF2F8F4E), "PRE" to Color(0xFFC0392B),
         "FIS" to Color(0xFFEDEDED), "SCO" to Color(0xFF8E5BC8), "GIA" to Color(0xFF5BA83A), "ANA" to Color(0xFFC9A227))
-    Column(Modifier.width(38.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF14215C)).clickable { go(Screen.STAFF) }.padding(vertical = 4.dp),
+    Column(Modifier.width(38.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF14215C)).padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
         voci.forEach { (ruolo, c) ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val dest = when (ruolo) {
+                "ALL" -> Screen.TATTICA; "ASS" -> Screen.CALENDARIO; "GIO", "SCO" -> Screen.VIVAIO
+                "PRE" -> Screen.PREPARATORI; "FIS" -> Screen.FISIO; "GIA" -> Screen.GIARDINIERE; else -> Screen.AVVERSARIO
+            }
+            Column(Modifier.clickable { go(dest) }, horizontalAlignment = Alignment.CenterHorizontally) {
                 Canvas(Modifier.size(28.dp)) {
                     val w = size.width; val h = size.height
                     drawCircle(c, w / 2f); drawCircle(Color(0xFF0B1240), w / 2f, style = Stroke(2.5f))
