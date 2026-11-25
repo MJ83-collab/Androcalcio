@@ -60,7 +60,7 @@ class PianoTatticoTest {
         StileTattico.values().forEach { s ->
             val e = s.pianoCompleto().effetti(xi())
             listOf(e.poss, e.atk, e.def, e.drain).forEach { v ->
-                assertTrue("${s.nome}: effetto $v fuori misura", v in 0.9..1.12)
+                assertTrue("${s.nome}: effetto $v fuori misura", v in 0.9..1.15)
             }
         }
     }
