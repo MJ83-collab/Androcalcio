@@ -24,12 +24,17 @@ Scelte di Marco: tutto, motore compreso; due ruoli per giocatore (con e senza pa
 - **Test:** `PianoTatticoTest` (salvataggio, effetti, gol medi 1,5-4,2 per ogni stile). Tutti verdi.
 - Modello: Sonnet basta per UI e collegamenti; Opus solo se si vuole tarare a fondo gli effetti.
 
+### Seconda parte (25/11 sera, Opus, build verde, NON provata sul telefono)
+Decisioni di Marco: 1) squadre AI con gli 11 stili, in base all'allenatore e alle 4 squadre più storiche e forti; 2) effetti alzati di poco; 3) Tiki-Taka verticale ok così; 4) istruzioni per giocatore e ruoli per fase in partita, subito.
+- **`StiliAi`:** le 4 squadre più storiche e forti di ogni nazione (stadio più grande, poi budget) scelgono tra Controllo del possesso, Tiki-Taka, Tiki-Taka verticale, Gegenpress; le altre tra gli stili d'attacco o di difesa secondo l'allenatore. Vince lo stile più adatto alla rosa. Per le AI pressing, linea, ampiezza e fasce vengono dallo stile.
+- **Effetti alzati** di circa un quarto; ruolo senza palla fino a ±10%.
+- **`IstrGiocatore`:** 11 istruzioni per giocatore (tiro, dribbling, passaggi, sortite, pressing, contrasti), effetto totale massimo ±5%; "Tira di più/meno" cambia chi tira. Nella scelta ruolo; punto "•" sul campo.
+- **Ruoli per fase in partita:** nella partita dal vivo e nella vista "Non in possesso" i giocatori vanno verso il ruolo senza palla (`PostoRuolo`).
+- **Tecnico:** `closeSeason` di nuovo al limite ("Method too large"): partita spostata in `simChiusura`. Ogni aggiunta futura lì va in funzioni separate.
+
 ### Decisioni aperte (Tattica FM)
-1. Le squadre AI usano ancora il vecchio stile Attacco/Difesa: dar loro uno dei 11 stili cambierebbe la taratura dei campionati. Vuoi che lo facciano?
-2. Tiki-Taka verticale: le istruzioni senza palla non erano leggibili nell'articolo (nel codice sono quelle del Tiki-Taka).
-3. Effetti: sono volutamente piccoli (pochi %). Se in prova sul telefono non si sentono, alzarli.
-4. Mancano ancora: istruzioni per singolo giocatore (come FM), ruoli diversi per fase nel campo della partita dal vivo, stile consigliato dall'allenatore in seconda.
-5. Da provare sul telefono: leggibilità delle caselle sul campo con 5 giocatori in fila, scelta ruolo, cambio stile.
+1. Le 4 "storiche" sono scelte per stadio e budget, non con un elenco fisso: se vuoi un elenco fisso per nazione, dimmi quali.
+2. Da provare sul telefono: leggibilità del campo, scelta ruolo, istruzioni, movimento senza palla in partita, equilibrio dei campionati con le AI a stili.
 
 ## Stato dei compiti (24/11 sera)
 Fatti nel codice, build verde, da provare sul telefono: stile marmo ovunque, icone staff, centro sportivo, movimento giocatori per fotogramma, ruoli FD/FS/AD/AS, allenamento ruoli/piede/Cinico, cronaca sincronizzata, importazione JSON con id, lettura giocatori a pagine, correzioni dei bug sotto.
