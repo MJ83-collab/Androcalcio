@@ -51,6 +51,8 @@ import it.androcalcio.engine.DefLine
 import it.androcalcio.engine.Fasce
 import it.androcalcio.engine.Formation
 import it.androcalcio.engine.FrequenzaPressing
+import it.androcalcio.engine.IstrGiocatore
+import it.androcalcio.engine.PostoRuolo
 import it.androcalcio.engine.Lineup
 import it.androcalcio.engine.Passaggi
 import it.androcalcio.engine.PianoTattico
@@ -122,7 +124,8 @@ fun TatticaFmScreen(
     trappola: Boolean, onTrappola: (Boolean) -> Unit,
     onRoleConPalla: (Player, String) -> Unit,
     onRoleSenzaPalla: (Player, String) -> Unit,
-    onCompito: (Player, String) -> Unit
+    onCompito: (Player, String) -> Unit,
+    onIstr: (Player, IstrGiocatore) -> Unit = { _, _ -> }
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi, formation)
     var tab by remember { mutableStateOf(0) }
@@ -137,7 +140,7 @@ fun TatticaFmScreen(
             DialogRuolo(
                 p, piano, if (fase == FaseVista.SENZA) 1 else 0,
                 onChiudi = { giocatoreId = null },
-                onRoleConPalla = onRoleConPalla, onRoleSenzaPalla = onRoleSenzaPalla, onCompito = onCompito
+                onRoleConPalla = onRoleConPalla, onRoleSenzaPalla = onRoleSenzaPalla, onCompito = onCompito, onIstr = onIstr
             )
         }
     }
@@ -370,26 +373,31 @@ private fun CampoFm(xi: List<Player>, formation: Formation, piano: PianoTattico,
             var yf = 0.88f - (c.first - 0.05f) / 0.41f * 0.74f
             if (fase == FaseVista.SENZA && p.role != "P") yf = (yf + calo).coerceAtMost(0.80f)
             if (fase == FaseVista.POSSESSO && p.role != "P") yf = (yf - 0.02f).coerceAtLeast(0.06f)
-            val xf = c.second
+            var xf = c.second
             val conPalla = TacticalRoles.assigned(p)
             val senza = piano.ruoliNonPoss[p.id] ?: conPalla
+            if (fase == FaseVista.SENZA && senza != conPalla) {
+                val (dd, dw) = PostoRuolo.spostamento(conPalla, senza)
+                yf = (yf - dd * 0.8f).coerceIn(0.06f, 0.82f); xf = (xf + dw * 0.8f).coerceIn(0.08f, 0.92f)
+            }
+            val conIstr = piano.istrGioc[p.id].orEmpty().isNotEmpty()
             val mostrato = if (fase == FaseVista.SENZA) senza else conPalla
             val etichetta = if (fase == FaseVista.COMBINATA && senza != conPalla) "$conPalla/$senza" else mostrato
             Box(Modifier.offset(x = w * xf - 31.dp, y = h * yf - 24.dp).width(62.dp)) {
-                ChipGiocatore(p, etichetta, mostrato, if (p.role == "P") coloreLinea("POR") else coloreLinea(mostrato)) { onGiocatore(p) }
+                ChipGiocatore(p, etichetta, mostrato, if (p.role == "P") coloreLinea("POR") else coloreLinea(mostrato), conIstr) { onGiocatore(p) }
             }
         }
     }
 }
 
 @Composable
-private fun ChipGiocatore(p: Player, etichetta: String, ruoloStelle: String, colore: Color, onClick: () -> Unit) {
+private fun ChipGiocatore(p: Player, etichetta: String, ruoloStelle: String, colore: Color, conIstr: Boolean, onClick: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(Fm.Carta).border(1.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(etichetta, Modifier.fillMaxWidth().background(colore).padding(vertical = 1.dp), color = Color.White, fontSize = 9.sp,
+        Text(etichetta + if (conIstr) " •" else "", Modifier.fillMaxWidth().background(colore).padding(vertical = 1.dp), color = Color.White, fontSize = 9.sp,
             fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, maxLines = 1)
         Stelle(mezzeStelle(p, ruoloStelle), 8.sp, Fm.Oro)
         Text(p.name.substringAfterLast(' '), Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 1.dp), color = Fm.Testo, fontSize = 9.sp,
@@ -409,7 +417,8 @@ private fun DialogRuolo(
     onChiudi: () -> Unit,
     onRoleConPalla: (Player, String) -> Unit,
     onRoleSenzaPalla: (Player, String) -> Unit,
-    onCompito: (Player, String) -> Unit
+    onCompito: (Player, String) -> Unit,
+    onIstr: (Player, IstrGiocatore) -> Unit
 ) {
     var fase by remember { mutableStateOf(faseIniziale) }
     val conPalla = TacticalRoles.assigned(p)
@@ -477,6 +486,23 @@ private fun DialogRuolo(
             } else {
                 Text("Un ruolo senza palla più congeniale rende la difesa un po' più solida (al massimo +8%).", color = Fm.Dim, fontSize = 12.sp)
             }
+            // Istruzioni per il singolo giocatore
+            Text("ISTRUZIONI GIOCATORE", color = Fm.Dim, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            val mie = piano.istrGioc[p.id].orEmpty()
+            IstrGiocatore.GRUPPI.forEach { g ->
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    IstrGiocatore.values().filter { it.gruppo == g }.forEach { i ->
+                        val on = i in mie
+                        Text(
+                            i.label, Modifier.clip(RoundedCornerShape(6.dp)).background(if (on) Fm.Viola else Fm.Carta)
+                                .border(1.dp, if (on) Fm.Viola else Fm.Bordo, RoundedCornerShape(6.dp))
+                                .clickable { onIstr(p, i) }.padding(horizontal = 10.dp, vertical = 6.dp),
+                            color = Fm.Testo, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1
+                        )
+                    }
+                }
+            }
+            mie.forEach { Text("•  ${it.label}: ${it.descrizione}", color = Fm.Dim, fontSize = 11.sp) }
             Pulsante("Chiudi", viola = true, modifier = Modifier.fillMaxWidth(), onClick = onChiudi)
         }
     }

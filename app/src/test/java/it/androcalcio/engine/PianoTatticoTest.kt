@@ -148,4 +148,42 @@ class PianoTatticoTest {
         }
         assertNotNull(base)
     }
+
+    @Test
+    fun istruzioniGiocatore() {
+        var piano = PianoTattico()
+        piano = piano.conIstruzione(5, IstrGiocatore.TIRA_DI_PIU)
+        piano = piano.conIstruzione(5, IstrGiocatore.PRESSA_DI_PIU)
+        piano = piano.conIstruzione(5, IstrGiocatore.TIRA_DI_MENO)   // stesso gruppo: sostituisce
+        assertEquals(setOf(IstrGiocatore.TIRA_DI_MENO, IstrGiocatore.PRESSA_DI_PIU), piano.istrGioc[5])
+        assertEquals(piano, PianoTattico.decodifica(piano.codifica()))
+        piano = piano.conIstruzione(5, IstrGiocatore.TIRA_DI_MENO).conIstruzione(5, IstrGiocatore.PRESSA_DI_PIU)
+        assertTrue(piano.istrGioc.isEmpty())
+        val g = p("A", "CA")
+        assertEquals(1.4, PianoTattico().conIstruzione(g.id, IstrGiocatore.TIRA_DI_PIU).pesoTiro(g), 1e-9)
+        // Tutta la squadra con "Più sortite": effetto limitato a +5%
+        val tutti = xi()
+        val pieno = tutti.fold(PianoTattico()) { acc, q -> acc.conIstruzione(q.id, IstrGiocatore.PIU_SORTITE) }
+        val e = pieno.effettiGiocatori(tutti)
+        assertTrue(e.atk <= 1.05 + 1e-9 && e.def >= 0.95 - 1e-9 && e.atk > 1.0)
+    }
+
+    @Test
+    fun stiliDelleSquadreAi() {
+        val rosa = xi(75)
+        assertTrue(StiliAi.scegli(1, null, rosa, grande = true) in StiliAi.GRANDI)
+        assertTrue(StiliAi.scegli(1, Stile.ATTACCO, rosa, grande = false) in StiliAi.ATTACCO)
+        assertTrue(StiliAi.scegli(1, Stile.DIFESA, rosa, grande = false) in StiliAi.DIFESA)
+        assertEquals(StiliAi.scegli(9, Stile.DIFESA, rosa, false), StiliAi.scegli(9, Stile.DIFESA, rosa, false))
+        val sq = (1L..6L).map { Team(id = it, name = "S$it", shortName = "S$it", colorPrimary = 0, colorSecondary = 0,
+            budget = it * 1000, stadiumCapacity = (it * 10000).toInt(), ticketPrice = 0, sponsor = "", nazione = "Italia") }
+        assertEquals(setOf(3L, 4L, 5L, 6L), StiliAi.grandi(sq))
+    }
+
+    @Test
+    fun spostamentoRuolo() {
+        val (dd, dw) = PostoRuolo.spostamento("MP", "MED")
+        assertTrue(dd < 0f); assertEquals(0f, dw, 1e-6f)
+        assertEquals(0f to 0f, PostoRuolo.spostamento("CA", "CA"))
+    }
 }

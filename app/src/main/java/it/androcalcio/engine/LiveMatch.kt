@@ -43,10 +43,10 @@ class LiveMatch(
     private val immersivo: Boolean = false,
     /** Atmosfera dello stadio 0..100 (vedi Atmosfera): conta solo nella partita dal vivo. */
     private val atmosfera: Int = 50,
-    private val homeFasce: Fasce = Fasce.MISTO, private val awayFasce: Fasce = Fasce.MISTO,
+    homeFasce: Fasce = Fasce.MISTO, awayFasce: Fasce = Fasce.MISTO,
     private val homeSchema: SchemaPiazzati = SchemaPiazzati.NORMALE, private val awaySchema: SchemaPiazzati = SchemaPiazzati.NORMALE,
     /** Piano tattico a due fasi (solo la tua squadra; null = nessun effetto). */
-    private val homePiano: PianoTattico? = null, private val awayPiano: PianoTattico? = null
+    val homePiano: PianoTattico? = null, val awayPiano: PianoTattico? = null
 ) {
     private val campo = if (immersivo) Atmosfera.fattore(atmosfera) else 1.0
     val extraH = StatExtra()
@@ -184,13 +184,18 @@ class LiveMatch(
         val d = avg(own, "D") { it.ve } - avg(opp, "A") { it.ve }
         return when { d > 4 -> DefLine.ALTA; d < -4 -> DefLine.BASSA; else -> DefLine.MEDIA }
     }
-    var pressH = homePress ?: homeStile?.pressing ?: aiPress(xiH, xiA); private set
-    var pressA = awayPress ?: awayStile?.pressing ?: aiPress(xiA, xiH); private set
-    var lineH = homeLine ?: homeStile?.linea ?: aiLine(xiH, xiA); private set
-    var lineA = awayLine ?: awayStile?.linea ?: aiLine(xiA, xiH); private set
+    // Squadre AI con uno stile del piano (homePress nullo = AI): pressing, linea, ampiezza e fasce vengono dallo stile
+    private val stileAiH = if (homePress == null) homePiano?.stile else null
+    private val stileAiA = if (awayPress == null) awayPiano?.stile else null
+    var pressH = homePress ?: stileAiH?.pressing ?: homeStile?.pressing ?: aiPress(xiH, xiA); private set
+    var pressA = awayPress ?: stileAiA?.pressing ?: awayStile?.pressing ?: aiPress(xiA, xiH); private set
+    var lineH = homeLine ?: stileAiH?.linea ?: homeStile?.linea ?: aiLine(xiH, xiA); private set
+    var lineA = awayLine ?: stileAiA?.linea ?: awayStile?.linea ?: aiLine(xiA, xiH); private set
 
-    var ampH = homeAmp; private set
-    var ampA = awayAmp; private set
+    var ampH = stileAiH?.ampiezza ?: homeAmp; private set
+    var ampA = stileAiA?.ampiezza ?: awayAmp; private set
+    private val homeFasce: Fasce = stileAiH?.fasce ?: homeFasce
+    private val awayFasce: Fasce = stileAiA?.fasce ?: awayFasce
     fun setAmpiezza(homeSide: Boolean, a: Ampiezza) { if (homeSide) ampH = a else ampA = a }
 
     /** Cambio programmato dall'allenatore: usa la logica del cambio automatico. Restituisce true se ha cambiato. */
@@ -378,7 +383,7 @@ class LiveMatch(
             } else if (trappola && rT < 0.21) ratio *= 1.8
             if (ratio > 0.0 && rng.nextDouble() < (0.45 * ratio).coerceIn(0.2, 0.7)) {
                 if (homeAtt) hs++ else asht++
-                val sh = MatchEngine.shooter(att.players, rng)
+                val sh = MatchEngine.shooter(att.players, rng, (if (homeAtt) homePiano else awayPiano)?.let { pn -> { p: Player -> pn.pesoTiro(p) } } ?: { 1.0 })
                 val who = sh?.name ?: "Attaccante"
                 val (x, y) = pos(homeAtt)
                 val pGoal = (0.22 * (att.atk / dfn.gk).pow(1.5) *

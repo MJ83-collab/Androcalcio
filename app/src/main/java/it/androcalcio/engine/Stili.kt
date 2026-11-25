@@ -34,6 +34,28 @@ enum class Contrasti(val label: String, val livello: Int) {
 enum class Intensita(val label: String) { BASSA("Bassa intensità"), MEDIA("Intensità media"), ALTA("Alta intensità"), MOLTO_ALTA("Intensità molto alta") }
 enum class Complessita(val label: String) { BASSA("Bassa complessità"), MEDIA("Media complessità"), ALTA("Alta complessità") }
 
+/**
+ * Istruzioni per singolo giocatore, come in Football Manager. Quelle dello stesso gruppo si escludono.
+ * Effetti piccoli, sommati su tutti gli undici: un'istruzione su un giocatore sposta la squadra di pochi decimi di punto.
+ */
+enum class IstrGiocatore(val label: String, val gruppo: String, val descrizione: String) {
+    TIRA_DI_PIU("Tira di più", "tiro", "Cerca la conclusione più spesso."),
+    TIRA_DI_MENO("Tira di meno", "tiro", "Tira solo se è libero, preferisce servire un compagno."),
+    DRIBBLA_DI_PIU("Dribbla di più", "dribbling", "Punta l'uomo: rende con un buon dribbling, ma perde qualche pallone."),
+    DRIBBLA_DI_MENO("Dribbla di meno", "dribbling", "Gioca semplice e tiene il possesso."),
+    PASSAGGI_RISCHIOSI("Passaggi rischiosi", "passaggi", "Cerca la giocata decisiva: rende con un buon passaggio."),
+    PASSAGGI_SICURI("Passaggi sicuri", "passaggi", "Passaggio facile al compagno vicino."),
+    PIU_SORTITE("Più sortite in avanti", "sortite", "Si inserisce spesso: più attacco, meno copertura, più fatica."),
+    RESTA_IN_POSIZIONE("Resta in posizione", "sortite", "Non lascia la sua zona: più copertura, meno attacco."),
+    PRESSA_DI_PIU("Pressa di più", "pressing", "Aggredisce il portatore: più palloni recuperati, più fatica."),
+    PRESSA_DI_MENO("Pressa di meno", "pressing", "Aspetta nella sua zona e risparmia energie."),
+    CONTRASTI_DURI("Contrasti duri", "contrasti", "Entra deciso: difesa più solida, un po' più di fatica.");
+
+    companion object {
+        val GRUPPI = values().map { it.gruppo }.distinct()
+    }
+}
+
 /** Moltiplicatori che un piano dà alla squadra: possesso, attacco, difesa e consumo di energia. */
 data class Effetti(val poss: Double = 1.0, val atk: Double = 1.0, val def: Double = 1.0, val drain: Double = 1.0) {
     companion object { val NEUTRO = Effetti() }
@@ -55,21 +77,59 @@ data class PianoTattico(
     /** Ritmo di partenza della partita (in partita lo cambi con il comando Ritmo). */
     val ritmo: Ritmo = Ritmo.NORMALE,
     /** Ruolo senza palla di un giocatore (id → codice ruolo, uno dei suoi ruoli noti). Assente = lo stesso della fase di possesso. */
-    val ruoliNonPoss: Map<Long, String> = emptyMap()
+    val ruoliNonPoss: Map<Long, String> = emptyMap(),
+    /** Istruzioni per singolo giocatore (id → istruzioni). */
+    val istrGioc: Map<Long, Set<IstrGiocatore>> = emptyMap()
 ) {
     /** Moltiplicatori del piano per gli undici in campo. */
     fun effetti(xi: List<Player>): Effetti {
         var poss = 1.0; var atk = 1.0; var def = 1.0; var drain = 1.0
-        poss *= 1 - 0.012 * passaggi.livello; atk *= 1 + 0.006 * passaggi.livello
-        atk *= 1 + 0.010 * creativita.livello; poss *= 1 - 0.005 * creativita.livello
-        poss *= 1 - 0.006 * costruzione.livello
-        poss *= 1 + 0.008 * frequenza.livello; drain *= 1 + 0.06 * frequenza.livello
-        def *= 1 + 0.012 * contrasti.livello; drain *= 1 + 0.03 * contrasti.livello
-        if (contropressing) { poss *= 1.006; drain *= 1.04 }
-        if (bloccaPortiere) poss *= 1.004
-        stile?.let { atk *= 1 + 0.04 * (it.idoneita(xi) - 50) / 50.0 }
+        poss *= 1 - 0.015 * passaggi.livello; atk *= 1 + 0.008 * passaggi.livello
+        atk *= 1 + 0.013 * creativita.livello; poss *= 1 - 0.006 * creativita.livello
+        poss *= 1 - 0.008 * costruzione.livello
+        poss *= 1 + 0.010 * frequenza.livello; drain *= 1 + 0.06 * frequenza.livello
+        def *= 1 + 0.015 * contrasti.livello; drain *= 1 + 0.03 * contrasti.livello
+        if (contropressing) { poss *= 1.008; drain *= 1.04 }
+        if (bloccaPortiere) poss *= 1.005
+        stile?.let { atk *= 1 + 0.05 * (it.idoneita(xi) - 50) / 50.0 }
         def *= fattoreRuoliSenzaPalla(xi)
-        return Effetti(poss, atk, def, drain)
+        val g = effettiGiocatori(xi)
+        return Effetti(poss * g.poss, atk * g.atk, def * g.def, drain * g.drain)
+    }
+
+    /** Somma delle istruzioni dei singoli giocatori in campo, limitata a ±5% (fatica ±10%). */
+    internal fun effettiGiocatori(xi: List<Player>): Effetti {
+        if (istrGioc.isEmpty()) return Effetti.NEUTRO
+        var poss = 0.0; var atk = 0.0; var def = 0.0; var drain = 0.0
+        xi.forEach { p ->
+            istrGioc[p.id].orEmpty().forEach { i ->
+                when (i) {
+                    IstrGiocatore.DRIBBLA_DI_PIU -> { atk += 0.006 * (p.dr - 60) / 40.0; poss -= 0.002 }
+                    IstrGiocatore.DRIBBLA_DI_MENO -> { poss += 0.002; atk -= 0.002 }
+                    IstrGiocatore.PASSAGGI_RISCHIOSI -> { atk += 0.008 * (p.pa - 60) / 40.0; poss -= 0.003 }
+                    IstrGiocatore.PASSAGGI_SICURI -> { poss += 0.003; atk -= 0.003 }
+                    IstrGiocatore.PIU_SORTITE -> { atk += 0.006; def -= 0.005; drain += 0.02 }
+                    IstrGiocatore.RESTA_IN_POSIZIONE -> { def += 0.005; atk -= 0.004 }
+                    IstrGiocatore.PRESSA_DI_PIU -> { poss += 0.004; drain += 0.03 }
+                    IstrGiocatore.PRESSA_DI_MENO -> { poss -= 0.003; drain -= 0.03 }
+                    IstrGiocatore.CONTRASTI_DURI -> { def += 0.005; drain += 0.01 }
+                    IstrGiocatore.TIRA_DI_PIU, IstrGiocatore.TIRA_DI_MENO -> Unit   // cambiano chi tira, vedi pesoTiro
+                }
+            }
+        }
+        return Effetti(1 + poss.coerceIn(-0.05, 0.05), 1 + atk.coerceIn(-0.05, 0.05), 1 + def.coerceIn(-0.05, 0.05), 1 + drain.coerceIn(-0.1, 0.1))
+    }
+
+    /** Peso del giocatore nella scelta di chi tira: 1,4 con "Tira di più", 0,6 con "Tira di meno". */
+    fun pesoTiro(p: Player): Double = istrGioc[p.id].orEmpty().let {
+        when { IstrGiocatore.TIRA_DI_PIU in it -> 1.4; IstrGiocatore.TIRA_DI_MENO in it -> 0.6; else -> 1.0 }
+    }
+
+    /** Accende o spegne un'istruzione di un giocatore; toglie quelle dello stesso gruppo. */
+    fun conIstruzione(id: Long, i: IstrGiocatore): PianoTattico {
+        val ora = istrGioc[id].orEmpty()
+        val nuove = if (i in ora) ora - i else ora.filter { it.gruppo != i.gruppo }.toSet() + i
+        return copy(istrGioc = if (nuove.isEmpty()) istrGioc - id else istrGioc + (id to nuove))
     }
 
     /**
@@ -82,7 +142,7 @@ data class PianoTattico(
             val r = ruoliNonPoss[p.id]
             if (r == null) 1.0 else affinita(p, r) / TacticalRoles.factor(p).coerceAtLeast(0.3)
         }
-        return if (v.isEmpty()) 1.0 else v.average().coerceIn(0.92, 1.08)
+        return if (v.isEmpty()) 1.0 else v.average().coerceIn(0.90, 1.10)
     }
 
     fun conRuoloSenzaPalla(id: Long, ruolo: String?): PianoTattico =
@@ -91,7 +151,8 @@ data class PianoTattico(
     fun codifica(): String = listOf(
         stile?.name ?: "-", passaggi.name, creativita.name, transizione.name, costruzione.name,
         frequenza.name, contrasti.name, contropressing.toString(), bloccaPortiere.toString(),
-        ruoliNonPoss.entries.joinToString(";") { "${it.key}:${it.value}" }, ritmo.name
+        ruoliNonPoss.entries.joinToString(";") { "${it.key}:${it.value}" }, ritmo.name,
+        istrGioc.entries.joinToString(";") { e -> "${e.key}:" + e.value.joinToString(",") { it.name } }
     ).joinToString("|")
 
     companion object {
@@ -123,7 +184,13 @@ data class PianoTattico(
                 transizione = leggi(p[3], Transizione.MANTIENI), costruzione = leggi(p[4], CostruzionePortiere.MISTA),
                 frequenza = leggi(p[5], FrequenzaPressing.NORMALE), contrasti = leggi(p[6], Contrasti.NORMALI),
                 contropressing = p[7] == "true", bloccaPortiere = p[8] == "true", ruoliNonPoss = ruoli,
-                ritmo = leggi(p.getOrNull(10), Ritmo.NORMALE)
+                ritmo = leggi(p.getOrNull(10), Ritmo.NORMALE),
+                istrGioc = p.getOrNull(11).orEmpty().split(";").mapNotNull {
+                    val kv = it.split(":")
+                    val id = kv.getOrNull(0)?.toLongOrNull() ?: return@mapNotNull null
+                    val set = kv.getOrNull(1).orEmpty().split(",").mapNotNull { n -> IstrGiocatore.values().firstOrNull { x -> x.name == n } }.toSet()
+                    if (set.isEmpty()) null else id to set
+                }.toMap()
             )
         }
     }
@@ -230,7 +297,8 @@ enum class StileTattico(
     );
 
     /** Piano di questo stile con lo stile segnato (i ruoli senza palla non si toccano: vedi [PianoTattico.conRuoloSenzaPalla]). */
-    fun pianoCompleto(ruoliNonPoss: Map<Long, String> = emptyMap()): PianoTattico = piano.copy(stile = this, ritmo = ritmo, ruoliNonPoss = ruoliNonPoss)
+    fun pianoCompleto(ruoliNonPoss: Map<Long, String> = emptyMap(), istrGioc: Map<Long, Set<IstrGiocatore>> = emptyMap()): PianoTattico =
+        piano.copy(stile = this, ritmo = ritmo, ruoliNonPoss = ruoliNonPoss, istrGioc = istrGioc)
 
     /** Istruzioni in possesso che lo stile imposta, a parole, per la scheda dello stile. */
     fun istruzioniInPossesso(): List<String> = if (this == TABULA_RASA) emptyList() else buildList {
@@ -304,4 +372,58 @@ object RuoliFm {
         "CA" -> listOf("Finalizzazione" to { p: Player -> p.fi }, "Tiro" to { p: Player -> p.ti }, "Aggressività" to { p: Player -> p.ag }, "Qualità" to { p: Player -> p.qu })
         else -> listOf("Qualità" to { p: Player -> p.qu })
     }
+}
+
+/** Punto del ruolo sul campo: profondità (0 propria porta, 1 porta avversaria) e larghezza (0 sinistra, 1 destra). */
+object PostoRuolo {
+    fun punto(r: String): Pair<Float, Float> = when (r) {
+        "POR" -> 0.05f to 0.5f
+        "TS" -> 0.25f to 0.12f; "TD" -> 0.25f to 0.88f
+        "DC" -> 0.20f to 0.5f; "CS" -> 0.20f to 0.32f; "CD" -> 0.20f to 0.68f
+        "MED" -> 0.33f to 0.5f; "REG" -> 0.38f to 0.5f; "INT" -> 0.45f to 0.5f
+        "FS" -> 0.45f to 0.10f; "FD" -> 0.45f to 0.90f
+        "MP" -> 0.58f to 0.5f; "ES" -> 0.62f to 0.15f
+        "AS" -> 0.65f to 0.12f; "AD" -> 0.65f to 0.88f
+        "CA" -> 0.72f to 0.5f
+        else -> 0.4f to 0.5f
+    }
+
+    /** Spostamento (profondità, larghezza) da un ruolo all'altro; la larghezza non cambia se uno dei due ruoli è centrale. */
+    fun spostamento(da: String, a: String): Pair<Float, Float> {
+        if (da == a) return 0f to 0f
+        val p = punto(da); val q = punto(a)
+        val centrale = setOf("DC", "MED", "REG", "INT", "MP", "CA", "POR")
+        val dy = if (da in centrale || a in centrale) 0f else q.second - p.second
+        return (q.first - p.first) to dy
+    }
+}
+
+/**
+ * Stile delle squadre AI: le 4 squadre più storiche e forti di ogni nazione giocano uno stile da grande squadra
+ * (possesso, Tiki-Taka o Gegenpress), le altre seguono lo stile del loro allenatore (attacco o difesa).
+ * In ogni gruppo vince lo stile a cui la rosa si adatta meglio, quindi è sempre lo stesso finché la rosa non cambia molto.
+ */
+object StiliAi {
+    val GRANDI = listOf(StileTattico.CONTROLLO_POSSESSO, StileTattico.TIKI_TAKA, StileTattico.TIKI_TAKA_VERTICALE, StileTattico.GEGENPRESS)
+    val ATTACCO = listOf(StileTattico.GEGENPRESS, StileTattico.GIOCO_SULLE_FASCE, StileTattico.CONTROPIEDE_FLUIDO,
+        StileTattico.CONTROLLO_POSSESSO, StileTattico.PALLA_LUNGA)
+    val DIFESA = listOf(StileTattico.CATENACCIO, StileTattico.PARCHEGGIA_AUTOBUS, StileTattico.CONTROPIEDE_DIRETTO, StileTattico.PALLA_LUNGA)
+
+    fun scegli(teamId: Long, coach: Stile?, rosa: List<Player>, grande: Boolean): StileTattico {
+        val lista = when {
+            grande -> GRANDI
+            coach == Stile.ATTACCO -> ATTACCO
+            coach == Stile.DIFESA -> DIFESA
+            else -> ATTACCO + DIFESA
+        }
+        val rosaCampo = rosa.sortedByDescending { it.overall }.take(16)
+        // A parità di adattamento decide la squadra (sempre lo stesso stile)
+        return lista.maxBy { it.idoneita(rosaCampo) * 10 + ((teamId + it.ordinal * 7) % 7).toInt() }
+    }
+
+    /** Le 4 squadre più storiche e forti di ogni nazione: stadio più grande, poi budget. */
+    fun grandi(teams: List<it.androcalcio.data.Team>): Set<Long> =
+        teams.groupBy { it.nazione }.values.flatMap { l ->
+            l.sortedWith(compareByDescending<it.androcalcio.data.Team> { it.stadiumCapacity }.thenByDescending { it.budget }).take(4)
+        }.map { it.id }.toSet()
 }

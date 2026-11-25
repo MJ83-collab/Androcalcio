@@ -150,7 +150,8 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         }
         val colC: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
             item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco, palla.scia, palla.quota, palla.inVolo,
-                info.tempo, info.prato, m.lineH, m.lineA, palla.sim) }
+                info.tempo, info.prato, m.lineH, m.lineA, palla.sim,
+                m.homePiano?.ruoliNonPoss.orEmpty(), m.awayPiano?.ruoliNonPoss.orEmpty()) }
             item { TelecronacaBubble(events, m.minute) }
         }
         val colD: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {

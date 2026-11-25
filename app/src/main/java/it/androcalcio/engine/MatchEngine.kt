@@ -97,14 +97,14 @@ object MatchEngine {
         )
     }
 
-    internal fun shooter(ps: List<Player>, rng: Random): Player? {
+    internal fun shooter(ps: List<Player>, rng: Random, peso: (Player) -> Double = { 1.0 }): Player? {
         val weights = ps.map {
             (when (it.role) {
                 "A" -> (it.fi + it.ti) / 2.0 * 3.0
                 "C" -> (it.fi + it.ti + it.pa) / 3.0 * 1.5
                 "D" -> it.ti * 0.4
                 else -> 0.0
-            }) * Tratti.pesoTiro(it)
+            }) * Tratti.pesoTiro(it) * peso(it)
         }
         val total = weights.sum()
         if (total <= 0.0) return null
