@@ -7,7 +7,8 @@ class MezzeStelleTest {
     @Test fun scoutingDa1a10() {
         assertEquals(1, ScoutingGiovani.mezzeStelle(0))
         assertEquals(2, ScoutingGiovani.mezzeStelle(30))    // 30 → una stella
-        assertEquals(10, ScoutingGiovani.mezzeStelle(85))   // 85+ → cinque stelle
+        assertEquals(9, ScoutingGiovani.mezzeStelle(85))
+        assertEquals(10, ScoutingGiovani.mezzeStelle(86))   // da 86 cinque stelle piene, come stelle()
         assertEquals(10, ScoutingGiovani.mezzeStelle(99))
         assertEquals(ScoutingGiovani.stelle(60), (ScoutingGiovani.mezzeStelle(60) + 1) / 2)
     }
