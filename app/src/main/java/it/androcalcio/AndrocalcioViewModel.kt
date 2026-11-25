@@ -2,7 +2,9 @@ package it.androcalcio
 
 import it.androcalcio.engine.AvatarGen
 import it.androcalcio.engine.CoppeEuropee
+import it.androcalcio.engine.PianoTattico
 import it.androcalcio.engine.PreparatoreCapo
+import it.androcalcio.engine.StileTattico
 import it.androcalcio.engine.SquadraB
 import it.androcalcio.engine.Difficolta
 import it.androcalcio.engine.EffettiMiglioria
@@ -309,6 +311,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
     fun setAmpiezza(a: Ampiezza) { _ampiezza.value = a; prefs.edit().putInt("ampiezza", a.ordinal).apply() }
 
     /** Gioco sulle fasce o al centro, e schema sui calci piazzati: solo per la tua squadra, in partita dal vivo. */
+    /** Piano tattico a due fasi (stile, istruzioni nuove, ruoli senza palla): vedi engine/Stili.kt. */
+    private val _piano = MutableStateFlow(PianoTattico.decodifica(prefs.getString("piano_tattico", "")))
+    val piano: StateFlow<PianoTattico> = _piano
+    fun setPiano(p: PianoTattico) { _piano.value = p; prefs.edit().putString("piano_tattico", p.codifica()).apply() }
+    /** Sceglie uno stile: imposta pressing, linea, ampiezza, fasce, schema e le istruzioni nuove; i ruoli senza palla restano. */
+    fun applicaStile(s: StileTattico) {
+        setPressing(s.pressing); setLine(s.linea); setAmpiezza(s.ampiezza)
+        if (s != StileTattico.TABULA_RASA) { setFasce(s.fasce); setSchemaPiazzati(s.schema) }
+        setPiano(s.pianoCompleto(_piano.value.ruoliNonPoss))
+    }
+    /** Ruolo senza palla di un giocatore ("" = come in possesso). */
+    fun setRuoloSenzaPalla(p: Player, ruolo: String) { setPiano(_piano.value.conRuoloSenzaPalla(p.id, ruolo.ifEmpty { null })) }
+
     private val _fasce = MutableStateFlow(Fasce.values()[prefs.getInt("fasce", Fasce.MISTO.ordinal).coerceIn(0, Fasce.values().size - 1)])
     val fasce: StateFlow<Fasce> = _fasce
     fun setFasce(f: Fasce) { _fasce.value = f; prefs.edit().putInt("fasce", f.ordinal).apply() }
@@ -653,7 +668,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                     awayStile = if (a.id == t.id) null else Staffing.stile(staffBy, a.id),
                     meteoGol = condizioni(m.round, totaliLega, h, h.id == t.id, fatteMie).fattoreGol() *
                         (if (h.id == t.id) Prato.fattore(pratoMio) else 1.0),
-                    homeTrap = h.id == t.id && _trappola.value, awayTrap = a.id == t.id && _trappola.value
+                    homeTrap = h.id == t.id && _trappola.value, awayTrap = a.id == t.id && _trappola.value,
+                    homePiano = if (h.id == t.id) _piano.value else null, awayPiano = if (a.id == t.id) _piano.value else null
                 )
                 dao.updateMatch(m.copy(homeGoals = r.homeGoals, awayGoals = r.awayGoals, played = true))
                 if (h.id == t.id || a.id == t.id) registraPartita(t, if (h.id == t.id) a else h, h.id == t.id, r)
@@ -1400,6 +1416,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             homeTiri = if (userHome) tiriMe else SetPieces.NONE, awayTiri = if (userHome) SetPieces.NONE else tiriMe,
             meteoGol = cond.fattoreGol() * (if (userHome) Prato.fattore(dao.statoInt(Prato.KEY)) else 1.0),
             trapH = userHome && _trappola.value, trapA = !userHome && _trappola.value,
+            homePiano = if (userHome) _piano.value else null, awayPiano = if (userHome) null else _piano.value,
             arbitro = Disciplina.arbitro(dao.statoInt("c_partite") + 1, _season.value.hashCode().toLong()),
             varAttivo = true, immersivo = true, atmosfera = atm,
             homeFasce = if (userHome) _fasce.value else Fasce.MISTO, awayFasce = if (userHome) Fasce.MISTO else _fasce.value,
@@ -3090,6 +3107,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             awayLine = if (a.id == me.id) _line.value else null,
             homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
             awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id),
+            homePiano = if (h.id == me.id) _piano.value else null, awayPiano = if (a.id == me.id) _piano.value else null,
             rng = rng
         )
         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
@@ -3288,7 +3306,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                             homeLine = if (h.id == me.id) _line.value else null,
                             awayLine = if (a.id == me.id) _line.value else null,
                             homeStile = if (h.id == me.id) null else Staffing.stile(staffBy, h.id),
-                            awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id)
+                            awayStile = if (a.id == me.id) null else Staffing.stile(staffBy, a.id),
+                            homePiano = if (h.id == me.id) _piano.value else null, awayPiano = if (a.id == me.id) _piano.value else null
                         )
                         cache[h.id] = Medical.afterMatch(cache[h.id] ?: emptyList(), r.homePlayed,
                             Staffing.cura(staffBy, h.id), rng,

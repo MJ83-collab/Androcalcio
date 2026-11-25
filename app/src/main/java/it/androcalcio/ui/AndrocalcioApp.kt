@@ -572,7 +572,27 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     val linea by vm.line.collectAsStateWithLifecycle()
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()
                     val tiriU by vm.tiriUser.collectAsStateWithLifecycle()
-                    TatticaScreen(players, modulo, { vm.setFormation(it) }, { vm.coachLineup() },
+                    var stileFm by remember { mutableStateOf(true) }
+                    val piano by vm.piano.collectAsStateWithLifecycle()
+                    Column(Modifier.fillMaxSize()) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            PcChip(stileFm, { stileFm = true }, { Text("Stile FM") })
+                            PcChip(!stileFm, { stileFm = false }, { Text("Classica (tutte le impostazioni)") })
+                        }
+                        Box(Modifier.weight(1f)) {
+                            if (stileFm) {
+                                TatticaFmScreen(
+                                    players, modulo, { vm.setFormation(it) },
+                                    piano, { vm.setPiano(it) }, { vm.applicaStile(it) },
+                                    press, { vm.setPressing(it) }, linea, { vm.setLine(it) },
+                                    vm.ampiezza.collectAsStateWithLifecycle().value, { vm.setAmpiezza(it) },
+                                    vm.fasce.collectAsStateWithLifecycle().value, { vm.setFasce(it) },
+                                    vm.schemaPiazzati.collectAsStateWithLifecycle().value, { vm.setSchemaPiazzati(it) },
+                                    vm.trappola.collectAsStateWithLifecycle().value, { vm.setTrappola(it) },
+                                    { p, r -> vm.setRuoloPartita(p, r) }, { p, r -> vm.setRuoloSenzaPalla(p, r) }, { p, c -> vm.setCompito(p, c) }
+                                )
+                            } else {
+                                TatticaScreen(players, modulo, { vm.setFormation(it) }, { vm.coachLineup() },
                         press, linea, { vm.setPressing(it) }, { vm.setLine(it) },
                         { p, r -> vm.setRuoloPartita(p, r) },
                         consigli, { vm.applyAssistantXI() }, { vm.applyAssistantTattica() },
@@ -586,6 +606,9 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         cambioCond = vm.cambioCond.collectAsStateWithLifecycle().value, onCambioCond = { vm.setCambioCond(it) },
                         fasce = vm.fasce.collectAsStateWithLifecycle().value, onFasce = { vm.setFasce(it) },
                         schema = vm.schemaPiazzati.collectAsStateWithLifecycle().value, onSchema = { vm.setSchemaPiazzati(it) })
+                            }
+                        }
+                    }
                 }
                 Screen.AVVERSARIO -> {
                     val consigli by vm.assistantAdvice.collectAsStateWithLifecycle()

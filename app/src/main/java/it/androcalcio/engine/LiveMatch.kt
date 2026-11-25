@@ -44,7 +44,9 @@ class LiveMatch(
     /** Atmosfera dello stadio 0..100 (vedi Atmosfera): conta solo nella partita dal vivo. */
     private val atmosfera: Int = 50,
     private val homeFasce: Fasce = Fasce.MISTO, private val awayFasce: Fasce = Fasce.MISTO,
-    private val homeSchema: SchemaPiazzati = SchemaPiazzati.NORMALE, private val awaySchema: SchemaPiazzati = SchemaPiazzati.NORMALE
+    private val homeSchema: SchemaPiazzati = SchemaPiazzati.NORMALE, private val awaySchema: SchemaPiazzati = SchemaPiazzati.NORMALE,
+    /** Piano tattico a due fasi (solo la tua squadra; null = nessun effetto). */
+    private val homePiano: PianoTattico? = null, private val awayPiano: PianoTattico? = null
 ) {
     private val campo = if (immersivo) Atmosfera.fattore(atmosfera) else 1.0
     val extraH = StatExtra()
@@ -123,11 +125,11 @@ class LiveMatch(
     var subsH = 0; private set
     var subsA = 0; private set
     // Ritmo di squadra (solo la tua squadra lo sceglie in partita)
-    var ritmoH = Ritmo.NORMALE; private set
-    var ritmoA = Ritmo.NORMALE; private set
+    var ritmoH = homePiano?.ritmo ?: Ritmo.NORMALE; private set
+    var ritmoA = awayPiano?.ritmo ?: Ritmo.NORMALE; private set
     // Contropiede: con meno possesso, le ripartenze sono più pericolose
-    var contropiedeH = false; private set
-    var contropiedeA = false; private set
+    var contropiedeH = homePiano?.transizione == Transizione.CONTROPIEDE; private set
+    var contropiedeA = awayPiano?.transizione == Transizione.CONTROPIEDE; private set
     fun setContropiede(homeSide: Boolean, on: Boolean) {
         if (finished) return
         if (homeSide) contropiedeH = on else contropiedeA = on
@@ -135,10 +137,13 @@ class LiveMatch(
         events += MatchEvent(minute, EventType.TACTIC, homeSide,
             "${t.shortName} ${if (on) "gioca in contropiede" else "torna al gioco normale"}", 0.5f, 0.5f)
     }
-    private fun conAttacco(r: MatchEngine.Ratings, k: Double) =
-        MatchEngine.Ratings(r.atk * k, r.mid, r.def, r.gk, r.stamina, r.players)
-    private var h = MatchEngine.ratings(xiH, homeF, homeCoach)
-    private var a = MatchEngine.ratings(xiA, awayF, awayCoach)
+    private fun conAttacco(r: MatchEngine.Ratings, k: Double, fx: Effetti = Effetti.NEUTRO) =
+        MatchEngine.Ratings(r.atk * k * fx.atk, r.mid, r.def * fx.def, r.gk, r.stamina, r.players)
+    // Effetti del piano tattico (ricalcolati a ogni cambio: dipendono dagli undici in campo)
+    private var fxH = homePiano?.effetti(xiH) ?: Effetti.NEUTRO
+    private var fxA = awayPiano?.effetti(xiA) ?: Effetti.NEUTRO
+    private var h = conAttacco(MatchEngine.ratings(xiH, homeF, homeCoach), 1.0, fxH)
+    private var a = conAttacco(MatchEngine.ratings(xiA, awayF, awayCoach), 1.0, fxA)
     private val pHome = h.mid * MatchEngine.HOME_BONUS / (h.mid * MatchEngine.HOME_BONUS + a.mid)
 
     val events = mutableListOf(MatchEvent(0, EventType.KICKOFF, true, "Calcio d'inizio", 0.5f, 0.5f))
@@ -271,8 +276,10 @@ class LiveMatch(
     }
 
     private fun refresh() {
-        h = conAttacco(MatchEngine.ratings(xiH, homeF, homeCoach, energy), ritmoH.attacco)
-        a = conAttacco(MatchEngine.ratings(xiA, awayF, awayCoach, energy), ritmoA.attacco)
+        fxH = homePiano?.effetti(xiH) ?: Effetti.NEUTRO
+        fxA = awayPiano?.effetti(xiA) ?: Effetti.NEUTRO
+        h = conAttacco(MatchEngine.ratings(xiH, homeF, homeCoach, energy), ritmoH.attacco, fxH)
+        a = conAttacco(MatchEngine.ratings(xiA, awayF, awayCoach, energy), ritmoA.attacco, fxA)
     }
 
     private fun doSub(homeSide: Boolean, out: Player, inP: Player) {
@@ -327,8 +334,8 @@ class LiveMatch(
         val prima = events.size
         minute++
         if (minute > 55) {
-            xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressH.drain * ritmoH.consumo).coerceAtLeast(0.7) }
-            xiA.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressA.drain * ritmoA.consumo).coerceAtLeast(0.7) }
+            xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressH.drain * ritmoH.consumo * fxH.drain).coerceAtLeast(0.7) }
+            xiA.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressA.drain * ritmoA.consumo * fxA.drain).coerceAtLeast(0.7) }
             if (minute in 56..85) {
                 if (!manualHome && subsH < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(true, hg < ag)
                 if (!manualAway && subsA < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(false, ag < hg)
@@ -343,8 +350,8 @@ class LiveMatch(
             "${away.shortName} passa a mentalità ${nA.label.lowercase()}", 0.5f, 0.5f)
         mH = nH; mA = nA
         if (rng.nextDouble() < MatchEngine.ATTACK_PER_MINUTE * meteoGol * (mH.tempo + mA.tempo) / 2) {
-            val ph = h.mid * MatchEngine.HOME_BONUS * campo * pressH.poss * lineH.poss * ampH.poss
-            val pNow = ph / (ph + a.mid * pressA.poss * lineA.poss * ampA.poss)
+            val ph = h.mid * MatchEngine.HOME_BONUS * campo * pressH.poss * lineH.poss * ampH.poss * fxH.poss
+            val pNow = ph / (ph + a.mid * pressA.poss * lineA.poss * ampA.poss * fxA.poss)
             val homeAtt = rng.nextDouble() < pNow
             val att = if (homeAtt) h else a
             val dfn = if (homeAtt) a else h

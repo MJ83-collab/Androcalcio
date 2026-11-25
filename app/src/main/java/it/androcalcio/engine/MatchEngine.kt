@@ -134,12 +134,13 @@ object MatchEngine {
         homeTiri: SetPieces = SetPieces.NONE, awayTiri: SetPieces = SetPieces.NONE,
         rng: Random = Random.Default,
         meteoGol: Double = 1.0,
-        homeTrap: Boolean = false, awayTrap: Boolean = false
+        homeTrap: Boolean = false, awayTrap: Boolean = false,
+        homePiano: PianoTattico? = null, awayPiano: PianoTattico? = null
     ): MatchReport = LiveMatch(
         home, homePlayers, away, awayPlayers, homeF, awayF, homeCoach, awayCoach,
         homeMent, awayMent, homeBench, awayBench, rng,
         homePress = homePress, awayPress = awayPress, homeLine = homeLine, awayLine = awayLine, homeAmp = homeAmp, awayAmp = awayAmp,
         homeStile = homeStile, awayStile = awayStile, homeTiri = homeTiri, awayTiri = awayTiri, meteoGol = meteoGol,
-        trapH = homeTrap, trapA = awayTrap
+        trapH = homeTrap, trapA = awayTrap, homePiano = homePiano, awayPiano = awayPiano
     ).also { it.runToEnd() }.report()
 }
