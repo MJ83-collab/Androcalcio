@@ -279,6 +279,14 @@ interface AndrocalcioDao {
 
     @Query("DELETE FROM rosa_nazionale WHERE playerId = :playerId") suspend fun deleteRosaNazionale(playerId: Long)
 
+    // Giocatori ritirati: il loro ID passa a un giovane, quindi lo storico legato all'ID si azzera
+    @Query("DELETE FROM player_stats WHERE playerId IN (:ids)") suspend fun deleteStatsDi(ids: List<Long>)
+    @Query("DELETE FROM goals WHERE playerId IN (:ids)") suspend fun deleteGoalsDi(ids: List<Long>)
+    @Query("DELETE FROM convocazioni WHERE playerId IN (:ids)") suspend fun deleteConvocazioniDi(ids: List<Long>)
+    @Query("DELETE FROM nazionale_stats WHERE playerId IN (:ids)") suspend fun deleteNazionaleStatsDi(ids: List<Long>)
+    @Query("DELETE FROM rosa_nazionale WHERE playerId IN (:ids)") suspend fun deleteRosaNazionaleDi(ids: List<Long>)
+    @Query("DELETE FROM scout_reports WHERE playerId IN (:ids)") suspend fun deleteReportsDi(ids: List<Long>)
+
     @Query("DELETE FROM rosa_nazionale") suspend fun clearRosaNazionale()
 }
 

@@ -3053,6 +3053,28 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         else "Senza allenatore in seconda, i numeri di maglia li ha assegnati la società."
     }
 
+    /** I giocatori ritirati lasciano l'ID a un giovane nuovo: cancella tutto ciò che nel gioco era legato a quell'ID. */
+    private suspend fun dimenticaGiocatori(ids: Set<Long>) {
+        if (ids.isEmpty()) return
+        ids.toList().chunked(500).forEach { c ->
+            dao.deleteStatsDi(c); dao.deleteGoalsDi(c); dao.deleteConvocazioniDi(c)
+            dao.deleteNazionaleStatsDi(c); dao.deleteRosaNazionaleDi(c); dao.deleteReportsDi(c)
+        }
+        for (k in listOf("capitano", "vicecapitano")) if (dao.stato(k)?.toLongOrNull() in ids) dao.setStato(Stato(k, ""))
+        dao.setStato(Stato("preferiti", decodeIds(dao.stato("preferiti")).filter { it !in ids }.joinToString(";")))
+        for (k in listOf("squal", "gialli"))
+            dao.setStato(Stato(k, Disciplina.encode(Disciplina.decode(dao.stato(k)).filterKeys { it !in ids })))
+        dao.setStato(Stato("allen_ind", Training.encodeInd(Training.decodeInd(dao.stato("allen_ind")).filterKeys { it !in ids })))
+        dao.setStato(Stato("apparizioni", Giovanili.encodeApparizioni(Giovanili.decodeApparizioni(dao.stato("apparizioni")).filter { it.second !in ids })))
+        dao.setStato(Stato(SquadraB.KEY, SquadraB.encode(SquadraB.decode(dao.stato(SquadraB.KEY)).filterKeys { it !in ids })))
+        // Voti per stagione: stagione:id:somma:partite
+        dao.setStato(Stato("voti", dao.stato("voti").orEmpty().split(";").filter { e ->
+            e.isNotBlank() && e.split(":").getOrNull(1)?.toLongOrNull() !in ids }.joinToString(";")))
+        val tratti = Tratti.encode().split(";").filter { it.toLongOrNull() !in ids }.joinToString(";")
+        Tratti.decode(tratti)
+        dao.setStato(Stato("tratti", tratti))
+    }
+
     fun closeSeason() {
         viewModelScope.launch(Dispatchers.IO) {
             val me = selectedTeam.value ?: return@launch
@@ -3461,16 +3483,37 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             dao.upsertClausole(clauseNuove)
             val clausePay = pagaSquadra[me.id] ?: 0L
             val prelazioneIds = SquadraB.decode(dao.stato(SquadraB.KEY)).filterValues { it == 1 }.keys
+            // Ritiri: per età, o per infortunio grave in età avanzata (in questo caso a volte si scende di categoria
+            // per un anno o due e poi ci si ritira). Il giovane che lo sostituisce prende il suo ID.
+            val declino = decodeIds(dao.stato("declino")).toMutableSet()
+            val ritirati = ArrayList<Player>()
+            val primeDiv = CoppeEuropee.PRIME_DIVISIONI
+            val inferiori = teamsNow.groupBy { it.nazione }.mapValues { (n, l) -> l.filter { primeDiv[n] != null && it.campionato != primeDiv[n] } }
             val newTeams = teamsNow.map { t ->
                 val keep = ArrayList<Player>()
+                val ritiratiPrima = ritirati.size
                 (byTeam[t.id] ?: emptyList()).forEach { p ->
                     val a = Progression.advance(p, rng, Staffing.skill(staffBy, t.id, Staffing.ALLENATORE),
                         if (t.id == me.id) Strutture.bonusAllenamento(livAll) + effMig.crescitaPct else 0,
                         mentore = Mentori.bonus(p, byTeam[t.id] ?: emptyList()))
+                    val infortunioGrave = p.age >= 33 && p.injuredRounds >= 20 && a.id !in declino
+                    val scendeDiCategoria = infortunioGrave && t.campionato == primeDiv[t.nazione] &&
+                        inferiori[t.nazione].orEmpty().isNotEmpty() && rng.nextBoolean()
                     when {
-                        a.age >= Progression.retireAge(a) -> {
-                            removed += p
+                        a.age >= Progression.retireAge(a) || (a.id in declino && a.contract <= 0) -> {
+                            removed += p; ritirati += p; declino -= p.id
                             if (t.id == me.id) leavers += "${p.name} (ritiro)"
+                        }
+                        scendeDiCategoria -> {
+                            val dest = inferiori[t.nazione].orEmpty().random(rng)
+                            val f = a.copy(teamId = dest.id, contract = rng.nextInt(1, 3), salary = (a.salary / 3).coerceAtLeast(30_000L))
+                            updated += f; declino += f.id
+                            if (t.id == me.id) leavers += "${p.name} (infortunio grave: scende in ${dest.campionato})"
+                            if (dest.id == me.id) avviso("${p.name} arriva da una categoria superiore dopo un infortunio grave: 1-2 anni, poi si ritira.")
+                        }
+                        infortunioGrave -> {
+                            removed += p; ritirati += p
+                            if (t.id == me.id) leavers += "${p.name} (ritiro per infortunio)"
                         }
                         a.contract <= 0 && t.id == me.id && a.id in prelazioneIds && a.age <= SquadraB.ETA_MAX -> {
                             // Prelazione sul satellite: contratto in scadenza, rinnovo automatico di 3 anni allo stesso ingaggio
@@ -3489,8 +3532,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                         }
                     }
                 }
-                val noKeeper = keep.none { it.role == "P" }
-                repeat((16 - keep.size).coerceAtLeast(0)) { i ->
+                // Chi si è ritirato viene sostituito da un giovane del vivaio dello stesso ruolo, con lo stesso ID
+                val loro = ritirati.drop(ritiratiPrima)
+                loro.forEach { r -> added += Progression.newYoung(t, rng, false, r.role).copy(id = r.id) }
+                val noKeeper = keep.none { it.role == "P" } && loro.none { it.role == "P" }
+                repeat((16 - keep.size - loro.size).coerceAtLeast(0)) { i ->
                     added += Progression.newYoung(t, rng, i == 0 && noKeeper)
                 }
                 val wages = keep.sumOf { it.salary } + (staffBy[t.id]?.sumOf { it.salary } ?: 0L)
@@ -3536,6 +3582,8 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             }
             dao.updatePlayers(updated)
             dao.deletePlayers(removed)
+            dao.setStato(Stato("declino", declino.joinToString(";")))
+            dimenticaGiocatori(ritirati.mapTo(HashSet()) { it.id })
             val idRimasti = updated.mapTo(HashSet()) { it.id }
             dao.deleteClausole(dao.clausoleOnce().filter { c -> c.playerId !in idRimasti })
             dao.insertPlayers(added)

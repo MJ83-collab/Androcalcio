@@ -40,13 +40,13 @@ object Progression {
     fun renewAI(p: Player, rng: Random): Player =
         p.copy(contract = rng.nextInt(1, 5), salary = wage(p))
 
-    fun newYoung(t: Team, rng: Random, forceGoalkeeper: Boolean): Player {
+    fun newYoung(t: Team, rng: Random, forceGoalkeeper: Boolean, ruolo: String? = null): Player {
         val ov = rng.nextInt(38, 56)
         return Attr.fill(Player(
             teamId = t.id,
             name = "${SeedData.initials[rng.nextInt(SeedData.initials.length)]}. " +
                 SeedData.surnames[rng.nextInt(SeedData.surnames.size)],
-            role = if (forceGoalkeeper) "P" else listOf("D", "C", "A", "D", "C").random(rng),
+            role = ruolo ?: if (forceGoalkeeper) "P" else listOf("D", "C", "A", "D", "C").random(rng),
             age = rng.nextInt(17, 20), overall = ov, morale = 70, salary = 30_000,
             nationality = t.nazione.ifEmpty { "Italia" },
             potential = (ov + rng.nextInt(5, 26)).coerceAtMost(95),
