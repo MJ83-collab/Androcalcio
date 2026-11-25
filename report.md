@@ -1,11 +1,18 @@
 # Androcalcio — report (aggiornato 25/11/2026, mattina)
 
-Repo: https://github.com/MJ83-collab/Androcalcio — ramo attuale `feat/tattica-fm` (da `main` v0.7.0; prima `feat/stadio`) (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
+Repo: https://github.com/MJ83-collab/Androcalcio — `main` = v0.8.0 (tattica FM, squadre storiche, forza reale dei club, forza avversario nelle amichevoli). Ramo precedente `feat/tattica-fm` (da `feat/fine-partita`: v0.6.0 + blocchi 1–6 + tablet + stadio, maglie, coppe europee, stile PC Calcio 7).
 Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella Stato). Nessun SDK Android in locale: compila e prova solo GitHub Actions.
 Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato sul telefono.
 
 ## COMANDO PER RIPARTIRE (da incollare nella nuova chat insieme a questo file)
-> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/tattica-fm`. Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `main` (v0.8.0). Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+
+## Release v0.8.0 (25/11/2026 sera, autorizzata da Marco prima della prova sul telefono)
+- Versione 0.8.0 (versionCode 8): include tattica FM, squadre storiche, forza reale dei club, valori reali, ritiri/ricambio, CONTINUA, schede staff.
+- **Amichevoli:** nuova colonna FORZA (media dei migliori 11) per ogni squadra, colorata rispetto alla tua (verde = più debole, rosso = più forte, arancio = pari). Dato da `vm.teamInfo`.
+- **Finali europee:** verificato nel codice: si giocano dal vivo solo se c'è la tua squadra e scegli tu (`playNextRoundLive`); le altre sono simulate.
+- **Decisioni aperte:** nessuna. **Da fare da te:** provare l'APK su telefono e tablet (esportare i salvataggi e disinstallare la vecchia versione); dire quali schermate ritoccare (servono screenshot).
+- Modello: Sonnet basta.
 
 ## Regole permanenti (valgono per ogni report futuro)
 1. Ricontrollare la repo e cercare bug a ogni ripartenza; correggere i bug certi, chiedere per i dubbi.

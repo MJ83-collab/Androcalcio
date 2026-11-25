@@ -86,7 +86,8 @@ fun CalendarioScreen(
     onSalta: () -> Unit = {},
     onMercato: () -> Unit = {},
     sceltaAmichevoli: String? = "IO",
-    onSceltaAmichevoli: (Boolean) -> Unit = {}
+    onSceltaAmichevoli: (Boolean) -> Unit = {},
+    forza: Map<Long, Int> = emptyMap()
 ) {
     var askNext by remember { mutableStateOf(false) }
     var chiediAmichevoli by remember { mutableStateOf(false) }
@@ -100,7 +101,7 @@ fun CalendarioScreen(
     )
     if (team == null) return
     if (amichevoliAperte) {
-        AmichevoliScreen(team, teams, friendlyMatches, { onRequestFriendly(it) }, onPlayFriendlies, { amichevoliAperte = false }, inviti, onInvito)
+        AmichevoliScreen(team, teams, friendlyMatches, { onRequestFriendly(it) }, onPlayFriendlies, { amichevoliAperte = false }, inviti, onInvito, forza)
         return
     }
     val byId = teams.associateBy { it.id }
