@@ -32,8 +32,10 @@ Decisioni di Marco: 1) squadre AI con gli 11 stili, in base all'allenatore e all
 - **Ruoli per fase in partita:** nella partita dal vivo e nella vista "Non in possesso" i giocatori vanno verso il ruolo senza palla (`PostoRuolo`).
 - **Tecnico:** `closeSeason` di nuovo al limite ("Method too large"): partita spostata in `simChiusura`. Ogni aggiunta futura lì va in funzioni separate.
 
+- **Squadre storiche (25/11 sera):** elenco fisso `StiliAi.STORICHE` per le 14 nazioni, preso dagli albi d'oro reali e associato ai nomi del gioco. Se una squadra è rinominata nell'editor, si completa con stadio e budget.
+
 ### Decisioni aperte (Tattica FM)
-1. Le 4 "storiche" sono scelte per stadio e budget, non con un elenco fisso: se vuoi un elenco fisso per nazione, dimmi quali.
+1. Squadre storiche da confermare: Italia 4ª (Napoli, in alternativa Genoa o Torino per titoli); Francia (Saint-Étienne, la più titolata, è in Ligue 2: esclusa); Germania (Norimberga, Schalke e Amburgo sono in 2.Bundesliga: escluse); Turchia e Grecia (nel gioco una sola squadra per Istanbul e Atene).
 2. Da provare sul telefono: leggibilità del campo, scelta ruolo, istruzioni, movimento senza palla in partita, equilibrio dei campionati con le AI a stili.
 
 ## Stato dei compiti (24/11 sera)

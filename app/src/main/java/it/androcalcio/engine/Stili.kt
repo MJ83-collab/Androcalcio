@@ -421,9 +421,38 @@ object StiliAi {
         return lista.maxBy { it.idoneita(rosaCampo) * 10 + ((teamId + it.ordinal * 7) % 7).toInt() }
     }
 
-    /** Le 4 squadre più storiche e forti di ogni nazione: stadio più grande, poi budget. */
+    /**
+     * Le 4 squadre più storiche e forti di ogni nazione, prese dagli albi d'oro reali (titoli nazionali) e associate ai nomi
+     * di Androcalcio. Dove due grandi reali sono nella stessa città con una sola squadra nel gioco (Lisbona, Glasgow, Istanbul),
+     * entra la squadra successiva. Fonte: albi d'oro dei campionati (Wikipedia, RSSSF, ESPN), novembre 2026.
+     */
+    val STORICHE: Map<String, List<String>> = mapOf(
+        "Italia" to listOf("Piemonte BN", "Inter NA", "Milano RN", "Partenope AZ"),          // Juventus, Inter, Milan, Napoli
+        "Spagna" to listOf("Royal Madril", "Barcelos BG", "Atletic Madril", "Bilbo RJ2"),     // Real, Barcellona, Atlético, Athletic
+        "Inghilterra" to listOf("Manchester Unity RD", "Liverpoole RD2", "Arsenale GN", "Manchester Citt SB"),
+        "Germania" to listOf("Baviera MO", "Dortmuno GS", "Glabach FH", "Stuggart VB4"),       // Bayern, Dortmund, Gladbach, Stoccarda
+        "Francia" to listOf("Parigi SG", "Marsiglia OM2", "Monaco AS2", "Lionese OL2"),        // PSG, Marsiglia, Monaco, Lione
+        "Brasile" to listOf("Palmeras VD", "Flamengo MG", "Corintios TM", "San Paulo TC"),
+        "Argentina" to listOf("River ML", "Boca XZ", "Racing AC", "Independencia RJ14"),
+        "Olanda" to listOf("Amsterdam Vlam", "Eindhoven Licht", "Rotterdam Haven", "Alkmaar Kaas"),   // Ajax, PSV, Feyenoord, AZ
+        "Portogallo" to listOf("Lisboa Sol", "Porto Ponte", "Braga Monte", "Guimaraes Castelo"),
+        "Belgio" to listOf("Brussel Leeuw", "Brugge Zwaan", "Liege Acier", "Antwerpen Haven"),       // Anderlecht, Bruges, Standard, Anversa
+        "Scozia" to listOf("Glasgow Clyde", "Aberdeen Granite", "Edimburgo Rock", "Dundee Tay"),
+        "Turchia" to listOf("Istanbul Bosforo", "Trabzon Karadeniz", "Bursa Yesil", "Izmir Egeo"),
+        "Grecia" to listOf("Atene Ulivo", "Salonicco Torre", "Larissa Pianura", "Heraklion Minoa"),
+        "Giappone" to listOf("Kashima Kuro", "Yokohama Kai", "Hiroshima Momiji", "Kawasaki Taiyo")  // Kashima, Marinos, Sanfrecce, Frontale
+    )
+
+    /**
+     * Le 4 squadre storiche di ogni nazione: quelle dell'elenco [STORICHE] (per nome); se una manca (rinominata nell'editor)
+     * o la nazione non è nell'elenco, si completa con stadio più grande, poi budget.
+     */
     fun grandi(teams: List<it.androcalcio.data.Team>): Set<Long> =
-        teams.groupBy { it.nazione }.values.flatMap { l ->
-            l.sortedWith(compareByDescending<it.androcalcio.data.Team> { it.stadiumCapacity }.thenByDescending { it.budget }).take(4)
+        teams.groupBy { it.nazione }.flatMap { (naz, l) ->
+            val nomi = STORICHE[naz].orEmpty()
+            val fisse = l.filter { it.name in nomi }
+            val resto = l.filter { it !in fisse }
+                .sortedWith(compareByDescending<it.androcalcio.data.Team> { it.stadiumCapacity }.thenByDescending { it.budget })
+            (fisse + resto).take(4)
         }.map { it.id }.toSet()
 }
