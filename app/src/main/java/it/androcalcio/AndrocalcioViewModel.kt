@@ -115,6 +115,7 @@ import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Forma
 import it.androcalcio.engine.Conoscenza
 import it.androcalcio.engine.Fisio
+import it.androcalcio.engine.Tifoserie
 import it.androcalcio.engine.Nomi
 import it.androcalcio.engine.Psicologo
 import it.androcalcio.engine.Mente
@@ -1107,6 +1108,20 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         inc("c_partite"); inc("c_gol", gf)
         val derby = Rivalita.isDerby(me.name, opp.name)
         if (gf > gs) { inc("c_vittorie"); if (derby) inc("c_derby") }
+        // Tifoserie: rivalità che cresce con gli incontri, coreografia automatica della curva di casa
+        val punteggiPrima = Tifoserie.decodePunteggi(dao.stato(Tifoserie.KEY_RIVALI))
+        val rivaleAttuale = Tifoserie.rivale(me.name, punteggiPrima)
+        val conRivale = rivaleAttuale?.first == opp.name
+        dao.setStato(Stato(Tifoserie.KEY_RIVALI, Tifoserie.encodePunteggi(Tifoserie.aggiorna(punteggiPrima, opp.name, gf, gs))))
+        val tifosi = dao.statoInt(StatoKeys.TIFOSI)
+        val curvaCasa = if (mioHome) Tifoserie.curva(me.name, me.shortName) else Tifoserie.curva(opp.name, opp.shortName)
+        val passioneCasa = if (mioHome) Tifoserie.passione(tifosi, me.stadiumCapacity) else 60
+        val coreo = Tifoserie.coreografia(curvaCasa, passioneCasa, conRivale, derby, kotlin.random.Random.Default)
+        val miei = dao.playersOnce(me.id)
+        val delta = if (mioHome) coreo.moraleCasa else if (conRivale) -coreo.pressioneOspiti else 0
+        if (delta != 0 && miei.isNotEmpty()) dao.updatePlayers(miei.map { it.copy(morale = (it.morale + delta).coerceIn(0, 100)) })
+        if (coreo.multa > 0) dao.team(me.id).let { dao.updateTeam(it.copy(budget = it.budget - coreo.multa)) }
+        salvaPosta(listOf(Posta.Messaggio(oggiEpoch(), Posta.Cat.PARTITA, coreo.testo, "DIRIGENZA")))
         val voti = r.playedPlayers.filter { it.teamId == me.id }.mapNotNull { p ->
             r.playerRatings[p.id]?.let { p.name to (Math.round(it * 2) / 2.0) }
         }
