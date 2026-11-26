@@ -109,6 +109,9 @@ fun EditorScreen(
     val export = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> if (uri != null) vm.exportTo(uri) }
+    val exportEd = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> if (uri != null) vm.exportEditorTo(uri) }
     val import = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> if (uri != null) vm.importFrom(uri) }
@@ -155,6 +158,7 @@ fun EditorScreen(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PcAction(onClick = { export.launch("androcalcio-dati.json") }) { Text("Esporta JSON") }
+                        PcAction(onClick = { exportEd.launch("androcalcio-editor.json") }) { Text("Esporta serie, squadre, giocatori") }
                         PcAction(onClick = { import.launch(arrayOf("*/*")) }) { Text("Importa JSON") }
                     }
                     PcAction(onClick = { societaAperta = true }, modifier = Modifier.fillMaxWidth()) { Text("Editor di tutte le società, staff e giocatori") }

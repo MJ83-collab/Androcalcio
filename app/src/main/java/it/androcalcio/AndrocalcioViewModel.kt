@@ -3134,6 +3134,18 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun exportEditorTo(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val text = DataIO.exportEditor(dao)
+                ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                _notice.value = "Database editor esportato (serie, squadre, giocatori)."
+            } catch (e: Exception) {
+                _notice.value = "Esportazione editor non riuscita."
+            }
+        }
+    }
+
     fun exportTo(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

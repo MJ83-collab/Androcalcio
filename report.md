@@ -383,3 +383,12 @@ Repo: https://github.com/MJ83-collab/Androcalcio, branch `feat/stadio`. Niente S
 
 ## Aggiornamento 25/11 sera (2): valori reali aggiunti
 Per Cádiz (22,7 M€), Granada (35,85 M€), Athletico Paranaense (~31 M€), Cuiabá (~13,5 M€) e Criciúma (~13,4 M€) ho usato valori Transfermarkt (footystats; i brasiliani da R$ a € a circa 6,2). Ricalcolo fatto dai file originali (prima della scalatura). Restano senza valore: Sampdoria, Wolfsburg, Heidenheim, Burnley, Almería, Metz, Clermont, Lorient: le fonti trovate usano altre stime (non confrontabili con Transfermarkt), quindi non le ho mescolate.
+
+## Export database per l'editor (serie, squadre, giocatori)
+
+- Nuovo file `androcalcio-editor.json`, esportato dal pulsante "Esporta serie, squadre, giocatori" nell'Editor.
+- Formato `androcalcio-editor`, versione 1. Contiene:
+  - `serie`: ogni coppia nazione + campionato, con l'elenco delle squadre.
+  - `squadre`: tutte le squadre, con parametri economici e tecnici, `giocatori` (parametri, mentalità, ruoli extra) e `staff`.
+- Il salvataggio di gioco ("Esporta JSON") resta invariato e non viene sostituito.
+- Stato: non verificato con la build locale (non disponibile). Verificato con la CI dopo il push.

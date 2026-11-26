@@ -1,6 +1,7 @@
 package it.androcalcio.data
 
 import it.androcalcio.engine.Attr
+import it.androcalcio.engine.Mente
 import it.androcalcio.engine.Staffing
 import it.androcalcio.engine.Stile
 import kotlin.random.Random
@@ -30,8 +31,61 @@ object DataIO {
         it.androcalcio.engine.Tratti.decode(null); it.androcalcio.engine.Training.individuali = emptyMap()
     }
 
+    /**
+     * Database per l'editor: tutte le serie (nazione, campionato, squadre), tutte le squadre con staff e giocatori,
+     * compresi parametri, mentalità e ruoli extra. Non sostituisce il salvataggio: è un file a parte da modificare.
+     */
+    suspend fun exportEditor(dao: AndrocalcioDao): String {
+        val mente = Mente.decode(dao.stato(Mente.KEY))
+        val teams = dao.allTeams()
+        val players = dao.allPlayersRaw().groupBy { it.teamId }
+        val staff = dao.allStaff().groupBy { it.teamId }
+        val serie = JSONArray()
+        teams.groupBy { it.nazione to it.campionato }.toSortedMap(compareBy<Pair<String, String>>({ it.first }, { it.second })).forEach { (chiave, lista) ->
+            serie.put(JSONObject().put("nazione", chiave.first).put("campionato", chiave.second)
+                .put("squadre", JSONArray(lista.sortedBy { it.name }.map { it.name })))
+        }
+        val squadre = JSONArray()
+        teams.sortedBy { it.name }.forEach { t ->
+            val ga = JSONArray()
+            (players[t.id] ?: emptyList()).sortedBy { it.name }.forEach { p ->
+                val v = Mente.valori(p, mente)
+                val mj = JSONObject()
+                Mente.Attr.values().forEach { a -> mj.put(a.sigla, v[a.ordinal]) }
+                val extra = dao.stato("ruoli_${p.id}").orEmpty().split(";").filter { r -> r.isNotBlank() }
+                ga.put(JSONObject()
+                    .put("id", p.id).put("name", p.name).put("role", p.role).put("pos", p.pos)
+                    .put("age", p.age).put("overall", p.overall).put("potential", p.potential)
+                    .put("morale", p.morale).put("salary", p.salary).put("contract", p.contract)
+                    .put("nationality", p.nationality).put("foot", p.foot).put("numero", p.numero)
+                    .put("condition", p.condition).put("injuredRounds", p.injuredRounds)
+                    .put("ve", p.ve).put("re", p.re).put("ag", p.ag).put("qu", p.qu).put("fo", p.fo)
+                    .put("gm", p.gm).put("en", p.en).put("pa", p.pa).put("dr", p.dr).put("fi", p.fi)
+                    .put("ti", p.ti).put("ri", p.ri)
+                    .put("sec2", p.sec2).put("aff2", p.aff2).put("sec3", p.sec3).put("aff3", p.aff3)
+                    .put("sec4", p.sec4).put("aff4", p.aff4)
+                    .put("ruoliExtra", JSONArray(extra)).put("mentalita", mj))
+            }
+            val sa = JSONArray()
+            (staff[t.id] ?: emptyList()).sortedBy { it.role }.forEach { st ->
+                sa.put(JSONObject().put("id", st.id).put("role", st.role).put("name", st.name).put("skill", st.skill)
+                    .put("salary", st.salary).put("contract", st.contract).put("stile", st.stile).put("specialita", st.specialita))
+            }
+            squadre.put(JSONObject()
+                .put("id", t.id).put("name", t.name).put("shortName", t.shortName)
+                .put("nazione", t.nazione).put("campionato", t.campionato)
+                .put("colorPrimary", t.colorPrimary).put("colorSecondary", t.colorSecondary)
+                .put("budget", t.budget).put("wageBudget", t.wageBudget).put("stadiumCapacity", t.stadiumCapacity)
+                .put("ticketPrice", t.ticketPrice).put("sponsor", t.sponsor)
+                .put("youthCoachSkill", t.youthCoachSkill).put("scoutSkill", t.scoutSkill)
+                .put("giocatori", ga).put("staff", sa))
+        }
+        return JSONObject().put("formato", "androcalcio-editor").put("versione", 1)
+            .put("serie", serie).put("squadre", squadre).toString(1)
+    }
+
     suspend fun export(dao: AndrocalcioDao): String {
-        val players = dao.allPlayers().groupBy { it.teamId }
+        val players = dao.allPlayersRaw().groupBy { it.teamId }
         val staff = dao.allStaff().groupBy { it.teamId }
         val arr = JSONArray()
         dao.allTeams().forEach { t ->
