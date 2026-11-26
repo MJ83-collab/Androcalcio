@@ -2762,6 +2762,22 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
      * Missione mirata nel vivaio di un solo club (metà prezzo): lo scout osserva i 3 ragazzi più interessanti
      * e manda il rapporto nella posta, con le stime già dentro il messaggio (come in FM27).
      */
+    // ---- Editor globale: società, staff e giocatori di qualsiasi squadra ----
+    data class SquadraEd(val players: List<Player> = emptyList(), val staff: List<Staff> = emptyList())
+    private val edTeam = MutableStateFlow<Long?>(null)
+    fun apriSquadraEd(teamId: Long?) { edTeam.value = teamId }
+    val squadraEd: StateFlow<SquadraEd> = edTeam.flatMapLatest { id ->
+        if (id == null) flowOf(SquadraEd())
+        else combine(dao.playersDiSquadra(id), dao.staffOf(id)) { p, s -> SquadraEd(p.sortedBy { it.name }, s) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SquadraEd())
+
+    fun salvaStaffEd(s: Staff) { viewModelScope.launch(Dispatchers.IO) { dao.updateStaffs(listOf(s)) } }
+    fun eliminaStaffEd(s: Staff) { viewModelScope.launch(Dispatchers.IO) { dao.deleteStaffs(listOf(s)) } }
+
+    /** Ruoli extra illimitati: salvati per giocatore; il motore partita li userà quando saranno collegati. */
+    suspend fun ruoliExtraDi(id: Long): List<String> = dao.stato("ruoli_$id").orEmpty().split(";").filter { it.isNotBlank() }
+    fun salvaRuoliExtra(id: Long, ruoli: List<String>) { viewModelScope.launch(Dispatchers.IO) { dao.setStato(Stato("ruoli_$id", ruoli.joinToString(";"))) } }
+
     // ---- Psicologo e mentalità ----
     val menteDelta: StateFlow<Map<Long, IntArray>> = osserva("stato") { Mente.decode(dao.stato(Mente.KEY)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())

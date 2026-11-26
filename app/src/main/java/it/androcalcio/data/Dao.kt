@@ -159,6 +159,9 @@ interface AndrocalcioDao {
     @Query("SELECT * FROM staff WHERE teamId = :teamId ORDER BY role")
     fun staffOf(teamId: Long): Flow<List<Staff>>
 
+    @Query("SELECT * FROM players WHERE teamId = :teamId")
+    fun playersDiSquadra(teamId: Long): Flow<List<Player>>
+
     @Query("SELECT * FROM staff WHERE teamId = :teamId")
     suspend fun staffOnce(teamId: Long): List<Staff>
 
