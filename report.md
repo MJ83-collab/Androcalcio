@@ -392,3 +392,15 @@ Per Cádiz (22,7 M€), Granada (35,85 M€), Athletico Paranaense (~31 M€), C
   - `squadre`: tutte le squadre, con parametri economici e tecnici, `giocatori` (parametri, mentalità, ruoli extra) e `staff`.
 - Il salvataggio di gioco ("Esporta JSON") resta invariato e non viene sostituito.
 - Stato: non verificato con la build locale (non disponibile). Verificato con la CI dopo il push.
+
+## Import database per l'editor
+
+- Nuovo pulsante "Importa serie, squadre, giocatori" nell'Editor. Legge `androcalcio-editor.json`.
+- Regole:
+  - squadre, giocatori e staff con lo stesso id vengono aggiornati;
+  - gli elementi nuovi vengono creati;
+  - ciò che non è nel file resta invariato: l'import non cancella nulla;
+  - mentalità e ruoli extra vengono salvati, come nell'editor.
+- Le serie non si importano a parte: sono ricavate dalle squadre.
+- Il pulsante "Importa JSON" resta per il salvataggio di gioco.
+- Non verificato in locale: la verifica è la build su GitHub Actions e il test su telefono.

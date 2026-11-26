@@ -3158,6 +3158,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun importEditorFrom(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val text = ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: error("vuoto")
+                val n = DataIO.importEditor(dao, text)
+                _notice.value = "Importate $n squadre dal database editor."
+            } catch (e: Exception) {
+                _notice.value = "File editor non valido: nessuna modifica."
+            }
+        }
+    }
+
     fun importFrom(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

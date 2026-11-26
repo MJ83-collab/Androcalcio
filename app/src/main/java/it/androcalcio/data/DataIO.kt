@@ -11,6 +11,7 @@ import org.json.JSONObject
 /** Esportazione/importazione dei dati modificabili (squadre e rose) in JSON. */
 object DataIO {
     private const val FORMAT = "androcalcio-dati"
+    private const val FORMAT_EDITOR = "androcalcio-editor"
 
     /** Chiavi di stato semplici (senza id di giocatori/squadre) che fanno parte della carriera. */
     val CHIAVI_STATO = listOf("fiducia", "tifosi", "reputazione", "clima", "liv_allenamento", "liv_vivaio",
@@ -80,7 +81,7 @@ object DataIO {
                 .put("youthCoachSkill", t.youthCoachSkill).put("scoutSkill", t.scoutSkill)
                 .put("giocatori", ga).put("staff", sa))
         }
-        return JSONObject().put("formato", "androcalcio-editor").put("versione", 1)
+        return JSONObject().put("formato", FORMAT_EDITOR).put("versione", 1)
             .put("serie", serie).put("squadre", squadre).toString(1)
     }
 
@@ -158,6 +159,144 @@ object DataIO {
     }
 
     /** Valida tutto prima di toccare il database; in caso di errore non cambia nulla. */
+    private fun squadraDa(o: JSONObject, old: Team?): Team = Team(
+        id = old?.id ?: 0L,
+        name = o.optString("name", old?.name ?: "Squadra"),
+        shortName = o.optString("shortName", old?.shortName ?: "SQ"),
+        colorPrimary = o.optLong("colorPrimary", old?.colorPrimary ?: 0xFF1E88E5L),
+        colorSecondary = o.optLong("colorSecondary", old?.colorSecondary ?: 0xFFFFFFFFL),
+        budget = o.optLong("budget", old?.budget ?: 0L),
+        stadiumCapacity = o.optInt("stadiumCapacity", old?.stadiumCapacity ?: 10000),
+        ticketPrice = o.optInt("ticketPrice", old?.ticketPrice ?: 20),
+        sponsor = o.optString("sponsor", old?.sponsor ?: ""),
+        nazione = o.optString("nazione", old?.nazione ?: ""),
+        campionato = o.optString("campionato", old?.campionato ?: ""),
+        youthCoachSkill = o.optInt("youthCoachSkill", old?.youthCoachSkill ?: 55),
+        scoutSkill = o.optInt("scoutSkill", old?.scoutSkill ?: 55),
+        youthClaimed = o.optString("youthClaimed", old?.youthClaimed ?: ""),
+        wageBudget = o.optLong("wageBudget", old?.wageBudget ?: 0L)
+    )
+
+    private fun giocatoreDa(o: JSONObject, teamId: Long, old: Player?): Player = Player(
+        id = old?.id ?: 0L, teamId = teamId,
+        name = o.optString("name", old?.name ?: "Giocatore"),
+        role = o.optString("role", old?.role ?: "C"),
+        age = o.optInt("age", old?.age ?: 24),
+        overall = o.optInt("overall", old?.overall ?: 50),
+        morale = o.optInt("morale", old?.morale ?: 60),
+        salary = o.optLong("salary", old?.salary ?: 100000L),
+        nationality = o.optString("nationality", old?.nationality ?: "IT"),
+        potential = o.optInt("potential", old?.potential ?: 60),
+        contract = o.optInt("contract", old?.contract ?: 3),
+        injuredRounds = o.optInt("injuredRounds", old?.injuredRounds ?: 0),
+        ve = o.optInt("ve", old?.ve ?: 50), re = o.optInt("re", old?.re ?: 50),
+        ag = o.optInt("ag", old?.ag ?: 50), qu = o.optInt("qu", old?.qu ?: 50),
+        fo = o.optInt("fo", old?.fo ?: 80), gm = o.optInt("gm", old?.gm ?: 20),
+        en = o.optInt("en", old?.en ?: 50), pa = o.optInt("pa", old?.pa ?: 50),
+        dr = o.optInt("dr", old?.dr ?: 50), fi = o.optInt("fi", old?.fi ?: 50),
+        ti = o.optInt("ti", old?.ti ?: 50), ri = o.optInt("ri", old?.ri ?: 50),
+        foot = o.optString("foot", old?.foot ?: "D"),
+        pos = o.optString("pos", old?.pos ?: ""),
+        starter = old?.starter ?: false,
+        condition = o.optInt("condition", old?.condition ?: 100),
+        ruoloPartita = old?.ruoloPartita ?: "",
+        compito = old?.compito ?: "",
+        sec2 = o.optString("sec2", old?.sec2 ?: ""), aff2 = o.optInt("aff2", old?.aff2 ?: 0),
+        sec3 = o.optString("sec3", old?.sec3 ?: ""), aff3 = o.optInt("aff3", old?.aff3 ?: 0),
+        sec4 = o.optString("sec4", old?.sec4 ?: ""), aff4 = o.optInt("aff4", old?.aff4 ?: 0),
+        numero = o.optInt("numero", old?.numero ?: 0)
+    )
+
+    private fun staffDa(o: JSONObject, teamId: Long, old: Staff?): Staff = Staff(
+        id = old?.id ?: 0L, teamId = teamId,
+        role = o.optString("role", old?.role ?: "PRE"),
+        name = o.optString("name", old?.name ?: "Staff"),
+        skill = o.optInt("skill", old?.skill ?: 50),
+        salary = o.optLong("salary", old?.salary ?: 0L),
+        contract = o.optInt("contract", old?.contract ?: 3),
+        stile = o.optString("stile", old?.stile ?: "DIFESA"),
+        specialita = o.optString("specialita", old?.specialita ?: "")
+    )
+
+    /**
+     * Importa il file dell'editor. Squadre, giocatori e staff con lo stesso id vengono aggiornati;
+     * quelli nuovi vengono creati. Ciò che non è nel file resta invariato: non cancello nulla.
+     * Mentalità e ruoli extra vanno nello stato. Le serie non si importano: sono ricavate dalle squadre.
+     */
+    suspend fun importEditor(dao: AndrocalcioDao, text: String): Int {
+        val root = JSONObject(text)
+        require(root.optString("formato") == FORMAT_EDITOR) { "formato sconosciuto" }
+        val arr = root.getJSONArray("squadre")
+        val squadreEsist = dao.allTeams().associateBy { it.id }
+        val giocatoriEsist = dao.allPlayersRaw().associateBy { it.id }
+        val staffEsist = dao.allStaff().associateBy { it.id }
+        val attr = Mente.Attr.values()
+
+        // 1. Squadre
+        val mappaSquadre = HashMap<Long, Long>()
+        val squadreAgg = ArrayList<Team>()
+        val squadreNuove = ArrayList<Pair<Long, Team>>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val vecchio = o.optLong("id", 0L)
+            val esist = squadreEsist[vecchio]
+            if (esist != null) { squadreAgg += squadraDa(o, esist); mappaSquadre[vecchio] = vecchio }
+            else squadreNuove += vecchio to squadraDa(o, null)
+        }
+        if (squadreAgg.isNotEmpty()) dao.updateTeams(squadreAgg)
+        if (squadreNuove.isNotEmpty()) {
+            val ids = dao.insertTeams(squadreNuove.map { it.second })
+            squadreNuove.forEachIndexed { k, (vecchio, _) -> mappaSquadre[vecchio] = ids[k] }
+        }
+
+        // 2. Giocatori e staff (id reale per gli esistenti, 0 per i nuovi)
+        val giocatori = ArrayList<Pair<Player, JSONObject>>()
+        val staffAgg = ArrayList<Staff>()
+        val staffNuovi = ArrayList<Staff>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val squadra = mappaSquadre[o.optLong("id", 0L)] ?: continue
+            o.optJSONArray("giocatori")?.let { ga ->
+                for (j in 0 until ga.length()) {
+                    val g = ga.getJSONObject(j)
+                    val esist = giocatoriEsist[g.optLong("id", 0L)]
+                    giocatori += giocatoreDa(g, squadra, esist) to g
+                }
+            }
+            o.optJSONArray("staff")?.let { sa ->
+                for (j in 0 until sa.length()) {
+                    val s = sa.getJSONObject(j)
+                    val esist = staffEsist[s.optLong("id", 0L)]
+                    if (esist != null) staffAgg += staffDa(s, squadra, esist) else staffNuovi += staffDa(s, squadra, null)
+                }
+            }
+        }
+        val giocAgg = giocatori.filter { it.first.id != 0L }.map { it.first }
+        if (giocAgg.isNotEmpty()) dao.updatePlayers(giocAgg)
+        val giocNuovi = giocatori.indices.filter { giocatori[it].first.id == 0L }
+        if (giocNuovi.isNotEmpty()) {
+            val ids = dao.insertPlayers(giocNuovi.map { giocatori[it].first })
+            giocNuovi.forEachIndexed { k, idx -> giocatori[idx] = giocatori[idx].first.copy(id = ids[k]) to giocatori[idx].second }
+        }
+        if (staffAgg.isNotEmpty()) dao.updateStaffs(staffAgg)
+        if (staffNuovi.isNotEmpty()) dao.insertStaffs(staffNuovi)
+
+        // 3. Mentalità e ruoli extra
+        val mente = Mente.decode(dao.stato(Mente.KEY)).toMutableMap()
+        for ((p, g) in giocatori) {
+            g.optJSONObject("mentalita")?.let { mj ->
+                val base = Mente.base(p)
+                mente[p.id] = IntArray(attr.size) { k -> mj.optInt(attr[k].sigla, base[k]) - base[k] }
+            }
+            g.optJSONArray("ruoliExtra")?.let { ra ->
+                val lista = (0 until ra.length()).map { ra.getString(it) }
+                dao.setStato(Stato("ruoli_${p.id}", lista.joinToString(";")))
+            }
+        }
+        dao.setStato(Stato(Mente.KEY, Mente.encode(mente)))
+        return arr.length()
+    }
+
     suspend fun import(dao: AndrocalcioDao, text: String): Int {
         val root = JSONObject(text)
         require(root.optString("formato") == FORMAT) { "formato sconosciuto" }
