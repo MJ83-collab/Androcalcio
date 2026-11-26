@@ -52,6 +52,13 @@ object Attr {
         )
     }
 
+    /** Overall dai parametri: inverso di fill, media dei dieci parametri tolto lo scarto del ruolo. */
+    fun overallDa(role: String, ve: Int, re: Int, ag: Int, qu: Int, en: Int, pa: Int, dr: Int, fi: Int, ti: Int, ri: Int): Int {
+        val b = BIAS[role] ?: BIAS.getValue("C")
+        val v = intArrayOf(ve, re, ag, qu, en, pa, dr, fi, ti, ri)
+        return (v.indices.sumOf { v[it] - b[it] } / v.size.toDouble()).let { Math.round(it).toInt() }.coerceIn(1, 99)
+    }
+
     /** Sposta tutti i parametri dello stesso scarto (crescita o declino); velocità e resistenza calano di più con l'età. */
     fun shift(p: Player, delta: Int): Player {
         fun s(x: Int, extra: Int = 0) = (x + delta - extra).coerceIn(25, 99)

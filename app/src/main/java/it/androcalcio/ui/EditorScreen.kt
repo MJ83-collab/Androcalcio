@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.text.font.FontWeight
@@ -120,6 +121,7 @@ fun EditorScreen(
     var coach by remember(team) { mutableStateOf(team.youthCoachSkill.toString()) }
     var scout by remember(team) { mutableStateOf(team.scoutSkill.toString()) }
     var editing by remember { mutableStateOf<Player?>(null) }
+    val menteCorrente by vm.menteDelta.collectAsStateWithLifecycle()
     var confirmReset by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -219,11 +221,10 @@ fun EditorScreen(
             "GM" to p.gm.toString(), "EN" to p.en.toString(), "PA" to p.pa.toString(), "DR" to p.dr.toString(), "FI" to p.fi.toString(),
             "TI" to p.ti.toString(), "RI" to p.ri.toString(), "CO" to p.condition.toString(), "CT" to p.contract.toString(),
             "NU" to p.numero.toString(), "IN" to p.injuredRounds.toString()) }
-        val menteIniz = it.androcalcio.engine.Mente.valori(p, vm.menteDelta.value)
-        val mente = remember(p) { androidx.compose.runtime.mutableStateListOf(*menteIniz.map { v -> v.toString() }.toTypedArray()) }
+        val menteIniz = it.androcalcio.engine.Mente.valori(p, menteCorrente)
+        val mente = remember(p, menteCorrente) { androidx.compose.runtime.mutableStateListOf(*menteIniz.map { v -> v.toString() }.toTypedArray()) }
         var scheda by remember(p) { mutableStateOf(0) }
         val nazioni = (SeedData.codes.keys + Nazionali.EUROPA + p.nationality).toSortedSet().map { n -> n to n }
-        val ruoliOpz = listOf("" to "— nessuno —") + TacticalRoles.NAMES.filterKeys { k -> k != pos }.map { e -> e.key to e.value }
         fun daPosizione(nuova: String) {   // ruoli affini di partenza per la posizione scelta
             pos = nuova
             val (r2, f2) = TacticalRoles.affine(nuova, 0); val (r3, f3) = TacticalRoles.affine(nuova, 1)
@@ -286,11 +287,11 @@ fun EditorScreen(
                   else -> {
                     Text("Ruoli affini (con l'affinità in %). Cambiando la posizione si ripartono i ruoli di default.",
                         style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
-                    Scelta("Ruolo 2", s2, ruoliOpz) { s2 = it; if (it.isEmpty()) a2 = "0" else if (a2 == "0") a2 = "50" }
+                    CodiceRuolo("Ruolo 2", s2, pos) { s2 = it; if (it.isEmpty()) a2 = "0" else if (a2 == "0") a2 = "50" }
                     if (s2.isNotEmpty()) NumF("Affinità ruolo 2 (0-100)", a2) { a2 = it }
-                    Scelta("Ruolo 3", s3, ruoliOpz) { s3 = it; if (it.isEmpty()) a3 = "0" else if (a3 == "0") a3 = "50" }
+                    CodiceRuolo("Ruolo 3", s3, pos) { s3 = it; if (it.isEmpty()) a3 = "0" else if (a3 == "0") a3 = "50" }
                     if (s3.isNotEmpty()) NumF("Affinità ruolo 3 (0-100)", a3) { a3 = it }
-                    Scelta("Ruolo 4", s4, ruoliOpz) { s4 = it; if (it.isEmpty()) a4 = "0" else if (a4 == "0") a4 = "50" }
+                    CodiceRuolo("Ruolo 4", s4, pos) { s4 = it; if (it.isEmpty()) a4 = "0" else if (a4 == "0") a4 = "50" }
                     if (s4.isNotEmpty()) NumF("Affinità ruolo 4 (0-100)", a4) { a4 = it }
                   }
                   }
@@ -299,7 +300,14 @@ fun EditorScreen(
             },
             confirmButton = {
                 PcAction(onClick = {
-                    val newOv = (ov.toIntOrNull() ?: p.overall).coerceIn(1, 99)
+                    fun nv(k: String, d: Int) = (num[k]?.toIntOrNull() ?: d).coerceIn(1, 99)
+                    val parametriCambiati = listOf("VE" to p.ve, "RE" to p.re, "AG" to p.ag, "QU" to p.qu, "EN" to p.en,
+                        "PA" to p.pa, "DR" to p.dr, "FI" to p.fi, "TI" to p.ti, "RI" to p.ri).any { (k, v) -> nv(k, v) != v }
+                    val valoreDigitato = ov.toIntOrNull()?.takeIf { it != p.overall }
+                    val newOv = valoreDigitato?.coerceIn(1, 99)
+                        ?: if (parametriCambiati) it.androcalcio.engine.Attr.overallDa(role, nv("VE", p.ve), nv("RE", p.re), nv("AG", p.ag),
+                            nv("QU", p.qu), nv("EN", p.en), nv("PA", p.pa), nv("DR", p.dr), nv("FI", p.fi), nv("TI", p.ti), nv("RI", p.ri))
+                        else p.overall
                     // Ruoli affini: mai uguali alla posizione o tra loro; affinità 0 se il ruolo è vuoto
                     val usati = mutableSetOf(pos)
                     fun ruolo(r: String) = if (r.isNotEmpty() && usati.add(r)) r else ""
@@ -395,5 +403,22 @@ private fun Caratteristica(sigla: String, nome: String, descrizione: String, val
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(76.dp)
         )
+    }
+}
+
+/** Codice ruolo libero (1-4 lettere) con suggerimenti toccabili dai ruoli tattici noti. */
+@Composable
+private fun CodiceRuolo(label: String, valore: String, posizione: String, onChange: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        OutlinedTextField(
+            value = valore, singleLine = true, label = { Text(label) }, modifier = Modifier.fillMaxWidth(),
+            onValueChange = { v -> onChange(v.uppercase().filter { it.isLetter() }.take(4)) },
+            supportingText = { Text(TacticalRoles.NAMES[valore] ?: if (valore.isEmpty()) "Vuoto: nessun ruolo" else "Ruolo personalizzato") }
+        )
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TacticalRoles.NAMES.keys.filter { it != posizione }.forEach { c ->
+                PcChip(selected = valore == c, onClick = { onChange(c) }, label = { Text(c, fontSize = 12.sp) })
+            }
+        }
     }
 }
