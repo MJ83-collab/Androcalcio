@@ -13,7 +13,7 @@ Stato: sono al 2 di 2 lavori. Merge su `main` solo dopo la prova di Marco.
 - **Mentalità (`engine/Mente.kt`):** 6 valori (determinazione, leadership, freddezza, professionalità, autocontrollo, spirito di squadra). Base fissa da nome e carattere; modifiche salvate in Stato `mente`. Effetti: freddezza attenua il calo di morale nelle sconfitte, determinazione aiuta a rialzarsi; affiatamento della squadra muove il clima ogni mese.
 - **Psicologo (`engine/Psicologo.kt`, ruolo staff `PSI`):** nuova scheda (colonna staff in Home, Stampa, posta). Vede problemi singoli (morale, panchina, ansia, ingaggio), attriti tra compagni e spogliatoio diviso: quanti ne vede dipende dall'abilità. Sedute a pagamento con probabilità di riuscita, attesa 7 giorni; lavoro individuale su un valore mentale (attesa 14 giorni). Pareri su tuoi, altri club (serve conoscenza scout ≥50%) e vivai. Report mensile in posta + "REPORT ORA". Recupero morale a ogni giornata in base all'abilità.
 - **Compatibilità:** il vecchio psicologo a livelli diventa automaticamente un membro dello staff. Le squadre AI ricevono uno psicologo.
-- **Da verificare con Marco:** colonna EN (energia) a 69 per tutti a inizio stagione: tutti hanno fatto gli stessi giorni di preparazione. Possibile ritocco: calo diverso secondo la resistenza.
+- **Energia (EN):** approvato da Marco: calo nelle amichevoli e nel ritiro e recupero nei riposi dipendono da resistenza ed età (`CalendarioGiorni.cala`).
 - Modello: Sonnet basta.
 
 ## Sessione 26/11: profondità FM27 + immediatezza PC Calcio 7 (ramo feat/profondita-fm27, 4 blocchi, NON provata sul telefono)
