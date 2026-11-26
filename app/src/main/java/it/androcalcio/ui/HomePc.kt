@@ -69,13 +69,13 @@ internal fun Modifier.marmo(): Modifier = this.background(Fondo).drawBehind {
 @Composable
 private fun ColonnaStaff(go: (Screen) -> Unit) {
     val voci = listOf("ALL" to Color(0xFFE08A12), "ASS" to Color(0xFF3AA0E0), "GIO" to Color(0xFF2F8F4E), "PRE" to Color(0xFFC0392B),
-        "FIS" to Color(0xFFEDEDED), "SCO" to Color(0xFF8E5BC8), "GIA" to Color(0xFF5BA83A), "ANA" to Color(0xFFC9A227))
+        "FIS" to Color(0xFFEDEDED), "SCO" to Color(0xFF8E5BC8), "GIA" to Color(0xFF5BA83A), "ANA" to Color(0xFFC9A227), "PSI" to Color(0xFF00897B))
     Column(Modifier.width(38.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF14215C)).padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
         voci.forEach { (ruolo, c) ->
             val dest = when (ruolo) {
                 "ALL" -> Screen.TATTICA; "ASS" -> Screen.CALENDARIO; "GIO", "SCO" -> Screen.VIVAIO
-                "PRE" -> Screen.PREPARATORI; "FIS" -> Screen.FISIO; "GIA" -> Screen.GIARDINIERE; else -> Screen.ANALISTA
+                "PRE" -> Screen.PREPARATORI; "FIS" -> Screen.FISIO; "GIA" -> Screen.GIARDINIERE; "PSI" -> Screen.PSICOLOGO; else -> Screen.ANALISTA
             }
             Column(Modifier.clickable { go(dest) }, horizontalAlignment = Alignment.CenterHorizontally) {
                 Canvas(Modifier.size(28.dp)) {
@@ -110,6 +110,11 @@ private fun ColonnaStaff(go: (Screen) -> Unit) {
                         }
                         "GIA" -> { // filo d'erba
                             for (i in 0..3) drawLine(k, Offset(w * (0.3f + i * 0.13f), h * 0.76f), Offset(w * (0.26f + i * 0.16f), h * 0.3f), 2.6f)
+                        }
+                        "PSI" -> { // testa con fumetto
+                            drawCircle(k, w * 0.17f, Offset(w * 0.4f, h * 0.48f), style = Stroke(2.4f))
+                            drawCircle(k, w * 0.09f, Offset(w * 0.68f, h * 0.3f))
+                            drawCircle(k, w * 0.04f, Offset(w * 0.58f, h * 0.42f))
                         }
                         else -> { // schermo con grafico
                             drawRect(k, Offset(w * 0.2f, h * 0.26f), Size(w * 0.6f, h * 0.42f), style = Stroke(2f))

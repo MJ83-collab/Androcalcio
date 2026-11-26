@@ -115,6 +115,9 @@ import it.androcalcio.engine.Formation
 import it.androcalcio.engine.Forma
 import it.androcalcio.engine.Conoscenza
 import it.androcalcio.engine.Fisio
+import it.androcalcio.engine.Nomi
+import it.androcalcio.engine.Psicologo
+import it.androcalcio.engine.Mente
 import it.androcalcio.engine.VivaioClub
 import it.androcalcio.engine.Mentori
 import it.androcalcio.engine.Ritmo
@@ -599,6 +602,14 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Squadre AI senza allenatore o preparatore: ne ricevono uno casuale (anche per i salvataggi esistenti). */
     private suspend fun ensureAiStaff(meId: Long) {
+        // Vecchio psicologo "a livelli": diventa una figura dello staff con abilità pari al livello
+        val livPsi = dao.statoInt("psicologo")
+        if (livPsi > 0 && dao.staffOnce(meId).none { it.role == Staffing.PSICOLOGO }) {
+            val sk = intArrayOf(0, 45, 65, 85)[livPsi.coerceIn(0, 3)]
+            dao.insertStaffs(listOf(Staff(teamId = meId, role = Staffing.PSICOLOGO, name = Nomi.genera(kotlin.random.Random.Default, "Italia"),
+                skill = sk, salary = Relazioni.costoPsicologo(livPsi), contract = 2)))
+            dao.setStatoInt("psicologo", 0, 0, 3)
+        }
         val have = dao.allStaff().groupBy { it.teamId }
         val players = dao.allPlayers().groupBy { it.teamId }
         val rng = kotlin.random.Random.Default
@@ -2593,13 +2604,19 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
             val vice = staff.firstOrNull { it.role == Staffing.ASSISTENTE }
             val st = if (vice == null) Conoscenza.Stima("Nessun allenatore in seconda", 0, null, Personalita.tipo(p).nome)
                 else Conoscenza.stima(p, "All. in seconda ${vice.name}", Conoscenza.daStaff(vice.skill)).copy(carattere = Personalita.tipo(p).nome)
+            val psi = staff.firstOrNull { it.role == Staffing.PSICOLOGO }
+            val mente = Mente.decode(dao.stato(Mente.KEY))
             d.copy(stima = st, parereRosa = if (vice == null) "" else Conoscenza.ruoloInRosa(p, rosa, st.forbice), mio = true,
+                mente = if (psi != null) Mente.valori(p, mente) else null,
+                parerePsi = Psicologo.parere(p.name, Mente.valori(p, mente), Personalita.tipo(p), 100, psi?.skill),
                 testFisio = Fisio.testo(dao.stato(Fisio.chiaveTest(p.id))))
         } else {
             val obs = dao.report(me.id, p.id)?.observations ?: 0
             val c = Conoscenza.daScout(obs, me.scoutSkill)
             val st = Conoscenza.stima(p, if (obs == 0) "Mai osservato" else "Scout ($obs osservazioni)", c)
-            d.copy(stima = st, affinita = if (c >= Conoscenza.MIN_CARATTERE) Conoscenza.affinita(p, rosa, ricca) else null)
+            val psi = staff.firstOrNull { it.role == Staffing.PSICOLOGO }
+            d.copy(stima = st, affinita = if (c >= Conoscenza.MIN_CARATTERE) Conoscenza.affinita(p, rosa, ricca) else null,
+                parerePsi = Psicologo.parere(p.name, Mente.valori(p, Mente.decode(dao.stato(Mente.KEY))), Personalita.tipo(p), c, psi?.skill))
         }
     }
 
@@ -2745,6 +2762,144 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
      * Missione mirata nel vivaio di un solo club (metà prezzo): lo scout osserva i 3 ragazzi più interessanti
      * e manda il rapporto nella posta, con le stime già dentro il messaggio (come in FM27).
      */
+    // ---- Psicologo e mentalità ----
+    val menteDelta: StateFlow<Map<Long, IntArray>> = osserva("stato") { Mente.decode(dao.stato(Mente.KEY)) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** Editor: fissa i valori mentali assoluti di un giocatore. */
+    fun salvaMente(p: Player, assoluti: IntArray) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val m = Mente.decode(dao.stato(Mente.KEY)) + (p.id to Mente.deltaPer(p, assoluti))
+            dao.setStato(Stato(Mente.KEY, Mente.encode(m)))
+        }
+    }
+
+    data class PsiStato(
+        val nome: String? = null, val skill: Int = 0,
+        val problemi: List<Psicologo.Problema> = emptyList(), val nascosti: Int = 0,
+        val mente: Map<Long, IntArray> = emptyMap(), val clima: Int = 60, val affiatamento: Int = 50,
+        val attesa: Map<String, Int> = emptyMap(),   // chiave -> giorni che mancano al prossimo intervento
+        val report: String = ""
+    )
+    private val _psi = MutableStateFlow(PsiStato())
+    val psi: StateFlow<PsiStato> = _psi
+
+    private suspend fun oggiEpoch(): Long = calcolaGiorno()?.oggi?.toEpochDay() ?: java.time.LocalDate.now().toEpochDay()
+
+    fun caricaPsi() { viewModelScope.launch(Dispatchers.IO) { _psi.value = statoPsi() } }
+
+    private suspend fun statoPsi(): PsiStato {
+        val me = selectedTeam.value ?: return PsiStato()
+        val psi = dao.staffOnce(me.id).firstOrNull { it.role == Staffing.PSICOLOGO }
+        val rosa = dao.playersOnce(me.id)
+        val mente = Mente.decode(dao.stato(Mente.KEY))
+        val clima = dao.statoInt(StatoKeys.CLIMA)
+        val tutti = Psicologo.problemi(rosa, mente, clima)
+        val visti = if (psi == null) emptyList() else tutti.take(Psicologo.visibili(psi.skill))
+        val oggi = oggiEpoch()
+        val cd = Psicologo.decodeCd(dao.stato(Psicologo.KEY_CD))
+        val attesa = cd.mapValues { (k, g) -> ((if (k.startsWith("lav_")) Psicologo.ATTESA_LAVORO else Psicologo.ATTESA_SEDUTA) - (oggi - g)).toInt() }
+            .filterValues { it > 0 }
+        return PsiStato(psi?.name, psi?.skill ?: 0, visti, tutti.size - visti.size, mente, clima,
+            Mente.affiatamento(rosa, mente, clima), attesa, dao.stato(Psicologo.KEY_REPORT).orEmpty().split("§").lastOrNull().orEmpty())
+    }
+
+    private suspend fun pagaPsi(me: Team, cost: Long, cosa: String): Boolean {
+        val t = dao.team(me.id)
+        if (cost > t.budget) { _notice.value = "Budget insufficiente (servono ${money(cost)})."; return false }
+        dao.updateTeam(t.copy(budget = t.budget - cost))
+        registra(t.id, cosa, -cost, t.budget - cost)
+        return true
+    }
+
+    private suspend fun segnaCd(chiave: String) {
+        val cd = Psicologo.decodeCd(dao.stato(Psicologo.KEY_CD)).filterValues { oggiEpoch() - it < 30 } + (chiave to oggiEpoch())
+        dao.setStato(Stato(Psicologo.KEY_CD, Psicologo.encodeCd(cd)))
+    }
+
+    /** Seduta su un problema rilevato dallo psicologo. */
+    fun psiSeduta(chiave: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val st = statoPsi()
+            val psi = st.nome ?: return@launch
+            val pb = st.problemi.firstOrNull { it.chiave == chiave } ?: return@launch
+            if ((st.attesa[chiave] ?: 0) > 0) return@launch
+            if (!pagaPsi(me, Psicologo.costoSeduta(st.skill, pb.tipo), "Psicologo: ${pb.tipo.azione.lowercase()}")) return@launch
+            val rosa = dao.playersOnce(me.id)
+            val es = Psicologo.seduta(pb, rosa, st.skill, kotlin.random.Random.Default)
+            var mente = st.mente
+            es.mente.forEach { (id, a, q) -> rosa.firstOrNull { it.id == id }?.let { mente = Mente.aggiungi(mente, it, a, q) } }
+            dao.setStato(Stato(Mente.KEY, Mente.encode(mente)))
+            dao.updatePlayers(rosa.filter { it.id in es.morale }.map { it.copy(morale = (it.morale + es.morale.getValue(it.id)).coerceIn(0, 100)) })
+            if (es.clima != 0) dao.setStatoInt(StatoKeys.CLIMA, (st.clima + es.clima).coerceIn(0, 100))
+            dao.setStatoInt("psi_interventi", dao.statoInt("psi_interventi") + 1)
+            segnaCd(chiave)
+            _notice.value = "🧠 $psi: ${es.testo}"
+            _psi.value = statoPsi()
+        }
+    }
+
+    /** Lavoro individuale su un valore mentale di un tuo giocatore. */
+    fun psiLavoro(p: Player, a: Mente.Attr) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = selectedTeam.value ?: return@launch
+            val st = statoPsi()
+            val psi = st.nome ?: return@launch
+            if ((st.attesa["lav_${p.id}"] ?: 0) > 0) return@launch
+            if (!pagaPsi(me, Psicologo.costoLavoro(st.skill), "Psicologo: lavoro su ${a.nome.lowercase()} di ${p.name}")) return@launch
+            val q = Psicologo.lavoro(Mente.valori(p, st.mente), a, st.skill, kotlin.random.Random.Default)
+            if (q > 0) dao.setStato(Stato(Mente.KEY, Mente.encode(Mente.aggiungi(st.mente, p, a, q))))
+            dao.setStatoInt("psi_interventi", dao.statoInt("psi_interventi") + 1)
+            segnaCd("lav_${p.id}")
+            _notice.value = if (q > 0) "🧠 $psi: ${p.name} migliora la ${a.nome.lowercase()} (+$q)." else "🧠 $psi: ${p.name} non risponde al lavoro, per ora."
+            _psi.value = statoPsi()
+        }
+    }
+
+    private suspend fun scriviReportPsi(periodo: String): String? {
+        val me = selectedTeam.value ?: return null
+        val st = statoPsi()
+        val nome = st.nome ?: return null
+        val rep = Psicologo.report(nome, periodo, dao.playersOnce(me.id), st.mente, st.clima, st.problemi, dao.statoInt("psi_interventi"))
+        dao.setStato(Stato(Psicologo.KEY_REPORT, PreparatoreCapo.aggiungi(dao.stato(Psicologo.KEY_REPORT), rep)))
+        salvaPosta(listOf(Posta.Messaggio(oggiEpoch(), Posta.Cat.STAFF, rep.lineSequence().take(2).joinToString(" · ") + " (apri lo Psicologo)", "PSICOLOGO")))
+        return rep
+    }
+
+    /** Report su richiesta. */
+    fun psiReport() {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (selectedTeam.value == null) return@launch
+            if (scriviReportPsi("su richiesta") == null) { _notice.value = "Nessuno psicologo nello staff."; return@launch }
+            _notice.value = "🧠 Report dello psicologo pronto (anche nella posta)."
+            _psi.value = statoPsi()
+        }
+    }
+
+    /** A inizio mese: lo psicologo lavora da solo su un giocatore, il clima si muove con l'affiatamento, poi il report. */
+    private suspend fun psicologoMensile(mesePrec: String) {
+        val me = selectedTeam.value ?: return
+        val psi = dao.staffOnce(me.id).firstOrNull { it.role == Staffing.PSICOLOGO }
+        val rosa = dao.playersOnce(me.id)
+        var mente = Mente.decode(dao.stato(Mente.KEY))
+        val clima = dao.statoInt(StatoKeys.CLIMA)
+        val aff = Mente.affiatamento(rosa, mente, clima)
+        dao.setStatoInt(StatoKeys.CLIMA, (clima + (aff - 55) / 10).coerceIn(0, 100))
+        if (psi == null) return
+        val rng = kotlin.random.Random.Default
+        // il più fragile riceve un aiuto spontaneo sul suo punto debole
+        rosa.minByOrNull { Mente.valori(it, mente).min() }?.let { p ->
+            val v = Mente.valori(p, mente)
+            val a = Mente.Attr.values().minByOrNull { v[it.ordinal] }!!
+            val q = Psicologo.lavoro(v, a, psi.skill, rng)
+            if (q > 0) mente = Mente.aggiungi(mente, p, a, q)
+        }
+        dao.setStato(Stato(Mente.KEY, Mente.encode(mente)))
+        scriviReportPsi(mesePrec)
+        dao.setStatoInt("psi_interventi", 0)
+    }
+
     /** Esiti dei test fisici e giocatori già operati in questa stagione (per la scheda Fisioterapisti). */
     data class FisioStato(val test: Map<Long, String> = emptyMap(), val operati: Set<Long> = emptySet())
     private val _fisio = MutableStateFlow(FisioStato())
@@ -4323,7 +4478,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         dao.setStatoInt(StatoKeys.CLIMA, clima)
         dao.setStatoInt(StatoKeys.TIFOSI, dao.statoInt(StatoKeys.TIFOSI) + dt)
         val spinta = Spogliatoio.spintaMorale(clima)
-        val psico = dao.statoInt("psicologo")
+        val psico = Psicologo.livello(dao.staffOnce(me).firstOrNull { it.role == Staffing.PSICOLOGO }?.skill)
         val rosa = dao.playersOnce(me)
         if (spinta != 0 || psico > 0) dao.updatePlayers(rosa.map {
             it.copy(morale = (it.morale + spinta + Relazioni.recuperoPsicologo(psico, it)).coerceIn(0, 100)) })
@@ -4575,6 +4730,7 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
                 _notice.value = "📋 Report mensile del preparatore capo disponibile (scheda Rosa)."
             }
         }
+        if (ultimo != null && ultimo != mese) psicologoMensile(ultimo)
         if (ultimo != null && ultimo != mese) {
             // Amichevoli su invito: due club della tua nazione ti propongono una partita
             val rngI = kotlin.random.Random.Default
@@ -4894,9 +5050,11 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         val rosa = dao.playersOnce(meId)
         if (rosa.isEmpty()) return
         val nessunTitolare = rosa.none { it.starter }
+        val mente = Mente.decode(dao.stato(Mente.KEY))
         dao.updatePlayers(rosa.map { p ->
             val giocato = nessunTitolare || p.starter
-            p.copy(morale = (p.morale + Personalita.moraleDopo(p, gf, gs, giocato)).coerceIn(0, 100))
+            val d = Mente.correggiMorale(Personalita.moraleDopo(p, gf, gs, giocato), Mente.valori(p, mente))
+            p.copy(morale = (p.morale + d).coerceIn(0, 100))
         })
         val esistenti = Personalita.decode(dao.stato("richieste")).filter { rq -> rosa.any { it.id == rq.playerId } }
         val nuove = Personalita.nuove(dao.playersOnce(meId), esistenti, kotlin.random.Random.Default)

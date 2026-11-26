@@ -17,5 +17,7 @@ data class DettaglioGiocatore(
     val parereRosa: String = "",                                  // parere del vice per la prima squadra (solo i tuoi)
     val affinita: Pair<String, String>? = null,                   // affinità di carattere con la tua squadra
     val mio: Boolean = false,
-    val testFisio: String? = null                                 // esito del test del fisioterapista, se fatto
+    val testFisio: String? = null,                                // esito del test del fisioterapista, se fatto
+    val mente: IntArray? = null,                                  // valori mentali (solo tuoi, con lo psicologo)
+    val parerePsi: List<String> = emptyList()                     // parere dello psicologo
 )

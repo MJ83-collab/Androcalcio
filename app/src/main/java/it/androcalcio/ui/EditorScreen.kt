@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -208,6 +213,15 @@ fun EditorScreen(
         var a3 by remember(p) { mutableStateOf(p.aff3.toString()) }
         var s4 by remember(p) { mutableStateOf(p.sec4) }
         var a4 by remember(p) { mutableStateOf(p.aff4.toString()) }
+        // Caratteristiche: sigla -> valore in testo (tutti i parametri del giocatore)
+        val num = remember(p) { androidx.compose.runtime.mutableStateMapOf(
+            "VE" to p.ve.toString(), "RE" to p.re.toString(), "AG" to p.ag.toString(), "QU" to p.qu.toString(), "FO" to p.fo.toString(),
+            "GM" to p.gm.toString(), "EN" to p.en.toString(), "PA" to p.pa.toString(), "DR" to p.dr.toString(), "FI" to p.fi.toString(),
+            "TI" to p.ti.toString(), "RI" to p.ri.toString(), "CO" to p.condition.toString(), "CT" to p.contract.toString(),
+            "NU" to p.numero.toString(), "IN" to p.injuredRounds.toString()) }
+        val menteIniz = it.androcalcio.engine.Mente.valori(p, vm.menteDelta.value)
+        val mente = remember(p) { androidx.compose.runtime.mutableStateListOf(*menteIniz.map { v -> v.toString() }.toTypedArray()) }
+        var scheda by remember(p) { mutableStateOf(0) }
         val nazioni = (SeedData.codes.keys + Nazionali.EUROPA + p.nationality).toSortedSet().map { n -> n to n }
         val ruoliOpz = listOf("" to "— nessuno —") + TacticalRoles.NAMES.filterKeys { k -> k != pos }.map { e -> e.key to e.value }
         fun daPosizione(nuova: String) {   // ruoli affini di partenza per la posizione scelta
@@ -219,7 +233,13 @@ fun EditorScreen(
             onDismissRequest = { editing = null },
             title = { Text("Modifica giocatore") },
             text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    SCHEDE_EDITOR.forEachIndexed { k, nome -> PcChip(selected = scheda == k, onClick = { scheda = k }, label = { Text(nome, fontSize = 12.sp) }) }
+                }
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                  when (scheda) {
+                  0 -> {
                     TextF("Nome", pn) { pn = it }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("P", "D", "C", "A").forEach { r ->
@@ -242,11 +262,28 @@ fun EditorScreen(
                         }
                     }
                     NumF("Età", age) { age = it }
+                    Scelta("Nazionale", nat, nazioni) { nat = it }
                     NumF("Valore (1-99)", ov) { ov = it }
                     NumF("Potenziale (1-99, non sotto il valore)", pot) { pot = it }
-                    NumF("Morale (0-100)", mo) { mo = it }
+                  }
+                  1, 2 -> CAMPI_EDITOR.filter { c -> c.scheda == scheda }.forEach { c ->
+                      Caratteristica(c.sigla, c.nome, c.descrizione, num[c.sigla].orEmpty()) { v -> num[c.sigla] = v }
+                  }
+                  3 -> {
+                    Caratteristica("MO", "Morale", "Umore del giocatore (0-100): sotto 45 rende meno e crea problemi.", mo) { mo = it }
+                    it.androcalcio.engine.Mente.Attr.values().forEach { a ->
+                        Caratteristica(a.sigla, a.nome, a.descrizione, mente[a.ordinal]) { v -> mente[a.ordinal] = v }
+                    }
+                    Text("Carattere: ${it.androcalcio.engine.Personalita.tipo(pn, nat).nome} (dipende da nome e nazionalità).",
+                        style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+                  }
+                  4 -> {
                     NumF("Ingaggio annuo (€)", sal) { sal = it }
-                    Scelta("Nazionale", nat, nazioni) { nat = it }
+                    CAMPI_EDITOR.filter { c -> c.scheda == 4 }.forEach { c ->
+                        Caratteristica(c.sigla, c.nome, c.descrizione, num[c.sigla].orEmpty()) { v -> num[c.sigla] = v }
+                    }
+                  }
+                  else -> {
                     Text("Ruoli affini (con l'affinità in %). Cambiando la posizione si ripartono i ruoli di default.",
                         style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
                     Scelta("Ruolo 2", s2, ruoliOpz) { s2 = it; if (it.isEmpty()) a2 = "0" else if (a2 == "0") a2 = "50" }
@@ -255,6 +292,9 @@ fun EditorScreen(
                     if (s3.isNotEmpty()) NumF("Affinità ruolo 3 (0-100)", a3) { a3 = it }
                     Scelta("Ruolo 4", s4, ruoliOpz) { s4 = it; if (it.isEmpty()) a4 = "0" else if (a4 == "0") a4 = "50" }
                     if (s4.isNotEmpty()) NumF("Affinità ruolo 4 (0-100)", a4) { a4 = it }
+                  }
+                  }
+                }
                 }
             },
             confirmButton = {
@@ -265,6 +305,7 @@ fun EditorScreen(
                     fun ruolo(r: String) = if (r.isNotEmpty() && usati.add(r)) r else ""
                     fun aff(r: String, a: String) = if (r.isEmpty()) 0 else (a.toIntOrNull() ?: 50).coerceIn(0, 100)
                     val r2 = ruolo(s2); val r3 = ruolo(s3); val r4 = ruolo(s4)
+                    fun n(k: String, d: Int) = (num[k]?.toIntOrNull() ?: d).coerceIn(1, 99)
                     vm.savePlayer(p.copy(
                         name = pn.ifBlank { p.name }, role = role,
                         age = (age.toIntOrNull() ?: p.age).coerceIn(15, 45),
@@ -277,8 +318,17 @@ fun EditorScreen(
                         sec2 = r2, aff2 = aff(r2, a2), sec3 = r3, aff3 = aff(r3, a3), sec4 = r4, aff4 = aff(r4, a4),
                         // il ruolo scelto per la partita deve restare uno dei suoi ruoli
                         ruoloPartita = if (p.ruoloPartita in setOf(pos, r2, r3, r4)) p.ruoloPartita else "",
-                        compito = if (p.ruoloPartita in setOf(pos, r2, r3, r4)) p.compito else ""
+                        compito = if (p.ruoloPartita in setOf(pos, r2, r3, r4)) p.compito else "",
+                        ve = n("VE", p.ve), re = n("RE", p.re), ag = n("AG", p.ag), qu = n("QU", p.qu), fo = n("FO", p.fo),
+                        gm = n("GM", p.gm), en = n("EN", p.en), pa = n("PA", p.pa), dr = n("DR", p.dr), fi = n("FI", p.fi),
+                        ti = n("TI", p.ti), ri = n("RI", p.ri),
+                        condition = (num["CO"]?.toIntOrNull() ?: p.condition).coerceIn(0, 100),
+                        contract = (num["CT"]?.toIntOrNull() ?: p.contract).coerceIn(0, 10),
+                        numero = (num["NU"]?.toIntOrNull() ?: p.numero).coerceIn(0, 99),
+                        injuredRounds = (num["IN"]?.toIntOrNull() ?: p.injuredRounds).coerceIn(0, 60)
                     ))
+                    val nuoviMente = IntArray(mente.size) { k -> mente[k].toIntOrNull() ?: menteIniz[k] }
+                    if (!nuoviMente.contentEquals(menteIniz)) vm.salvaMente(p, nuoviMente)
                     editing = null
                 }) { Text("Salva") }
             },
@@ -305,6 +355,45 @@ fun EditorScreen(
         AlertDialog(
             onDismissRequest = { vm.clearNotice() }, title = { Text("Editor") }, text = { Text(it) },
             confirmButton = { TextButton(onClick = { vm.clearNotice() }) { Text("OK") } }
+        )
+    }
+}
+
+private val SCHEDE_EDITOR = listOf("Anagrafica", "Fisico", "Tecnica", "Mentale", "Contratto", "Ruoli")
+
+private data class CampoEditor(val sigla: String, val nome: String, val descrizione: String, val scheda: Int)
+
+private val CAMPI_EDITOR = listOf(
+    CampoEditor("VE", "Velocità", "Scatto e corsa: pesa negli inserimenti e nei recuperi.", 1),
+    CampoEditor("RE", "Resistenza", "Quanto regge i 90 minuti: cala meno la condizione.", 1),
+    CampoEditor("AG", "Aggressività", "Grinta nei contrasti: più palloni recuperati, più cartellini.", 1),
+    CampoEditor("FO", "Forma", "Stato di forma del momento (40-99).", 1),
+    CampoEditor("CO", "Condizione", "Energia di oggi (0-100): sotto 60 rischia infortuni.", 1),
+    CampoEditor("QU", "Qualità", "Tecnica generale e visione di gioco.", 2),
+    CampoEditor("PA", "Passaggio", "Precisione nei passaggi corti e lunghi.", 2),
+    CampoEditor("DR", "Dribbling", "Saltare l'uomo palla al piede.", 2),
+    CampoEditor("EN", "Entrate", "Tackle e anticipo in difesa.", 2),
+    CampoEditor("FI", "Finalizzazione", "Freddezza sotto porta.", 2),
+    CampoEditor("TI", "Tiro", "Potenza e precisione da fuori.", 2),
+    CampoEditor("RI", "Rigori", "Precisione dal dischetto.", 2),
+    CampoEditor("GM", "Gioco di mani", "Parate e uscite: conta soprattutto per i portieri.", 2),
+    CampoEditor("CT", "Contratto", "Anni di contratto rimasti (0-10).", 4),
+    CampoEditor("NU", "Numero di maglia", "0 = lo sceglie l'allenatore in seconda.", 4),
+    CampoEditor("IN", "Turni di infortunio", "0 = disponibile.", 4)
+)
+
+/** Una caratteristica: nome con sigla, descrizione breve e valore modificabile. */
+@Composable
+private fun Caratteristica(sigla: String, nome: String, descrizione: String, valore: String, onChange: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text("$sigla · $nome", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(descrizione, style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+        }
+        OutlinedTextField(
+            value = valore, onValueChange = { v -> onChange(v.filter(Char::isDigit).take(3)) }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.width(76.dp)
         )
     }
 }

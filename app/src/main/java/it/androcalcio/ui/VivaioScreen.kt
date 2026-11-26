@@ -106,7 +106,8 @@ fun VivaioScreen(
     onScoutGiovani: (String, String) -> Unit = { _, _ -> },
     onFollowGiovane: (Youth) -> Unit = {},
     onIngaggia: (Youth) -> Unit = {},
-    onScoutClub: (Long) -> Unit = {}
+    onScoutClub: (Long) -> Unit = {},
+    psicologo: Int? = null   // abilità dello psicologo, null se non c'è
 ) {
     if (team == null) return
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -165,6 +166,7 @@ fun VivaioScreen(
                                 "Livello: ${Youths.judge(y.overall)} · Parere dell'allenatore delle giovanili: pot. ${stG.testo}",
                                 modifier = Modifier.padding(top = 8.dp), color = AC.Accent, fontSize = 13.sp
                             )
+                            ParerePsi(y.name, y.nationality, y.age, 100, psicologo)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Liv. ", color = Color(0xFFFFC24B), fontSize = 13.sp)
                                 Stelle(ScoutingGiovani.mezzeStelle(y.overall), 13.sp, Color(0xFFFFC24B))
@@ -229,6 +231,7 @@ fun VivaioScreen(
                     val pot = stY.forbice?.let { (it.first + it.last) / 2 } ?: r.last
                     GlassCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
+                            ParerePsi(y.name, y.nationality, y.age, Conoscenza.daScout(n, team.scoutSkill), psicologo)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Avatar(y.name, 44.dp)
                                 Box(Modifier.padding(start = 8.dp)) { RoleBadge(y.role) }
@@ -313,6 +316,7 @@ fun VivaioScreen(
                                 Text("Carattere: ${stP.carattere} · affinità con la squadra: $liv", fontSize = 12.sp, fontWeight = FontWeight.Bold,
                                     color = when (liv) { "Alta" -> Color(0xFF7CE38B); "Media" -> Color(0xFFFFC24B); else -> Color(0xFFFF8A80) })
                                 Text(motivo, fontSize = 11.sp, color = AC.TextDim)
+                                ParerePsi(p.name, p.nationality, p.age, conosc, psicologo)
                             } else Text("Carattere: da scoprire (serve conoscenza ${Conoscenza.MIN_CARATTERE}%)", fontSize = 11.sp, color = AC.TextDim)
                             TextButton(onClick = { onFollow(p) }) {
                                 Text("Osserva ancora (${money(Scouting.FOLLOW_COST)})")
@@ -345,4 +349,13 @@ fun VivaioScreen(
             confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } }
         )
     }
+}
+
+/** Due righe dal parere dello psicologo (punti di forza e rischi), per giovani e osservati. */
+@Composable
+private fun ParerePsi(nome: String, naz: String, eta: Int, conoscenza: Int, skill: Int?) {
+    if (skill == null) return
+    val righe = it.androcalcio.engine.Psicologo.parere(nome, it.androcalcio.engine.Mente.base(nome, naz, eta),
+        it.androcalcio.engine.Personalita.tipo(nome, naz), conoscenza, skill)
+    Text("🧠 Psicologo: " + righe.drop(1).joinToString(" ").ifEmpty { righe.first() }, fontSize = 11.sp, color = Color(0xFF80CBC4))
 }

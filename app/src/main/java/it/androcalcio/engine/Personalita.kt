@@ -17,8 +17,11 @@ object Personalita {
         FEDELE("Fedele", "Legato alla maglia: resiste anche ai momenti bui.")
     }
 
-    fun tipo(p: Player): Tipo {
-        val h = Math.floorMod(p.name.hashCode() * 31 + p.nationality.hashCode(), Tipo.values().size)
+    fun tipo(p: Player): Tipo = tipo(p.name, p.nationality)
+
+    /** Anche per i giovani del vivaio: basta nome e nazionalità. */
+    fun tipo(nome: String, naz: String): Tipo {
+        val h = Math.floorMod(nome.hashCode() * 31 + naz.hashCode(), Tipo.values().size)
         return Tipo.values()[h]
     }
 

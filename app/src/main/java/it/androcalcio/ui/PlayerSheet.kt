@@ -208,6 +208,14 @@ fun PlayerSheet(
                     RadarGiocatore(p)
                     Text(if (dettaglio.mio) "Propensione agli infortuni: " + (dettaglio.testFisio ?: "sconosciuta — chiedi un test ai fisioterapisti")
                         else "Propensione agli infortuni: sconosciuta", fontSize = 12.sp, color = AC.PaperText)
+                    Titolo("MENTALITÀ · PSICOLOGO")
+                    dettaglio.mente?.let { v ->
+                        it.androcalcio.engine.Mente.Attr.values().forEach { a ->
+                            Text("${a.nome}: ${v[a.ordinal]} (${it.androcalcio.engine.Mente.giudizio(v[a.ordinal]).lowercase()})", fontSize = 12.sp,
+                                color = coloreMente(v[a.ordinal]), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    dettaglio.parerePsi.forEach { r -> Text(r, fontSize = 12.sp, color = AC.PaperText) }
                     Titolo("INFORTUNI")
                     if (dettaglio.infortuni.isEmpty()) Text("Nessun infortunio registrato.", fontSize = 11.sp, color = AC.PaperText)
                     dettaglio.infortuni.takeLast(8).reversed().forEach { (st, t) -> Text("$st: $t turni di stop", fontSize = 12.sp, color = AC.PaperText) }

@@ -72,7 +72,7 @@ private fun Riga(sinistra: String, destra: String, evidenza: Boolean = false) {
 @Composable
 fun RelazioniScreen(
     ex: ExtraStato, rosa: List<Player>,
-    onRisposta: (Int) -> Unit, onColloquio: (Long, Relazioni.Tono) -> Unit, onPsicologo: (Int) -> Unit
+    onRisposta: (Int) -> Unit, onColloquio: (Long, Relazioni.Tono) -> Unit, onPsicologo: () -> Unit
 ) {
     Pagina {
         SectionTitle("Conferenza stampa")
@@ -98,15 +98,9 @@ fun RelazioniScreen(
         SectionTitle("Psicologo")
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Ogni giornata recupera morale a chi sta sotto 60. Costo annuo, pagato a fine stagione.",
+                Text("Lo psicologo è nello staff: scopre i problemi della rosa e tra i compagni, lavora sulla mentalità e scrive un report mensile.",
                     color = AC.TextDim, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Relazioni.PSICOLOGO.forEachIndexed { i, nome ->
-                        PcChip(selected = ex.psicologo == i, onClick = { onPsicologo(i) }, label = { Text(if (i == 0) "No" else "L$i", fontSize = 12.sp) })
-                    }
-                }
-                Text("${Relazioni.PSICOLOGO[ex.psicologo.coerceIn(0, 3)]} · ${money(Relazioni.costoPsicologo(ex.psicologo))} l'anno",
-                    color = AC.Accent, fontSize = 12.sp)
+                PcButton("APRI LO PSICOLOGO", onPsicologo, Modifier.fillMaxWidth())
             }
         }
 

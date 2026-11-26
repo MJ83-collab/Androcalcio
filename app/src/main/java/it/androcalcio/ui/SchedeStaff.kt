@@ -1,6 +1,9 @@
 package it.androcalcio.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -221,3 +224,109 @@ fun SchedaAnalista(staff: List<Staff>, analisi: it.androcalcio.engine.AnalistaPa
       Box(Modifier.weight(1f)) { avversario() }
     }
 }
+
+/**
+ * Psicologo: stato dello spogliatoio, problemi rilevati con la seduta per risolverli,
+ * mentalità della rosa (tocca un giocatore per lavorare su un valore) e report.
+ */
+@Composable
+fun SchedaPsicologo(
+    staff: List<Staff>, rosa: List<Player>, st: AndrocalcioViewModel.PsiStato, onStaff: () -> Unit,
+    onSeduta: (String) -> Unit, onLavoro: (Player, it.androcalcio.engine.Mente.Attr) -> Unit, onReport: () -> Unit
+) {
+    val M = it.androcalcio.engine.Mente
+    val P = it.androcalcio.engine.Psicologo
+    val psi = staff.firstOrNull { s -> s.role == Staffing.PSICOLOGO }
+    var scelto by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Player?>(null) }
+    scelto?.let { p ->
+        val v = M.valori(p, st.mente)
+        val attesa = st.attesa["lav_${p.id}"] ?: 0
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { scelto = null },
+            title = { Text("Lavoro mentale · ${p.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(if (attesa > 0) "Già seguito di recente: riprova tra $attesa giorni."
+                        else "Costo ${money(P.costoLavoro(st.skill))}. Riesce più spesso con chi è professionale e sui valori bassi.",
+                        fontSize = 12.sp, color = AC.TextDim)
+                    M.Attr.values().forEach { a ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("${a.nome} ${v[a.ordinal]}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = coloreMente(v[a.ordinal]))
+                                Text(a.descrizione, fontSize = 11.sp, color = AC.TextDim)
+                            }
+                            if (attesa == 0) PcButton("LAVORA", { onLavoro(p, a); scelto = null }, compatto = true)
+                        }
+                    }
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { scelto = null }) { Text("Chiudi") } }
+        )
+    }
+    Pagina {
+        CapoRuolo("Psicologo", psi, onStaff)
+        if (psi == null) {
+            Text("Senza psicologo non vedi i problemi nascosti, non puoi lavorare sulla mentalità e non ricevi il report mensile.",
+                color = AC.TextDim, fontSize = 12.sp)
+            return@Pagina
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(Triple("CLIMA", st.clima, "spogliatoio"), Triple("AFFIATAMENTO", st.affiatamento, "squadra"),
+                Triple("PROBLEMI", st.problemi.size, "rilevati")).forEach { (t, v, sub) ->
+                PaperPanel(Modifier.weight(1f)) {
+                    Column(Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(t, fontSize = 10.sp, color = AC.PaperDim, fontWeight = FontWeight.Bold)
+                        Text("$v", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold,
+                            color = if (t == "PROBLEMI") (if (v == 0) AC.Ok else AC.ColEn) else coloreMente(v))
+                        Text(sub, fontSize = 10.sp, color = AC.PaperDim)
+                    }
+                }
+            }
+        }
+        SectionTitle("Problemi rilevati")
+        if (st.problemi.isEmpty()) Text("Nessun problema in vista.", color = AC.TextDim, fontSize = 12.sp)
+        if (st.nascosti > 0) Text("Potrebbero essercene altri ${st.nascosti}: uno psicologo più bravo li vedrebbe.", color = AC.TextDim, fontSize = 11.sp)
+        st.problemi.forEach { pb ->
+            PaperPanel(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.width(6.dp).heightIn(min = 44.dp).background(when (pb.gravita) { 3 -> AC.ColEn; 2 -> AC.ColOrange; else -> AC.ColBlue }))
+                    Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                        Text("${pb.tipo.icona} ${pb.tipo.nome}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AC.PaperText)
+                        Text(pb.testo, fontSize = 12.sp, color = AC.PaperText)
+                        val att = st.attesa[pb.chiave] ?: 0
+                        Text(if (att > 0) "Seduta già fatta: riprova tra $att giorni."
+                            else "${pb.tipo.azione}: ${money(P.costoSeduta(st.skill, pb.tipo))} · riuscita ${P.probabilita(st.skill)}%",
+                            fontSize = 11.sp, color = AC.PaperDim)
+                    }
+                    if ((st.attesa[pb.chiave] ?: 0) == 0) PcButton("AGISCI", { onSeduta(pb.chiave) }, compatto = true)
+                }
+            }
+        }
+        SectionTitle("Mentalità della rosa")
+        Text("Tocca un giocatore per lavorare su un valore. DE determinazione · LD leadership · FR freddezza · PR professionalità · AU autocontrollo · SQ spirito di squadra.",
+            color = AC.TextDim, fontSize = 11.sp)
+        PaperPanel(Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row {
+                    Text("", Modifier.weight(1f))
+                    M.Attr.values().forEach { a -> Text(a.sigla, Modifier.width(28.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AC.PaperDim) }
+                }
+                rosa.sortedBy { it.name }.forEach { p ->
+                    val v = M.valori(p, st.mente)
+                    Row(Modifier.fillMaxWidth().clickable { scelto = p }, verticalAlignment = Alignment.CenterVertically) {
+                        RuoloChip(p.role, p.pos)
+                        Text(" ${p.name}", Modifier.weight(1f), fontSize = 12.sp, color = AC.PaperText, maxLines = 1)
+                        v.forEach { x -> Text("$x", Modifier.width(28.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = coloreMente(x)) }
+                    }
+                }
+            }
+        }
+        SectionTitle("Report")
+        PcButton("REPORT ORA", onReport, Modifier.fillMaxWidth())
+        if (st.report.isNotBlank()) PaperPanel(Modifier.fillMaxWidth()) {
+            Text(st.report, Modifier.padding(8.dp), fontSize = 12.sp, color = AC.PaperText)
+        } else Text("Il report arriva a inizio mese (anche nella posta) o quando lo chiedi.", color = AC.TextDim, fontSize = 11.sp)
+    }
+}
+
+fun coloreMente(v: Int) = when { v >= 70 -> Color(0xFF2E7D32); v >= 45 -> Color(0xFFB26A00); else -> Color(0xFFC62828) }

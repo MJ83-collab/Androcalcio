@@ -156,7 +156,8 @@ enum class Screen(val label: String, val icon: ImageVector, val desc: String, va
     PREPARATORI("Preparatori", Icons.Filled.Person, "Attività per giocatore", Color(0xFFC0392B)),
     FISIO("Fisioterapisti", Icons.Filled.Add, "Infermeria e rischi", Color(0xFFD32F2F)),
     GIARDINIERE("Giardiniere", Icons.Filled.Build, "Campo e cantieri", Color(0xFF5BA83A)),
-    ANALISTA("Analista video", Icons.Filled.Search, "Ultima partita e avversario", Color(0xFFC9A227))
+    ANALISTA("Analista video", Icons.Filled.Search, "Ultima partita e avversario", Color(0xFFC9A227)),
+    PSICOLOGO("Psicologo", Icons.Filled.Face, "Problemi, mentalità, report", Color(0xFF00897B))
 }
 
 private val bottomTabs = listOf(
@@ -379,7 +380,7 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                 Screen.RELAZIONI -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
                     LaunchedEffect(team?.id, players.size) { vm.aggiornaExtra() }
-                    RelazioniScreen(ex, players, { vm.rispondiConferenza(it) }, { id, t -> vm.colloquio(id, t) }, { vm.setPsicologo(it) })
+                    RelazioniScreen(ex, players, { vm.rispondiConferenza(it) }, { id, t -> vm.colloquio(id, t) }, { screen = Screen.PSICOLOGO })
                 }
                 Screen.COMMERCIALE -> {
                     val ex by vm.extra.collectAsStateWithLifecycle()
@@ -405,6 +406,11 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                     LaunchedEffect(Unit) { vm.caricaFisio() }
                     SchedaFisio(vm.staff.collectAsStateWithLifecycle().value, players, { screen = Screen.STAFF },
                         vm.fisio.collectAsStateWithLifecycle().value, { vm.testFisio(it) }, { vm.operaGiocatore(it) })
+                }
+                Screen.PSICOLOGO -> {
+                    LaunchedEffect(Unit) { vm.caricaPsi() }
+                    SchedaPsicologo(vm.staff.collectAsStateWithLifecycle().value, players, vm.psi.collectAsStateWithLifecycle().value,
+                        { screen = Screen.STAFF }, { vm.psiSeduta(it) }, { p, a -> vm.psiLavoro(p, a) }, { vm.psiReport() })
                 }
                 Screen.GIARDINIERE -> {
                     val mig by vm.migliorie.collectAsStateWithLifecycle()
@@ -518,7 +524,8 @@ private fun AndrocalcioContenuto(vm: AndrocalcioViewModel) {
                         { n, c -> vm.sendScout(n, c) }, { vm.followPlayer(it) }, { vm.clearNotice() },
                         exViv.inPrima, schedaViv, { vm.richiediScheda(it) }, { vm.apparizione(it) }, { vm.chiudiScheda() },
                         scoutedGio, { n, c -> vm.sendScoutGiovani(n, c) }, { vm.followGiovane(it) }, { vm.ingaggiaGiovane(it) },
-                        { vm.sendScoutVivaio(it) }
+                        { vm.sendScoutVivaio(it) },
+                        vm.staff.collectAsStateWithLifecycle().value.firstOrNull { s -> s.role == it.androcalcio.engine.Staffing.PSICOLOGO }?.skill
                     )
                 }
                 Screen.EDITOR -> {

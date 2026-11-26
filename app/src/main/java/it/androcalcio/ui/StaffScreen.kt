@@ -120,7 +120,8 @@ fun StaffScreen(
         "Preparatori atletici (6)" to Staffing.POSTI.filter { it.role == Staffing.PREPARATORE },
         "Fisioterapisti (2)" to Staffing.POSTI.filter { it.role == Staffing.FISIOTERAPISTA },
         "Manutenzione" to Staffing.POSTI.filter { it.role == Staffing.TUTTOFARE },
-        "Analisi" to Staffing.POSTI.filter { it.role == Staffing.ANALISTA }
+        "Analisi" to Staffing.POSTI.filter { it.role == Staffing.ANALISTA },
+        "Psicologia" to Staffing.POSTI.filter { it.role == Staffing.PSICOLOGO }
     )
 
     LazyColumn(
