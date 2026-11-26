@@ -5,7 +5,16 @@ Kotlin 2.0 / Compose / Room (DB v24, nessuna migrazione; dati nuovi in tabella S
 Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato sul telefono.
 
 ## COMANDO PER RIPARTIRE (da incollare nella nuova chat insieme a questo file)
-> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/profondita-fm27` (in prova da Marco; `main` = v0.8.0). Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+> Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/psicologo` (contiene anche `feat/profondita-fm27`; in prova da Marco; `main` = v0.8.0). Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
+
+## Sessione 26/11 mattina: psicologo ed editor completo (ramo feat/psicologo, build verde, NON provata sul telefono)
+Stato: sono al 2 di 2 lavori. Merge su `main` solo dopo la prova di Marco.
+- **Editor giocatore a schede:** Anagrafica, Fisico, Tecnica, Mentale, Contratto, Ruoli. Ogni caratteristica ha sigla, nome, descrizione e valore (VE RE AG FO condizione, QU PA DR EN FI TI RI GM, morale e 6 valori mentali, contratto, numero, turni di infortunio).
+- **Mentalità (`engine/Mente.kt`):** 6 valori (determinazione, leadership, freddezza, professionalità, autocontrollo, spirito di squadra). Base fissa da nome e carattere; modifiche salvate in Stato `mente`. Effetti: freddezza attenua il calo di morale nelle sconfitte, determinazione aiuta a rialzarsi; affiatamento della squadra muove il clima ogni mese.
+- **Psicologo (`engine/Psicologo.kt`, ruolo staff `PSI`):** nuova scheda (colonna staff in Home, Stampa, posta). Vede problemi singoli (morale, panchina, ansia, ingaggio), attriti tra compagni e spogliatoio diviso: quanti ne vede dipende dall'abilità. Sedute a pagamento con probabilità di riuscita, attesa 7 giorni; lavoro individuale su un valore mentale (attesa 14 giorni). Pareri su tuoi, altri club (serve conoscenza scout ≥50%) e vivai. Report mensile in posta + "REPORT ORA". Recupero morale a ogni giornata in base all'abilità.
+- **Compatibilità:** il vecchio psicologo a livelli diventa automaticamente un membro dello staff. Le squadre AI ricevono uno psicologo.
+- **Da verificare con Marco:** colonna EN (energia) a 69 per tutti a inizio stagione: tutti hanno fatto gli stessi giorni di preparazione. Possibile ritocco: calo diverso secondo la resistenza.
+- Modello: Sonnet basta.
 
 ## Sessione 26/11: profondità FM27 + immediatezza PC Calcio 7 (ramo feat/profondita-fm27, 4 blocchi, NON provata sul telefono)
 Stato: sono al 4 di 4 blocchi. Merge su `main` solo dopo la prova di Marco.
