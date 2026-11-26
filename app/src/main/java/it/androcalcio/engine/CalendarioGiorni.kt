@@ -74,12 +74,16 @@ object CalendarioGiorni {
 
     /** Effetto di un'attività su condizione e morale di un giocatore non infortunato. */
     fun applica(p: it.androcalcio.data.Player, a: Attivita, rng: kotlin.random.Random = kotlin.random.Random.Default): it.androcalcio.data.Player = if (p.injuredRounds > 0) p else when (a) {
-        Attivita.ALLENAMENTO -> p.copy(condition = (p.condition - 1).coerceAtLeast(50))
-        Attivita.RIPOSO -> p.copy(condition = (p.condition + 6).coerceAtMost(100), morale = (p.morale + 1).coerceAtMost(99))
-        Attivita.AMICHEVOLE -> p.copy(condition = (p.condition - 4).coerceAtLeast(50))
-        Attivita.RIFINITURA -> rifinisci(p.copy(condition = (p.condition - 1).coerceAtLeast(50)), rng)
-        Attivita.RITIRO -> p.copy(condition = (p.condition - 2).coerceAtLeast(50), morale = (p.morale + 2).coerceAtMost(99))
+        Attivita.ALLENAMENTO -> p.copy(condition = (p.condition - cala(p, 1)).coerceAtLeast(50))
+        Attivita.RIPOSO -> p.copy(condition = (p.condition + 4 + p.re / 25).coerceAtMost(100), morale = (p.morale + 1).coerceAtMost(99))
+        Attivita.AMICHEVOLE -> p.copy(condition = (p.condition - cala(p, 4)).coerceAtLeast(50))
+        Attivita.RIFINITURA -> rifinisci(p.copy(condition = (p.condition - cala(p, 1)).coerceAtLeast(50)), rng)
+        Attivita.RITIRO -> p.copy(condition = (p.condition - cala(p, 2)).coerceAtLeast(50), morale = (p.morale + 2).coerceAtMost(99))
     }
+
+    /** Fatica di un'attività: chi ha resistenza alta cala meno, chi è sopra i 30 anni un po' di più. */
+    fun cala(p: it.androcalcio.data.Player, base: Int): Int =
+        Math.round(base * (1.6 - p.re / 100.0) + (p.age - 30).coerceAtLeast(0) * 0.15).toInt().coerceAtLeast(0)
 
     /**
      * Rifinitura: prove tecniche e schemi. Con il 30% di probabilità uno tra passaggio, dribbling e tiro sale di 1
