@@ -159,12 +159,11 @@ fun EditorScreen(
                         PcAction(onClick = { vm.salvaComePredefinito() }) { Text("Usa come predefinito") }
                         PcAction(onClick = { vm.tornaAlPredefinitoOriginale() }) { Text("Torna all'originale") }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PcAction(onClick = { export.launch("androcalcio-dati.json") }) { Text("Esporta JSON") }
-                        PcAction(onClick = { exportEd.launch("androcalcio-editor.json") }) { Text("Esporta serie, squadre, giocatori") }
-                        PcAction(onClick = { import.launch(arrayOf("*/*")) }) { Text("Importa JSON") }
-                        PcAction(onClick = { importEd.launch(arrayOf("*/*")) }) { Text("Importa serie, squadre, giocatori") }
-                    }
+                    PcAction(onClick = { exportEd.launch("androcalcio-database.json") }, modifier = Modifier.fillMaxWidth()) { Text("Esporta tutto il database (JSON)") }
+                    PcAction(onClick = { importEd.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Importa tutto il database (JSON)") }
+                    Text("Salvataggio di gioco (carriera):", style = MaterialTheme.typography.bodySmall, color = AC.TextDim)
+                    PcAction(onClick = { export.launch("androcalcio-dati.json") }, modifier = Modifier.fillMaxWidth()) { Text("Esporta salvataggio (JSON)") }
+                    PcAction(onClick = { import.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Importa salvataggio (JSON)") }
                     PcAction(onClick = { societaAperta = true }, modifier = Modifier.fillMaxWidth()) { Text("Editor di tutte le società, staff e giocatori") }
                     TextButton(onClick = { confirmReset = true }) { Text("Ripristina dati predefiniti") }
                 }

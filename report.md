@@ -404,3 +404,9 @@ Per Cádiz (22,7 M€), Granada (35,85 M€), Athletico Paranaense (~31 M€), C
 - Le serie non si importano a parte: sono ricavate dalle squadre.
 - Il pulsante "Importa JSON" resta per il salvataggio di gioco.
 - Non verificato in locale: la verifica è la build su GitHub Actions e il test su telefono.
+
+## Pulsanti database e ricerca società
+
+- Editor dati: "Esporta tutto il database (JSON)" e "Importa tutto il database (JSON)", una per riga a tutta larghezza. Prima i pulsanti erano in una riga sola e "Importa" usciva dallo schermo.
+- Salvataggio di gioco: "Esporta salvataggio (JSON)" e "Importa salvataggio (JSON)", separati sotto un'etichetta.
+- Elenco società nell'Editor: campo "Cerca società, campionato o nazione".

@@ -49,6 +49,7 @@ fun EditorSocieta(vm: AndrocalcioViewModel, onBack: () -> Unit) {
     val menteCorrente by vm.menteDelta.collectAsStateWithLifecycle()
     val sq by vm.squadraEd.collectAsStateWithLifecycle()
     var sceltaId by remember { mutableStateOf<Long?>(null) }
+    var cerca by remember { mutableStateOf("") }
     var editTeam by remember { mutableStateOf<Team?>(null) }
     var editStaff by remember { mutableStateOf<Staff?>(null) }
     var editPlayer by remember { mutableStateOf<Player?>(null) }
@@ -69,7 +70,14 @@ fun EditorSocieta(vm: AndrocalcioViewModel, onBack: () -> Unit) {
         }
         if (scelta == null) {
             item { Text("Editor di tutte le società", style = MaterialTheme.typography.headlineSmall) }
-            items(teams.sortedBy { it.name }, key = { it.id }) { t ->
+            item {
+                OutlinedTextField(
+                    value = cerca, onValueChange = { cerca = it }, singleLine = true,
+                    label = { Text("Cerca società, campionato o nazione") }, modifier = Modifier.fillMaxWidth()
+                )
+            }
+            val q = cerca.trim()
+            items(teams.filter { t -> q.isEmpty() || listOf(t.name, t.campionato, t.nazione).any { it.contains(q, ignoreCase = true) } }.sortedBy { it.name }, key = { it.id }) { t ->
                 GlassCard(Modifier.fillMaxWidth().clickable { sceltaId = t.id }) {
                     Column(Modifier.padding(10.dp)) {
                         Text(t.name, fontWeight = FontWeight.Bold)
