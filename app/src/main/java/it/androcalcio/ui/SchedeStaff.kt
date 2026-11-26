@@ -16,6 +16,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import it.androcalcio.engine.Psicologo
+import it.androcalcio.engine.Mente
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -232,14 +238,12 @@ fun SchedaAnalista(staff: List<Staff>, analisi: it.androcalcio.engine.AnalistaPa
 @Composable
 fun SchedaPsicologo(
     staff: List<Staff>, rosa: List<Player>, st: AndrocalcioViewModel.PsiStato, onStaff: () -> Unit,
-    onSeduta: (String) -> Unit, onLavoro: (Player, it.androcalcio.engine.Mente.Attr) -> Unit, onReport: () -> Unit
+    onSeduta: (String) -> Unit, onLavoro: (Player, Mente.Attr) -> Unit, onReport: () -> Unit
 ) {
-    val M = it.androcalcio.engine.Mente
-    val P = it.androcalcio.engine.Psicologo
     val psi = staff.firstOrNull { s -> s.role == Staffing.PSICOLOGO }
-    var scelto by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Player?>(null) }
+    var scelto by remember { mutableStateOf<Player?>(null) }
     scelto?.let { p ->
-        val v = M.valori(p, st.mente)
+        val v = Mente.valori(p, st.mente)
         val attesa = st.attesa["lav_${p.id}"] ?: 0
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { scelto = null },
@@ -247,9 +251,9 @@ fun SchedaPsicologo(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(if (attesa > 0) "Già seguito di recente: riprova tra $attesa giorni."
-                        else "Costo ${money(P.costoLavoro(st.skill))}. Riesce più spesso con chi è professionale e sui valori bassi.",
+                        else "Costo ${money(Psicologo.costoLavoro(st.skill))}. Riesce più spesso con chi è professionale e sui valori bassi.",
                         fontSize = 12.sp, color = AC.TextDim)
-                    M.Attr.values().forEach { a ->
+                    Mente.Attr.values().forEach { a ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("${a.nome} ${v[a.ordinal]}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = coloreMente(v[a.ordinal]))
@@ -295,7 +299,7 @@ fun SchedaPsicologo(
                         Text(pb.testo, fontSize = 12.sp, color = AC.PaperText)
                         val att = st.attesa[pb.chiave] ?: 0
                         Text(if (att > 0) "Seduta già fatta: riprova tra $att giorni."
-                            else "${pb.tipo.azione}: ${money(P.costoSeduta(st.skill, pb.tipo))} · riuscita ${P.probabilita(st.skill)}%",
+                            else "${pb.tipo.azione}: ${money(Psicologo.costoSeduta(st.skill, pb.tipo))} · riuscita ${Psicologo.probabilita(st.skill)}%",
                             fontSize = 11.sp, color = AC.PaperDim)
                     }
                     if ((st.attesa[pb.chiave] ?: 0) == 0) PcButton("AGISCI", { onSeduta(pb.chiave) }, compatto = true)
@@ -309,10 +313,10 @@ fun SchedaPsicologo(
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Row {
                     Text("", Modifier.weight(1f))
-                    M.Attr.values().forEach { a -> Text(a.sigla, Modifier.width(28.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AC.PaperDim) }
+                    Mente.Attr.values().forEach { a -> Text(a.sigla, Modifier.width(28.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AC.PaperDim) }
                 }
                 rosa.sortedBy { it.name }.forEach { p ->
-                    val v = M.valori(p, st.mente)
+                    val v = Mente.valori(p, st.mente)
                     Row(Modifier.fillMaxWidth().clickable { scelto = p }, verticalAlignment = Alignment.CenterVertically) {
                         RuoloChip(p.role, p.pos)
                         Text(" ${p.name}", Modifier.weight(1f), fontSize = 12.sp, color = AC.PaperText, maxLines = 1)
