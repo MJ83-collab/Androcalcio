@@ -7,6 +7,12 @@ Build verde sull'ultimo commit. ⚠️ Nulla di questa sessione è stato provato
 ## COMANDO PER RIPARTIRE (da incollare nella nuova chat insieme a questo file)
 > Riparti da questo report.md. Clona https://github.com/MJ83-collab/Androcalcio, ramo `feat/psicologo` (contiene anche `feat/profondita-fm27`; in prova da Marco; `main` = v0.8.0). Leggi "Cosa manca" e "Decisioni aperte". Prima di tutto ricontrolla la repo, cerca bug e correggi quelli certi; per ogni dubbio o decisione chiedimi sempre. Tienimi aggiornato con "sono al N di M lavori". A fine lavoro aggiorna questo report.md rispettando le regole permanenti.
 
+## Sessione 26/11 sera: tifoserie e rivalità (build verde, da provare)
+- `engine/Tifoserie.kt`: curva con nome e passione per club; rivalità nuove dal punteggio degli incontri (soglia 30); rivalità storiche fisse.
+- Ogni partita tua: la curva di casa prepara una coreografia in automatico (tipo, qualità); morale alla squadra di casa; contro rivale la curva ospite contesta; pirotecniche in derby possono costare una multa. Esito in posta (Dirigenza).
+- APERTO: non c'è ancora una schermata dedicata alle tifoserie; solo i messaggi in posta.
+- APERTO: Marco ha segnalato che l'età modificata in editor torna diversa nel gioco: non ancora risolto (vedi sotto).
+
 ## Sessione 26/11 pomeriggio: correzioni editor (build verde, da provare)
 - Overall ricalcolato dai parametri salvati (se non digiti a mano il Valore). Valori mentali non più resettati.
 - Ruoli 2-4: codice libero (1-4 lettere) con suggerimenti. APERTO: numero illimitato di ruoli richiede cambio database (sec5...), 58 punti da adattare. Decisione di Marco pendente.
