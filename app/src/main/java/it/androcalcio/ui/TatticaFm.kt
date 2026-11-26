@@ -64,6 +64,13 @@ import it.androcalcio.engine.StileTattico
 import it.androcalcio.engine.TacticalRoles
 import it.androcalcio.engine.Transizione
 import it.androcalcio.ui.components.Stelle
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.zIndex
+import kotlin.math.hypot
 
 /** Colori della schermata Tattica in stile Football Manager: sempre scura, a prescindere dal tema dell'app. */
 private object Fm {
@@ -126,7 +133,8 @@ fun TatticaFmScreen(
     onRoleSenzaPalla: (Player, String) -> Unit,
     onCompito: (Player, String) -> Unit,
     onIstr: (Player, IstrGiocatore) -> Unit = { _, _ -> },
-    onScambia: (List<Long>, Player, Player) -> Unit = { _, _, _ -> }
+    onScambia: (List<Long>, Player, Player) -> Unit = { _, _, _ -> },
+    onScambiaPosti: (Player, Player) -> Unit = { _, _ -> }
 ) {
     val xi = orderedXI(Lineup.resolve(players, formation).xi, formation)
     var tab by remember { mutableStateOf(0) }
@@ -193,11 +201,11 @@ fun TatticaFmScreen(
                     FaseVista.values().forEach { f -> Scheda(f.label, fase == f, Modifier.weight(1f)) { fase = f } }
                 }
             }
-            item { CampoFm(xi, formation, piano, line, fase) { giocatoreId = it.id } }
+            item { CampoFm(xi, formation, piano, line, fase, { giocatoreId = it.id }, onScambiaPosti) }
             item {
                 Text(
                     when (fase) {
-                        FaseVista.COMBINATA -> "Il ruolo con la palla e, se diverso, quello senza palla. Tocca un giocatore per cambiarli."
+                        FaseVista.COMBINATA -> "Il ruolo con la palla e, se diverso, quello senza palla. Tocca un giocatore per cambiarli, o trascinalo su un altro per scambiare le posizioni."
                         FaseVista.POSSESSO -> "Ruoli con la palla: posizione e stelle dipendono da quanto il giocatore conosce il ruolo."
                         FaseVista.SENZA -> "Ruoli senza palla: la linea si abbassa con la linea difensiva bassa. Un ruolo più congeniale rende la difesa un po' più solida."
                     },
@@ -355,11 +363,33 @@ private fun ValutazioneStaff(st: StileTattico) {
 // ------------------------------------------------------------------ campo
 
 @Composable
-private fun CampoFm(xi: List<Player>, formation: Formation, piano: PianoTattico, line: DefLine, fase: FaseVista, onGiocatore: (Player) -> Unit) {
+private fun CampoFm(xi: List<Player>, formation: Formation, piano: PianoTattico, line: DefLine, fase: FaseVista,
+                    onGiocatore: (Player) -> Unit, onScambiaPosti: (Player, Player) -> Unit) {
     val coords = formation.coords()
     // Senza palla la squadra si abbassa: tanto più quanto più bassa è la linea difensiva
     val calo = when (line) { DefLine.BASSA -> 0.09f; DefLine.MEDIA -> 0.05f; DefLine.ALTA -> 0.02f }
-    BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(0.78f).clip(RoundedCornerShape(8.dp)).border(1.dp, Fm.Bordo, RoundedCornerShape(8.dp))) {
+    // Posizione di ogni giocatore nel campo: xf = fraction della larghezza, yf = fraction dell'altezza
+    val punti = xi.mapIndexedNotNull { i, p ->
+        val c = coords.getOrNull(i) ?: return@mapIndexedNotNull null
+        var yf = 0.88f - (c.first - 0.05f) / 0.41f * 0.74f
+        if (fase == FaseVista.SENZA && p.role != "P") yf = (yf + calo).coerceAtMost(0.80f)
+        if (fase == FaseVista.POSSESSO && p.role != "P") yf = (yf - 0.02f).coerceAtLeast(0.06f)
+        var xf = c.second
+        val conPalla = TacticalRoles.assigned(p)
+        val senza = piano.ruoliNonPoss[p.id] ?: conPalla
+        if (fase == FaseVista.SENZA && senza != conPalla) {
+            val (dd, dw) = PostoRuolo.spostamento(conPalla, senza)
+            yf = (yf - dd * 0.8f).coerceIn(0.06f, 0.82f); xf = (xf + dw * 0.8f).coerceIn(0.08f, 0.92f)
+        }
+        Triple(p, xf, yf)
+    }
+    // Trascinamento: solo con la palla e in possesso (senza palla i ruoli sono quelli dell'altra fase)
+    val trascinabile = fase != FaseVista.SENZA
+    var trascinato by remember { mutableStateOf<Long?>(null) }
+    var spostamento by remember { mutableStateOf(Offset.Zero) }
+    var misura by remember { mutableStateOf(IntSize.Zero) }
+    BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(0.78f).onSizeChanged { misura = it }
+        .clip(RoundedCornerShape(8.dp)).border(1.dp, Fm.Bordo, RoundedCornerShape(8.dp))) {
         val w = maxWidth; val h = maxHeight
         Canvas(Modifier.matchParentSize()) {
             val strisce = 10
@@ -371,22 +401,42 @@ private fun CampoFm(xi: List<Player>, formation: Formation, piano: PianoTattico,
             drawRect(l, Offset(size.width * 0.27f, size.height * 0.02f), Size(size.width * 0.46f, size.height * 0.15f), style = st)
             drawRect(l, Offset(size.width * 0.27f, size.height * 0.83f), Size(size.width * 0.46f, size.height * 0.15f), style = st)
         }
-        xi.forEachIndexed { i, p ->
-            val c = coords.getOrNull(i) ?: return@forEachIndexed
-            var yf = 0.88f - (c.first - 0.05f) / 0.41f * 0.74f
-            if (fase == FaseVista.SENZA && p.role != "P") yf = (yf + calo).coerceAtMost(0.80f)
-            if (fase == FaseVista.POSSESSO && p.role != "P") yf = (yf - 0.02f).coerceAtLeast(0.06f)
-            var xf = c.second
+        punti.forEach { (p, xf, yf) ->
             val conPalla = TacticalRoles.assigned(p)
             val senza = piano.ruoliNonPoss[p.id] ?: conPalla
-            if (fase == FaseVista.SENZA && senza != conPalla) {
-                val (dd, dw) = PostoRuolo.spostamento(conPalla, senza)
-                yf = (yf - dd * 0.8f).coerceIn(0.06f, 0.82f); xf = (xf + dw * 0.8f).coerceIn(0.08f, 0.92f)
-            }
             val conIstr = piano.istrGioc[p.id].orEmpty().isNotEmpty()
             val mostrato = if (fase == FaseVista.SENZA) senza else conPalla
             val etichetta = if (fase == FaseVista.COMBINATA && senza != conPalla) "$conPalla/$senza" else mostrato
-            Box(Modifier.offset(x = w * xf - 31.dp, y = h * yf - 24.dp).width(62.dp)) {
+            val inTrascino = trascinato == p.id
+            Box(
+                Modifier.offset(x = w * xf - 31.dp, y = h * yf - 24.dp).width(62.dp).zIndex(if (inTrascino) 1f else 0f)
+                    .graphicsLayer {
+                        translationX = if (inTrascino) spostamento.x else 0f
+                        translationY = if (inTrascino) spostamento.y else 0f
+                    }
+                    .then(
+                        if (trascinabile) Modifier.pointerInput(p.id, xf, yf) {
+                            detectDragGestures(
+                                onDragStart = { trascinato = p.id; spostamento = Offset.Zero },
+                                onDrag = { change, quanto -> change.consume(); spostamento += quanto },
+                                onDragEnd = {
+                                    val larg = misura.width.toFloat().coerceAtLeast(1f)
+                                    val alt = misura.height.toFloat().coerceAtLeast(1f)
+                                    val dx = xf + spostamento.x / larg
+                                    val dy = yf + spostamento.y / alt
+                                    // Lasciato vicino a un altro giocatore: i due si scambiano la posizione
+                                    val vicino = punti.filter { it.first.id != p.id }
+                                        .minByOrNull { hypot(it.second - dx, it.third - dy) }
+                                    if (vicino != null && hypot(vicino.second - dx, vicino.third - dy) < 0.16f) {
+                                        onScambiaPosti(p, vicino.first)
+                                    }
+                                    trascinato = null; spostamento = Offset.Zero
+                                },
+                                onDragCancel = { trascinato = null; spostamento = Offset.Zero }
+                            )
+                        } else Modifier
+                    )
+            ) {
                 ChipGiocatore(p, etichetta, mostrato, if (p.role == "P") coloreLinea("POR") else coloreLinea(mostrato), conIstr) { onGiocatore(p) }
             }
         }

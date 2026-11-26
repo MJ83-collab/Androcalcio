@@ -410,3 +410,10 @@ Per Cádiz (22,7 M€), Granada (35,85 M€), Athletico Paranaense (~31 M€), C
 - Editor dati: "Esporta tutto il database (JSON)" e "Importa tutto il database (JSON)", una per riga a tutta larghezza. Prima i pulsanti erano in una riga sola e "Importa" usciva dallo schermo.
 - Salvataggio di gioco: "Esporta salvataggio (JSON)" e "Importa salvataggio (JSON)", separati sotto un'etichetta.
 - Elenco società nell'Editor: campo "Cerca società, campionato o nazione".
+
+## Tattica: trascina i giocatori per cambiare posizione
+
+- Nel campo (Tattica, scheda Disposizione) trascini un giocatore su un altro: i due si scambiano la posizione in campo.
+- Lo scambio cambia il ruolo assegnato (ruolo in campo e compito azzerato), come il cambio di ruolo dal menu.
+- Attivo in Combinata e In possesso. In "Non in possesso" il trascinamento è disattivato.
+- Limite: si scambiano solo due giocatori già in campo. Non c'è ancora il trascinamento su uno slot vuoto (non esistono slot vuoti con 11 titolari).

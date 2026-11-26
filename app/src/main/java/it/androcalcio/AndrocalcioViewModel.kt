@@ -3206,6 +3206,22 @@ class AndrocalcioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Scambia il ruolo in campo di due giocatori trascinati uno sull'altro. */
+    fun scambiaPosti(a: Player, b: Player) {
+        if (a.id == b.id) return
+        viewModelScope.launch {
+            val rosa = dao.playersOnce(a.teamId).associateBy { it.id }
+            val fa = rosa[a.id] ?: return@launch
+            val fb = rosa[b.id] ?: return@launch
+            val ra = TacticalRoles.assigned(fa); val rb = TacticalRoles.assigned(fb)
+            dao.updatePlayers(listOf(
+                fa.copy(ruoloPartita = if (rb == fa.pos) "" else rb, compito = ""),
+                fb.copy(ruoloPartita = if (ra == fb.pos) "" else ra, compito = "")
+            ))
+            _notice.value = "${fa.name} e ${fb.name} si scambiano la posizione."
+        }
+    }
+
     fun setRuoloPartita(p: Player, ruolo: String) { viewModelScope.launch { dao.updatePlayer(p.copy(ruoloPartita = ruolo, compito = "")) } }
     /** Compito di ruolo scelto per il giocatore nel ruolo in cui gioca ("" = nessuno). */
     fun setCompito(p: Player, codice: String) { viewModelScope.launch { dao.updatePlayer(p.copy(compito = codice)) } }
