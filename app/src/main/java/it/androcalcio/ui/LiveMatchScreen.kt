@@ -152,7 +152,12 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
         val colC: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
             item { MangaPitch(m.home, m.away, palla.x, palla.y, m.homeF, m.awayF, m.xiH.toList(), m.xiA.toList(), palla.attacco, palla.scia, palla.quota, palla.inVolo,
                 info.tempo, info.prato, m.lineH, m.lineA, palla.sim,
-                m.homePiano?.ruoliNonPoss.orEmpty(), m.awayPiano?.ruoliNonPoss.orEmpty()) }
+                m.homePiano?.ruoliNonPoss.orEmpty(), m.awayPiano?.ruoliNonPoss.orEmpty(), mioCasa = info.userHome) }
+            item {
+                val mia = if (info.userHome) m.home else m.away
+                Text("● La tua squadra: ${mia.name} (alone giallo) · attacca verso ${if (info.userHome) "destra →" else "← sinistra"}",
+                    color = AC.Accent, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            }
             item { TelecronacaBubble(events, m.minute) }
         }
         val colD: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
@@ -232,6 +237,8 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 NeonTile("Tattica", Icons.Filled.Edit, panel == LivePanel.TATTICA, Modifier.weight(1f)) {
                     panel = if (panel == LivePanel.TATTICA) LivePanel.NESSUNO else LivePanel.TATTICA
+                    // Aprendo la tattica la partita si ferma; riparte solo quando premi "Riprendi"
+                    if (panel == LivePanel.TATTICA) vm.setLivePaused(true)
                 }
                 NeonTile("Cambi $mySubs/${MatchEngine.MAX_SUBS}", Icons.Filled.Refresh, false, Modifier.weight(1f),
                     enabled = mySubs < MatchEngine.MAX_SUBS) { pausaPrima = info.paused; vm.setLivePaused(true); subOpen = true }
@@ -261,10 +268,11 @@ fun LiveMatchScreen(info: AndrocalcioViewModel.LiveInfo, vm: AndrocalcioViewMode
 
     if (subOpen) SubDialog(
         xi = if (info.userHome) m.xiH.toList() else m.xiA.toList(),
-        bench = if (info.userHome) m.benchH.toList() else m.benchA.toList(),
+        bench = (if (info.userHome) m.benchH.toList() else m.benchA.toList()).filter { it.id !in m.usciti },
         energy = { (m.energyOf(it) * 100).toInt() },
         ammoniti = events.filter { it.type == EventType.YELLOW }.map { it.playerId }.toSet(),
-        onDone = { out, inP -> if (out != null && inP != null) vm.liveSub(out, inP); subOpen = false; if (!pausaPrima) vm.setLivePaused(false) }
+        // Dopo il cambio la partita resta in pausa: la fai ripartire tu con "Riprendi"
+        onDone = { out, inP -> if (out != null && inP != null) vm.liveSub(out, inP); subOpen = false }
     )
 }
 
@@ -394,7 +402,7 @@ private fun SubDialog(
         onDismissRequest = { onDone(null, null) },
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier.fillMaxWidth(0.96f),
-        title = { Text("CAMBI · la partita è in pausa", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) },
+        title = { Text("CAMBI · partita in pausa (riparte con Riprendi)", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (stanco != null && sostituto != null && o == null) {
@@ -425,7 +433,7 @@ private fun SubDialog(
                                         .background(if (e < 80) AC.Danger else if (e < 90) AC.Warn else AC.Ok))
                                     if (e < 100) Box(Modifier.weight((100 - e).toFloat()).fillMaxHeight())
                                 }
-                                Text("energia $e%" + if (p.id in ammoniti) " · 🟨" else "", fontSize = 10.sp, color = AC.TextDim)
+                                Text("liv ${p.overall} · energia $e%" + if (p.id in ammoniti) " · 🟨" else "", fontSize = 10.sp, color = AC.TextDim)
                             }
                         }
                     }

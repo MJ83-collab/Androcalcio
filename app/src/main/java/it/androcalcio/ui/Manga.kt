@@ -86,7 +86,8 @@ fun MangaPitch(
     lineaCasa: it.androcalcio.engine.DefLine? = null, lineaOspiti: it.androcalcio.engine.DefLine? = null,
     sim: PallonePista? = null,          // se presente, la palla è simulata sui giocatori (portata e passata) invece di essere disegnata dove dice bx,by
     ruoliSenzaCasa: Map<Long, String> = emptyMap(),   // ruoli senza palla (piano tattico): ci si sposta lì quando si difende
-    ruoliSenzaOspiti: Map<Long, String> = emptyMap()
+    ruoliSenzaOspiti: Map<Long, String> = emptyMap(),
+    mioCasa: Boolean? = null            // la squadra dell'utente: true = casa, false = ospiti (alone giallo e etichetta)
 ) {
     val animato = meteo == it.androcalcio.engine.Meteo.Tempo.PIOGGIA || meteo == it.androcalcio.engine.Meteo.Tempo.NEVE ||
         meteo == it.androcalcio.engine.Meteo.Tempo.VENTO
@@ -111,17 +112,23 @@ fun MangaPitch(
     // (formazione + spinta dell'azione + attrazione della palla), con velocità massima. Niente salti, come in Football Manager.
     val pbx = pbxS.value; val pby = pbyS.value
     val sp = spinta.value
-    val shift = (pbx - 0.5f) * 0.2f
-    fun dove(base: Float, ny: Float, casa: Boolean, portiere: Boolean): Offset {
+    // Il blocco squadra scorre verso la palla lungo il campo (più compatto quando difende)
+    val shift = (pbx - 0.5f) * 0.30f
+    // profondita = distanza dalla propria porta (0 = porta, 0.5 = metà campo), uguale per casa e ospiti
+    fun dove(profondita: Float, ny: Float, casa: Boolean, portiere: Boolean): Offset {
         val segno = if (casa) 1f else -1f
         val att = kotlin.math.max(segno * sp, 0f)
         val dif = kotlin.math.max(-segno * sp, 0f)
         val linea = if (casa) lineaCasa else lineaOspiti
-        val extraLinea = if (portiere || base >= 0.3f) 0f else when (linea) {
+        val extraLinea = if (portiere || profondita >= 0.3f) 0f else when (linea) {
             it.androcalcio.engine.DefLine.ALTA -> 0.05f; it.androcalcio.engine.DefLine.BASSA -> -0.04f; else -> 0f }
-        val dx = if (portiere) 0f else segno * ((0.04f + 0.35f * base) * att - 0.15f * base * dif + extraLinea)
-        val x0 = (base + dx + shift).coerceIn(0.03f, 0.97f)
-        val y0 = ny + (pby - ny) * (0.18f * abs(sp))
+        // In attacco la squadra sale (gli attaccanti più dei difensori); in difesa scende e si compatta
+        val rel = if (portiere) profondita + 0.02f * att
+            else profondita + (0.04f + 0.35f * profondita) * att - 0.10f * profondita * dif + extraLinea
+        val xRel = if (casa) rel else 1f - rel
+        val x0 = (xRel + shift * (if (portiere) 0.15f else 1f)).coerceIn(0.04f, 0.96f)
+        // Lateralmente: chi difende stringe verso la palla più di chi attacca
+        val y0 = ny + (pby - ny) * (if (portiere) 0.25f else 0.12f + 0.20f * dif)
         val d = hypot(pbx - x0, (pby - y0) * 0.55f)
         val k = 0.8f * (1f - d / 0.18f).coerceAtLeast(0f).let { it * it }
         return Offset(x0 + (pbx - x0) * k, y0 + (pby - y0) * k)
@@ -141,7 +148,7 @@ fun MangaPitch(
     } }
     af.coords().forEachIndexed { i, (fx, fy) -> if (i < 11) {
         val (dd, dw) = spostaFase(awayNums, ruoliSenzaOspiti, i, false)
-        bersagli[11 + i] = dove(1f - (fx + dd), fy + dw + (pby - fy) * 0.08f, false, i == 0)
+        bersagli[11 + i] = dove(fx + dd, fy + dw + (pby - fy) * 0.08f, false, i == 0)
     } }
     val bersagliOra = androidx.compose.runtime.rememberUpdatedState(bersagli)
     val posiz = remember { androidx.compose.runtime.mutableStateListOf<Offset>().also { l -> repeat(22) { l.add(Offset(0.5f, 0.5f)) } } }
@@ -238,6 +245,8 @@ fun MangaPitch(
             val portiere = pl.role == "P"
             val col = if (portiere) (if (casa) Color(0xFFF4D03F) else Color(0xFF7CD957)) else maglia.first
             val rp = r * 0.95f
+            // La mia squadra: alone giallo sotto il pallino, così si riconosce subito
+            if (mioCasa != null && casa == mioCasa) drawCircle(Color(0xFFFFE23D).copy(alpha = 0.55f), rp * 1.45f, c)
             drawCircle(Color.Black.copy(alpha = 0.3f), rp, Offset(c.x + r * 0.15f, c.y + r * 0.22f))
             drawCircle(col, rp, c)
             drawCircle(if (portiere) Inchiostro else maglia.second, rp, c, style = Stroke(width = r * 0.2f))

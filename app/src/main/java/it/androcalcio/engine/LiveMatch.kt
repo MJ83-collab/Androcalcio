@@ -119,6 +119,8 @@ class LiveMatch(
     // Minuto di ingresso e di uscita di chi ha cambiato, per i minuti giocati a fine partita
     private val minIn = HashMap<Long, Int>()
     private val minOut = HashMap<Long, Int>()
+    /** Chi è uscito per un cambio: non può più rientrare. */
+    val usciti = mutableSetOf<Long>()
     /** Minuti giocati da un giocatore (0 se non è sceso in campo). */
     fun minutiGiocati(id: Long): Int =
         if (id !in playedH && id !in playedA) 0 else ((minOut[id] ?: minute) - (minIn[id] ?: 0)).coerceAtLeast(0)
@@ -221,7 +223,7 @@ class LiveMatch(
             if (g != null && inP != null) { doSub(homeSide, g, inP); return true }
         }
         if (cond and CambiCondizioni.STANCO != 0) {
-            val g = gioc.filter { energyOf(it) < 0.88 }.minByOrNull { energyOf(it) }
+            val g = gioc.filter { energyOf(it) < 0.75 }.minByOrNull { energyOf(it) }
             val inP = g?.let { migliore(it.role) }
             if (g != null && inP != null) { doSub(homeSide, g, inP); return true }
         }
@@ -291,6 +293,7 @@ class LiveMatch(
         val xi = if (homeSide) xiH else xiA
         val bench = if (homeSide) benchH else benchA
         xi[xi.indexOf(out)] = inP; bench -= inP
+        usciti += out.id; bench.removeAll { it.id == out.id || it.id in usciti }
         (if (homeSide) playedH else playedA) += inP.id
         minOut[out.id] = minute; minIn[inP.id] = minute
         rated[inP.id] = inP; pRatings.putIfAbsent(inP.id, 6.0)
@@ -306,7 +309,7 @@ class LiveMatch(
         val xi = if (homeSide) xiH else xiA
         val bench = if (homeSide) benchH else benchA
         val used = if (homeSide) subsH else subsA
-        if (finished || used >= MatchEngine.MAX_SUBS || out !in xi || inP !in bench) return false
+        if (finished || used >= MatchEngine.MAX_SUBS || out !in xi || inP !in bench || inP.id in usciti) return false
         doSub(homeSide, out, inP)
         return true
     }
@@ -317,7 +320,7 @@ class LiveMatch(
         val xi = if (homeSide) xiH else xiA
         val bench = if (homeSide) benchH else benchA
         for (tired in xi.filter { it.role != "P" }.sortedBy { energyOf(it) }) {
-            if (energyOf(tired) > 0.965 && !(losing && minute > 60)) return false
+            if (energyOf(tired) > 0.82 && !(losing && minute > 60)) return false
             val wantAtk = losing && minute > 60 && tired.role != "A"
             val inP = (if (wantAtk) bench.filter { it.role == "A" }.maxByOrNull { Attr.atk(it) } else null)
                 ?: bench.filter { it.role == tired.role }.maxByOrNull { it.overall }
@@ -338,9 +341,13 @@ class LiveMatch(
         if (finished) return
         val prima = events.size
         minute++
+        // Fatica minuto per minuto, per tutte le squadre: resistenza, forma, età, pressing, ritmo e stile
+        xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.faticaMinuto(p) * pressH.drain * ritmoH.consumo * fxH.drain).coerceAtLeast(0.40) }
+        xiA.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.faticaMinuto(p) * pressA.drain * ritmoA.consumo * fxA.drain).coerceAtLeast(0.40) }
+        // Intervallo: un po' di recupero
+        if (minute == 46) (xiH + xiA).forEach { p -> energy[p.id] = (energyOf(p) + 0.04 + p.re / 2500.0).coerceAtMost(1.0) }
+        if (minute % 5 == 0) refresh()
         if (minute > 55) {
-            xiH.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressH.drain * ritmoH.consumo * fxH.drain).coerceAtLeast(0.7) }
-            xiA.forEach { p -> energy[p.id] = (energyOf(p) - MatchEngine.drain(p) * pressA.drain * ritmoA.consumo * fxA.drain).coerceAtLeast(0.7) }
             if (minute in 56..85) {
                 if (!manualHome && subsH < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(true, hg < ag)
                 if (!manualAway && subsA < MatchEngine.MAX_SUBS && rng.nextDouble() < 0.15) autoSub(false, ag < hg)

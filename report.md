@@ -417,3 +417,24 @@ Per Cádiz (22,7 M€), Granada (35,85 M€), Athletico Paranaense (~31 M€), C
 - Lo scambio cambia il ruolo assegnato (ruolo in campo e compito azzerato), come il cambio di ruolo dal menu.
 - Attivo in Combinata e In possesso. In "Non in possesso" il trascinamento è disattivato.
 - Limite: si scambiano solo due giocatori già in campo. Non c'è ancora il trascinamento su uno slot vuoto (non esistono slot vuoti con 11 titolari).
+
+## Blocco 1 (piano 27/11): errori della partita
+
+- Cambi: chi esce non può rientrare (lista `usciti` nel motore, panchina filtrata).
+- Finestra cambi: anche chi è in campo mostra il livello ("liv 68 · energia 92%").
+- Pausa: aprendo Cambi o Tattica la partita si ferma e non riparte da sola. Riparte con "Riprendi".
+- La mia squadra: alone giallo sotto i pallini e riga "La tua squadra: … attacca verso …".
+- Campo: corretta la profondità della squadra in trasferta (i difensori finivano sulla linea di fondo). Il blocco squadra segue di più la palla, chi difende stringe verso la palla.
+- Fatica: cala dal 1' (prima solo dopo il 55', minimo 70%). Dipende da resistenza, forma pre-partita, età, ruolo, pressing, ritmo e stile. Piccolo recupero all'intervallo. Minimo 40%. Vale per tutte le squadre (tutte le partite usano lo stesso motore).
+- Cambi automatici adattati alla nuova scala di energia.
+
+### Piano dei blocchi successivi (scelte di Marco)
+1. Errori partita (fatto)
+2. Numeri di maglia: numero preferito, scelta a inizio stagione, visibili ovunque
+3. Tattica unica in stile FM con tutte le impostazioni della Classica; indicazioni ai giocatori (vai avanti, raddoppia, pressing)
+4. Movimenti e animazioni più realistici e vari
+5. Staff: delega per persona e per compito, revocabile; feedback; scheda con rendimento; psicologo più chiaro e con più strategie
+6. Contratti in scadenza (giocatori e staff) con notifica e trattativa
+7. Stampa: più varia, interviste notificate, giornalisti con stili diversi
+8. Centro scouting unico
+9. Nazionali: scheda completa al tocco; allenatori più interattivi (maggiore e U21); allenatori con caratteristiche e moduli preferiti

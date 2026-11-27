@@ -73,6 +73,19 @@ object MatchEngine {
     /** Energia persa al minuto dopo il 55': da ~0,0045 (RE bassa) a ~0,002 (RE 99). */
     internal fun drain(p: Player): Double = 0.0045 - 0.0025 * p.re / 99.0
 
+    /**
+     * Fatica di un minuto: dipende da resistenza, forma (condizione prima della partita), età e ruolo.
+     * Un giocatore medio perde circa il 25% in 90 minuti a ritmo normale; il portiere molto meno.
+     * Pressing, ritmo e stile moltiplicano questo valore.
+     */
+    internal fun faticaMinuto(p: Player): Double {
+        val resistenza = 0.0012 + 0.0030 * (1.0 - p.re.coerceIn(1, 99) / 99.0)
+        val forma = 1.0 + (100 - p.condition.coerceIn(0, 100)) / 100.0 * 0.9
+        val eta = 1.0 + (p.age - 30).coerceAtLeast(0) * 0.03
+        val ruolo = if (p.role == "P") 0.3 else 1.0
+        return resistenza * forma * eta * ruolo
+    }
+
     /** Sceglie a caso un giocatore, con più probabilità per chi ha l'aggressività alta. */
     internal fun aggressive(ps: List<Player>, rng: Random): Player {
         val total = ps.sumOf { it.ag.coerceAtLeast(1) }
